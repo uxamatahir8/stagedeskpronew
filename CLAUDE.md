@@ -15,7 +15,7 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - Pages get the user via `lib/viewer.ts`: `requireViewer()`, `requirePermission(p)`, or `requireAgency(p)` which also returns a `tenantDb` scoped to the active agency. Use that `db` for all agency data; add new tenant models to `tenantModels` in `packages/db/src/tenant.ts` (a test enforces it).
 - Prisma 7: `prisma migrate dev` doesn't regenerate the client; `pnpm db:migrate` runs both.
 - Server-side form actions return `FormState` (`lib/validation.ts`); shared Dutch validators (KvK, BTW, postcode) live there.
-- Smoke tests: `bash scripts/smoke-accounts.sh`, `bash scripts/smoke-bookings.sh`; Playwright e2e in `apps/web/e2e` (`pnpm --filter @stagedesk/web e2e`). All need services, seed and `pnpm dev`.
+- Smoke tests: `bash scripts/smoke-accounts.sh`, `bash scripts/smoke-bookings.sh`, `bash scripts/smoke-payments.sh`; Playwright e2e in `apps/web/e2e` (`pnpm --filter @stagedesk/web e2e`). All need services, seed and `pnpm dev`.
 - Bookings: change status only via `packages/db/src/bookings.ts` (createBooking, sendQuote, acceptQuote, assignArtist, respondToAssignment, recordPayment, changeBookingStatus, issueInvoice, expireQuotes). Web actions wrap them with `runAction()` (`lib/actions.ts`) to translate `BookingError` codes.
 - Cross-agency reads are explicit and rare: artist sharing (partner side filters on `partnerOrganizationId`), an artist's own gigs (filter on `artist.userId`), and public quote links (secret token). Everything else goes through `tenantDb`.
 - Every export of a `"use server"` file is a public endpoint: keep helpers that take ids or db clients in server-only modules (e.g. `lib/availability.ts`).
@@ -24,3 +24,6 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - Emails: add templates to `packages/emails`, send from web via `deliver()` in `lib/mail.ts` (never awaited in the request).
 - Rate limits: `allow(key, max, seconds)` in `lib/rate-limit.ts` (Redis). Running many sign-ins quickly (e.g. e2e + smoke scripts back to back) hits the 10/min sign-in limit; wait a minute.
 - After `pnpm add` while `pnpm dev` runs, restart the dev server (Turbopack loses track of node_modules). Restart after `next.config.ts` or Prisma schema changes too.
+- Stripe lives in `packages/payments`. `getStripe()` returns null without `STRIPE_SECRET_KEY`; every caller must handle that (show a message, skip the job). Logic tests use a fake Stripe (`src/test/fixtures.ts`); `stripe-contract.test.ts` checks request shapes against stripe-mock and skips if it isn't running.
+- Money movements are append-only `LedgerEntry` rows; never update or delete them. Fee rules resolve agency deal, then plan, then platform default (`effectiveFeeSnapshot`) and are frozen on the booking when the quote is accepted.
+- Plan limits: actions check `writeBlocked`, `limitBlocked` or `featureBlocked` from `lib/billing.ts` before changing anything. Buttons that send the user to Stripe use `RedirectButton` with an action returning `RedirectResult`.

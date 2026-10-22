@@ -406,12 +406,14 @@
     "bank_transfer": "Bank transfer",
     "cash": "Cash",
     "card": "Card",
-    "other": "Other"
+    "other": "Other",
+    "stripe": "Online (Stripe)"
   },
   "paymentKinds": {
     "deposit": "Deposit",
     "balance": "Balance",
-    "other": "Other"
+    "other": "Other",
+    "refund": "Refund"
   },
   "assignmentStatus": {
     "pending": "Waiting for artist",

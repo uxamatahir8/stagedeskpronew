@@ -97,4 +97,13 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
     const response = await agency.request.get(href!);
     expect(response.headers()["content-type"]).toBe("application/pdf");
   });
+
+  await test.step("part of the bank transfer is refunded and recorded", async () => {
+    await agency.getByRole("button", { name: "Terugbetalen" }).last().click();
+    const dialog = agency.getByRole("dialog");
+    await dialog.getByLabel("Bedrag").fill("10,00");
+    await dialog.getByRole("button", { name: "Terugbetalen" }).click();
+    await expect(agency.getByText("€ 10,00 terugbetaald.")).toBeVisible();
+    await expect(agency.getByText("−€ 10,00").first()).toBeVisible();
+  });
 });

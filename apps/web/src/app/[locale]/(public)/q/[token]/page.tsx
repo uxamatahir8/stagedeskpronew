@@ -6,27 +6,29 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { type EventType } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { FormMessage } from "@/components/auth/auth-card";
+import { PayPanel } from "@/components/booking/pay-panel";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, eventDate } from "@/lib/format";
+import { payByQuoteTokenAction } from "@/lib/pay-actions";
 import { AcceptQuoteForm } from "./accept-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
-export default function QuotePage({ params }: PageProps<"/[locale]/q/[token]">) {
+export default function QuotePage({ params, searchParams }: PageProps<"/[locale]/q/[token]">) {
   return (
     <main className="mx-auto grid w-full max-w-3xl gap-6 px-4 py-10">
       <Suspense fallback={<Skeleton className="h-[40rem] w-full" />}>
-        <Quote params={params} />
+        <Quote params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );
 }
 
-async function Quote({ params }: Pick<PageProps<"/[locale]/q/[token]">, "params">) {
+async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[token]">, "params" | "searchParams">) {
   const { token, locale } = await params;
   setRequestLocale(locale as Locale);
   // Expiry depends on the current time, so this renders per request.
@@ -39,7 +41,7 @@ async function Quote({ params }: Pick<PageProps<"/[locale]/q/[token]">, "params"
     include: {
       items: { orderBy: { position: "asc" } },
       organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true } },
-      booking: { select: { trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, customer: { select: { name: true } } } },
+      booking: { select: { trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true, customer: { select: { name: true } } } },
     },
   });
   if (!quote) return <FormMessage>{t("quotePage.notFound")}</FormMessage>;
@@ -89,7 +91,10 @@ async function Quote({ params }: Pick<PageProps<"/[locale]/q/[token]">, "params"
       </Card>
 
       {quote.status === "accepted" && quote.acceptedAt ? (
-        <FormMessage tone="success">{t("quotePage.alreadyAccepted", { date: dateTime(format, quote.acceptedAt) })}</FormMessage>
+        <>
+          <FormMessage tone="success">{t("quotePage.alreadyAccepted", { date: dateTime(format, quote.acceptedAt) })}</FormMessage>
+          <PayPanel booking={quote.booking} pay={payByQuoteTokenAction.bind(null, token)} paid={(await searchParams)["paid"]} />
+        </>
       ) : quote.status === "superseded" ? (
         <FormMessage>{t("quotePage.superseded")}</FormMessage>
       ) : quote.status !== "sent" || quote.booking.status !== "quoted" ? (

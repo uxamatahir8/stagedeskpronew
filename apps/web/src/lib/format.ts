@@ -37,3 +37,8 @@ export function centsToInput(cents: number, locale: string) {
     useGrouping: false,
   });
 }
+
+/** First moment of the current calendar month (server time, Europe/Amsterdam in production). */
+export function startOfMonth(now = new Date()) {
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}

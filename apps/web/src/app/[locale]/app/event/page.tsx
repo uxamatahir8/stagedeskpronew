@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { type BookingStatus, type EventType, paymentStatus, todayInNetherlands } from "@stagedesk/core";
+import { PayPanel } from "@/components/booking/pay-panel";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -14,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
+import { payBookingAction } from "@/lib/pay-actions";
 import { requireAgency } from "@/lib/viewer";
 import { ReviewForm } from "./review-form";
 
@@ -56,7 +58,8 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
   }
 
   const today = todayInNetherlands();
-  const requested = (await searchParams)["booking"];
+  const query = await searchParams;
+  const requested = query["booking"];
   const upcoming = bookings.find((b) => b.eventDate && b.eventDate.toISOString().slice(0, 10) >= today && !["cancelled", "declined"].includes(b.status));
   const booking = bookings.find((b) => b.trackingCode === requested) ?? upcoming ?? bookings[0]!;
   const status = booking.status as BookingStatus;
@@ -165,6 +168,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
                 <p>{t("customerEvent.paidOf", { paid: euro(format, booking.paidCents), total: euro(format, booking.totalCents) })}</p>
+                <PayPanel booking={booking} pay={payBookingAction.bind(null, booking.id, "event")} paid={query["paid"]} />
                 {booking.invoices.map((inv) => (
                   <Button key={inv.id} variant="outline" size="sm" asChild className="w-fit">
                     <a href={`/api/pdf/invoice/${inv.id}?lang=${locale}`} target="_blank" rel="noopener">

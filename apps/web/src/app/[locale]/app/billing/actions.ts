@@ -1,0 +1,43 @@
+"use server";
+
+import { getLocale, getTranslations } from "next-intl/server";
+import { billingPortal, getStripe, subscriptionCheckout } from "@stagedesk/payments";
+import type { RedirectResult } from "@/components/redirect-button";
+import { paymentsErrorMessage } from "@/lib/billing";
+import { absoluteUrl } from "@/lib/mail";
+import { requireAgency } from "@/lib/viewer";
+
+
+/** Starts Stripe Checkout for a plan. Only the agency owner manages billing. */
+export async function choosePlanAction(planId: string, interval: "month" | "year"): Promise<RedirectResult> {
+  const { viewer, organization } = await requireAgency("agency.billing");
+  const stripe = getStripe();
+  if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
+  const locale = (await getLocale()) === "en" ? "en" : "nl";
+  try {
+    return {
+      url: await subscriptionCheckout(stripe, {
+        organizationId: organization.id,
+        planId,
+        interval,
+        email: viewer.user.email,
+        locale,
+        successUrl: absoluteUrl(locale, "/app/billing?checkout=success"),
+        cancelUrl: absoluteUrl(locale, "/app/billing"),
+      }),
+    };
+  } catch (error) {
+    return { message: await paymentsErrorMessage(error) };
+  }
+}
+
+export async function billingPortalAction(): Promise<RedirectResult> {
+  const { organization } = await requireAgency("agency.billing");
+  const stripe = getStripe();
+  if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
+  try {
+    return { url: await billingPortal(stripe, organization.id, absoluteUrl(await getLocale(), "/app/billing")) };
+  } catch (error) {
+    return { message: await paymentsErrorMessage(error) };
+  }
+}

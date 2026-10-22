@@ -20,6 +20,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { RefundDialog } from "../../payments/refund-dialog";
 import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import {
@@ -319,9 +320,18 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                         {t(`paymentKinds.${p.kind as "deposit"}`)} · {t(`paymentMethods.${p.method as "cash"}`)}
                         {p.reference && <span className="text-muted-foreground"> · {p.reference}</span>}
                       </span>
-                      <span className="flex gap-3 tabular-nums">
+                      <span className="flex items-center gap-3 tabular-nums">
                         <span className="text-muted-foreground">{eventDate(format, p.receivedAt, "short")}</span>
                         <span className="font-medium">{euro(format, p.amountCents)}</span>
+                        {p.refundedCents > 0 && <span className="text-muted-foreground">−{euro(format, p.refundedCents)}</span>}
+                        {canPay && p.kind !== "refund" && p.amountCents > p.refundedCents && (
+                          <RefundDialog
+                            paymentId={p.id}
+                            refundableCents={p.amountCents - p.refundedCents}
+                            refundableLabel={euro(format, p.amountCents - p.refundedCents)}
+                            online={p.method === "stripe"}
+                          />
+                        )}
                       </span>
                     </li>
                   ))}

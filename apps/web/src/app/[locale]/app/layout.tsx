@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
+import { can } from "@stagedesk/core";
 import { AppSidebar } from "@/components/shell/app-sidebar";
+import { SubscriptionBanner } from "@/components/shell/subscription-banner";
 import { TopBar } from "@/components/shell/top-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +27,7 @@ async function Shell({ children }: { children: React.ReactNode }) {
       <AppSidebar viewer={{ user, role, organization, memberships }} />
       <SidebarInset>
         <TopBar role={role} />
+        {organization && can(role, "agency.bookings") && <SubscriptionBanner organizationId={organization.id} role={role} />}
         <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">{children}</div>
       </SidebarInset>
     </SidebarProvider>

@@ -13,13 +13,14 @@ Build plan: https://claude.ai/artifact/2g4KvkN7ByigdSn5Vmh2aN
 | `packages/core` | Business rules: money, fees, settings, booking states. No framework code. |
 | `packages/db` | Prisma 7 schema, migrations, client, settings service, seed |
 | `packages/config` | Shared TypeScript config |
-| `docker/` | Local services (MySQL, Redis, S3 storage, Mailpit) |
+| `packages/payments` | Stripe: subscriptions, Connect onboarding, booking checkout, payouts, refunds, webhooks |
+| `docker/` | Local services (MySQL, Redis, S3 storage, Mailpit, stripe-mock) |
 
 ## Requirements
 
 - Node 22 (`nvm use 22`), pnpm via `corepack enable`
 - Docker Desktop
-- Stripe CLI (from Phase 5)
+- Stripe CLI, to forward webhooks once you add Stripe test keys
 
 ## First run
 
@@ -65,6 +66,23 @@ Spam protection: Cloudflare Turnstile (the `.env.example` keys are Cloudflare's 
 keys), a honeypot field, a minimum fill time, and Redis rate limits per IP and email.
 All other pages refuse to be framed by other sites.
 
+## Payments (Stripe)
+
+Without keys the app runs normally: plans, trials, limits and offline payments work, and online
+payment buttons explain that Stripe isn't connected yet. To switch on online payments:
+
+1. In the Stripe dashboard (test mode), enable Connect (Express) and turn on iDEAL and cards for EUR.
+2. Put `STRIPE_SECRET_KEY` and `STRIPE_PUBLISHABLE_KEY` in `.env`.
+3. Forward webhooks: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`, and put the
+   `whsec_...` it prints in `STRIPE_WEBHOOK_SECRET`. Restart `pnpm dev`.
+4. As platform admin, open Plans and save each plan once to create its Stripe prices.
+
+Money flow: the customer pays the platform on behalf of the agency (Checkout, iDEAL or card).
+After the event plus the dispute window (Settings), the worker splits each payment with the fee
+rule frozen when the quote was accepted and transfers the artist's and agency's shares. An
+unconnected artist's share goes to the agency and is recorded as owed. Refunds reverse transfers
+proportionally; the platform absorbs Stripe's unreturned fee. Every movement is in `ledger_entries`.
+
 ## Local services
 
 | Service | URL | Login |
@@ -73,6 +91,7 @@ All other pages refuse to be framed by other sites.
 | Mailpit (test inbox) | http://localhost:8025 | |
 | Storage console (RustFS) | http://localhost:9001 | `stagedesk` / `stagedesk-secret` |
 | MySQL | `localhost:3307` | `stagedesk` / `stagedesk` |
+| stripe-mock (API contract tests) | `localhost:12111` | |
 | Prisma Studio | `pnpm db:studio` | |
 
 ## Checks
@@ -81,6 +100,7 @@ All other pages refuse to be framed by other sites.
 pnpm lint && pnpm typecheck && pnpm test   # db tests use the stagedesk_test database
 bash scripts/smoke-accounts.sh             # accounts and agency isolation, against pnpm dev
 bash scripts/smoke-bookings.sh             # bookings, artists, customers and PDF access
+bash scripts/smoke-payments.sh             # billing and payment screens by role
 pnpm --filter @stagedesk/web e2e           # Playwright: full booking flow in a real browser
 ```
 

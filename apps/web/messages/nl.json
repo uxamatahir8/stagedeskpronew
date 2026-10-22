@@ -406,12 +406,14 @@
     "bank_transfer": "Bankoverschrijving",
     "cash": "Contant",
     "card": "Pin",
-    "other": "Anders"
+    "other": "Anders",
+    "stripe": "Online (Stripe)"
   },
   "paymentKinds": {
     "deposit": "Aanbetaling",
     "balance": "Restbedrag",
-    "other": "Overig"
+    "other": "Overig",
+    "refund": "Terugbetaling"
   },
   "assignmentStatus": {
     "pending": "Wacht op artiest",
