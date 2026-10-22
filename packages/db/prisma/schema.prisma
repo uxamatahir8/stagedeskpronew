@@ -36,6 +36,9 @@ model User {
   members          Member[]
   invitations      Invitation[]
   twofactors       TwoFactor[]
+  artistProfiles   Artist[]
+  bookings         Booking[]    @relation("BookingCustomer")
+  reviews          Review[]
 
   @@map("users")
 }
@@ -90,23 +93,38 @@ model Verification {
 
 /// An agency (tenant).
 model Organization {
-  id           String       @id @db.VarChar(64)
-  name         String       @db.VarChar(191)
-  slug         String       @unique @db.VarChar(191)
-  logo         String?      @db.Text
-  metadata     String?      @db.Text
-  kvkNumber    String?      @db.VarChar(16)
-  vatNumber    String?      @db.VarChar(20)
-  contactEmail String?      @db.VarChar(191)
-  phone        String?      @db.VarChar(32)
-  website      String?      @db.VarChar(191)
-  addressLine  String?      @db.VarChar(191)
-  postalCode   String?      @db.VarChar(16)
-  city         String?      @db.VarChar(96)
-  brandColor   String?      @db.VarChar(16)
-  createdAt    DateTime     @default(now())
+  id           String                 @id @db.VarChar(64)
+  name         String                 @db.VarChar(191)
+  slug         String                 @unique @db.VarChar(191)
+  logo         String?                @db.Text
+  metadata     String?                @db.Text
+  kvkNumber    String?                @db.VarChar(16)
+  vatNumber    String?                @db.VarChar(20)
+  contactEmail String?                @db.VarChar(191)
+  phone        String?                @db.VarChar(32)
+  website      String?                @db.VarChar(191)
+  addressLine  String?                @db.VarChar(191)
+  postalCode   String?                @db.VarChar(16)
+  city         String?                @db.VarChar(96)
+  brandColor   String?                @db.VarChar(16)
+  createdAt    DateTime               @default(now())
   members      Member[]
   invitations  Invitation[]
+  artists      Artist[]
+  unavailable  ArtistUnavailability[]
+  sharesOut    ArtistShare[]          @relation("ShareOwner")
+  sharesIn     ArtistShare[]          @relation("SharePartner")
+  bookings     Booking[]
+  assignments  BookingAssignment[]
+  events       BookingEvent[]
+  notes        BookingNote[]
+  services     ServiceItem[]
+  quotes       Quote[]
+  quoteItems   QuoteItem[]
+  payments     Payment[]
+  invoices     Invoice[]
+  counters     OrganizationCounter[]
+  reviews      Review[]
 
   @@map("organizations")
 }
@@ -166,6 +184,341 @@ model RateLimit {
   lastRequest BigInt
 
   @@map("rate_limits")
+}
+
+// ─── Artists ────────────────────────────────────────────────────────────
+
+/// A performer an agency books. userId links the artist's own login, if any.
+model Artist {
+  id              String                 @id @db.VarChar(64)
+  organizationId  String                 @db.VarChar(64)
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId          String?                @db.VarChar(64)
+  user            User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  stageName       String                 @db.VarChar(120)
+  bio             String?                @db.Text
+  /// string[]
+  genres          Json
+  photoUrl        String?                @db.Text
+  /// Default share of each booking payment, in basis points.
+  defaultShareBps Int                    @default(4000)
+  active          Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  assignments     BookingAssignment[]
+  unavailability  ArtistUnavailability[]
+  shares          ArtistShare[]
+  reviews         Review[]
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, active])
+  @@map("artists")
+}
+
+/// Dates an artist can't perform.
+model ArtistUnavailability {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  artistId       String       @db.VarChar(64)
+  artist         Artist       @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  date           DateTime     @db.Date
+  note           String?      @db.VarChar(191)
+  createdAt      DateTime     @default(now())
+
+  @@unique([artistId, date])
+  @@index([organizationId, date])
+  @@map("artist_unavailability")
+}
+
+/// An agency lending one of its artists to a partner agency.
+/// organizationId is the owner; the partner side is read via partnerOrganizationId.
+model ArtistShare {
+  id                    String       @id @db.VarChar(64)
+  organizationId        String       @db.VarChar(64)
+  organization          Organization @relation("ShareOwner", fields: [organizationId], references: [id], onDelete: Cascade)
+  artistId              String       @db.VarChar(64)
+  artist                Artist       @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  partnerOrganizationId String       @db.VarChar(64)
+  partnerOrganization   Organization @relation("SharePartner", fields: [partnerOrganizationId], references: [id], onDelete: Cascade)
+  /// pending | accepted | declined | revoked
+  status                String       @db.VarChar(16)
+  createdAt             DateTime     @default(now())
+  respondedAt           DateTime?
+
+  @@unique([artistId, partnerOrganizationId])
+  @@index([organizationId, status])
+  @@index([partnerOrganizationId, status])
+  @@map("artist_shares")
+}
+
+// ─── Bookings ───────────────────────────────────────────────────────────
+
+/// One event for one customer. Status changes go through transition() in core.
+model Booking {
+  id             String              @id @db.VarChar(64)
+  organizationId String              @db.VarChar(64)
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  /// Public reference, e.g. K7Q2M9XA.
+  trackingCode   String              @unique @db.VarChar(8)
+  status         String              @default("inquiry") @db.VarChar(16)
+  customerId     String?             @db.VarChar(64)
+  customer       User?               @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  eventType      String              @db.VarChar(24)
+  eventDate      DateTime?           @db.Date
+  startTime      String?             @db.VarChar(5)
+  endTime        String?             @db.VarChar(5)
+  venueName      String?             @db.VarChar(191)
+  venueAddress   String?             @db.VarChar(191)
+  venueCity      String?             @db.VarChar(96)
+  guestCount     Int?
+  budgetCents    Int?
+  /// The customer's own words from the inquiry.
+  message        String?             @db.Text
+  partnerName    String?             @db.VarChar(191)
+  /// string[]
+  dos            Json?
+  /// string[]
+  donts          Json?
+  playlistUrl    String?             @db.VarChar(500)
+  /// manual | booking_page
+  source         String              @default("manual") @db.VarChar(16)
+  /// Copied from the accepted quote.
+  totalCents     Int                 @default(0)
+  depositCents   Int                 @default(0)
+  /// Sum of received payments, kept in step by recordPayment().
+  paidCents      Int                 @default(0)
+  quoteExpiresAt DateTime?
+  cancelReason   String?             @db.Text
+  createdById    String?             @db.VarChar(64)
+  quotedAt       DateTime?
+  bookedAt       DateTime?
+  confirmedAt    DateTime?
+  completedAt    DateTime?
+  settledAt      DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  assignments    BookingAssignment[]
+  events         BookingEvent[]
+  notes          BookingNote[]
+  quotes         Quote[]
+  payments       Payment[]
+  invoices       Invoice[]
+  review         Review?
+
+  @@index([organizationId, status])
+  @@index([organizationId, eventDate])
+  @@index([customerId])
+  @@map("bookings")
+}
+
+/// An artist asked to perform at a booking. One open assignment per booking.
+model BookingAssignment {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  artistId       String       @db.VarChar(64)
+  artist         Artist       @relation(fields: [artistId], references: [id], onDelete: Restrict)
+  /// pending | accepted | declined | withdrawn
+  status         String       @db.VarChar(16)
+  /// Artist's share for this booking, copied when assigned.
+  shareBps       Int
+  declineReason  String?      @db.Text
+  respondedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([bookingId, status])
+  @@index([artistId, status])
+  @@index([organizationId])
+  @@map("booking_assignments")
+}
+
+/// Timeline of everything that happened to a booking.
+model BookingEvent {
+  id             BigInt       @id @default(autoincrement())
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  type           String       @db.VarChar(32)
+  actorId        String?      @db.VarChar(64)
+  data           Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([organizationId])
+  @@map("booking_events")
+}
+
+/// Internal notes; never shown to customers or artists.
+model BookingNote {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  authorId       String       @db.VarChar(64)
+  body           String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([organizationId])
+  @@map("booking_notes")
+}
+
+// ─── Quotes ─────────────────────────────────────────────────────────────
+
+/// An agency's reusable quote lines, e.g. "DJ, per hour".
+model ServiceItem {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String       @db.VarChar(191)
+  description    String?      @db.Text
+  /// hour | piece | flat
+  unit           String       @db.VarChar(16)
+  unitPriceCents Int
+  vatBps         Int          @default(2100)
+  active         Boolean      @default(true)
+  position       Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, active, position])
+  @@map("service_items")
+}
+
+/// A versioned price offer for a booking. Totals are stored as sent.
+model Quote {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  version        Int
+  /// draft | sent | accepted | superseded | declined
+  status         String       @db.VarChar(16)
+  /// Secret for the customer's /q/<token> link.
+  token          String       @unique @db.VarChar(64)
+  notes          String?      @db.Text
+  depositBps     Int
+  subtotalCents  Int
+  vatCents       Int
+  totalCents     Int
+  depositCents   Int
+  /// VatGroup[]
+  vatGroups      Json
+  expiresAt      DateTime
+  sentAt         DateTime?
+  acceptedAt     DateTime?
+  acceptedByName String?      @db.VarChar(191)
+  createdById    String?      @db.VarChar(64)
+  createdAt      DateTime     @default(now())
+  items          QuoteItem[]
+
+  @@unique([bookingId, version])
+  @@index([organizationId, status])
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id                 String       @id @db.VarChar(64)
+  organizationId     String       @db.VarChar(64)
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  quoteId            String       @db.VarChar(64)
+  quote              Quote        @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  position           Int
+  description        String       @db.VarChar(500)
+  quantityHundredths Int
+  unitPriceCents     Int
+  vatBps             Int
+  subtotalCents      Int
+
+  @@index([quoteId, position])
+  @@index([organizationId])
+  @@map("quote_items")
+}
+
+// ─── Money ──────────────────────────────────────────────────────────────
+
+/// Money received for a booking. Offline methods now; Stripe joins in phase 5.
+model Payment {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  /// deposit | balance | other
+  kind           String       @db.VarChar(16)
+  /// bank_transfer | cash | card | other
+  method         String       @db.VarChar(24)
+  amountCents    Int
+  receivedAt     DateTime
+  reference      String?      @db.VarChar(191)
+  recordedById   String?      @db.VarChar(64)
+  createdAt      DateTime     @default(now())
+
+  @@index([bookingId])
+  @@index([organizationId, receivedAt])
+  @@map("payments")
+}
+
+/// Issued invoice. `data` is a snapshot so later edits don't change it.
+model Invoice {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  number         String       @db.VarChar(16)
+  issuedAt       DateTime
+  dueAt          DateTime?
+  subtotalCents  Int
+  vatCents       Int
+  totalCents     Int
+  data           Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, number])
+  @@index([bookingId])
+  @@map("invoices")
+}
+
+/// Per-agency sequences, e.g. invoice numbers per year.
+model OrganizationCounter {
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  key            String       @db.VarChar(32)
+  value          Int
+
+  @@id([organizationId, key])
+  @@map("organization_counters")
+}
+
+/// A customer's review after a completed booking; shown once approved.
+model Review {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @unique @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId     String       @db.VarChar(64)
+  customer       User         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  artistId       String?      @db.VarChar(64)
+  artist         Artist?      @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  rating         Int
+  comment        String?      @db.Text
+  /// pending | approved | rejected
+  status         String       @default("pending") @db.VarChar(16)
+  moderatedAt    DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, status])
+  @@index([artistId, status])
+  @@map("reviews")
 }
 
 // ─── Platform settings ──────────────────────────────────────────────────

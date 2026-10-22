@@ -6,7 +6,24 @@ import { prisma } from "./client";
  * Add every new tenant model here; the tenant tests check this list
  * against the schema so a model can't be forgotten.
  */
-export const tenantModels = ["Member", "Invitation"] as const satisfies readonly Prisma.ModelName[];
+export const tenantModels = [
+  "Member",
+  "Invitation",
+  "Artist",
+  "ArtistUnavailability",
+  "ArtistShare",
+  "Booking",
+  "BookingAssignment",
+  "BookingEvent",
+  "BookingNote",
+  "ServiceItem",
+  "Quote",
+  "QuoteItem",
+  "Payment",
+  "Invoice",
+  "OrganizationCounter",
+  "Review",
+] as const satisfies readonly Prisma.ModelName[];
 
 const scopedReads = new Set(["findMany", "findFirst", "findFirstOrThrow", "count", "aggregate", "groupBy"]);
 const scopedWrites = new Set(["updateMany", "updateManyAndReturn", "deleteMany"]);

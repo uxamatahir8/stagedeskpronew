@@ -7,6 +7,7 @@ const run = `t${Date.now().toString(36)}`;
 const orgA = `${run}-org-a`;
 const orgB = `${run}-org-b`;
 const ids = { userA: `${run}-user-a`, userB: `${run}-user-b`, memberA: `${run}-mem-a`, memberB: `${run}-mem-b` };
+const ids_ = ids;
 
 beforeAll(async () => {
   await prisma.organization.createMany({
@@ -69,6 +70,15 @@ describe("tenantDb", () => {
       },
     });
     expect(created.organizationId).toBe(orgA);
+  });
+
+  it("keeps the scope inside interactive transactions", async () => {
+    const ids = await tenantDb(orgA).$transaction(async (tx) => {
+      const rows = await tx.member.findMany({ where: { id: { in: [ids_.memberA, ids_.memberB] } } });
+      const updated = await tx.member.updateMany({ where: { id: ids_.memberB }, data: { role: "agency_owner" } });
+      return { rows: rows.map((r) => r.id), updated: updated.count };
+    });
+    expect(ids).toEqual({ rows: [ids_.memberA], updated: 0 });
   });
 
   it("refuses lookups by unique key, which can't be scoped", async () => {
