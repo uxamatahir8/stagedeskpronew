@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "Prisma.prisma",
+    "dbaeumer.vscode-eslint",
+    "bradlc.vscode-tailwindcss",
+    "vitest.explorer",
+    "ms-azuretools.vscode-containers",
+    "EditorConfig.EditorConfig"
+  ]
+}

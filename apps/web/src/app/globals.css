@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Placeholder tokens until the design system lands (Phase 1, shadcn/ui). */
+:root {
+  --background: #fbfafd;
+  --foreground: #1b1724;
+  --muted: #5a5367;
+  --brand: #5b2a86;
+  --line: #e2dceb;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-line: var(--line);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #15121b;
+    --foreground: #ece8f3;
+    --muted: #a9a1b8;
+    --brand: #c9a2f0;
+    --line: #342c40;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+}

@@ -1,0 +1,25 @@
+{
+  "name": "stagedesk",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22.12 <23"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "services:up": "docker compose -f docker/compose.dev.yml up -d",
+    "services:down": "docker compose -f docker/compose.dev.yml down",
+    "db:generate": "pnpm --filter @stagedesk/db generate",
+    "db:migrate": "pnpm --filter @stagedesk/db migrate",
+    "db:seed": "pnpm --filter @stagedesk/db seed",
+    "db:studio": "pnpm --filter @stagedesk/db studio"
+  },
+  "devDependencies": {
+    "turbo": "2.11.10",
+    "typescript": "5.9.3"
+  }
+}

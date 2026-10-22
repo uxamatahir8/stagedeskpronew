@@ -1,0 +1,17 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.workingDirectories": [{ "pattern": "apps/*" }, { "pattern": "packages/*" }],
+  "files.exclude": {
+    "**/.turbo": true,
+    "**/src/generated": true
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/src/generated": true
+  }
+}

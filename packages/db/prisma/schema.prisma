@@ -1,0 +1,38 @@
+// StageDesk v2 schema. Conventions:
+// - money is integer cents (Int), percentages are basis points (Int)
+// - every tenant table gets organizationId + an index on it
+// - table names are snake_case plural via @@map
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+/// Typed key/value settings edited by the super admin. Keys and shapes are
+/// defined in @stagedesk/core settingsRegistry.
+model PlatformSetting {
+  key         String   @id @db.VarChar(100)
+  value       Json
+  updatedById String?  @db.VarChar(64)
+  updatedAt   DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+/// Append-only history of every settings change.
+model SettingChange {
+  id          BigInt   @id @default(autoincrement())
+  key         String   @db.VarChar(100)
+  oldValue    Json?
+  newValue    Json
+  changedById String?  @db.VarChar(64)
+  changedAt   DateTime @default(now())
+
+  @@index([key, changedAt])
+  @@map("settings_history")
+}
