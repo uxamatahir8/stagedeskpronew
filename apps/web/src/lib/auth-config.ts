@@ -15,8 +15,9 @@ const roleLabels: Record<EmailLocale, Record<string, string>> = {
   en: { agency_owner: "owner", agency_admin: "admin", agency_staff: "staff member", artist: "artist", customer: "customer" },
 };
 
-function localeOf(user: { locale?: unknown } | null | undefined): EmailLocale {
-  return user?.locale === "en" ? "en" : "nl";
+// Callbacks receive the base user type; our `locale` field is there at runtime.
+function localeOf(user: object | null | undefined): EmailLocale {
+  return user && "locale" in user && user.locale === "en" ? "en" : "nl";
 }
 
 /** Locale-aware app URL: Dutch has no prefix, English lives under /en. */

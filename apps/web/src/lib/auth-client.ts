@@ -10,11 +10,7 @@ export const authClient = createAuthClient({
     inferAdditionalFields<typeof auth>(),
     organizationClient({ ac, roles: organizationRoles }),
     emailOTPClient(),
-    twoFactorClient({
-      onTwoFactorRedirect() {
-        const prefix = window.location.pathname.startsWith("/en") ? "/en" : "";
-        window.location.href = `${prefix}/two-factor`;
-      },
-    }),
+    // Sign-in forms check `twoFactorRedirect` in the response and route to /two-factor.
+    twoFactorClient(),
   ],
 });
