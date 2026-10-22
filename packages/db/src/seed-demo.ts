@@ -103,4 +103,159 @@ export async function seedDemo(prisma: PrismaClient) {
     }
     console.log(`  ready    agency ${a.name}`);
   }
+
+  await seedBookingData(prisma, ids);
+}
+
+async function orgId(prisma: PrismaClient, slug: string) {
+  return (await prisma.organization.findUniqueOrThrow({ where: { slug }, select: { id: true } })).id;
+}
+
+/** Artists, services and bookings in every stage, created through the real booking operations. */
+async function seedBookingData(prisma: PrismaClient, ids: Map<string, string>) {
+  const feest = await orgId(prisma, "feestband-utrecht");
+  const rot = await orgId(prisma, "rotterdam-dj-collectief");
+  if (await prisma.booking.count({ where: { organizationId: { in: [feest, rot] } } })) {
+    console.log("  kept     demo bookings");
+    return;
+  }
+  const b = await import("./bookings");
+  const owner = ids.get("eigenaar@feestband.local")!;
+  const rotOwner = ids.get("eigenaar@rotterdamdj.local")!;
+
+  const artist = (organizationId: string, stageName: string, genres: string[], userEmail?: string, shareBps = 4_000) =>
+    prisma.artist.create({
+      data: {
+        id: randomUUID(),
+        organizationId,
+        userId: userEmail ? ids.get(userEmail)! : null,
+        stageName,
+        genres,
+        defaultShareBps: shareBps,
+        bio: null,
+      },
+    });
+  const sem = await artist(feest, "DJ Sem", ["Top 40", "House", "Nederlandstalig"], "dj.sem@feestband.local");
+  await artist(feest, "Lotte Sax & Beats", ["Deep house", "Lounge"], undefined, 4_500);
+  await artist(feest, "DJ Ruben", ["80s", "90s", "Disco"]);
+  const yara = await artist(rot, "DJ Yara", ["Afro house", "R&B"], "dj.yara@rotterdamdj.local");
+  await prisma.artistShare.create({
+    data: { id: randomUUID(), organizationId: rot, artistId: yara.id, partnerOrganizationId: feest, status: "accepted", respondedAt: new Date() },
+  });
+
+  const services = [
+    { name: "DJ, per uur", unit: "hour", unitPriceCents: 12_500, vatBps: 2_100 },
+    { name: "Ceremoniegeluid", unit: "flat", unitPriceCents: 25_000, vatBps: 2_100 },
+    { name: "Lichtshow", unit: "flat", unitPriceCents: 17_500, vatBps: 2_100 },
+    { name: "Saxofonist, per uur", unit: "hour", unitPriceCents: 9_500, vatBps: 2_100 },
+    { name: "Reiskosten", unit: "flat", unitPriceCents: 4_500, vatBps: 0 },
+  ];
+  for (const [i, s] of services.entries()) {
+    for (const organizationId of [feest, rot]) {
+      await prisma.serviceItem.create({ data: { ...s, id: randomUUID(), organizationId, position: i } });
+    }
+  }
+
+  // Extra Feestband customers.
+  const customer = async (email: string, name: string, organizationId: string) => {
+    const user =
+      (await prisma.user.findUnique({ where: { email } })) ??
+      (await prisma.user.create({ data: { id: randomUUID(), email, name, emailVerified: true } }));
+    await prisma.member.upsert({
+      where: { organizationId_userId: { organizationId, userId: user.id } },
+      create: { id: randomUUID(), organizationId, userId: user.id, role: "customer" },
+      update: {},
+    });
+    return user.id;
+  };
+  const femke = await customer("femke@klant.local", "Femke Visser", feest);
+  const events = await customer("events@bedrijf.local", "Rabo Utrecht Events", feest);
+  const lotte = await customer("lotte@klant.local", "Lotte Jansen", feest);
+  const sanne = ids.get("sanne@klant.local")!;
+  const bram = ids.get("bram@klant.local")!;
+
+  const lines = (hours: number) => [
+    { description: "DJ, per uur", quantityHundredths: hours * 100, unitPriceCents: 12_500, vatBps: 2_100 },
+    { description: "Lichtshow", quantityHundredths: 100, unitPriceCents: 17_500, vatBps: 2_100 },
+    { description: "Reiskosten", quantityHundredths: 100, unitPriceCents: 4_500, vatBps: 0 },
+  ];
+  const now = new Date();
+  const earlier = new Date(now.getTime() - 30 * 86_400_000);
+
+  // New corporate inquiry waiting for a quote.
+  await b.createBooking(
+    feest,
+    {
+      customerId: events,
+      eventType: "corporate",
+      eventDate: "2026-12-18",
+      startTime: "20:00",
+      endTime: "00:30",
+      venueName: "Fort aan de Klop",
+      venueCity: "Utrecht",
+      guestCount: 180,
+      budgetCents: 250_000,
+      message: "Kerstborrel voor het team. Graag een DJ met wat lichteffecten.",
+    },
+    null,
+  );
+
+  // Quoted wedding, waiting for the couple.
+  const femkeWedding = await b.createBooking(
+    feest,
+    { customerId: femke, eventType: "wedding", eventDate: "2027-08-21", venueName: "Kasteel de Haar", venueCity: "Haarzuilens", guestCount: 120, partnerName: "Bram" },
+    owner,
+  );
+  await b.sendQuote(feest, femkeWedding.id, { lines: lines(6), depositBps: 3_000, expiresInDays: 14, notes: "Inclusief ceremoniemuziek op aanvraag." }, owner, now);
+
+  // Sanne's wedding: accepted, artist confirmed, deposit in.
+  const sanneWedding = await b.createBooking(
+    feest,
+    {
+      customerId: sanne,
+      eventType: "wedding",
+      eventDate: "2027-06-12",
+      startTime: "19:30",
+      endTime: "01:00",
+      venueName: "Landgoed Zonheuvel",
+      venueCity: "Doorn",
+      guestCount: 140,
+      partnerName: "Daan",
+    },
+    owner,
+  );
+  await prisma.booking.update({
+    where: { id: sanneWedding.id },
+    data: { dos: ["Openingsdans: Perfect – Ed Sheeran", "Veel Nederlandstalig na 23:00"], donts: ["Geen schlagers"] },
+  });
+  const sanneQuote = await b.sendQuote(feest, sanneWedding.id, { lines: lines(6), depositBps: 3_000, expiresInDays: 14 }, owner, earlier);
+  await b.acceptQuote(feest, sanneQuote.id, { actor: "customer", actorId: sanne, name: "Sanne de Vries" }, earlier);
+  await b.assignArtist(feest, sanneWedding.id, sem.id, owner, earlier);
+  const pending = await prisma.bookingAssignment.findFirstOrThrow({ where: { bookingId: sanneWedding.id, status: "pending" } });
+  await b.respondToAssignment(pending.id, ids.get("dj.sem@feestband.local")!, { accept: true }, earlier);
+  await b.recordPayment(feest, sanneWedding.id, { amountCents: sanneQuote.depositCents, kind: "deposit", method: "bank_transfer", receivedAt: earlier, reference: "NL12RABO0123456789" }, owner);
+
+  // A past birthday: done and settled.
+  const past = new Date("2026-08-01T10:00:00Z");
+  const birthday = await b.createBooking(
+    feest,
+    { customerId: lotte, eventType: "birthday", eventDate: "2026-09-26", venueName: "Café de Zaak", venueCity: "Utrecht", guestCount: 60 },
+    owner,
+  );
+  const bq = await b.sendQuote(feest, birthday.id, { lines: lines(4), depositBps: 0, expiresInDays: 14 }, owner, past);
+  await b.acceptQuote(feest, bq.id, { actor: "agency", actorId: owner, name: "Lotte Jansen (telefonisch)" }, past);
+  await b.assignArtist(feest, birthday.id, sem.id, owner, past);
+  const bp = await prisma.bookingAssignment.findFirstOrThrow({ where: { bookingId: birthday.id, status: "pending" } });
+  await b.respondToAssignment(bp.id, ids.get("dj.sem@feestband.local")!, { accept: true }, past);
+  await b.changeBookingStatus(feest, birthday.id, "complete", { actor: "agency", actorId: owner }, now);
+  await b.recordPayment(feest, birthday.id, { amountCents: bq.totalCents, kind: "balance", method: "bank_transfer", receivedAt: now }, owner);
+  await b.issueInvoice(feest, birthday.id, owner, now);
+  await b.changeBookingStatus(feest, birthday.id, "settle", { actor: "agency", actorId: owner }, now);
+
+  // Rotterdam: Bram's party, accepted, no artist yet.
+  const party = await b.createBooking(rot, { customerId: bram, eventType: "party", eventDate: "2027-03-14", venueCity: "Rotterdam", guestCount: 80 }, rotOwner);
+  const pq = await b.sendQuote(rot, party.id, { lines: lines(5), depositBps: 2_500, expiresInDays: 14 }, rotOwner, now);
+  await b.acceptQuote(rot, pq.id, { actor: "customer", actorId: bram, name: "Bram Visser" }, now);
+
+  console.log("  created  demo artists, services and bookings");
 }

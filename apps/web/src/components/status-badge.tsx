@@ -1,5 +1,5 @@
 import { useTranslations } from "next-intl";
-import type { BookingStatus } from "@stagedesk/core";
+import type { BookingStatus, PaymentStatus } from "@stagedesk/core";
 import { cn } from "@/lib/utils";
 
 type Tone = "neutral" | "info" | "brand" | "success" | "warning" | "danger";
@@ -44,3 +44,24 @@ export function BookingStatusBadge({ status }: { status: BookingStatus }) {
   const t = useTranslations("bookingStatus");
   return <Pill tone={bookingTone[status]}>{t(status)}</Pill>;
 }
+
+const paymentTone: Record<PaymentStatus, Tone> = {
+  unpaid: "warning",
+  partially_paid: "info",
+  deposit_paid: "brand",
+  paid: "success",
+};
+
+export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+  const t = useTranslations("paymentStatus");
+  return <Pill tone={paymentTone[status]}>{t(status)}</Pill>;
+}
+
+const assignmentTone: Record<string, Tone> = { pending: "warning", accepted: "success", declined: "danger", withdrawn: "neutral" };
+
+export function AssignmentStatusBadge({ status }: { status: "pending" | "accepted" | "declined" | "withdrawn" }) {
+  const t = useTranslations("assignmentStatus");
+  return <Pill tone={assignmentTone[status]}>{t(status)}</Pill>;
+}
+
+export type { Tone };
