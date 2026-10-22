@@ -1,7 +1,17 @@
 "use client";
 
+import { CheckIcon, ChevronsUpDownIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useTransition } from "react";
 import type { Role } from "@stagedesk/core";
+import { switchOrganization } from "@/app/[locale]/app/actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -16,35 +26,21 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { footerNavigationFor, navigationFor, type NavItem } from "@/config/navigation";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import type { Viewer } from "@/lib/viewer";
 import { UserMenu } from "./user-menu";
 
-const platformRoles: Role[] = ["platform_admin", "affiliate"];
+export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships"> & { role: Role };
 
-export function AppSidebar({ role }: { role: Role }) {
+export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
   const t = useTranslations();
-  const groups = navigationFor(role);
-  const footer = footerNavigationFor(role);
-  const workspace = platformRoles.includes(role) ? t("shell.demoPlatform") : t("shell.demoAgency");
+  const groups = navigationFor(viewer.role);
+  const footer = footerNavigationFor(viewer.role);
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <Link href="/app">
-                <span className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
-                  S
-                </span>
-                <span className="grid flex-1 text-left leading-tight">
-                  <span className="truncate font-semibold">{workspace}</span>
-                  <span className="truncate text-xs text-sidebar-foreground/70">{t(`roles.${role}`)}</span>
-                </span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <WorkspaceSwitcher viewer={viewer} />
       </SidebarHeader>
 
       <SidebarContent>
@@ -60,10 +56,86 @@ export function AppSidebar({ role }: { role: Role }) {
 
       <SidebarFooter>
         <NavMenu items={footer} />
-        <UserMenu role={role} />
+        <UserMenu viewer={viewer} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+function WorkspaceMark({ name, logo }: { name: string; logo?: string | null }) {
+  if (logo) {
+    // eslint-disable-next-line @next/next/no-img-element -- uploaded logos are served from /files
+    return <img src={logo} alt="" className="size-8 shrink-0 rounded-lg bg-white object-contain" />;
+  }
+  return (
+    <span className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sm font-bold text-sidebar-primary-foreground">
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
+function WorkspaceSwitcher({ viewer }: { viewer: ShellViewer }) {
+  const t = useTranslations();
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const name = viewer.organization?.name ?? t("shell.platform");
+  const label = (
+    <>
+      <WorkspaceMark name={name} logo={viewer.organization?.logo} />
+      <span className="grid flex-1 text-left leading-tight">
+        <span className="truncate font-semibold">{name}</span>
+        <span className="truncate text-xs text-sidebar-foreground/70">{t(`roles.${viewer.role}`)}</span>
+      </span>
+    </>
+  );
+
+  if (viewer.memberships.length < 2) {
+    return (
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" asChild>
+            <Link href="/app">{label}</Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    );
+  }
+
+  function choose(organizationId: string) {
+    startTransition(async () => {
+      await switchOrganization(organizationId);
+      router.push("/app");
+      router.refresh();
+    });
+  }
+
+  return (
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton size="lg" disabled={pending} className="data-[state=open]:bg-sidebar-accent">
+              {label}
+              <ChevronsUpDownIcon className="ml-auto" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-60">
+            <DropdownMenuLabel className="text-xs text-muted-foreground">{t("shell.switchAgency")}</DropdownMenuLabel>
+            {viewer.memberships.map((m) => (
+              <DropdownMenuItem key={m.id} onSelect={() => choose(m.id)}>
+                <WorkspaceMark name={m.name} logo={m.logo} />
+                <span className="grid flex-1 leading-tight">
+                  <span className="truncate">{m.name}</span>
+                  <span className="truncate text-xs text-muted-foreground">{t(`roles.${m.role}`)}</span>
+                </span>
+                {m.id === viewer.organization?.id && <CheckIcon />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }
 

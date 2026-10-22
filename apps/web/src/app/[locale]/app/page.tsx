@@ -10,7 +10,7 @@ import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
-import { getPreviewRole } from "@/lib/preview-role";
+import { requireViewer } from "@/lib/viewer";
 
 type StatKey = keyof Messages["home"]["stats"];
 
@@ -43,11 +43,12 @@ export default async function DashboardHome({ params }: PageProps<"/[locale]/app
 }
 
 async function RoleHome() {
-  const [role, t] = await Promise.all([getPreviewRole(), getTranslations("home")]);
+  const [{ role, user }, t] = await Promise.all([requireViewer(), getTranslations("home")]);
+  const firstName = user.name.split(/\s+/)[0] ?? user.name;
 
   return (
     <div className="grid gap-8">
-      <PageHeader title={t("greeting")} description={t(`subtitle.${role}`)} />
+      <PageHeader title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statsByRole[role].map((key) => (

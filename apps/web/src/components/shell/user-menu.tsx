@@ -1,10 +1,17 @@
 "use client";
 
-import { ChevronsUpDownIcon, LanguagesIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon } from "lucide-react";
+import {
+  ChevronsUpDownIcon,
+  LanguagesIcon,
+  LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
+  SunIcon,
+  UserRoundIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
-import type { Role } from "@stagedesk/core";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -20,12 +27,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { authClient } from "@/lib/auth-client";
+import type { ShellViewer } from "./app-sidebar";
 
 const languageNames = { nl: "Nederlands", en: "English" } as const;
 
-export function UserMenu({ role }: { role: Role }) {
+export function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+export function UserMenu({ viewer }: { viewer: ShellViewer }) {
   const t = useTranslations();
   const { isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
@@ -38,6 +56,12 @@ export function UserMenu({ role }: { role: Role }) {
     startTransition(() => router.replace(pathname, { locale: next as (typeof routing.locales)[number] }));
   }
 
+  async function signOut() {
+    await authClient.signOut();
+    router.push("/sign-in");
+    router.refresh();
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -45,11 +69,11 @@ export function UserMenu({ role }: { role: Role }) {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
               <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">DU</AvatarFallback>
+                <AvatarFallback className="rounded-lg">{initials(viewer.user.name)}</AvatarFallback>
               </Avatar>
               <span className="grid flex-1 text-left leading-tight">
-                <span className="truncate font-medium">{t("shell.demoUser")}</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">{t(`roles.${role}`)}</span>
+                <span className="truncate font-medium">{viewer.user.name}</span>
+                <span className="truncate text-xs text-sidebar-foreground/70">{viewer.user.email}</span>
               </span>
               <ChevronsUpDownIcon className="ml-auto" />
             </SidebarMenuButton>
@@ -61,10 +85,16 @@ export function UserMenu({ role }: { role: Role }) {
             sideOffset={4}
           >
             <DropdownMenuLabel className="font-normal">
-              <div className="font-medium">{t("shell.demoUser")}</div>
-              <div className="text-xs text-muted-foreground">{t(`roles.${role}`)}</div>
+              <div className="font-medium">{viewer.user.name}</div>
+              <div className="text-xs text-muted-foreground">{viewer.user.email}</div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/app/profile">
+                <UserRoundIcon />
+                {t("shell.profile")}
+              </Link>
+            </DropdownMenuItem>
 
             <DropdownMenuSub>
               <DropdownMenuSubTrigger>
@@ -106,12 +136,9 @@ export function UserMenu({ role }: { role: Role }) {
             </DropdownMenuSub>
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled>
+            <DropdownMenuItem onSelect={signOut}>
               <LogOutIcon />
-              <span className="grid">
-                {t("shell.signOut")}
-                <span className="text-xs text-muted-foreground">{t("shell.signOutSoon")}</span>
-              </span>
+              {t("shell.signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

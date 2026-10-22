@@ -24,7 +24,6 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { findNavItem } from "@/config/navigation";
 import { Link, usePathname } from "@/i18n/navigation";
 import { CommandMenu } from "./command-menu";
-import { RoleSwitcher } from "./role-switcher";
 
 export function TopBar({ role }: { role: Role }) {
   const t = useTranslations();
@@ -59,7 +58,6 @@ export function TopBar({ role }: { role: Role }) {
 
       <div className="ml-auto flex items-center gap-2">
         <CommandMenu role={role} />
-        {process.env.NODE_ENV !== "production" && <RoleSwitcher role={role} />}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label={t("shell.notifications")}>

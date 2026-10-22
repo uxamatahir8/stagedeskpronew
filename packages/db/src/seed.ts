@@ -19,4 +19,11 @@ for (const key of settingKeys) {
   console.log(`  created  ${key}`);
 }
 
+// Demo accounts for every role, never in production.
+if (process.env["NODE_ENV"] !== "production") {
+  const { seedDemo, DEMO_PASSWORD } = await import("./seed-demo");
+  await seedDemo(prisma);
+  console.log(`\n  Demo accounts use the password: ${DEMO_PASSWORD}`);
+}
+
 await prisma.$disconnect();

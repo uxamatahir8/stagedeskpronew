@@ -9,6 +9,10 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Enables forbidden() for permission checks (403 page).
+    authInterrupts: true,
+  },
   transpilePackages: ["@stagedesk/core", "@stagedesk/db"],
   serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb"],
   turbopack: {

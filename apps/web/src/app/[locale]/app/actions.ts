@@ -1,11 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { isRole } from "@stagedesk/core";
-import { PREVIEW_ROLE_COOKIE } from "@/lib/preview-role";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
-export async function setPreviewRole(role: string) {
-  if (process.env.NODE_ENV === "production") throw new Error("Role preview is only available in development.");
-  if (!isRole(role)) throw new Error(`Unknown role: ${role}`);
-  (await cookies()).set(PREVIEW_ROLE_COOKIE, role, { path: "/", sameSite: "lax", httpOnly: true });
+/** Makes another of the user's agencies active. Better Auth checks the membership. */
+export async function switchOrganization(organizationId: string) {
+  await auth.api.setActiveOrganization({ headers: await headers(), body: { organizationId } });
 }

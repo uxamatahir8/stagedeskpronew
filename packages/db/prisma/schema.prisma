@@ -28,6 +28,7 @@ model User {
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
   platformRole     String?      @db.VarChar(32)
   locale           String?      @default("nl") @db.VarChar(8)
+  phone            String?      @db.VarChar(32)
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   sessions         Session[]

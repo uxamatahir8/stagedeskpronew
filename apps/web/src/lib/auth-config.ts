@@ -1,6 +1,6 @@
 // Auth configuration. Import `auth` from "./auth" in app code; this file has no
 // server-only guard so the Better Auth CLI can load it to generate the schema.
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
@@ -14,6 +14,11 @@ const roleLabels: Record<EmailLocale, Record<string, string>> = {
   nl: { agency_owner: "eigenaar", agency_admin: "beheerder", agency_staff: "medewerker", artist: "artiest", customer: "klant" },
   en: { agency_owner: "owner", agency_admin: "admin", agency_staff: "staff member", artist: "artist", customer: "customer" },
 };
+
+/** Team roles that can be invited. Customers are added from the customers page. */
+const invitableRoles = new Set<string>(["agency_admin", "agency_staff", "artist"]);
+/** Roles a team member can be moved between (owner is further limited to owners by Better Auth). */
+const assignableRoles = new Set<string>(["agency_owner", "agency_admin", "agency_staff", "artist"]);
 
 // Callbacks receive the base user type; our `locale` field is there at runtime.
 function localeOf(user: object | null | undefined): EmailLocale {
@@ -40,6 +45,7 @@ export const auth = betterAuth({
       // Set by seed/admin tools only; never accepted from a form.
       platformRole: { type: "string", required: false, input: false },
       locale: { type: "string", required: false, defaultValue: "nl", input: true },
+      phone: { type: "string", required: false, input: true },
     },
   },
 
@@ -93,6 +99,18 @@ export const auth = betterAuth({
       invitationExpiresIn: 60 * 60 * 24 * 7,
       cancelPendingInvitationsOnReInvite: true,
       requireEmailVerificationOnInvitation: true,
+      // Better Auth already stops non-owners from granting the owner role.
+      // These keep invitations and role changes to single team roles.
+      organizationHooks: {
+        beforeCreateInvitation: async ({ invitation }) => {
+          if (!invitableRoles.has(invitation.role)) throw new APIError("BAD_REQUEST", { message: "This role can't be invited." });
+        },
+        beforeUpdateMemberRole: async ({ member, newRole }) => {
+          if (member.role === "customer" || !assignableRoles.has(newRole)) {
+            throw new APIError("BAD_REQUEST", { message: "This role change isn't allowed." });
+          }
+        },
+      },
       schema: {
         organization: {
           additionalFields: {

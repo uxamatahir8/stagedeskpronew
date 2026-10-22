@@ -5,7 +5,7 @@ import { TopBar } from "@/components/shell/top-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
-import { getPreviewRole } from "@/lib/preview-role";
+import { requireViewer } from "@/lib/viewer";
 
 export default async function DashboardLayout({ children, params }: LayoutProps<"/[locale]/app">) {
   const { locale } = await params;
@@ -19,10 +19,10 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
 }
 
 async function Shell({ children }: { children: React.ReactNode }) {
-  const role = await getPreviewRole();
+  const { user, role, organization, memberships } = await requireViewer();
   return (
     <SidebarProvider>
-      <AppSidebar role={role} />
+      <AppSidebar viewer={{ user, role, organization, memberships }} />
       <SidebarInset>
         <TopBar role={role} />
         <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">{children}</div>
