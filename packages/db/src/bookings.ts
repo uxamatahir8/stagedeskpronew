@@ -13,6 +13,7 @@ import {
   transition,
   type TransitionError,
 } from "@stagedesk/core";
+import { effectiveFeeSnapshot } from "./billing";
 import { prisma } from "./client";
 import { Prisma } from "./generated/prisma/client";
 import { tenantDb, type TenantDb } from "./tenant";
@@ -213,6 +214,9 @@ export async function acceptQuote(
   by: { actor: "customer" | "agency"; actorId: string | null; name: string },
   now = new Date(),
 ) {
+  // The platform fee in force now is frozen onto the booking, so later
+  // changes to fee settings only affect new bookings.
+  const feeSnapshot = await effectiveFeeSnapshot(organizationId);
   return tenantDb(organizationId).$transaction(async (tx) => {
     const quote = await tx.quote.findFirst({ where: { id: quoteId } });
     if (!quote) throw new BookingError("not_found");
@@ -226,7 +230,7 @@ export async function acceptQuote(
       by.actor,
       by.actorId,
       now,
-      { totalCents: quote.totalCents, depositCents: quote.depositCents },
+      { totalCents: quote.totalCents, depositCents: quote.depositCents, feeSnapshot: feeSnapshot as unknown as Prisma.InputJsonValue },
       { version: quote.version, name: by.name },
     );
     await tx.quote.updateMany({ where: { id: quote.id }, data: { status: "accepted", acceptedAt: now, acceptedByName: by.name } });

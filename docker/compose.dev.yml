@@ -56,6 +56,13 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  # Stripe API stand-in for tests and development without Stripe keys.
+  stripe-mock:
+    image: stripe/stripe-mock:v0.206.0
+    restart: unless-stopped
+    ports:
+      - "12111:12111"
+
 volumes:
   mysql-data:
   redis-data:

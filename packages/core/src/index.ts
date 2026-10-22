@@ -2,6 +2,7 @@ export * from "./access";
 export * from "./bookings";
 export * from "./inquiries";
 export * from "./money";
+export * from "./plans";
 export * from "./quotes";
 export * from "./fees";
 export * from "./settings/fees";

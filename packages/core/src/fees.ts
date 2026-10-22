@@ -64,3 +64,30 @@ export function splitBookingPayment(input: {
 
   return { artist, agency, platform, stripe: stripeFee };
 }
+
+/**
+ * How much to take back from each party when part of a transferred payment is
+ * refunded: the same fraction of what the artist and agency received. The
+ * platform covers the rest, including Stripe's fee, which Stripe doesn't return.
+ */
+export function refundReversal(input: {
+  paymentCents: Cents;
+  refundCents: Cents;
+  artistTransferred: Cents;
+  agencyTransferred: Cents;
+}): { artist: Cents; agency: Cents; platform: Cents } {
+  const { paymentCents, refundCents, artistTransferred, agencyTransferred } = input;
+  assertCents(paymentCents);
+  assertCents(refundCents, "refundCents");
+  if (refundCents <= 0 || refundCents > paymentCents) throw new RangeError(`refund must be 1–${paymentCents}, got ${refundCents}`);
+  const share = (transferred: Cents) => Math.min(transferred, Math.round((transferred * refundCents) / paymentCents));
+  const artist = share(artistTransferred);
+  const agency = share(agencyTransferred);
+  return { artist, agency, platform: refundCents - artist - agency };
+}
+
+/** The fee rule and Stripe-fee bearer frozen onto a booking when its quote is accepted. */
+export interface FeeSnapshot {
+  rule: FeeRule;
+  stripeFeePaidBy: PlatformFeeSettings["stripeFeePaidBy"];
+}

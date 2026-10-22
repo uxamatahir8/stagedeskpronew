@@ -32,6 +32,13 @@ export const bookingDefaultsSchema = z.object({
   vatRatesBps: z.array(z.int().min(0).max(10_000)).min(1),
 });
 
+export const billingDefaultsSchema = z.object({
+  /** Days of full access after a trial ends or a payment fails, before read-only. */
+  graceDays: z.int().min(0).max(60),
+  /** Plan new agencies start their trial on. */
+  trialPlanKey: z.string().min(1).max(48),
+});
+
 export const siteGeneralSchema = z.object({
   siteName: z.string().min(1),
   defaultLocale: z.enum(["nl", "en"]),
@@ -82,6 +89,10 @@ export const settingsRegistry = {
         { name: "Elite", minPayingAgencies: 20, commissionBps: 3_500, perks: "Co-marketing listing" },
       ],
     },
+  },
+  "billing.defaults": {
+    schema: billingDefaultsSchema,
+    defaults: { graceDays: 7, trialPlanKey: "pro" },
   },
   "bookings.defaults": {
     schema: bookingDefaultsSchema,

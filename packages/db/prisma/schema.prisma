@@ -114,7 +114,13 @@ model Organization {
   /// { question: string; answer: string }[]
   faq                Json?
   showReviews        Boolean                @default(true)
+  stripeCustomerId   String?                @unique @db.VarChar(64)
+  /// Platform fee deal for this agency (FeeRule); overrides the plan and platform default.
+  feeRule            Json?
   createdAt          DateTime               @default(now())
+  subscription       Subscription?
+  connectedAccounts  ConnectedAccount[]
+  ledger             LedgerEntry[]
   members            Member[]
   invitations        Invitation[]
   artists            Artist[]
@@ -220,6 +226,7 @@ model Artist {
   unavailability    ArtistUnavailability[]
   shares            ArtistShare[]
   reviews           Review[]
+  connectedAccount  ConnectedAccount?
 
   @@unique([organizationId, userId])
   @@index([organizationId, active])
@@ -306,6 +313,12 @@ model Booking {
   /// Sum of received payments, kept in step by recordPayment().
   paidCents         Int                 @default(0)
   quoteExpiresAt    DateTime?
+  /// { rule: FeeRule; stripeFeePaidBy } frozen when the quote is accepted.
+  feeSnapshot       Json?
+  /// A customer opened a card dispute; payouts wait until it's resolved.
+  disputed          Boolean             @default(false)
+  /// When Stripe money was transferred to the agency and artist.
+  paidOutAt         DateTime?
   cancelReason      String?             @db.Text
   createdById       String?             @db.VarChar(64)
   quotedAt          DateTime?
@@ -323,6 +336,7 @@ model Booking {
   payments          Payment[]
   invoices          Invoice[]
   review            Review?
+  ledger            LedgerEntry[]
 
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
@@ -461,26 +475,150 @@ model QuoteItem {
 
 // ─── Money ──────────────────────────────────────────────────────────────
 
-/// Money received for a booking. Offline methods now; Stripe joins in phase 5.
+/// Money received for a booking: recorded by hand (offline) or paid through Stripe.
 model Payment {
-  id             String       @id @db.VarChar(64)
-  organizationId String       @db.VarChar(64)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  bookingId      String       @db.VarChar(64)
-  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
-  /// deposit | balance | other
-  kind           String       @db.VarChar(16)
-  /// bank_transfer | cash | card | other
-  method         String       @db.VarChar(24)
-  amountCents    Int
-  receivedAt     DateTime
-  reference      String?      @db.VarChar(191)
-  recordedById   String?      @db.VarChar(64)
-  createdAt      DateTime     @default(now())
+  id                    String        @id @db.VarChar(64)
+  organizationId        String        @db.VarChar(64)
+  organization          Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId             String        @db.VarChar(64)
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  /// deposit | balance | other | refund (offline refunds are negative amounts)
+  kind                  String        @db.VarChar(16)
+  /// bank_transfer | cash | card | other | stripe
+  method                String        @db.VarChar(24)
+  amountCents           Int
+  receivedAt            DateTime
+  reference             String?       @db.VarChar(191)
+  recordedById          String?       @db.VarChar(64)
+  stripeCheckoutId      String?       @unique @db.VarChar(80)
+  stripePaymentIntentId String?       @unique @db.VarChar(64)
+  stripeChargeId        String?       @db.VarChar(64)
+  stripeFeeCents        Int           @default(0)
+  refundedCents         Int           @default(0)
+  /// When this payment's split was transferred to the agency and artist.
+  transferredAt         DateTime?
+  createdAt             DateTime      @default(now())
+  ledger                LedgerEntry[]
 
   @@index([bookingId])
   @@index([organizationId, receivedAt])
   @@map("payments")
+}
+
+/// Append-only record of every money movement. Amounts are signed cents
+/// from the point of view of `party`; nothing here is ever edited.
+model LedgerEntry {
+  id             BigInt       @id @default(autoincrement())
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId      String?      @db.VarChar(64)
+  booking        Booking?     @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  paymentId      String?      @db.VarChar(64)
+  payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  /// payment | stripe_fee | platform_fee | artist_share | agency_share | transfer | refund | transfer_reversal | dispute | owed_by_agency
+  type           String       @db.VarChar(32)
+  /// platform | agency | artist | stripe | customer
+  party          String       @db.VarChar(16)
+  amountCents    Int
+  artistId       String?      @db.VarChar(64)
+  stripeObjectId String?      @db.VarChar(64)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([bookingId])
+  @@index([artistId, type])
+  @@map("ledger_entries")
+}
+
+// ─── Subscriptions and Stripe ───────────────────────────────────────────
+
+/// A subscription plan, edited by the super admin and mirrored to Stripe.
+model Plan {
+  id                   String         @id @db.VarChar(64)
+  key                  String         @unique @db.VarChar(48)
+  /// { nl, en }
+  name                 Json
+  /// { nl, en }
+  description          Json?
+  monthlyPriceCents    Int
+  yearlyPriceCents     Int
+  trialDays            Int            @default(14)
+  /// { nl: string[]; en: string[] } shown on the pricing page
+  features             Json
+  /// PlanLimits from @stagedesk/core
+  limits               Json
+  /// FeeRule for agencies on this plan; null uses the platform default.
+  feeRule              Json?
+  recommended          Boolean        @default(false)
+  visible              Boolean        @default(true)
+  active               Boolean        @default(true)
+  position             Int            @default(0)
+  stripeProductId      String?        @db.VarChar(64)
+  stripeMonthlyPriceId String?        @db.VarChar(64)
+  stripeYearlyPriceId  String?        @db.VarChar(64)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  subscriptions        Subscription[]
+
+  @@map("plans")
+}
+
+/// An agency's subscription. Mirrors Stripe once the agency has paid.
+model Subscription {
+  id                   String       @id @db.VarChar(64)
+  organizationId       String       @unique @db.VarChar(64)
+  organization         Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId               String       @db.VarChar(64)
+  plan                 Plan         @relation(fields: [planId], references: [id], onDelete: Restrict)
+  /// trialing | active | past_due | unpaid | canceled | incomplete
+  status               String       @db.VarChar(24)
+  /// month | year
+  interval             String       @default("month") @db.VarChar(8)
+  stripeSubscriptionId String?      @unique @db.VarChar(64)
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean      @default(false)
+  /// Start of a failed-payment period; read-only access begins after the grace days.
+  pastDueSince         DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+/// A Stripe Express account for an agency (receives its share) or an artist.
+model ConnectedAccount {
+  id               String       @id @db.VarChar(64)
+  organizationId   String       @db.VarChar(64)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// Set for an artist's account; null for the agency's own.
+  artistId         String?      @unique @db.VarChar(64)
+  artist           Artist?      @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  stripeAccountId  String       @unique @db.VarChar(64)
+  chargesEnabled   Boolean      @default(false)
+  payoutsEnabled   Boolean      @default(false)
+  detailsSubmitted Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([organizationId])
+  @@map("connected_accounts")
+}
+
+/// Every Stripe webhook event, stored once by id so it's processed at most once.
+model StripeEvent {
+  id          String    @id @db.VarChar(80)
+  type        String    @db.VarChar(80)
+  /// received | processed | failed | ignored
+  status      String    @default("received") @db.VarChar(16)
+  error       String?   @db.Text
+  payload     Json
+  receivedAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([status, receivedAt])
+  @@map("stripe_events")
 }
 
 /// Issued invoice. `data` is a snapshot so later edits don't change it.
