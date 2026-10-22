@@ -24,7 +24,7 @@ hasnt "other agency can't open DJ Sem" rot "/app/artists/$SEM" "Openingsdans"
 has "services list" owner /app/services "Ceremoniegeluid"
 has "quotes overview" owner /app/quotes "Femke Visser"
 has "calendar month" owner "/app/calendar?month=2027-06" "Sanne de Vries"
-has "reviews empty state" owner /app/reviews "Nog geen reviews"
+has "reviews list shows approved review" owner /app/reviews "Goedgekeurd"
 
 echo "Artist"
 has "gigs list" artist /app/gigs "Landgoed Zonheuvel\|Doorn"

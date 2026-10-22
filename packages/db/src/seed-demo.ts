@@ -105,6 +105,51 @@ export async function seedDemo(prisma: PrismaClient) {
   }
 
   await seedBookingData(prisma, ids);
+  await seedBookingPage(prisma);
+}
+
+/** Booking page content and one approved review for Feestband. Fills only what's empty. */
+async function seedBookingPage(prisma: PrismaClient) {
+  const feest = await prisma.organization.findUniqueOrThrow({ where: { slug: "feestband-utrecht" } });
+  if (!feest.bookingIntro) {
+    await prisma.organization.update({
+      where: { id: feest.id },
+      data: {
+        bookingIntro:
+          "Feestband Utrecht verzorgt al ruim tien jaar de muziek op bruiloften, bedrijfsfeesten en verjaardagen in heel Midden-Nederland. Onze dj's lezen de zaal en maken van elk feest een avond om nooit te vergeten.",
+        phone: feest.phone ?? "+31 30 123 4567",
+        contactEmail: feest.contactEmail ?? "info@feestband.local",
+        website: feest.website ?? "https://feestband.local",
+        faq: [
+          { question: "Hoe ver van tevoren moet ik boeken?", answer: "Voor bruiloften in het hoogseizoen (mei tot september) raden we 6 tot 12 maanden aan. Voor andere feesten is 2 maanden meestal genoeg." },
+          { question: "Nemen jullie geluid en licht mee?", answer: "Ja. Een complete geluidsset en basisverlichting zijn altijd inbegrepen. Een uitgebreide lichtshow kun je los bijboeken." },
+          { question: "Kunnen we verzoeknummers doorgeven?", answer: "Natuurlijk. Na je boeking kun je in je account een playlist en je wel- en niet-doen-lijst invullen." },
+        ],
+      },
+    });
+    console.log("  ready    Feestband booking page");
+  }
+
+  const settled = await prisma.booking.findFirst({
+    where: { organizationId: feest.id, status: "settled", review: null, customerId: { not: null } },
+    include: { assignments: { where: { status: "accepted" }, take: 1 } },
+  });
+  if (settled) {
+    await prisma.review.create({
+      data: {
+        id: randomUUID(),
+        organizationId: feest.id,
+        bookingId: settled.id,
+        customerId: settled.customerId!,
+        artistId: settled.assignments[0]?.artistId ?? null,
+        rating: 5,
+        comment: "DJ Sem had de hele zaal binnen tien minuten op de dansvloer. Precies de mix die we wilden!",
+        status: "approved",
+        moderatedAt: new Date(),
+      },
+    });
+    console.log("  created  approved review");
+  }
 }
 
 async function orgId(prisma: PrismaClient, slug: string) {

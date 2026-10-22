@@ -54,6 +54,8 @@ interface ArtistValues {
   sharePct: string;
   userId: string | null;
   active: boolean;
+  showOnBookingPage: boolean;
+  mediaLinks: string;
 }
 
 const NO_ACCOUNT = "none";
@@ -64,6 +66,7 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState(artist?.userId ?? NO_ACCOUNT);
   const [active, setActive] = useState(artist?.active ?? true);
+  const [onPage, setOnPage] = useState(artist?.showOnBookingPage ?? true);
   const [pending, run] = useRun();
 
   function save(form: FormData) {
@@ -77,6 +80,8 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
           sharePct: Number(String(form.get("sharePct")).replace(",", ".")),
           userId: userId === NO_ACCOUNT ? null : userId,
           active,
+          showOnBookingPage: onPage,
+          mediaLinks: String(form.get("mediaLinks") ?? ""),
         }),
       (result) => {
         setOpen(false);
@@ -132,6 +137,15 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
               </SelectContent>
             </Select>
           </FormField>
+          <FormField id="ar-media" label={t("artists.media")} hint={t("artists.mediaHint")} className="sm:col-span-2">
+            <Textarea id="ar-media" name="mediaLinks" defaultValue={artist?.mediaLinks} rows={3} placeholder="https://www.youtube.com/watch?v=…" />
+          </FormField>
+          <div className="flex items-center justify-between gap-4 sm:col-span-2">
+            <label htmlFor="ar-onpage" className="text-sm font-medium">
+              {t("artists.showOnPage")}
+            </label>
+            <Switch id="ar-onpage" checked={onPage} onCheckedChange={setOnPage} />
+          </div>
           {artist && (
             <div className="flex items-center justify-between gap-4 sm:col-span-2">
               <label htmlFor="ar-active" className="text-sm font-medium">

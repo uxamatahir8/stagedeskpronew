@@ -23,6 +23,20 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async headers() {
+    const common = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+    ];
+    return [
+      // Nothing may be framed by other sites (clickjacking), except the embeddable form.
+      {
+        source: "/:path((?!embed/|en/embed/).*)",
+        headers: [...common, { key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: "frame-ancestors 'self'" }],
+      },
+      { source: "/:lang(en)?/embed/:slug", headers: [...common, { key: "Content-Security-Policy", value: "frame-ancestors *" }] },
+    ];
+  },
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");

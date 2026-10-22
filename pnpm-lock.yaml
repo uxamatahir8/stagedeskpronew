@@ -44,6 +44,9 @@ importers:
       cn:
         specifier: ^0.5.0
         version: 0.5.0
+      ioredis:
+        specifier: 5.11.1
+        version: 5.11.1
       lucide-react:
         specifier: ^1.61.0
         version: 1.61.0(@types/react@19.3.0)(react@19.3.0)

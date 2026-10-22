@@ -8,6 +8,7 @@ import {
   type BookingStatus,
   can,
   type EventType,
+  isBudgetRange,
   paymentStatus,
   todayInNetherlands,
 } from "@stagedesk/core";
@@ -75,6 +76,10 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     }),
   ]);
   const nameOf = (id: string | null) => people.find((p) => p.id === id)?.name ?? null;
+  // The requested artist can belong to a partner agency, so this isn't tenant-scoped.
+  const preferredArtist = booking.preferredArtistId
+    ? await prisma.artist.findUnique({ where: { id: booking.preferredArtistId }, select: { stageName: true } })
+    : null;
 
   const now = new Date();
   const today = todayInNetherlands(now);
@@ -201,6 +206,13 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 </Detail>
                 {booking.partnerName && <Detail label={t("newBooking.partnerName")}>{booking.partnerName}</Detail>}
                 {booking.budgetCents && <Detail label={t("newBooking.budget")}>{euro(format, booking.budgetCents)}</Detail>}
+                {booking.budgetRange && isBudgetRange(booking.budgetRange) && (
+                  <Detail label={t("bookingPage.budget")}>{t(`budgetRanges.${booking.budgetRange}`)}</Detail>
+                )}
+                {preferredArtist && <Detail label={t("bookingPage.artist")}>{preferredArtist.stageName}</Detail>}
+                {booking.preferredGenre && <Detail label={t("bookingPage.genre")}>{booking.preferredGenre}</Detail>}
+                {booking.ceremony && <Detail label={t("eventTypes.wedding")}>{t("bookingPage.ceremony")}</Detail>}
+                {booking.source === "booking_page" && <Detail label={t("bookings.event")}>{t("attention.viaPage")}</Detail>}
               </dl>
               {booking.message && (
                 <div className="rounded-lg bg-muted/60 p-3 text-sm">

@@ -3,7 +3,8 @@ import { ActivityIcon, BellRingIcon } from "lucide-react";
 import type { Metadata } from "next";
 import type { Messages } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import type { Role } from "@stagedesk/core";
+import { can, type Role } from "@stagedesk/core";
+import { tenantDb } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { requireViewer } from "@/lib/viewer";
+import { AgencyHome } from "./agency-home";
 
 type StatKey = keyof Messages["home"]["stats"];
 
@@ -43,12 +45,23 @@ export default async function DashboardHome({ params }: PageProps<"/[locale]/app
 }
 
 async function RoleHome() {
-  const [{ role, user }, t] = await Promise.all([requireViewer(), getTranslations("home")]);
+  const [{ role, user, organization }, t] = await Promise.all([requireViewer(), getTranslations("home")]);
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
+  const header = <PageHeader title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />;
 
+  if (organization && can(role, "agency.bookings")) {
+    return (
+      <div className="grid gap-8">
+        {header}
+        <AgencyHome db={tenantDb(organization.id)} role={role} />
+      </div>
+    );
+  }
+
+  // Other roles get their figures in phase 7 (dashboards).
   return (
     <div className="grid gap-8">
-      <PageHeader title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />
+      {header}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statsByRole[role].map((key) => (

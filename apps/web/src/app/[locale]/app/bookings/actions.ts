@@ -17,7 +17,9 @@ import {
   sendQuote,
   toDateOnly,
 } from "@stagedesk/db";
+import { sendQuote as sendQuoteEmail } from "@stagedesk/emails";
 import { redirect } from "@/i18n/navigation";
+import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import type { Locale } from "@/i18n/routing";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { fieldErrorKeys, type FormState, optionalText } from "@/lib/validation";
@@ -204,8 +206,31 @@ export async function sendQuoteAction(bookingId: string, input: z.input<typeof q
       },
       viewer.user.id,
     );
+    await emailQuote(quote.id, organization.name);
     return t("sent", { n: quote.version });
   });
+}
+
+/** Emails the customer their quote link, in their own language. */
+async function emailQuote(quoteId: string, agencyName: string) {
+  const quote = await prisma.quote.findUnique({
+    where: { id: quoteId },
+    select: { token: true, totalCents: true, expiresAt: true, booking: { select: { customer: { select: { name: true, email: true, locale: true } } } } },
+  });
+  const customer = quote?.booking.customer;
+  if (!quote || !customer) return;
+  const locale = userLocale(customer.locale);
+  const intl = locale === "en" ? "en-GB" : "nl-NL";
+  deliver(
+    sendQuoteEmail(customer.email, {
+      locale,
+      name: customer.name.split(/\s+/)[0] ?? customer.name,
+      agency: agencyName,
+      total: new Intl.NumberFormat(intl, { style: "currency", currency: "EUR" }).format(quote.totalCents / 100),
+      until: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(quote.expiresAt),
+      url: absoluteUrl(locale, `/q/${quote.token}`),
+    }),
+  );
 }
 
 export async function acceptOnBehalfAction(quoteId: string, name: string): Promise<ActionResult> {

@@ -19,4 +19,8 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - Bookings: change status only via `packages/db/src/bookings.ts` (createBooking, sendQuote, acceptQuote, assignArtist, respondToAssignment, recordPayment, changeBookingStatus, issueInvoice, expireQuotes). Web actions wrap them with `runAction()` (`lib/actions.ts`) to translate `BookingError` codes.
 - Cross-agency reads are explicit and rare: artist sharing (partner side filters on `partnerOrganizationId`), an artist's own gigs (filter on `artist.userId`), and public quote links (secret token). Everything else goes through `tenantDb`.
 - Every export of a `"use server"` file is a public endpoint: keep helpers that take ids or db clients in server-only modules (e.g. `lib/availability.ts`).
+- Public booking pages: `packages/db/src/inquiries.ts` (publicAgency, publicArtists, submitInquiry, agencyFullyBookedDates); web in `app/[locale]/(public)/b/[slug]` and `/embed/[slug]` + `public/embed.js`. Only `/embed/*` may be framed (headers in `next.config.ts`). Media links must pass core's `mediaEmbed()`.
+- Pages or `generateMetadata` that hit the database or read the clock must `await connection()` first (Cache Components flags `Date.now()` during prerender; the DB driver reads it too).
+- Emails: add templates to `packages/emails`, send from web via `deliver()` in `lib/mail.ts` (never awaited in the request).
+- Rate limits: `allow(key, max, seconds)` in `lib/rate-limit.ts` (Redis). Running many sign-ins quickly (e.g. e2e + smoke scripts back to back) hits the 10/min sign-in limit; wait a minute.
 - After `pnpm add` while `pnpm dev` runs, restart the dev server (Turbopack loses track of node_modules). Restart after `next.config.ts` or Prisma schema changes too.

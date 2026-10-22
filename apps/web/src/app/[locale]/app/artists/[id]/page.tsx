@@ -91,6 +91,8 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
                 sharePct: String(artist.defaultShareBps / 100),
                 userId: artist.userId,
                 active: artist.active,
+                showOnBookingPage: artist.showOnBookingPage,
+                mediaLinks: (Array.isArray(artist.mediaLinks) ? (artist.mediaLinks as string[]) : []).join("\n"),
               }}
             />
             <PhotoUpload artistId={artist.id} />

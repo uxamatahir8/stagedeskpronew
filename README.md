@@ -49,6 +49,22 @@ All use the password `StageDesk-demo-2026`. Emails sent by the app land in Mailp
 | `dj.yara@rotterdamdj.local` | Artist | Rotterdam DJ Collectief |
 | `bram@klant.local` | Customer | Rotterdam DJ Collectief |
 
+## Public booking pages
+
+Every agency has a public page at `/b/<slug>` (English: `/en/b/<slug>`), e.g.
+http://localhost:3000/b/feestband-utrecht. Inquiries create the customer account and a booking in
+"inquiry", email the customer and the agency (see Mailpit), and appear on the agency's home page.
+
+Agencies can put the form on their own site:
+
+```html
+<script src="http://localhost:3000/embed.js" data-agency="feestband-utrecht" data-lang="nl" async></script>
+```
+
+Spam protection: Cloudflare Turnstile (the `.env.example` keys are Cloudflare's always-pass test
+keys), a honeypot field, a minimum fill time, and Redis rate limits per IP and email.
+All other pages refuse to be framed by other sites.
+
 ## Local services
 
 | Service | URL | Login |

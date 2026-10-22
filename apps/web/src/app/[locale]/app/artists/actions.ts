@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { mediaEmbed } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { toggleUnavailable } from "@/lib/availability";
@@ -17,6 +18,8 @@ const artistSchema = z.object({
   sharePct: z.number().min(0).max(100),
   userId: z.string().max(64).nullable(),
   active: z.boolean(),
+  showOnBookingPage: z.boolean(),
+  mediaLinks: z.string().max(2000),
 });
 
 /** Only artist members of this agency without a profile can be linked. */
@@ -35,7 +38,14 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
   if (!parsed.success) return { ok: false, message: t("invalidShare") };
   const d = parsed.data;
 
+  // Only links we know how to embed safely are stored.
+  const links = d.mediaLinks.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 3);
+  const invalid = links.find((l) => !mediaEmbed(l));
+  if (invalid) return { ok: false, message: t("invalidMedia", { link: invalid.slice(0, 80) }) };
+
   const data = {
+    showOnBookingPage: d.showOnBookingPage,
+    mediaLinks: links,
     stageName: d.stageName,
     genres: d.genres.split(",").map((g) => g.trim()).filter(Boolean).slice(0, 12),
     bio: d.bio?.trim() || null,
