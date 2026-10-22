@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     authInterrupts: true,
   },
   transpilePackages: ["@stagedesk/core", "@stagedesk/db"],
-  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb"],
+  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb", "@react-pdf/renderer"],
   turbopack: {
     rules: {
       "*.css": {

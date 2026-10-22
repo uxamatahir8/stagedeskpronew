@@ -15,4 +15,8 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - Pages get the user via `lib/viewer.ts`: `requireViewer()`, `requirePermission(p)`, or `requireAgency(p)` which also returns a `tenantDb` scoped to the active agency. Use that `db` for all agency data; add new tenant models to `tenantModels` in `packages/db/src/tenant.ts` (a test enforces it).
 - Prisma 7: `prisma migrate dev` doesn't regenerate the client; `pnpm db:migrate` runs both.
 - Server-side form actions return `FormState` (`lib/validation.ts`); shared Dutch validators (KvK, BTW, postcode) live there.
-- Smoke test for accounts/agencies: `bash scripts/smoke-accounts.sh` (needs services, seed and `pnpm dev`).
+- Smoke tests: `bash scripts/smoke-accounts.sh`, `bash scripts/smoke-bookings.sh`; Playwright e2e in `apps/web/e2e` (`pnpm --filter @stagedesk/web e2e`). All need services, seed and `pnpm dev`.
+- Bookings: change status only via `packages/db/src/bookings.ts` (createBooking, sendQuote, acceptQuote, assignArtist, respondToAssignment, recordPayment, changeBookingStatus, issueInvoice, expireQuotes). Web actions wrap them with `runAction()` (`lib/actions.ts`) to translate `BookingError` codes.
+- Cross-agency reads are explicit and rare: artist sharing (partner side filters on `partnerOrganizationId`), an artist's own gigs (filter on `artist.userId`), and public quote links (secret token). Everything else goes through `tenantDb`.
+- Every export of a `"use server"` file is a public endpoint: keep helpers that take ids or db clients in server-only modules (e.g. `lib/availability.ts`).
+- After `pnpm add` while `pnpm dev` runs, restart the dev server (Turbopack loses track of node_modules). Restart after `next.config.ts` or Prisma schema changes too.

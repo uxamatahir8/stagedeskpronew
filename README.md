@@ -63,8 +63,12 @@ All use the password `StageDesk-demo-2026`. Emails sent by the app land in Mailp
 
 ```sh
 pnpm lint && pnpm typecheck && pnpm test   # db tests use the stagedesk_test database
-bash scripts/smoke-accounts.sh             # end-to-end accounts/agency checks against pnpm dev
+bash scripts/smoke-accounts.sh             # accounts and agency isolation, against pnpm dev
+bash scripts/smoke-bookings.sh             # bookings, artists, customers and PDF access
+pnpm --filter @stagedesk/web e2e           # Playwright: full booking flow in a real browser
 ```
+
+The Playwright test needs Chromium once: `pnpm --filter @stagedesk/web exec playwright install chromium`.
 
 ## Conventions
 
@@ -75,3 +79,5 @@ bash scripts/smoke-accounts.sh             # end-to-end accounts/agency checks a
 - Role, organization and status are never read from client input.
 - Agency data is read and written through `requireAgency()` → `tenantDb(organizationId)`, which
   limits every query to the signed-in user's agency. The plain `prisma` client is for platform code.
+- Booking status only changes through the operations in `packages/db/src/bookings.ts`, which call
+  core's `transition()`. Quotes are versioned; payments and invoices are never cascade-deleted.

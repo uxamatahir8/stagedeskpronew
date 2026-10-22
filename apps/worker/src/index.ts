@@ -1,6 +1,6 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
-import { prisma } from "@stagedesk/db";
+import { expireQuotes, prisma } from "@stagedesk/db";
 
 const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379", {
   maxRetriesPerRequest: null,
@@ -18,6 +18,8 @@ const worker = new Worker(
         const settings = await prisma.platformSetting.count();
         return { at: new Date().toISOString(), settings };
       }
+      case "expire-quotes":
+        return { expired: await expireQuotes() };
       default:
         throw new Error(`Unknown system job: ${job.name}`);
     }
@@ -29,6 +31,7 @@ worker.on("completed", (job, result) => console.log(`[system] ${job.name} done`,
 worker.on("failed", (job, err) => console.error(`[system] ${job?.name} failed:`, err.message));
 
 await systemQueue.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "heartbeat" });
+await systemQueue.upsertJobScheduler("expire-quotes", { every: 15 * 60_000 }, { name: "expire-quotes" });
 console.log("Worker started. Queues: system");
 
 async function shutdown() {
