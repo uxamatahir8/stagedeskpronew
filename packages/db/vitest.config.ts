@@ -1,0 +1,9 @@
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    // Runs against a separate stagedesk_test database, migrated fresh per run.
+    globalSetup: ["./src/test/global-setup.ts"],
+    fileParallelism: false,
+  },
+});

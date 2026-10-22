@@ -13,6 +13,162 @@ datasource db {
   provider = "mysql"
 }
 
+// ─── Identity and agencies ──────────────────────────────────────────────
+// Managed by Better Auth (apps/web/src/lib/auth-config.ts). Regenerate a
+// reference with `pnpm dlx auth generate` after changing plugins, then
+// merge by hand: model and field names must match what Better Auth expects.
+
+model User {
+  id               String       @id @db.VarChar(64)
+  name             String       @db.VarChar(191)
+  email            String       @unique @db.VarChar(191)
+  emailVerified    Boolean      @default(false)
+  image            String?      @db.Text
+  twoFactorEnabled Boolean?     @default(false)
+  /// "platform_admin" | "affiliate" | null. Never accepted from client input.
+  platformRole     String?      @db.VarChar(32)
+  locale           String?      @default("nl") @db.VarChar(8)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  sessions         Session[]
+  accounts         Account[]
+  members          Member[]
+  invitations      Invitation[]
+  twofactors       TwoFactor[]
+
+  @@map("users")
+}
+
+model Session {
+  id                   String   @id @db.VarChar(64)
+  token                String   @unique @db.VarChar(191)
+  expiresAt            DateTime
+  ipAddress            String?  @db.VarChar(64)
+  userAgent            String?  @db.Text
+  userId               String   @db.VarChar(64)
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId String?  @db.VarChar(64)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @db.VarChar(64)
+  accountId             String    @db.VarChar(191)
+  providerId            String    @db.VarChar(64)
+  userId                String    @db.VarChar(64)
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @db.VarChar(64)
+  identifier String   @db.VarChar(191)
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+/// An agency (tenant).
+model Organization {
+  id           String       @id @db.VarChar(64)
+  name         String       @db.VarChar(191)
+  slug         String       @unique @db.VarChar(191)
+  logo         String?      @db.Text
+  metadata     String?      @db.Text
+  kvkNumber    String?      @db.VarChar(16)
+  vatNumber    String?      @db.VarChar(20)
+  contactEmail String?      @db.VarChar(191)
+  phone        String?      @db.VarChar(32)
+  website      String?      @db.VarChar(191)
+  addressLine  String?      @db.VarChar(191)
+  postalCode   String?      @db.VarChar(16)
+  city         String?      @db.VarChar(96)
+  brandColor   String?      @db.VarChar(16)
+  createdAt    DateTime     @default(now())
+  members      Member[]
+  invitations  Invitation[]
+
+  @@map("organizations")
+}
+
+/// A user's role in one agency: agency_owner, agency_admin, agency_staff, artist, customer.
+model Member {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String       @db.VarChar(64)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String       @db.VarChar(32)
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([organizationId, role])
+  @@index([userId])
+  @@map("members")
+}
+
+model Invitation {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String       @db.VarChar(191)
+  role           String?      @db.VarChar(32)
+  /// pending | accepted | rejected | canceled
+  status         String       @db.VarChar(16)
+  expiresAt      DateTime
+  inviterId      String       @db.VarChar(64)
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, status])
+  @@index([email])
+  @@map("invitations")
+}
+
+model TwoFactor {
+  id                      String    @id @db.VarChar(64)
+  secret                  String    @db.Text
+  backupCodes             String    @db.Text
+  userId                  String    @db.VarChar(64)
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verified                Boolean?  @default(true)
+  failedVerificationCount Int?      @default(0)
+  lockedUntil             DateTime?
+
+  @@index([userId])
+  @@map("two_factors")
+}
+
+model RateLimit {
+  id          String @id @db.VarChar(64)
+  key         String @unique @db.VarChar(191)
+  count       Int
+  lastRequest BigInt
+
+  @@map("rate_limits")
+}
+
+// ─── Platform settings ──────────────────────────────────────────────────
+
 /// Typed key/value settings edited by the super admin. Keys and shapes are
 /// defined in @stagedesk/core settingsRegistry.
 model PlatformSetting {

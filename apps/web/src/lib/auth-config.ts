@@ -1,0 +1,140 @@
+// Auth configuration. Import `auth` from "./auth" in app code; this file has no
+// server-only guard so the Better Auth CLI can load it to generate the schema.
+import { betterAuth } from "better-auth";
+import { prismaAdapter } from "better-auth/adapters/prisma";
+import { nextCookies } from "better-auth/next-js";
+import { emailOTP, organization, twoFactor } from "better-auth/plugins";
+import { prisma } from "@stagedesk/db";
+import { type EmailLocale, sendInvitation, sendLoginCode, sendResetPassword, sendVerifyEmail } from "@stagedesk/emails";
+import { ac, organizationRoles } from "./auth-roles";
+
+const appUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+
+const roleLabels: Record<EmailLocale, Record<string, string>> = {
+  nl: { agency_owner: "eigenaar", agency_admin: "beheerder", agency_staff: "medewerker", artist: "artiest", customer: "klant" },
+  en: { agency_owner: "owner", agency_admin: "admin", agency_staff: "staff member", artist: "artist", customer: "customer" },
+};
+
+function localeOf(user: { locale?: unknown } | null | undefined): EmailLocale {
+  return user?.locale === "en" ? "en" : "nl";
+}
+
+/** Locale-aware app URL: Dutch has no prefix, English lives under /en. */
+function appPath(locale: EmailLocale, path: string) {
+  return `${appUrl}${locale === "en" ? "/en" : ""}${path}`;
+}
+
+// Emails are sent without awaiting so response times don't reveal whether an account exists.
+function deliver(task: Promise<unknown>) {
+  task.catch((error: unknown) => console.error("[auth] email failed", error));
+}
+
+export const auth = betterAuth({
+  appName: "StageDesk",
+  baseURL: appUrl,
+  database: prismaAdapter(prisma, { provider: "mysql" }),
+
+  user: {
+    additionalFields: {
+      // Set by seed/admin tools only; never accepted from a form.
+      platformRole: { type: "string", required: false, input: false },
+      locale: { type: "string", required: false, defaultValue: "nl", input: true },
+    },
+  },
+
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+    minPasswordLength: 10,
+    resetPasswordTokenExpiresIn: 60 * 60,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      deliver(sendResetPassword(user.email, { locale: localeOf(user), name: user.name, url }));
+    },
+  },
+
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
+    expiresIn: 60 * 60 * 24,
+    sendVerificationEmail: async ({ user, url }) => {
+      deliver(sendVerifyEmail(user.email, { locale: localeOf(user), name: user.name, url }));
+    },
+  },
+
+  session: {
+    expiresIn: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24,
+  },
+
+  rateLimit: {
+    enabled: true,
+    storage: "database",
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/email": { window: 60, max: 5 },
+      "/sign-up/email": { window: 60, max: 3 },
+      "/email-otp/send-verification-otp": { window: 300, max: 3 },
+      "/sign-in/email-otp": { window: 60, max: 5 },
+      "/request-password-reset": { window: 300, max: 3 },
+      "/two-factor/verify-totp": { window: 60, max: 5 },
+    },
+  },
+
+  plugins: [
+    organization({
+      ac,
+      roles: organizationRoles,
+      creatorRole: "agency_owner",
+      organizationLimit: 1,
+      invitationExpiresIn: 60 * 60 * 24 * 7,
+      cancelPendingInvitationsOnReInvite: true,
+      requireEmailVerificationOnInvitation: true,
+      schema: {
+        organization: {
+          additionalFields: {
+            kvkNumber: { type: "string", required: false },
+            vatNumber: { type: "string", required: false },
+            contactEmail: { type: "string", required: false },
+            phone: { type: "string", required: false },
+            website: { type: "string", required: false },
+            addressLine: { type: "string", required: false },
+            postalCode: { type: "string", required: false },
+            city: { type: "string", required: false },
+            brandColor: { type: "string", required: false },
+          },
+        },
+      },
+      sendInvitationEmail: async ({ id, role, email, organization, inviter }) => {
+        const locale = localeOf(inviter.user);
+        deliver(
+          sendInvitation(email, {
+            locale,
+            agency: organization.name,
+            inviter: inviter.user.name,
+            role: roleLabels[locale][role] ?? role,
+            url: appPath(locale, `/invite/${id}`),
+          }),
+        );
+      },
+    }),
+    emailOTP({
+      otpLength: 6,
+      expiresIn: 60 * 10,
+      allowedAttempts: 3,
+      disableSignUp: true,
+      storeOTP: "hashed",
+      sendVerificationOTP: async ({ email, otp }) => {
+        const user = await prisma.user.findUnique({ where: { email }, select: { locale: true } });
+        deliver(sendLoginCode(email, { locale: localeOf(user), code: otp }));
+      },
+    }),
+    twoFactor({ issuer: "StageDesk" }),
+    // Must stay last: lets server actions set auth cookies.
+    nextCookies(),
+  ],
+});
+
+export type Session = typeof auth.$Infer.Session;
