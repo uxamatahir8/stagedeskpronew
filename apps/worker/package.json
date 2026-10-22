@@ -12,7 +12,8 @@
     "@stagedesk/core": "workspace:*",
     "@stagedesk/db": "workspace:*",
     "bullmq": "5.81.5",
-    "ioredis": "5.11.1"
+    "ioredis": "5.11.1",
+    "@stagedesk/payments": "workspace:*"
   },
   "devDependencies": {
     "@stagedesk/config": "workspace:*",
