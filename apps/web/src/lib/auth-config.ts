@@ -4,8 +4,12 @@ import { APIError, betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
-import { prisma } from "@stagedesk/db";
+import { createTranslator } from "next-intl";
+import { withinLimit } from "@stagedesk/core";
+import { agencyBilling, agencyUsage, prisma } from "@stagedesk/db";
 import { type EmailLocale, sendInvitation, sendLoginCode, sendResetPassword, sendVerifyEmail } from "@stagedesk/emails";
+import en from "../../messages/en.json";
+import nl from "../../messages/nl.json";
 import { ac, organizationRoles } from "./auth-roles";
 
 const appUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
@@ -103,8 +107,15 @@ export const auth = betterAuth({
       // Better Auth already stops non-owners from granting the owner role.
       // These keep invitations and role changes to single team roles.
       organizationHooks: {
-        beforeCreateInvitation: async ({ invitation }) => {
+        beforeCreateInvitation: async ({ invitation, inviter }) => {
           if (!invitableRoles.has(invitation.role)) throw new APIError("BAD_REQUEST", { message: "This role can't be invited." });
+          // Staff seats and read-only access come from the agency's plan.
+          const t = createTranslator({ locale: localeOf(inviter), messages: localeOf(inviter) === "en" ? en : nl, namespace: "billing" });
+          const [{ access, limits }, usage] = await Promise.all([agencyBilling(invitation.organizationId), agencyUsage(invitation.organizationId)]);
+          if (access.level === "read_only") throw new APIError("FORBIDDEN", { message: t("readOnly") });
+          if (invitation.role !== "artist" && !withinLimit(limits, "maxStaff", usage.maxStaff)) {
+            throw new APIError("FORBIDDEN", { message: t("limitReached", { max: String(limits.maxStaff), limit: t("limit_maxStaff") }) });
+          }
         },
         beforeUpdateMemberRole: async ({ member, newRole }) => {
           if (member.role === "customer" || !assignableRoles.has(newRole)) {

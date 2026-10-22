@@ -7,8 +7,8 @@ const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379
   maxRetriesPerRequest: null,
 });
 
-// "system": housekeeping on a schedule. "stripe-events": webhooks stored by the
-// web app, processed here with retries so a hiccup never loses a payment.
+// Housekeeping on a schedule. Stripe webhooks are stored and processed by the
+// web app; "retry-stripe-events" picks up any that failed, so none are lost.
 const systemQueue = new Queue("system", { connection });
 const stripe = getStripe();
 
@@ -42,16 +42,8 @@ const systemWorker = new Worker(
   { connection },
 );
 
-const stripeWorker = new Worker(
-  "stripe-events",
-  async (job) => {
-    if (!stripe) throw new Error("Stripe not configured");
-    return { status: await processStoredEvent(stripe, String(job.data.eventId)) };
-  },
-  { connection },
-);
 
-for (const w of [systemWorker, stripeWorker]) {
+for (const w of [systemWorker]) {
   w.on("completed", (job, result) => console.log(`[${w.name}] ${job.name} done`, result));
   w.on("failed", (job, err) => console.error(`[${w.name}] ${job?.name} failed:`, err.message));
 }
@@ -60,10 +52,10 @@ await systemQueue.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "he
 await systemQueue.upsertJobScheduler("expire-quotes", { every: 15 * 60_000 }, { name: "expire-quotes" });
 await systemQueue.upsertJobScheduler("payouts", { every: 60 * 60_000 }, { name: "payouts" });
 await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 5 * 60_000 }, { name: "retry-stripe-events" });
-console.log(`Worker started. Queues: system, stripe-events. Stripe ${stripe ? "configured" : "not configured"}.`);
+console.log(`Worker started. Queues: system. Stripe ${stripe ? "configured" : "not configured"}.`);
 
 async function shutdown() {
-  await Promise.all([systemWorker.close(), stripeWorker.close()]);
+  await systemWorker.close();
   await systemQueue.close();
   await connection.quit();
   await prisma.$disconnect();

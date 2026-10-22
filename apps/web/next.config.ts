@@ -13,8 +13,8 @@ const nextConfig: NextConfig = {
     // Enables forbidden() for permission checks (403 page).
     authInterrupts: true,
   },
-  transpilePackages: ["@stagedesk/core", "@stagedesk/db"],
-  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb", "@react-pdf/renderer"],
+  transpilePackages: ["@stagedesk/core", "@stagedesk/db", "@stagedesk/payments"],
+  serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb", "@react-pdf/renderer", "stripe"],
   turbopack: {
     rules: {
       "*.css": {

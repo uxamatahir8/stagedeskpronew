@@ -62,11 +62,11 @@ export const navigation: NavGroup[] = [
     key: "platform",
     items: [
       { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies" },
-      { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans", phase: 5 },
-      { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments", phase: 5 },
+      { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans" },
+      { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates", phase: 6 },
       { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages", phase: 8 },
-      { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings", phase: 5 },
+      { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },
     ],
   },
   {
@@ -79,7 +79,7 @@ export const navigation: NavGroup[] = [
       { key: "customers", href: "/app/customers", icon: ContactIcon, permission: "agency.customers" },
       { key: "services", href: "/app/services", icon: TagIcon, permission: "agency.quotes" },
       { key: "reviews", href: "/app/reviews", icon: StarIcon, permission: "agency.bookings" },
-      { key: "agencyPayments", href: "/app/payments", icon: WalletIcon, permission: "agency.payments", phase: 5 },
+      { key: "agencyPayments", href: "/app/payments", icon: WalletIcon, permission: "agency.payments" },
     ],
   },
   {
@@ -87,14 +87,14 @@ export const navigation: NavGroup[] = [
     items: [
       { key: "gigs", href: "/app/gigs", icon: ClipboardListIcon, permission: "artist.gigs" },
       { key: "availability", href: "/app/availability", icon: CalendarDaysIcon, permission: "artist.availability" },
-      { key: "earnings", href: "/app/earnings", icon: HandCoinsIcon, permission: "artist.earnings", phase: 5 },
+      { key: "earnings", href: "/app/earnings", icon: HandCoinsIcon, permission: "artist.earnings" },
     ],
   },
   {
     key: "customer",
     items: [
       { key: "event", href: "/app/event", icon: PartyPopperIcon, permission: "customer.event" },
-      { key: "customerPayments", href: "/app/my-payments", icon: CreditCardIcon, permission: "customer.payments", phase: 5 },
+      { key: "customerPayments", href: "/app/my-payments", icon: CreditCardIcon, permission: "customer.payments" },
     ],
   },
   {
@@ -111,7 +111,7 @@ export const navigation: NavGroup[] = [
       { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team" },
       { key: "agencySettings", href: "/app/agency-settings", icon: SettingsIcon, permission: "agency.settings" },
       { key: "bookingPage", href: "/app/booking-page", icon: GlobeIcon, permission: "agency.settings" },
-      { key: "billing", href: "/app/billing", icon: CreditCardIcon, permission: "agency.billing", phase: 5 },
+      { key: "billing", href: "/app/billing", icon: CreditCardIcon, permission: "agency.billing" },
     ],
   },
 ];

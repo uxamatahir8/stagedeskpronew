@@ -8,6 +8,7 @@ import { prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { toggleUnavailable } from "@/lib/availability";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
+import { featureBlocked, limitBlocked, writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
 
 const artistSchema = z.object({
@@ -33,6 +34,9 @@ async function linkableUser(db: Awaited<ReturnType<typeof requireAgency>>["db"],
 
 export async function saveArtistAction(input: z.input<typeof artistSchema>): Promise<ActionResult & { id?: string }> {
   const { organization, db } = await requireAgency("agency.artists");
+  // New artists count against the plan; edits only need an active subscription.
+  const blocked = await (input.id ? writeBlocked(organization.id) : limitBlocked(organization.id, "maxArtists"));
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("artists");
   const parsed = artistSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: t("invalidShare") };
@@ -88,6 +92,8 @@ export async function setUnavailableAction(artistId: string, date: string, unava
 
 export async function shareArtistAction(artistId: string, partnerSlug: string): Promise<ActionResult> {
   const { organization, db } = await requireAgency("agency.artists");
+  const blocked = (await writeBlocked(organization.id)) ?? (await featureBlocked(organization.id, "artistSharing"));
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("artists");
   const artist = await db.artist.findFirst({ where: { id: artistId }, select: { id: true } });
   if (!artist) return { ok: false };

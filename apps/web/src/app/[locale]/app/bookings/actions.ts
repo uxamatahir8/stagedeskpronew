@@ -23,6 +23,7 @@ import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import type { Locale } from "@/i18n/routing";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { fieldErrorKeys, type FormState, optionalText } from "@/lib/validation";
+import { limitBlocked, writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
 
 const time = z.preprocess(
@@ -106,6 +107,8 @@ async function resolveCustomer(
 
 export async function createBookingAction(_prev: FormState, form: FormData): Promise<FormState> {
   const { viewer, organization, db } = await requireAgency("agency.bookings");
+  const blocked = await limitBlocked(organization.id, "maxBookingsPerMonth");
+  if (blocked) return { message: blocked };
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const d = parsed.data;
@@ -179,6 +182,8 @@ const quoteSchema = z.object({
 
 export async function sendQuoteAction(bookingId: string, input: z.input<typeof quoteSchema>): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.quotes");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   const parsed = quoteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: (await getTranslations("auth"))("generic") };
@@ -244,6 +249,8 @@ export async function acceptOnBehalfAction(quoteId: string, name: string): Promi
 
 export async function assignArtistAction(bookingId: string, artistId: string): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.bookings");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   return runAction(async () => {
     await assignArtist(organization.id, bookingId, artistId, viewer.user.id);

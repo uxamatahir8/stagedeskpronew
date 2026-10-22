@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { prisma } from "@stagedesk/db";
+import { prisma, startTrial } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
@@ -38,10 +38,12 @@ export async function createAgency(_prev: FormState, form: FormData): Promise<Fo
   }
 
   const { name, city, kvkNumber: kvk } = parsed.data;
-  await auth.api.createOrganization({
+  const organization = await auth.api.createOrganization({
     headers: await headers(),
     body: { name, slug: await uniqueSlug(name), city: city ?? undefined, kvkNumber: kvk ?? undefined },
   });
+  // Every new agency starts with a free trial of the configured plan.
+  if (organization) await startTrial(organization.id);
   redirect({ href: "/app", locale: (await getLocale()) as Locale });
   return { ok: true };
 }

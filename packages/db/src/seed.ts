@@ -19,10 +19,17 @@ for (const key of settingKeys) {
   console.log(`  created  ${key}`);
 }
 
+// Starting plans (edited afterwards in the admin screens).
+const { seedPlans } = await import("./seed-plans");
+await seedPlans(prisma);
+
 // Demo accounts for every role, never in production.
 if (process.env["NODE_ENV"] !== "production") {
   const { seedDemo, DEMO_PASSWORD } = await import("./seed-demo");
   await seedDemo(prisma);
+  // Every demo agency starts on a trial, like a real sign-up.
+  const { startTrial } = await import("./billing");
+  for (const org of await prisma.organization.findMany({ select: { id: true } })) await startTrial(org.id);
   console.log(`\n  Demo accounts use the password: ${DEMO_PASSWORD}`);
 }
 

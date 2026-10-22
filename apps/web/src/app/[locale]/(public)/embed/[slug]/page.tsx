@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 import { todayInNetherlands } from "@stagedesk/core";
-import { agencyFullyBookedDates, publicAgency, publicArtists } from "@stagedesk/db";
+import { agencyBilling, agencyFullyBookedDates, publicAgency, publicArtists } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import type { Locale } from "@/i18n/routing";
 import { brandStyle } from "@/lib/brand";
@@ -28,6 +28,8 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
   await connection();
   const agency = await publicAgency(slug);
   if (!agency) notFound();
+  // The embeddable form is a plan feature.
+  if (!(await agencyBilling(agency.id)).limits.embedWidget) notFound();
 
   const today = todayInNetherlands();
   const until = new Date(`${today}T00:00:00Z`);

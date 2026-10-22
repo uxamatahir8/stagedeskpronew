@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { mediaEmbed, todayInNetherlands } from "@stagedesk/core";
-import { agencyFullyBookedDates, approvedReviews, publicAgency, publicArtists } from "@stagedesk/db";
+import { agencyBilling, agencyFullyBookedDates, approvedReviews, publicAgency, publicArtists } from "@stagedesk/db";
 import { ArtistAvatar } from "@/components/artist-avatar";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import { Stars } from "@/components/stars";
@@ -51,6 +51,8 @@ async function Page({ params }: Pick<PageProps<"/[locale]/b/[slug]">, "params">)
   await connection();
   const agency = await publicAgency(slug);
   if (!agency) notFound();
+  // The booking page is a plan feature.
+  if (!(await agencyBilling(agency.id)).limits.bookingPage) notFound();
 
   const today = todayInNetherlands();
   // Availability hints cover the next 18 months.

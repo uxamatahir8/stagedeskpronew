@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
+import { writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
 
 const schema = z.object({
@@ -18,6 +19,8 @@ const schema = z.object({
 
 export async function saveBookingPageAction(input: z.input<typeof schema>): Promise<ActionResult> {
   const { organization } = await requireAgency("agency.settings");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, message: (await getTranslations("auth"))("generic") };
   // Not part of Better Auth's organization fields; requireAgency already limits this to owners and admins.
