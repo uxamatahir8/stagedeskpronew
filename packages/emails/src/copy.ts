@@ -34,6 +34,30 @@ export const copy = {
         `${inviter} heeft je uitgenodigd om als ${role} mee te werken aan ${agency} op StageDesk. De uitnodiging is 7 dagen geldig.`,
       button: "Uitnodiging bekijken",
     },
+    inquiryReceived: {
+      subject: (agency: string) => `We hebben je aanvraag ontvangen – ${agency}`,
+      preview: "Je aanvraag is binnen. Je hoort snel van ons.",
+      heading: "Bedankt voor je aanvraag",
+      body: (name: string, agency: string, code: string) =>
+        `Hoi ${name}, ${agency} heeft je aanvraag ontvangen (referentie ${code}). Je ontvangt binnenkort een offerte per e-mail.`,
+      follow: "Je kunt je aanvraag altijd volgen door in te loggen met een code die we naar dit adres mailen.",
+      button: "Mijn evenement bekijken",
+    },
+    newInquiry: {
+      subject: (customer: string) => `Nieuwe aanvraag van ${customer}`,
+      preview: "Er is een nieuwe aanvraag binnengekomen via je boekingspagina.",
+      heading: "Nieuwe aanvraag",
+      body: (customer: string, event: string, date: string) => `${customer} vraagt een offerte aan voor ${event} op ${date}.`,
+      button: "Aanvraag openen",
+    },
+    quoteSent: {
+      subject: (agency: string) => `Je offerte van ${agency}`,
+      preview: "Je offerte staat klaar.",
+      heading: "Je offerte staat klaar",
+      body: (name: string, agency: string, total: string, until: string) =>
+        `Hoi ${name}, ${agency} heeft een offerte voor je gemaakt van ${total}. Accepteer hem vóór ${until} om je datum vast te leggen.`,
+      button: "Offerte bekijken",
+    },
   },
   en: {
     footer: "You're receiving this email because a StageDesk account uses this address.",
@@ -66,6 +90,30 @@ export const copy = {
       body: (inviter: string, agency: string, role: string) =>
         `${inviter} invited you to work with ${agency} on StageDesk as ${role}. The invitation is valid for 7 days.`,
       button: "View invitation",
+    },
+    inquiryReceived: {
+      subject: (agency: string) => `We've received your inquiry – ${agency}`,
+      preview: "Your inquiry is in. You'll hear from us soon.",
+      heading: "Thanks for your inquiry",
+      body: (name: string, agency: string, code: string) =>
+        `Hi ${name}, ${agency} has received your inquiry (reference ${code}). You'll get a quote by email soon.`,
+      follow: "You can follow your inquiry any time by signing in with a code we email to this address.",
+      button: "View my event",
+    },
+    newInquiry: {
+      subject: (customer: string) => `New inquiry from ${customer}`,
+      preview: "A new inquiry came in through your booking page.",
+      heading: "New inquiry",
+      body: (customer: string, event: string, date: string) => `${customer} is asking for a quote for ${event} on ${date}.`,
+      button: "Open inquiry",
+    },
+    quoteSent: {
+      subject: (agency: string) => `Your quote from ${agency}`,
+      preview: "Your quote is ready.",
+      heading: "Your quote is ready",
+      body: (name: string, agency: string, total: string, until: string) =>
+        `Hi ${name}, ${agency} has prepared a quote for ${total}. Accept it before ${until} to book your date.`,
+      button: "View quote",
     },
   },
 } as const;

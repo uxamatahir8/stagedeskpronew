@@ -2,7 +2,7 @@ import { render } from "@react-email/render";
 import { createTransport, type Transporter } from "nodemailer";
 import { createElement, type ReactElement } from "react";
 import { copy, type EmailLocale } from "./copy";
-import { Invitation, LoginCode, ResetPassword, VerifyEmail } from "./templates";
+import { InquiryReceived, Invitation, LoginCode, NewInquiry, QuoteSent, ResetPassword, VerifyEmail } from "./templates";
 
 export type { EmailLocale } from "./copy";
 
@@ -39,6 +39,21 @@ export function sendLoginCode(to: string, p: { locale: EmailLocale; code: string
 
 export function sendResetPassword(to: string, p: { locale: EmailLocale; name: string; url: string }) {
   return send(to, copy[p.locale].reset.subject, createElement(ResetPassword, p));
+}
+
+export function sendInquiryReceived(to: string, p: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
+  return send(to, copy[p.locale].inquiryReceived.subject(p.agency), createElement(InquiryReceived, p));
+}
+
+export function sendNewInquiry(to: string, p: { locale: EmailLocale; customer: string; event: string; date: string; url: string }) {
+  return send(to, copy[p.locale].newInquiry.subject(p.customer), createElement(NewInquiry, p));
+}
+
+export function sendQuote(
+  to: string,
+  p: { locale: EmailLocale; name: string; agency: string; total: string; until: string; url: string },
+) {
+  return send(to, copy[p.locale].quoteSent.subject(p.agency), createElement(QuoteSent, p));
 }
 
 export function sendInvitation(

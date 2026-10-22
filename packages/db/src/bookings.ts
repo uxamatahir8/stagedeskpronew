@@ -112,6 +112,10 @@ export interface NewBooking {
   budgetCents?: number | null;
   message?: string | null;
   partnerName?: string | null;
+  preferredArtistId?: string | null;
+  preferredGenre?: string | null;
+  budgetRange?: string | null;
+  ceremony?: boolean | null;
   source?: "manual" | "booking_page";
 }
 

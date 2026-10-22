@@ -49,6 +49,53 @@ export function ResetPassword({ locale, name, url }: { locale: EmailLocale; name
   );
 }
 
+export function InquiryReceived({ locale, name, agency, code, url }: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
+  const c = copy[locale].inquiryReceived;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, agency, code)}</Paragraph>
+      <Paragraph>{c.follow}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
+export function NewInquiry({ locale, customer, event, date, url }: { locale: EmailLocale; customer: string; event: string; date: string; url: string }) {
+  const c = copy[locale].newInquiry;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(customer, event, date)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function QuoteSent({
+  locale,
+  name,
+  agency,
+  total,
+  until,
+  url,
+}: {
+  locale: EmailLocale;
+  name: string;
+  agency: string;
+  total: string;
+  until: string;
+  url: string;
+}) {
+  const c = copy[locale].quoteSent;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, agency, total, until)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
 export function Invitation({
   locale,
   agency,

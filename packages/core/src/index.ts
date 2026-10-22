@@ -1,5 +1,6 @@
 export * from "./access";
 export * from "./bookings";
+export * from "./inquiries";
 export * from "./money";
 export * from "./quotes";
 export * from "./fees";
