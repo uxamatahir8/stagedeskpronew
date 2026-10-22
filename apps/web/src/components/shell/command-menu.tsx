@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import type { Role } from "@stagedesk/core";
 import { Button } from "@/components/ui/button";
 import {
+  Command,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
@@ -52,28 +53,31 @@ export function CommandMenu({ role }: { role: Role }) {
         <kbd className="hidden rounded border bg-muted px-1.5 font-mono text-[10px] sm:inline">Ctrl K</kbd>
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} title={t("shell.search")} description={t("shell.searchPlaceholder")}>
-        <CommandInput placeholder={t("shell.searchPlaceholder")} />
-        <CommandList>
-          <CommandEmpty>{t("shell.noResults")}</CommandEmpty>
-          {groups.map((group) => (
-            <CommandGroup key={group.key} heading={t(`navGroups.${group.key}`)}>
-              {group.items.map((item) => (
+        {/* This shadcn version expects the <Command> root inside the dialog. */}
+        <Command>
+          <CommandInput placeholder={t("shell.searchPlaceholder")} />
+          <CommandList>
+            <CommandEmpty>{t("shell.noResults")}</CommandEmpty>
+            {groups.map((group) => (
+              <CommandGroup key={group.key} heading={t(`navGroups.${group.key}`)}>
+                {group.items.map((item) => (
+                  <CommandItem key={item.key} onSelect={() => go(item.href)}>
+                    <item.icon />
+                    {t(`nav.${item.key}`)}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
+            <CommandGroup>
+              {footer.map((item) => (
                 <CommandItem key={item.key} onSelect={() => go(item.href)}>
                   <item.icon />
                   {t(`nav.${item.key}`)}
                 </CommandItem>
               ))}
             </CommandGroup>
-          ))}
-          <CommandGroup>
-            {footer.map((item) => (
-              <CommandItem key={item.key} onSelect={() => go(item.href)}>
-                <item.icon />
-                {t(`nav.${item.key}`)}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </CommandList>
+          </CommandList>
+        </Command>
       </CommandDialog>
     </>
   );
