@@ -377,7 +377,8 @@
     "backupCodesBody": "Bewaar deze codes op een veilige plek. Elke code werkt één keer als je geen toegang meer hebt tot je app.",
     "verify": "Verifiëren en aanzetten",
     "enabled": "Verificatie in twee stappen staat aan.",
-    "disabled": "Verificatie in twee stappen staat uit."
+    "disabled": "Verificatie in twee stappen staat uit.",
+    "statusOn": "Aan"
   },
   "errors": {
     "forbiddenTitle": "Je hebt geen toegang tot deze pagina",

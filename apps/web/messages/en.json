@@ -377,7 +377,8 @@
     "backupCodesBody": "Save these codes somewhere safe. Each works once if you lose access to your app.",
     "verify": "Verify and turn on",
     "enabled": "Two-step verification is on.",
-    "disabled": "Two-step verification is off."
+    "disabled": "Two-step verification is off.",
+    "statusOn": "On"
   },
   "errors": {
     "forbiddenTitle": "You don't have access to this page",

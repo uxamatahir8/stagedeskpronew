@@ -28,9 +28,26 @@ cp .env.example .env          # then set BETTER_AUTH_SECRET
 pnpm install
 pnpm services:up              # MySQL :3307, Redis :6379, storage :9000, Mailpit :8025
 pnpm db:migrate               # apply migrations
-pnpm db:seed                  # default platform settings
+pnpm db:seed                  # default settings + demo accounts (not in production)
 pnpm dev                      # web on :3000 + worker
 ```
+
+## Demo accounts
+
+All use the password `StageDesk-demo-2026`. Emails sent by the app land in Mailpit.
+
+| Email | Role | Agency |
+|---|---|---|
+| `admin@stagedesk.local` | Platform admin | — |
+| `partner@stagedesk.local` | Affiliate | — |
+| `eigenaar@feestband.local` | Agency owner | Feestband Utrecht |
+| `beheer@feestband.local` | Agency admin | Feestband Utrecht |
+| `planning@feestband.local` | Agency staff | Feestband Utrecht |
+| `dj.sem@feestband.local` | Artist | Feestband Utrecht |
+| `sanne@klant.local` | Customer (also try the email-code sign-in) | Feestband Utrecht |
+| `eigenaar@rotterdamdj.local` | Agency owner | Rotterdam DJ Collectief |
+| `dj.yara@rotterdamdj.local` | Artist | Rotterdam DJ Collectief |
+| `bram@klant.local` | Customer | Rotterdam DJ Collectief |
 
 ## Local services
 
@@ -45,7 +62,8 @@ pnpm dev                      # web on :3000 + worker
 ## Checks
 
 ```sh
-pnpm lint && pnpm typecheck && pnpm test
+pnpm lint && pnpm typecheck && pnpm test   # db tests use the stagedesk_test database
+bash scripts/smoke-accounts.sh             # end-to-end accounts/agency checks against pnpm dev
 ```
 
 ## Conventions
@@ -55,3 +73,5 @@ pnpm lint && pnpm typecheck && pnpm test
 - Fees, plans, affiliate rates and similar are settings (`packages/core/src/settings/registry.ts`),
   edited by the super admin. Records copy the setting they were created under.
 - Role, organization and status are never read from client input.
+- Agency data is read and written through `requireAgency()` → `tenantDb(organizationId)`, which
+  limits every query to the signed-in user's agency. The plain `prisma` client is for platform code.

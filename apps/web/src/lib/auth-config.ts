@@ -81,7 +81,8 @@ export const auth = betterAuth({
     window: 60,
     max: 100,
     customRules: {
-      "/sign-in/email": { window: 60, max: 5 },
+      // Per IP: high enough for an office of agency staff behind one address.
+      "/sign-in/email": { window: 60, max: 10 },
       "/sign-up/email": { window: 60, max: 3 },
       "/email-otp/send-verification-otp": { window: 300, max: 3 },
       "/sign-in/email-otp": { window: 60, max: 5 },

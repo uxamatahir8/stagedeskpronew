@@ -21,6 +21,7 @@ import {
   ReceiptIcon,
   SettingsIcon,
   SlidersHorizontalIcon,
+  UserRoundIcon,
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
@@ -57,7 +58,7 @@ export const navigation: NavGroup[] = [
   {
     key: "platform",
     items: [
-      { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies", phase: 2 },
+      { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies" },
       { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans", phase: 5 },
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments", phase: 5 },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates", phase: 6 },
@@ -72,7 +73,7 @@ export const navigation: NavGroup[] = [
       { key: "quotes", href: "/app/quotes", icon: ReceiptIcon, permission: "agency.quotes", phase: 3 },
       { key: "calendar", href: "/app/calendar", icon: CalendarDaysIcon, permission: "agency.calendar", phase: 3 },
       { key: "artists", href: "/app/artists", icon: Music2Icon, permission: "agency.artists", phase: 3 },
-      { key: "customers", href: "/app/customers", icon: ContactIcon, permission: "agency.customers", phase: 2 },
+      { key: "customers", href: "/app/customers", icon: ContactIcon, permission: "agency.customers" },
       { key: "agencyPayments", href: "/app/payments", icon: WalletIcon, permission: "agency.payments", phase: 5 },
     ],
   },
@@ -102,8 +103,8 @@ export const navigation: NavGroup[] = [
     key: "manage",
     items: [
       { key: "messages", href: "/app/messages", icon: MessagesSquareIcon, permission: "messages", phase: 7 },
-      { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team", phase: 2 },
-      { key: "agencySettings", href: "/app/agency-settings", icon: SettingsIcon, permission: "agency.settings", phase: 2 },
+      { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team" },
+      { key: "agencySettings", href: "/app/agency-settings", icon: SettingsIcon, permission: "agency.settings" },
       { key: "billing", href: "/app/billing", icon: CreditCardIcon, permission: "agency.billing", phase: 5 },
     ],
   },
@@ -132,7 +133,10 @@ export function footerNavigationFor(role: Role): NavItem[] {
   return footerNavigation.filter((item) => allowed(item, role));
 }
 
+/** Pages reached from menus other than the sidebar; listed for breadcrumbs. */
+const otherPages: NavItem[] = [{ key: "profile", href: "/app/profile", icon: UserRoundIcon }];
+
 /** Finds the nav item for a path like "/app/bookings". */
 export function findNavItem(path: string): NavItem | undefined {
-  return [...navigation.flatMap((g) => g.items), ...footerNavigation].find((item) => item.href === path);
+  return [...navigation.flatMap((g) => g.items), ...footerNavigation, ...otherPages].find((item) => item.href === path);
 }

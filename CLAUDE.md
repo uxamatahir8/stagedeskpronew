@@ -10,4 +10,9 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - Configurable business values (fees, plans, affiliate rates) go in the settings registry, not constants.
 - i18n: next-intl, Dutch default without prefix (`/app`), English under `/en`. Every user-facing string goes in both `apps/web/messages/nl.json` and `en.json` (keys are type-checked against en). Use `Link`/`useRouter` from `@/i18n/navigation`, and call `setRequestLocale` in each layout/page.
 - UI: shadcn/ui (radix-nova) in `apps/web/src/components/ui`; StageDesk tokens in `globals.css` (brand purple, violet-tinted neutrals, status colours success/warning/info). Shared pieces: `PageHeader`, `StatCard`, `EmptyState`, `Pill`/`BookingStatusBadge`. Dev-only preview at `/app/ui`.
-- Dashboard nav lives in `apps/web/src/config/navigation.ts`; items declare a `permission` (checked with `can()` from core) and the plan `phase` that builds them. Until auth (phase 2), the role comes from the dev-only "Preview as" switcher (`sd_preview_role` cookie).
+- Dashboard nav lives in `apps/web/src/config/navigation.ts`; items declare a `permission` (checked with `can()` from core) and the plan `phase` that builds them. Remove `phase` when a page is built.
+- Auth: Better Auth (`apps/web/src/lib/auth-config.ts`; app code imports `@/lib/auth`). Agencies are Better Auth organizations; member roles are our role names. `platformRole` on users is never client-writable.
+- Pages get the user via `lib/viewer.ts`: `requireViewer()`, `requirePermission(p)`, or `requireAgency(p)` which also returns a `tenantDb` scoped to the active agency. Use that `db` for all agency data; add new tenant models to `tenantModels` in `packages/db/src/tenant.ts` (a test enforces it).
+- Prisma 7: `prisma migrate dev` doesn't regenerate the client; `pnpm db:migrate` runs both.
+- Server-side form actions return `FormState` (`lib/validation.ts`); shared Dutch validators (KvK, BTW, postcode) live there.
+- Smoke test for accounts/agencies: `bash scripts/smoke-accounts.sh` (needs services, seed and `pnpm dev`).
