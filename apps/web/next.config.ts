@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // The single .env lives at the repo root, shared with the worker and Prisma.
 const rootEnv = new URL("../../.env", import.meta.url);
@@ -20,4 +21,6 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(nextConfig);
