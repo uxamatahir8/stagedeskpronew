@@ -44,12 +44,13 @@ const artistIds = artists.map((a) => a.id);
 const onTestDomain = (field: "email" | "authorEmail") => testDomains.map((d) => ({ [field]: { endsWith: `@${d}` } }));
 const invitations = await prisma.invitation.count({ where: { OR: onTestDomain("email") } });
 const comments = await prisma.blogComment.count({ where: { OR: onTestDomain("authorEmail") } });
+const leads = await prisma.lead.count({ where: { OR: onTestDomain("email") } });
 
 console.log(`Test accounts: ${userIds.length}`);
 console.log(`Agencies owned by test accounts: ${orgIds.length}`);
 console.log(`Bookings: ${bookingIds.length}, payments: ${paymentIds.length}`);
 console.log(`Partner accounts: ${affiliateIds.length}, artist profiles: ${artistIds.length}`);
-console.log(`Invitations: ${invitations}, blog comments: ${comments}`);
+console.log(`Invitations: ${invitations}, blog comments: ${comments}, leads: ${leads}`);
 
 if (!apply) {
   console.log("\nNothing removed. Run again with --yes to remove these.");
@@ -71,6 +72,8 @@ if (!apply) {
       await tx.user.deleteMany({ where: { id: { in: userIds } } });
       await tx.invitation.deleteMany({ where: { OR: onTestDomain("email") } });
       await tx.blogComment.deleteMany({ where: { OR: onTestDomain("authorEmail") } });
+      // Their offers go with them.
+      await tx.lead.deleteMany({ where: { OR: onTestDomain("email") } });
       // Notifications for demo accounts that pointed at the removed bookings.
       for (const b of bookings) await tx.notification.deleteMany({ where: { url: { contains: b.trackingCode } } });
     },

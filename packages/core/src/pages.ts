@@ -36,7 +36,7 @@ export type LegalKey = (typeof legalKeys)[number];
 export const reservedSlugs = new Set([
   "app", "api", "b", "q", "embed", "en", "nl", "files", "partners", "pricing", "features", "blog", "help", "contact",
   "changelog", "for-agencies", "for-artists", "sign-in", "sign-up", "onboarding", "invite", "forgot-password",
-  "reset-password", "two-factor", "accept-terms", "waitlist", "og", "sitemap.xml", "robots.txt", "about", "over-ons", "solutions",
+  "reset-password", "two-factor", "accept-terms", "waitlist", "og", "sitemap.xml", "robots.txt", "about", "over-ons", "solutions", "request",
 ]);
 
 export function isValidSlug(slug: string) {

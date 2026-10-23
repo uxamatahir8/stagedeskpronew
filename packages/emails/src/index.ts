@@ -13,6 +13,8 @@ import {
   GigReminder,
   InquiryReceived,
   Invitation,
+  LeadOffer,
+  LeadReceived,
   LoginCode,
   NewInquiry,
   NewMessage,
@@ -138,6 +140,14 @@ export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: st
   return send(to, copy[p.locale].agencyCreated.subject(p.agency), createElement(AgencyCreated, p));
 }
 
+export function sendLeadReceived(to: string, p: { locale: EmailLocale; name: string; reference: string; url: string }) {
+  return send(to, copy[p.locale].leadReceived.subject(p.reference), createElement(LeadReceived, p));
+}
+
+export function sendLeadOffer(to: string, p: { locale: EmailLocale; agency: string; event: string; date: string; city: string; url: string }) {
+  return send(to, copy[p.locale].leadOffer.subject(p.event, p.date), createElement(LeadOffer, p));
+}
+
 /**
  * Every email the app sends, by name. Web and worker describe an email as a
  * job ({ kind, to, params }); the worker's email queue sends it with retries.
@@ -160,6 +170,8 @@ const senders = {
   ticketReply: sendTicketReply,
   contactMessage: sendContactMessage,
   agencyCreated: sendAgencyCreated,
+  leadReceived: sendLeadReceived,
+  leadOffer: sendLeadOffer,
 } as const;
 
 export type EmailKind = keyof typeof senders;

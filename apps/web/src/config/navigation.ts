@@ -15,6 +15,8 @@ import {
   LayersIcon,
   LifeBuoyIcon,
   LinkIcon,
+  InboxIcon,
+  SparklesIcon,
   type LucideIcon,
   MailIcon,
   MessagesSquareIcon,
@@ -64,6 +66,7 @@ export const navigation: NavGroup[] = [
     items: [
       { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies" },
       { key: "platformBookings", href: "/app/platform-bookings", icon: CalendarCheckIcon, permission: "platform.agencies" },
+      { key: "leads", href: "/app/leads", icon: InboxIcon, permission: "platform.agencies" },
       { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans" },
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates" },
@@ -78,6 +81,7 @@ export const navigation: NavGroup[] = [
     key: "agency",
     items: [
       { key: "bookings", href: "/app/bookings", icon: CalendarCheckIcon, permission: "agency.bookings" },
+      { key: "leadOffers", href: "/app/lead-offers", icon: SparklesIcon, permission: "agency.bookings" },
       { key: "quotes", href: "/app/quotes", icon: ReceiptIcon, permission: "agency.quotes" },
       { key: "calendar", href: "/app/calendar", icon: CalendarDaysIcon, permission: "agency.calendar" },
       { key: "artists", href: "/app/artists", icon: Music2Icon, permission: "agency.artists" },

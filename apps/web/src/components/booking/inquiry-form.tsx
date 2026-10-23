@@ -4,7 +4,7 @@ import { CalendarXIcon, PartyPopperIcon, SendIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { budgetRanges, eventTypes, type EventType } from "@stagedesk/core";
-import { submitInquiryAction } from "@/app/[locale]/(public)/b/[slug]/actions";
+import { type InquiryResult, submitInquiryAction } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { FormMessage } from "@/components/auth/auth-card";
 import { FormField } from "@/components/form-field";
 import { Turnstile } from "@/components/turnstile";
@@ -15,18 +15,27 @@ import { Textarea } from "@/components/ui/textarea";
 
 const NONE = "none";
 
+/**
+ * The public request form. On a booking page it goes to that agency (`slug`);
+ * the platform's own form passes `submitAction` and `kind="platform"`, where
+ * the request becomes a lead for StageDesk to match with an agency.
+ */
 export function InquiryForm({
-  slug,
+  slug = "",
   artists,
   fullyBooked,
   siteKey,
   today,
+  submitAction,
+  kind = "agency",
 }: {
-  slug: string;
+  slug?: string;
   artists: { id: string; stageName: string }[];
   fullyBooked: string[];
   siteKey: string | null;
   today: string;
+  submitAction?: (form: FormData) => Promise<InquiryResult>;
+  kind?: "agency" | "platform";
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -49,7 +58,7 @@ export function InquiryForm({
       <div className="grid gap-4 rounded-xl border bg-card p-6 text-center">
         <PartyPopperIcon className="mx-auto size-8 text-primary" aria-hidden />
         <h3 className="text-xl font-semibold">{t("bookingPage.sentTitle", { name: result.name })}</h3>
-        <p className="text-muted-foreground">{t("bookingPage.sentBody", { code: result.code })}</p>
+        <p className="text-muted-foreground">{t(kind === "platform" ? "leadForm.sentBody" : "bookingPage.sentBody", { code: result.code })}</p>
         <Button
           variant="outline"
           className="mx-auto"
@@ -71,7 +80,7 @@ export function InquiryForm({
     form.set("startedAt", String(startedAt.current));
     setError(null);
     startTransition(async () => {
-      const response = await submitInquiryAction(slug, form);
+      const response = submitAction ? await submitAction(form) : await submitInquiryAction(slug, form);
       if (response.ok) setResult({ code: response.code, name: response.name });
       else setError(response.message);
     });

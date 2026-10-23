@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const fixed = [
     "/", "/features", "/pricing", "/about", "/for-agencies", "/for-artists", "/partners", "/blog", "/help", "/changelog", "/contact",
     "/features/booking-page", "/features/quotes-invoices", "/features/payments-payouts", "/features/artist-management",
-    "/solutions/weddings-events", "/solutions/band-agencies",
+    "/solutions/weddings-events", "/solutions/band-agencies", "/request",
   ];
   const [pages, agencies] = await Promise.all([
     prisma.page.findMany({ where: { status: "published" }, select: { slugNl: true, slugEn: true, updatedAt: true } }),

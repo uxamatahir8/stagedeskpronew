@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AffiliateAdminError, createAffiliateByAdmin, deleteAffiliateByAdmin, updateAffiliateByAdmin } from "./affiliates";
 import { AgencyAdminError, createAgencyForOwner, deleteAgency, extendTrial, grantPlan, listAgencies, setAgencySuspended } from "./agencies";
 import { prisma } from "./client";
+import { agencyLeadOffers, assignLead, closeLead, LeadError, offerLead, respondToLeadOffer, submitLead, type LeadInput } from "./leads";
 import { clearReadNotifications, listNotifications, markNotificationsRead, notify } from "./notifications";
 import { seedPlans } from "./seed-plans";
 import { createPlatformAdmin, deleteUserByAdmin, listUsers, signOutEverywhere, updateUserByAdmin, UserAdminError } from "./users";
@@ -18,6 +19,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await prisma.lead.deleteMany({ where: { email: { startsWith: run } } });
   await prisma.affiliate.deleteMany({ where: { user: { email: { startsWith: run } } } });
   await prisma.booking.deleteMany({ where: { organizationId: { in: orgs } } });
   await prisma.organization.deleteMany({ where: { id: { in: orgs } } });
@@ -136,5 +138,72 @@ describe("notifications page", () => {
     expect((await listNotifications(id, { unreadOnly: true })).total).toBe(1);
     expect(await clearReadNotifications(id)).toBe(1);
     expect((await listNotifications(id)).total).toBe(1);
+  });
+});
+
+describe("platform leads", () => {
+  const request = (who: string): LeadInput => ({
+    name: "Lotte Lead",
+    email: email(who),
+    phone: "0612345678",
+    locale: "nl",
+    eventType: "wedding",
+    eventDate: "2027-06-14",
+    startTime: "20:00",
+    venueName: "Kasteel",
+    venueCity: "Utrecht",
+    guestCount: 120,
+    budgetRange: "1500_2500",
+    preferredGenre: "Pop",
+    partnerName: "Sam",
+    ceremony: true,
+    message: "Graag tot 1 uur",
+  });
+  const agency = async (name: string) => {
+    const r = await createAgencyForOwner({ name: `${run} ${name}`, city: "Utrecht", ownerName: "Owner", ownerEmail: email(`owner-${name}`), locale: "nl" });
+    orgs.push(r.organization.id);
+    return r;
+  };
+
+  it("offers a lead to two agencies; the first to accept gets it as a booking, the other loses the offer", async () => {
+    const [a, b] = [await agency("LeadA"), await agency("LeadB")];
+    const lead = await submitLead(request("lead1"));
+    expect(lead.reference).toMatch(/^L-[A-Z2-9]{6}$/);
+    expect(await offerLead(lead.id, [a.organization.id, b.organization.id])).toHaveLength(2);
+    // Offering again is a no-op.
+    expect(await offerLead(lead.id, [a.organization.id])).toEqual([]);
+
+    // Agencies see the request but not who sent it.
+    const [seen] = await agencyLeadOffers(b.organization.id);
+    expect(seen).toMatchObject({ reference: lead.reference, venueCity: "Utrecht", offeredTo: 2 });
+    expect(seen).not.toHaveProperty("email");
+    expect(seen).not.toHaveProperty("name");
+
+    const result = await respondToLeadOffer(lead.id, a.organization.id, true, a.ownerId);
+    expect(result.accepted).toBe(true);
+    const booking = await prisma.booking.findFirstOrThrow({ where: { organizationId: a.organization.id, source: "lead" }, include: { customer: true } });
+    expect(booking).toMatchObject({ venueCity: "Utrecht", guestCount: 120, ceremony: true });
+    expect(booking.customer?.email).toBe(email("lead1"));
+    expect(await prisma.lead.findUniqueOrThrow({ where: { id: lead.id } })).toMatchObject({ status: "assigned", assignedAgencyId: a.organization.id, bookingId: booking.id });
+
+    // B was too late: its offer is withdrawn and accepting fails.
+    expect(await agencyLeadOffers(b.organization.id)).toEqual([]);
+    await expect(respondToLeadOffer(lead.id, b.organization.id, true, b.ownerId)).rejects.toMatchObject({ code: "not_offered" });
+    await expect(assignLead(lead.id, b.organization.id, admin)).rejects.toMatchObject({ code: "taken" });
+  });
+
+  it("records a decline, lets the admin assign directly, and closes a lead", async () => {
+    const a = await agency("LeadC");
+    const declined = await submitLead(request("lead2"));
+    await offerLead(declined.id, [a.organization.id]);
+    expect(await respondToLeadOffer(declined.id, a.organization.id, false, a.ownerId)).toEqual({ accepted: false });
+    expect((await prisma.leadOffer.findFirstOrThrow({ where: { leadId: declined.id } })).status).toBe("declined");
+    const { booking } = await assignLead(declined.id, a.organization.id, admin);
+    expect(booking.source).toBe("lead");
+
+    const spam = await submitLead(request("lead3"));
+    await closeLead(spam.id, "spam");
+    expect(await prisma.lead.findUniqueOrThrow({ where: { id: spam.id } })).toMatchObject({ status: "closed", closedReason: "spam" });
+    await expect(offerLead(spam.id, [a.organization.id])).rejects.toBeInstanceOf(LeadError);
   });
 });

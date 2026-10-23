@@ -11,6 +11,7 @@ import {
   MessageSquareTextIcon,
   Music2Icon,
   ReceiptIcon,
+  SparklesIcon,
 } from "lucide-react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
@@ -54,6 +55,9 @@ const icons: Record<string, { icon: LucideIcon; tone: string }> = {
   reminder_event: { icon: CalendarClockIcon, tone: "bg-chart-2/14 text-chart-2" },
   commission_approved: { icon: HandCoinsIcon, tone: "bg-success/15 text-success" },
   comment_new: { icon: MessageSquareTextIcon, tone: "bg-info/12 text-info" },
+  lead_new: { icon: SparklesIcon, tone: "bg-magenta/12 text-magenta" },
+  lead_offer: { icon: SparklesIcon, tone: "bg-magenta/12 text-magenta" },
+  lead_accepted: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
 };
 const fallback = { icon: ReceiptIcon, tone: "bg-muted text-muted-foreground" };
 

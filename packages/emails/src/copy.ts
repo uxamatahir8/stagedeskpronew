@@ -124,6 +124,22 @@ export const copy = {
         `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Log in met je e-mailadres: je krijgt een code per mail, een wachtwoord is niet nodig. Je proefperiode loopt al.`,
       button: "Inloggen",
     },
+    leadReceived: {
+      subject: (reference: string) => `We hebben je aanvraag ontvangen (${reference})`,
+      preview: "We zoeken het bureau dat bij je event past.",
+      heading: "Bedankt voor je aanvraag",
+      body: (name: string, reference: string) =>
+        `Hoi ${name}, we hebben je aanvraag ontvangen (referentie ${reference}). We zoeken nu een bureau dat bij je event past. Zodra een bureau je aanvraag oppakt, krijg je van hen een bevestiging en daarna een offerte.`,
+      button: "Meer over StageDesk",
+    },
+    leadOffer: {
+      subject: (event: string, date: string) => `Nieuwe lead: ${event} op ${date}`,
+      preview: "StageDesk biedt je bureau een aanvraag aan.",
+      heading: "Er is een lead voor je bureau",
+      body: (agency: string, event: string, date: string, city: string) =>
+        `StageDesk biedt ${agency} een aanvraag aan: ${event} op ${date} in ${city}. Bekijk de details en neem hem aan; het eerste bureau dat accepteert krijgt de boeking.`,
+      button: "Lead bekijken",
+    },
     quoteSent: {
       subject: (agency: string) => `Je offerte van ${agency}`,
       preview: "Je offerte staat klaar.",
@@ -254,6 +270,22 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hi ${name}, we've set up ${agency} for you on StageDesk. Sign in with your email address: we'll email you a code, no password needed. Your trial has started.`,
       button: "Sign in",
+    },
+    leadReceived: {
+      subject: (reference: string) => `We've received your request (${reference})`,
+      preview: "We're finding the agency that fits your event.",
+      heading: "Thanks for your request",
+      body: (name: string, reference: string) =>
+        `Hi ${name}, we've received your request (reference ${reference}). We're now finding an agency that fits your event. As soon as an agency takes it on, they'll confirm and then send you a quote.`,
+      button: "More about StageDesk",
+    },
+    leadOffer: {
+      subject: (event: string, date: string) => `New lead: ${event} on ${date}`,
+      preview: "StageDesk is offering your agency a request.",
+      heading: "There's a lead for your agency",
+      body: (agency: string, event: string, date: string, city: string) =>
+        `StageDesk is offering ${agency} a request: ${event} on ${date} in ${city}. Look at the details and take it on; the first agency to accept gets the booking.`,
+      button: "View the lead",
     },
     quoteSent: {
       subject: (agency: string) => `Your quote from ${agency}`,

@@ -5,6 +5,7 @@ export * from "./affiliates";
 export * from "./agencies";
 export * from "./analytics";
 export * from "./audit";
+export * from "./leads";
 export * from "./messages";
 export * from "./notifications";
 export * from "./pages";

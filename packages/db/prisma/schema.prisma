@@ -159,6 +159,9 @@ model Organization {
   counters           OrganizationCounter[]
   reviews            Review[]
 
+  leadsAssigned Lead[]      @relation("LeadAgency")
+  leadOffers    LeadOffer[] @relation("LeadOffers")
+
   @@map("organizations")
 }
 
@@ -1099,4 +1102,61 @@ model WaitlistEntry {
   createdAt DateTime @default(now())
 
   @@map("waitlist_entries")
+}
+
+/// A request sent to StageDesk itself (the public "request a quote" form). The
+/// platform admin offers it to agencies or assigns it; the agency that takes it
+/// gets it as a normal booking. Agencies are referenced as agencyId so leads stay
+/// platform-level (outside tenantDb).
+model Lead {
+  id               String        @id @db.VarChar(64)
+  /// Shown to the customer, e.g. L-7KQ2M9
+  reference        String        @unique @db.VarChar(12)
+  /// new | offered | assigned | closed
+  status           String        @default("new") @db.VarChar(16)
+  name             String        @db.VarChar(191)
+  email            String        @db.VarChar(191)
+  phone            String?       @db.VarChar(32)
+  locale           String        @default("nl") @db.VarChar(8)
+  eventType        String        @db.VarChar(24)
+  eventDate        DateTime?     @db.Date
+  startTime        String?       @db.VarChar(5)
+  venueName        String?       @db.VarChar(191)
+  venueCity        String?       @db.VarChar(96)
+  guestCount       Int?
+  budgetRange      String?       @db.VarChar(16)
+  preferredGenre   String?       @db.VarChar(96)
+  partnerName      String?       @db.VarChar(191)
+  ceremony         Boolean?
+  message          String?       @db.Text
+  assignedAgencyId String?       @db.VarChar(64)
+  assignedAgency   Organization? @relation("LeadAgency", fields: [assignedAgencyId], references: [id], onDelete: SetNull)
+  bookingId        String?       @unique @db.VarChar(64)
+  closedReason     String?       @db.VarChar(191)
+  /// Admin's notes, never shown to agencies or the customer.
+  adminNotes       String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  offers           LeadOffer[]
+
+  @@index([status, createdAt])
+  @@map("leads")
+}
+
+/// One agency being offered a lead. The first to accept gets it; the other offers are withdrawn.
+model LeadOffer {
+  id            String       @id @db.VarChar(64)
+  leadId        String       @db.VarChar(64)
+  lead          Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  agencyId      String       @db.VarChar(64)
+  agency        Organization @relation("LeadOffers", fields: [agencyId], references: [id], onDelete: Cascade)
+  /// pending | accepted | declined | withdrawn
+  status        String       @default("pending") @db.VarChar(16)
+  respondedById String?      @db.VarChar(64)
+  respondedAt   DateTime?
+  createdAt     DateTime     @default(now())
+
+  @@unique([leadId, agencyId])
+  @@index([agencyId, status])
+  @@map("lead_offers")
 }

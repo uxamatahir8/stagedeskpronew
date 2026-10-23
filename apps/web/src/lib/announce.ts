@@ -1,7 +1,7 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
 import type { EventType } from "@stagedesk/core";
-import { notify, prisma } from "@stagedesk/db";
+import { notify, platformAdminIds, prisma } from "@stagedesk/db";
 import { absoluteUrl, deliver, userLocale } from "./mail";
 
 /**
@@ -41,4 +41,31 @@ export async function announceNewBooking(
     { type: "new_inquiry", data: { name: customerName, code: booking.trackingCode }, url: `/app/bookings/${booking.trackingCode}` },
     exceptUserId,
   );
+}
+
+/**
+ * After a lead became a booking (assigned by the admin or accepted by the
+ * agency): the agency team hears about it, the customer gets the agency's
+ * confirmation, and the platform admins see who took it.
+ */
+export async function announceLeadAssigned(
+  lead: { id: string; name: string; email: string; locale: string; reference: string },
+  booking: { trackingCode: string; eventType: string; eventDate: Date | string | null },
+  agency: { id: string; name: string },
+  actorId: string | null,
+) {
+  await announceNewBooking(agency.id, booking, lead.name, actorId);
+  const locale = userLocale(lead.locale);
+  deliver({
+    kind: "inquiryReceived",
+    to: lead.email,
+    params: {
+      locale,
+      name: lead.name.split(/\s+/)[0] ?? lead.name,
+      agency: agency.name,
+      code: booking.trackingCode,
+      url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`),
+    },
+  });
+  await notify(await platformAdminIds(), { type: "lead_accepted", data: { name: agency.name, code: lead.reference }, url: `/app/leads/${lead.id}` }, actorId);
 }

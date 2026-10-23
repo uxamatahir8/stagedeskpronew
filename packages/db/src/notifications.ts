@@ -14,7 +14,10 @@ export type NotificationType =
   | "ticket_reply"
   | "reminder_event"
   | "commission_approved"
-  | "comment_new";
+  | "comment_new"
+  | "lead_new"
+  | "lead_offer"
+  | "lead_accepted";
 
 export interface NotificationInput {
   type: NotificationType;

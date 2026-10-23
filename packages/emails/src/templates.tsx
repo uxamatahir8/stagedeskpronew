@@ -250,3 +250,24 @@ export function AgencyCreated({ locale, name, agency, url }: { locale: EmailLoca
     </EmailLayout>
   );
 }
+
+export function LeadReceived({ locale, name, reference, url }: { locale: EmailLocale; name: string; reference: string; url: string }) {
+  const c = copy[locale].leadReceived;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, reference)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
+export function LeadOffer({ locale, agency, event, date, city, url }: { locale: EmailLocale; agency: string; event: string; date: string; city: string; url: string }) {
+  const c = copy[locale].leadOffer;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(agency, event, date, city)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}

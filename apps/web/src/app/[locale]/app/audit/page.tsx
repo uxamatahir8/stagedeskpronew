@@ -28,7 +28,7 @@ export default async function AuditPage({ params, searchParams }: PageProps<"/[l
 }
 
 /** Filter groups by action prefix. */
-const groups = ["all", "settings", "plan", "agency", "affiliate", "payment", "user", "ticket", "booking", "support"] as const;
+const groups = ["all", "settings", "plan", "agency", "affiliate", "payment", "user", "ticket", "booking", "lead", "support"] as const;
 
 async function Audit({ searchParams }: Pick<PageProps<"/[locale]/app/audit">, "searchParams">) {
   await requirePermission("platform.audit");

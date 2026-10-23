@@ -41,5 +41,7 @@ export function emailSamples(locale: EmailLocale, appUrl: string): { [K in Email
     },
     contactMessage: { locale, name: "Lotte Jansen", email: "lotte@example.nl", company: "Lotte Events", message: nl ? "Ik wil graag een demo voor ons bureau met 12 DJ's." : "I'd like a demo for our agency with 12 DJs." },
     agencyCreated: { locale, name: "Olga", agency: "Feestbureau Noord", url: url("/sign-in") },
+    leadReceived: { locale, name: "Lotte", reference: "L-7KQ2M9", url: url("/") },
+    leadOffer: { locale, agency: "Feestband Utrecht", event: nl ? "bruiloft" : "wedding", date: nl ? "14 juni 2027" : "14 June 2027", city: "Utrecht", url: url("/app/lead-offers") },
   };
 }
