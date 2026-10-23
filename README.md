@@ -85,7 +85,9 @@ proportionally; the platform absorbs Stripe's unreturned fee. Every movement is 
 
 ## Affiliate program
 
-Partners apply at `/partners`; the platform admin approves them under Affiliates. Program rules
+Partners apply at `/partners`; the platform admin approves them under Affiliates, or adds them there
+directly (approved at once, with a link and promo code). Partners can be edited or paused; one without
+referrals or commission can be deleted. Program rules
 (rate, period, cookie window, approval period, payout minimum and day, promo discount, give-a-month
 reward, review threshold, tiers) are in Settings and apply to new referrals only.
 
@@ -116,17 +118,28 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
 - **Reminders** (hourly): event reminders 7 days and 1 day before to customer and artist, quote expiry
   within 48 hours, and the balance-due reminder. Each is sent once (`reminder_logs`).
 - **Support:** anyone signed in can ask a question at `/app/support`; platform admins answer from the
-  same page. **Admin tools:** Users (search, disable, confirm email, reset 2FA) and the Audit log.
+  same page.
+- **Agencies (platform admin):** search by name, city, KvK or owner email; filter by status and plan;
+  create an agency for an owner (the account is made if needed, the trial starts, a welcome email is
+  optional). Each agency has its own page with stats, team, recent bookings and admin activity, where the
+  admin edits details and internal notes, extends a trial, grants a plan without payment, sets a fee deal,
+  suspends it (team locked out, booking page offline, nothing deleted) or deletes it (only without bookings
+  or money records).
+- **Users (platform admin):** search, filter by role or status, add platform admins, edit details, sign
+  out everywhere, disable, confirm email, reset 2FA, and delete accounts without history. Plus the Audit log.
+- **Loading bar:** a thin bar at the top shows page changes and server calls (`components/activity-bar.tsx`).
 - **CSV export** for bookings, customers and payments (`/api/export/<kind>`).
 
 ## Website, pages and legal
 
-- **Public site** (`app/[locale]/(marketing)`): home, features, pricing (from the plans in Settings),
-  for agencies, for artists, partner program, blog, help centre, changelog and contact, in Dutch and English.
+- **Public site** (`app/[locale]/(marketing)`): home, features with four feature pages (`/features/<slug>`),
+  solutions for weddings & events and band agencies (`/solutions/<slug>`), pricing (from the plans in Settings),
+  about, for agencies, for artists, partner program, blog, help centre, changelog and contact, in Dutch and English.
+  Feature and solution pages share `components/site/detail-page.tsx`; their copy is under `featureDetail.<slug>`.
 - **Blog, help and changelog** are MDX files in `apps/web/src/content`. To add a post: write
   `blog/posts/<slug>.nl.mdx` and `.en.mdx` and add its entry to `blog/index.ts` (help works the same way).
   Blog comments wait for approval under Pages → Blog comments.
-- **Page builder** (`/app/pages`, platform admin): About, Terms, Privacy and any other page, built from
+- **Page builder** (`/app/pages`, platform admin): Terms, Privacy and any other page, built from
   blocks (headings, text, lists, tables, images, callouts) in both languages, placed in the header or a footer
   column. Every save is a version; compare any version with the live one, restore it, or publish it.
 - **Legal acceptance:** a legal page set to "ask everyone" (Terms) or "agency teams" (data processing

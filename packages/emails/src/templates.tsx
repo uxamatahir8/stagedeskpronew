@@ -239,3 +239,14 @@ export function ContactMessage({ locale, name, email, company, message }: { loca
     </EmailLayout>
   );
 }
+
+export function AgencyCreated({ locale, name, agency, url }: { locale: EmailLocale; name: string; agency: string; url: string }) {
+  const c = copy[locale].agencyCreated;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, agency)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}

@@ -1,10 +1,11 @@
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
+import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { sitePages, siteSettings } from "@/lib/site";
-import { LocaleSwitch, MobileNav, type NavLink, NavLinks } from "./site-nav";
+import { LocaleSwitch, MobileNav, type NavEntry, NavLinks } from "./site-nav";
 
 /** The primary call to action: start a trial, or join the waitlist before launch. */
 export async function primaryCta() {
@@ -12,25 +13,51 @@ export async function primaryCta() {
   return site.waitlistMode ? { href: "/#waitlist", label: t("joinWaitlist") } : { href: "/sign-up", label: t("startTrial") };
 }
 
-async function navLinks(): Promise<NavLink[]> {
+/** Feature and solution pages, shared by the header menus and the footer. */
+export const featurePages = ["booking-page", "quotes-invoices", "payments-payouts", "artist-management"] as const;
+const featureIcons = { "booking-page": "globe", "quotes-invoices": "file", "payments-payouts": "coins", "artist-management": "music" } as const;
+
+async function navEntries(): Promise<NavEntry[]> {
   const [t, locale, pages] = await Promise.all([getTranslations("site"), getLocale(), sitePages()]);
   return [
-    { href: "/features", label: t("nav.features") },
+    {
+      label: t("nav.product"),
+      children: [
+        { href: "/features", label: t("nav.features"), description: t("nav.featuresHint"), icon: "grid" },
+        ...featurePages.map((slug) => ({ href: `/features/${slug}`, label: t(`nav.feature_${slug}`), description: t(`nav.feature_${slug}Hint`), icon: featureIcons[slug] })),
+      ],
+    },
+    {
+      label: t("nav.solutions"),
+      children: [
+        { href: "/for-agencies", label: t("nav.forAgencies"), description: t("nav.forAgenciesHint"), icon: "users" },
+        { href: "/solutions/weddings-events", label: t("nav.weddingsEvents"), description: t("nav.weddingsEventsHint"), icon: "heart" },
+        { href: "/solutions/band-agencies", label: t("nav.bandAgencies"), description: t("nav.bandAgenciesHint"), icon: "calendar" },
+        { href: "/for-artists", label: t("nav.forArtists"), description: t("nav.forArtistsHint"), icon: "music" },
+      ],
+    },
     { href: "/pricing", label: t("nav.pricing") },
-    { href: "/for-agencies", label: t("nav.forAgencies") },
-    { href: "/for-artists", label: t("nav.forArtists") },
-    { href: "/blog", label: t("nav.blog") },
-    { href: "/help", label: t("nav.help") },
+    {
+      label: t("nav.resources"),
+      children: [
+        { href: "/blog", label: t("nav.blog"), description: t("nav.blogHint"), icon: "book" },
+        { href: "/help", label: t("nav.help"), description: t("nav.helpHint"), icon: "help" },
+        { href: "/changelog", label: t("nav.changelog"), description: t("nav.changelogHint"), icon: "sparkles" },
+        { href: "/partners", label: t("nav.partners"), description: t("nav.partnersHint"), icon: "handshake" },
+        { href: "/contact", label: t("nav.contact"), description: t("nav.contactHint"), icon: "mail" },
+      ],
+    },
+    { href: "/about", label: t("nav.about") },
     ...pages.filter((p) => p.placement === "header").map((p) => ({ href: `/${locale === "en" ? p.slugEn : p.slugNl}`, label: locale === "en" ? p.titleEn : p.titleNl })),
   ];
 }
 
 async function HeaderActions() {
   await connection();
-  const [t, links, cta] = await Promise.all([getTranslations("site"), navLinks(), primaryCta()]);
+  const [t, entries, cta] = await Promise.all([getTranslations("site"), navEntries(), primaryCta()]);
   return (
     <>
-      <NavLinks links={links} />
+      <NavLinks entries={entries} />
       <div className="ml-auto flex items-center gap-1">
         <LocaleSwitch />
         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
@@ -39,7 +66,7 @@ async function HeaderActions() {
         <Button asChild size="sm" className="hidden sm:inline-flex">
           <Link href={cta.href}>{cta.label}</Link>
         </Button>
-        <MobileNav links={links} signIn={t("signIn")} cta={cta} />
+        <MobileNav entries={entries} signIn={t("signIn")} cta={cta} />
       </div>
     </>
   );
@@ -49,9 +76,8 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">S</span>
-          StageDesk
+        <Link href="/" className="shrink-0" aria-label="StageDesk Pro">
+          <Logo className="h-9" priority />
         </Link>
         <Suspense fallback={<div className="ml-auto h-8 w-40" />}>
           <HeaderActions />
@@ -71,17 +97,23 @@ async function FooterColumns() {
       title: t("footer.product"),
       links: [
         { href: "/features", label: t("nav.features") },
+        ...featurePages.map((slug) => ({ href: `/features/${slug}`, label: t(`nav.feature_${slug}`) })),
         { href: "/pricing", label: t("nav.pricing") },
         { href: "/changelog", label: t("nav.changelog") },
-        { href: "/help", label: t("nav.help") },
         ...placed("footer_product"),
       ],
     },
     {
       title: t("footer.company"),
       links: [
+        { href: "/about", label: t("nav.about") },
+        { href: "/for-agencies", label: t("nav.forAgencies") },
+        { href: "/solutions/weddings-events", label: t("nav.weddingsEvents") },
+        { href: "/solutions/band-agencies", label: t("nav.bandAgencies") },
+        { href: "/for-artists", label: t("nav.forArtists") },
         ...placed("footer_company"),
         { href: "/blog", label: t("nav.blog") },
+        { href: "/help", label: t("nav.help") },
         { href: "/partners", label: t("nav.partners") },
         { href: "/contact", label: t("nav.contact") },
       ],
@@ -115,9 +147,8 @@ export async function SiteFooter() {
     <footer className="border-t bg-muted/30">
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1fr_2fr]">
         <div className="grid content-start gap-3">
-          <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">S</span>
-            StageDesk
+          <Link href="/" className="w-fit" aria-label="StageDesk Pro">
+            <Logo className="h-11" />
           </Link>
           <p className="max-w-xs text-sm text-muted-foreground">{t("footer.tagline")}</p>
         </div>

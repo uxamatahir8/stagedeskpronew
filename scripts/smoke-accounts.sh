@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Accounts and agencies smoke test (phase 2). Needs `pnpm services:up`, `pnpm db:seed` and `pnpm dev`.
 # Clears the Mailpit inbox. Run: bash scripts/smoke-accounts.sh
+# Docker Desktop on Windows doesn't always put its CLI on the Git Bash PATH.
+command -v docker >/dev/null || PATH="$PATH:/c/Program Files/Docker/Docker/resources/bin"
 B=http://localhost:3000
 PW=StageDesk-demo-2026
 D=$(mktemp -d)
@@ -62,7 +64,8 @@ check "verification link signs the user in" "$(curl -s -c "$D/new" -b "$D/new" -
 inv=$(docker exec stagedesk-dev-mysql-1 mysql -N -ustagedesk -pstagedesk stagedesk -e "select id from invitations where email='$NEWART' and status='pending'" 2>/dev/null)
 check "invitation page opens" "$(code new /invite/$inv)" 200
 check "artist accepts invitation" "$(api new /organization/accept-invitation "{\"invitationId\":\"$inv\"}")" 200
-page new /app | grep -q "Feestband Utrecht" && ok "new artist lands in Feestband dashboard" || bad "new artist dashboard" "agency missing"
+# A brand-new account is asked to accept the Terms first; that redirect is streamed inside the shell.
+np=$(page new /app); { echo "$np" | grep -q "Feestband Utrecht" || echo "$np" | grep -q "accept-terms"; } && ok "new artist lands in Feestband (after the Terms)" || bad "new artist dashboard" "agency missing"
 page new /app/team | grep -q "Je hebt geen toegang" && ok "new artist can't open team page" || bad "new artist team 403" "no 403"
 
 echo "Cross-agency writes"

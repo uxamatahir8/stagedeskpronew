@@ -49,10 +49,10 @@ export async function AdminHome() {
   return (
     <>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={ts("mrr")} value={euro(format, mrr)} hint={t("churned", { count: churned })} icon={RepeatIcon} />
-        <StatCard label={ts("activeAgencies")} value={count("active") + count("past_due")} hint={t("pastDue", { count: count("past_due") })} icon={BuildingIcon} />
-        <StatCard label={ts("trialing")} value={count("trialing")} icon={TimerIcon} />
-        <StatCard label={ts("platformFees")} value={euro(format, fees._sum.amountCents ?? 0)} hint={t("commissionsDue", { amount: euro(format, due._sum.amountCents ?? 0) })} icon={BadgeEuroIcon} />
+        <StatCard index={0} label={ts("mrr")} value={euro(format, mrr)} hint={t("churned", { count: churned })} icon={RepeatIcon} />
+        <StatCard index={1} label={ts("activeAgencies")} value={count("active") + count("past_due")} hint={t("pastDue", { count: count("past_due") })} icon={BuildingIcon} />
+        <StatCard index={2} label={ts("trialing")} value={count("trialing")} icon={TimerIcon} />
+        <StatCard index={3} label={ts("platformFees")} value={euro(format, fees._sum.amountCents ?? 0)} hint={t("commissionsDue", { amount: euro(format, due._sum.amountCents ?? 0) })} icon={BadgeEuroIcon} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-5">

@@ -321,3 +321,74 @@ export async function affiliateOverview(affiliateId: string, now = new Date()) {
     payouts,
   };
 }
+
+export class AffiliateAdminError extends Error {
+  constructor(readonly code: "code_taken" | "promo_taken" | "has_history" | "is_admin" | "already_partner" | "not_found") {
+    super(`Affiliate: ${code}`);
+    this.name = "AffiliateAdminError";
+  }
+}
+
+/**
+ * The platform admin adds a partner directly (no application needed). An
+ * account is created for a new email; they sign in with an emailed code.
+ */
+export async function createAffiliateByAdmin(input: { name: string; email: string; code: string | null; website: string | null; commissionBps: number | null; locale: "nl" | "en" }) {
+  const email = input.email.trim().toLowerCase();
+  const existing = await prisma.user.findUnique({ where: { email }, include: { affiliate: { select: { id: true } } } });
+  if (existing?.platformRole === "platform_admin") throw new AffiliateAdminError("is_admin");
+  if (existing?.affiliate) throw new AffiliateAdminError("already_partner");
+  if (input.code && (await prisma.affiliate.findUnique({ where: { code: input.code }, select: { id: true } }))) throw new AffiliateAdminError("code_taken");
+  const userId = existing?.id ?? randomUUID();
+  if (!existing) await prisma.user.create({ data: { id: userId, name: input.name.trim(), email, locale: input.locale } });
+  const program = await getSetting("affiliates.program");
+  const code = await freeCode(input.code ?? input.name);
+  const promoCode = await freePromoCode(code.toUpperCase(), program.promoDiscountBps);
+  const [affiliate] = await prisma.$transaction([
+    prisma.affiliate.create({
+      data: { id: randomUUID(), userId, code, promoCode, website: input.website, commissionBps: input.commissionBps, status: "approved", approvedAt: new Date() },
+      include: { user: { select: { email: true, name: true, locale: true } } },
+    }),
+    prisma.user.update({ where: { id: userId }, data: { platformRole: "affiliate" } }),
+  ]);
+  return { affiliate, newUser: !existing };
+}
+
+/** Edits a partner's link code, promo code and details. A changed promo code is re-created in Stripe. */
+export async function updateAffiliateByAdmin(affiliateId: string, input: { code: string; promoCode: string; website: string | null; pitch: string | null; commissionBps: number | null }) {
+  const current = await prisma.affiliate.findUnique({ where: { id: affiliateId } });
+  if (!current) throw new AffiliateAdminError("not_found");
+  if (input.code !== current.code && (await prisma.affiliate.findUnique({ where: { code: input.code }, select: { id: true } }))) throw new AffiliateAdminError("code_taken");
+  if (input.promoCode !== current.promoCode && (await prisma.affiliate.findUnique({ where: { promoCode: input.promoCode }, select: { id: true } }))) throw new AffiliateAdminError("promo_taken");
+  return prisma.affiliate.update({
+    where: { id: affiliateId },
+    data: {
+      code: input.code,
+      promoCode: input.promoCode,
+      website: input.website,
+      pitch: input.pitch,
+      commissionBps: input.commissionBps,
+      // The old Stripe promotion code no longer matches; it's created again on the next sync.
+      ...(input.promoCode !== current.promoCode ? { stripePromotionCodeId: null } : {}),
+    },
+  });
+}
+
+/**
+ * Removes a partner who never brought anyone in (no referrals, commission or
+ * payouts). Partners with history are paused instead, so the books stay whole.
+ */
+export async function deleteAffiliateByAdmin(affiliateId: string) {
+  const affiliate = await prisma.affiliate.findUnique({
+    where: { id: affiliateId },
+    include: { _count: { select: { referrals: true, commissions: true, payouts: true } } },
+  });
+  if (!affiliate) throw new AffiliateAdminError("not_found");
+  const c = affiliate._count;
+  if (c.referrals + c.commissions + c.payouts > 0) throw new AffiliateAdminError("has_history");
+  await prisma.$transaction([
+    prisma.affiliate.delete({ where: { id: affiliateId } }),
+    prisma.user.update({ where: { id: affiliate.userId }, data: { platformRole: null } }),
+  ]);
+  return affiliate;
+}

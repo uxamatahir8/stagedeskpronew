@@ -1,4 +1,5 @@
 import {
+  ArrowRightIcon,
   BellRingIcon,
   CalendarCheckIcon,
   FileTextIcon,
@@ -13,6 +14,7 @@ import {
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { PageIntro } from "@/components/site/page-intro";
+import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { pageMetadata } from "@/lib/seo";
 
@@ -21,6 +23,9 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/features
   const t = await getTranslations({ locale, namespace: "featuresPage" });
   return pageMetadata({ locale, title: t("title"), description: t("intro"), paths: { nl: "/features", en: "/features" }, kicker: t("eyebrow") });
 }
+
+/** Sections with a page of their own link to it. */
+const detail: Record<string, string> = { bookingPage: "booking-page", quotes: "quotes-invoices", payments: "payments-payouts", artists: "artist-management" };
 
 const sections: { key: string; icon: LucideIcon; points: number }[] = [
   { key: "bookingPage", icon: GlobeIcon, points: 4 },
@@ -43,7 +48,7 @@ export default async function FeaturesPage({ params }: PageProps<"/[locale]/feat
       <div className="grid gap-x-12 gap-y-14 md:grid-cols-2">
         {sections.map(({ key, icon: Icon, points }) => (
           <section key={key} id={key} className="grid content-start gap-3 scroll-mt-24">
-            <span className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <span className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-magenta/15 text-primary">
               <Icon className="size-5" aria-hidden />
             </span>
             <h2 className="text-xl font-semibold">{t(`${key}.title` as "quotes.title")}</h2>
@@ -56,6 +61,12 @@ export default async function FeaturesPage({ params }: PageProps<"/[locale]/feat
                 </li>
               ))}
             </ul>
+            {detail[key] && (
+              <Link href={`/features/${detail[key]}`} className="flex w-fit items-center gap-1 text-sm font-medium text-primary underline-offset-4 hover:underline">
+                {t("learnMore")}
+                <ArrowRightIcon className="size-4" aria-hidden />
+              </Link>
+            )}
           </section>
         ))}
       </div>

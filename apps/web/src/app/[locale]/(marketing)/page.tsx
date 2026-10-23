@@ -4,6 +4,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { splitBookingPayment } from "@stagedesk/core";
+import { BeforeAfter, CapabilityFigures, EventTypes, HubDiagram, JourneyFlow, TrustStrip } from "@/components/site/infographics";
+import { MockArtistRequest, MockPayout, MockQuote } from "@/components/site/mockups";
 import { primaryCta } from "@/components/site/site-chrome";
 import { WaitlistForm } from "@/components/site/waitlist-form";
 import { Button } from "@/components/ui/button";
@@ -41,7 +43,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-24">
           <div className="grid gap-6">
             <p className="text-sm font-semibold tracking-wider text-primary uppercase">{t("eyebrow")}</p>
-            <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">{t("title")}</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
+              {t.rich("title", { hl: (chunks) => <span className="text-brand-gradient">{chunks}</span> })}
+            </h1>
             <p className="max-w-xl text-lg text-muted-foreground">{t("intro")}</p>
             <Suspense fallback={<Skeleton className="h-11 w-72" />}>
               <HeroActions />
@@ -56,6 +60,11 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
             </ul>
           </div>
           <PipelinePreview />
+        </div>
+        <div className="relative border-t bg-background/60 py-5">
+          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+            <TrustStrip />
+          </div>
         </div>
       </section>
 
@@ -84,6 +93,14 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       <section className="border-y bg-muted/30">
+        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+          <JourneyFlow />
+        </div>
+      </section>
+
+      <Showcase />
+
+      <section className="border-y bg-muted/30">
         <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:items-center">
           <div className="grid gap-4">
             <h2 className="text-3xl font-bold tracking-tight text-balance">{t("moneyTitle")}</h2>
@@ -100,6 +117,18 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           <Suspense fallback={<Skeleton className="h-72 w-full" />}>
             <MoneySplit />
           </Suspense>
+        </div>
+      </section>
+
+      <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+        <HubDiagram />
+      </section>
+
+      <section className="border-y bg-muted/30">
+        <div className="mx-auto grid w-full max-w-6xl gap-16 px-4 py-20 sm:px-6">
+          <BeforeAfter />
+          <CapabilityFigures />
+          <EventTypes />
         </div>
       </section>
 
@@ -239,7 +268,7 @@ async function PricingTeaser() {
 
 async function Faq() {
   const t = await getTranslations("landing");
-  const items = (["faq1", "faq2", "faq3", "faq4", "faq5"] as const).map((k) => ({ q: t(`${k}Q`), a: t(`${k}A`) }));
+  const items = (["faq1", "faq2", "faq3", "faq4", "faq5", "faq6", "faq7", "faq8"] as const).map((k) => ({ q: t(`${k}Q`), a: t(`${k}A`) }));
   return (
     <>
       <div className="divide-y rounded-xl border bg-card">
@@ -268,10 +297,10 @@ async function ClosingCta() {
   const [t, cta, { site }] = await Promise.all([getTranslations("landing"), primaryCta(), siteSettings()]);
   return (
     <section id="waitlist" className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
-      <div className="grid gap-6 rounded-3xl bg-primary px-8 py-12 text-primary-foreground sm:px-12 lg:grid-cols-[1fr_auto] lg:items-center">
+      <div className="grid gap-6 rounded-3xl bg-brand-gradient px-8 py-12 text-white sm:px-12 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="grid gap-2">
           <h2 className="text-3xl font-bold tracking-tight text-balance">{site.waitlistMode ? t("waitlistTitle") : t("closingTitle")}</h2>
-          <p className="text-primary-foreground/80">{site.waitlistMode ? t("waitlistIntro") : t("closingIntro")}</p>
+          <p className="text-white/85">{site.waitlistMode ? t("waitlistIntro") : t("closingIntro")}</p>
         </div>
         {site.waitlistMode ? (
           <WaitlistForm turnstileKey={turnstileSiteKey()} inverted />
@@ -284,6 +313,46 @@ async function ClosingCta() {
           </Button>
         )}
       </div>
+    </section>
+  );
+}
+
+/** Three product areas, each next to an illustration, alternating sides. */
+async function Showcase() {
+  const t = await getTranslations("landing");
+  const rows = [
+    { key: "showQuotes", href: "/features/quotes-invoices", Mock: MockQuote },
+    { key: "showArtists", href: "/features/artist-management", Mock: MockArtistRequest },
+    { key: "showPayouts", href: "/features/payments-payouts", Mock: MockPayout },
+  ] as const;
+  return (
+    <section className="mx-auto grid w-full max-w-6xl gap-20 px-4 py-20 sm:px-6">
+      {rows.map(({ key, href, Mock }, i) => (
+        <div key={key} className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <div className={i % 2 ? "lg:order-2" : undefined}>
+            <div className="grid max-w-lg gap-4">
+              <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t(`${key}Eyebrow`)}</p>
+              <h2 className="text-3xl font-bold tracking-tight text-balance">{t(`${key}Title`)}</h2>
+              <p className="text-lg text-muted-foreground">{t(`${key}Body`)}</p>
+              <ul className="grid gap-2">
+                {(["1", "2", "3"] as const).map((p) => (
+                  <li key={p} className="flex gap-2">
+                    <CheckIcon className="mt-1 size-4 shrink-0 text-success" aria-hidden />
+                    {t(`${key}Point${p}`)}
+                  </li>
+                ))}
+              </ul>
+              <Link href={href} className="flex w-fit items-center gap-1 font-medium text-primary underline-offset-4 hover:underline">
+                {t("learnMore")}
+                <ArrowRightIcon className="size-4" aria-hidden />
+              </Link>
+            </div>
+          </div>
+          <div className={i % 2 ? "lg:order-1" : undefined}>
+            <Mock />
+          </div>
+        </div>
+      ))}
     </section>
   );
 }

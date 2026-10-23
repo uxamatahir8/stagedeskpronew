@@ -5,6 +5,7 @@ import { copy, type EmailLocale } from "./copy";
 import {
   AffiliateApproved,
   AffiliatePayout,
+  AgencyCreated,
   BalanceDue,
   ContactMessage,
   EventReminder,
@@ -120,6 +121,10 @@ export function sendContactMessage(to: string, p: { locale: EmailLocale; name: s
   return send(to, copy[p.locale].contactMessage.subject(p.name), createElement(ContactMessage, p), p.email);
 }
 
+export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: string; agency: string; url: string }) {
+  return send(to, copy[p.locale].agencyCreated.subject(p.agency), createElement(AgencyCreated, p));
+}
+
 /**
  * Every email the app sends, by name. Web and worker describe an email as a
  * job ({ kind, to, params }); the worker's email queue sends it with retries.
@@ -141,6 +146,7 @@ const senders = {
   balanceDue: sendBalanceDue,
   ticketReply: sendTicketReply,
   contactMessage: sendContactMessage,
+  agencyCreated: sendAgencyCreated,
 } as const;
 
 export type EmailKind = keyof typeof senders;

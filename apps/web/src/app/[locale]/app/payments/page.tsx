@@ -78,9 +78,9 @@ async function Payments() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label={t("received")} value={euro(format, received)} icon={ArrowDownLeftIcon} />
-        <StatCard label={t("paidOut")} value={euro(format, paidOut)} icon={ArrowUpRightIcon} />
-        <StatCard label={t("refunded")} value={euro(format, refunded)} icon={Undo2Icon} />
+        <StatCard index={0} label={t("received")} value={euro(format, received)} icon={ArrowDownLeftIcon} />
+        <StatCard index={1} label={t("paidOut")} value={euro(format, paidOut)} icon={ArrowUpRightIcon} />
+        <StatCard index={2} label={t("refunded")} value={euro(format, refunded)} icon={Undo2Icon} />
       </div>
 
       <Card>

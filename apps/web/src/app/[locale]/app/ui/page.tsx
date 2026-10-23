@@ -65,10 +65,10 @@ export default async function DesignSystemPage({ params }: PageProps<"/[locale]/
 
       <Section title={t("stats")}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label={th("newInquiries")} value="12" hint={t("sample")} icon={InboxIcon} />
-          <StatCard label={th("quotesExpiring")} value="4" hint={t("sample")} icon={TimerIcon} />
-          <StatCard label={th("eventsThisWeek")} value="7" hint={t("sample")} icon={CalendarCheckIcon} />
-          <StatCard label={th("collected")} value={euro(1_284_500)} hint={t("sample")} icon={EuroIcon} />
+          <StatCard index={0} label={th("newInquiries")} value="12" hint={t("sample")} icon={InboxIcon} />
+          <StatCard index={1} label={th("quotesExpiring")} value="4" hint={t("sample")} icon={TimerIcon} />
+          <StatCard index={2} label={th("eventsThisWeek")} value="7" hint={t("sample")} icon={CalendarCheckIcon} />
+          <StatCard index={3} label={th("collected")} value={euro(1_284_500)} hint={t("sample")} icon={EuroIcon} />
         </div>
       </Section>
 

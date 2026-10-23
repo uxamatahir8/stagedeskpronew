@@ -144,6 +144,11 @@ export function footerNavigationFor(role: Role): NavItem[] {
 const otherPages: NavItem[] = [{ key: "profile", href: "/app/profile", icon: UserRoundIcon }];
 
 /** Finds the nav item for a path like "/app/bookings". */
+/** The item for a path, or for its closest parent section (so detail pages keep their section). */
 export function findNavItem(path: string): NavItem | undefined {
-  return [...navigation.flatMap((g) => g.items), ...footerNavigation, ...otherPages].find((item) => item.href === path);
+  const items = [...navigation.flatMap((g) => g.items), ...footerNavigation, ...otherPages];
+  return (
+    items.find((item) => item.href === path) ??
+    items.filter((item) => item.href !== "/app" && path.startsWith(`${item.href}/`)).sort((a, b) => b.href.length - a.href.length)[0]
+  );
 }

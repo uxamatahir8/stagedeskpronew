@@ -1,6 +1,6 @@
 "use client";
 
-import { BanIcon, CheckIcon, EllipsisIcon, PencilIcon, PercentIcon, PlusIcon, SendIcon, Trash2Icon, XIcon } from "lucide-react";
+import { BanIcon, CheckIcon, EllipsisIcon, PencilIcon, PlusIcon, SendIcon, Trash2Icon, XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -10,9 +10,20 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
-import { deleteAssetAction, payNowAction, reviewCommissionAction, saveAssetAction, setAffiliateRateAction, setAffiliateStatusAction } from "./actions";
+import {
+  createPartnerAction,
+  deleteAssetAction,
+  deletePartnerAction,
+  payNowAction,
+  reviewCommissionAction,
+  saveAssetAction,
+  setAffiliateStatusAction,
+  updatePartnerAction,
+} from "./actions";
 
 function useRun() {
   const router = useRouter();
@@ -45,11 +56,25 @@ export function ApplicationButtons({ affiliateId }: { affiliateId: string }) {
   );
 }
 
-export function AffiliateMenu({ affiliateId, name, status, ratePercent, canPay }: { affiliateId: string; name: string; status: string; ratePercent: string; canPay: boolean }) {
+export interface PartnerValues {
+  code: string;
+  promoCode: string;
+  website: string;
+  pitch: string;
+  ratePercent: string;
+}
+
+export function AffiliateMenu({ affiliateId, name, status, canPay, values }: { affiliateId: string; name: string; status: string; canPay: boolean; values: PartnerValues }) {
   const t = useTranslations("affiliatesAdmin");
   const [pending, run] = useRun();
-  const [rateOpen, setRateOpen] = useState(false);
-  const [rate, setRate] = useState(ratePercent);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [v, setV] = useState(values);
+  const field = (key: keyof PartnerValues, label: string, props: React.ComponentProps<typeof Input> = {}) => (
+    <FormField id={`pe-${key}-${affiliateId}`} label={label}>
+      <Input id={`pe-${key}-${affiliateId}`} value={v[key]} onChange={(e) => setV({ ...v, [key]: e.target.value })} {...props} />
+    </FormField>
+  );
   return (
     <>
       <DropdownMenu>
@@ -59,9 +84,9 @@ export function AffiliateMenu({ affiliateId, name, status, ratePercent, canPay }
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setRateOpen(true)}>
-            <PercentIcon />
-            {t("setRate")}
+          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <PencilIcon />
+            {t("edit")}
           </DropdownMenuItem>
           {canPay && (
             <DropdownMenuItem onSelect={() => run(() => payNowAction(affiliateId))}>
@@ -71,7 +96,7 @@ export function AffiliateMenu({ affiliateId, name, status, ratePercent, canPay }
           )}
           <DropdownMenuSeparator />
           {status === "approved" ? (
-            <DropdownMenuItem variant="destructive" onSelect={() => run(() => setAffiliateStatusAction(affiliateId, "suspended"))}>
+            <DropdownMenuItem onSelect={() => run(() => setAffiliateStatusAction(affiliateId, "suspended"))}>
               <BanIcon />
               {t("suspend")}
             </DropdownMenuItem>
@@ -81,28 +106,117 @@ export function AffiliateMenu({ affiliateId, name, status, ratePercent, canPay }
               {t("reactivate")}
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+            <Trash2Icon />
+            {t("deletePartner")}
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <Dialog open={rateOpen} onOpenChange={setRateOpen}>
-        <DialogContent>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t("rateTitle", { name })}</DialogTitle>
-            <DialogDescription>{t("rateHint")}</DialogDescription>
+            <DialogTitle>{t("editTitle", { name })}</DialogTitle>
+            <DialogDescription>{t("editHint")}</DialogDescription>
           </DialogHeader>
-          <FormField id={`rate-${affiliateId}`} label={t("ratePercent")}>
-            <Input id={`rate-${affiliateId}`} inputMode="decimal" value={rate} placeholder={t("rateTiers")} onChange={(e) => setRate(e.target.value)} />
-          </FormField>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {field("code", t("linkCode"), { maxLength: 24 })}
+            {field("promoCode", t("promoCode"), { maxLength: 24, className: "uppercase" })}
+            {field("website", t("website"), { maxLength: 191 })}
+            {field("ratePercent", t("ratePercent"), { inputMode: "decimal", placeholder: t("rateTiers") })}
+            <FormField id={`pe-pitch-${affiliateId}`} label={t("pitch")} className="sm:col-span-2">
+              <Textarea id={`pe-pitch-${affiliateId}`} rows={3} value={v.pitch} maxLength={2000} onChange={(e) => setV({ ...v, pitch: e.target.value })} />
+            </FormField>
+          </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">{t("cancel")}</Button>
             </DialogClose>
-            <Button disabled={pending} onClick={() => run(() => setAffiliateRateAction(affiliateId, rate), () => setRateOpen(false))}>
+            <Button disabled={pending} onClick={() => run(() => updatePartnerAction(affiliateId, v), () => setEditOpen(false))}>
               {t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("deleteTitle", { name })}</DialogTitle>
+            <DialogDescription>{t("deleteHint")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">{t("cancel")}</Button>
+            </DialogClose>
+            <Button variant="destructive" disabled={pending} onClick={() => run(() => deletePartnerAction(affiliateId), () => setDeleteOpen(false))}>
+              {t("deletePartner")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
+  );
+}
+
+/** Adds a partner directly, approved straight away (no application needed). */
+export function CreatePartnerDialog() {
+  const t = useTranslations("affiliatesAdmin");
+  const [open, setOpen] = useState(false);
+  const [v, setV] = useState({ name: "", email: "", code: "", website: "", ratePercent: "", locale: "nl" as "nl" | "en", sendEmail: true });
+  const [pending, run] = useRun();
+  const field = (key: "name" | "email" | "code" | "website" | "ratePercent", label: string, props: React.ComponentProps<typeof Input> = {}) => (
+    <FormField id={`np-${key}`} label={label}>
+      <Input id={`np-${key}`} value={v[key]} onChange={(e) => setV({ ...v, [key]: e.target.value })} {...props} />
+    </FormField>
+  );
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <PlusIcon />
+          {t("addPartner")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{t("addPartner")}</DialogTitle>
+          <DialogDescription>{t("addPartnerHint")}</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {field("name", t("name"), { maxLength: 191 })}
+          {field("email", t("email"), { type: "email" })}
+          {field("code", t("linkCode"), { maxLength: 24, placeholder: t("codeAuto") })}
+          {field("ratePercent", t("ratePercent"), { inputMode: "decimal", placeholder: t("rateTiers") })}
+          {field("website", t("website"), { maxLength: 191 })}
+          <FormField id="np-locale" label={t("language")}>
+            <Select value={v.locale} onValueChange={(l) => setV({ ...v, locale: l as "nl" | "en" })}>
+              <SelectTrigger id="np-locale" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nl">Nederlands</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+            <label htmlFor="np-send" className="text-sm">
+              {t("sendWelcome")}
+            </label>
+            <Switch id="np-send" checked={v.sendEmail} onCheckedChange={(c) => setV({ ...v, sendEmail: c })} />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">{t("cancel")}</Button>
+          </DialogClose>
+          <Button disabled={pending} onClick={() => run(() => createPartnerAction(v), () => setOpen(false))}>
+            {t("addPartner")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

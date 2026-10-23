@@ -62,9 +62,9 @@ async function Payouts() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label={t("pending")} value={euro(format, total(["pending", "review"]))} hint={t("pendingHint", { days: program.approvalDays })} icon={HourglassIcon} />
-        <StatCard label={t("approved")} value={euro(format, total(["approved"]))} icon={BadgeCheckIcon} />
-        <StatCard label={t("paid")} value={euro(format, total(["paid"]))} icon={WalletIcon} />
+        <StatCard index={0} label={t("pending")} value={euro(format, total(["pending", "review"]))} hint={t("pendingHint", { days: program.approvalDays })} icon={HourglassIcon} />
+        <StatCard index={1} label={t("approved")} value={euro(format, total(["approved"]))} icon={BadgeCheckIcon} />
+        <StatCard index={2} label={t("paid")} value={euro(format, total(["paid"]))} icon={WalletIcon} />
       </div>
 
       <Card>

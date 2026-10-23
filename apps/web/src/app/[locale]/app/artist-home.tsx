@@ -48,10 +48,10 @@ export async function ArtistHome({ userId }: { userId: string }) {
   return (
     <>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("nextGig")} value={next ? (eventDate(format, next.booking.eventDate, "short") ?? "—") : "—"} hint={next ? next.booking.organization.name : t("noGigs")} icon={CalendarClockIcon} />
-        <StatCard label={t("requests")} value={requests.length} icon={InboxIcon} />
-        <StatCard label={t("upcomingEarnings")} value={euro(format, upcoming)} hint={t("gigCount", { count: gigs.length })} icon={HandCoinsIcon} />
-        <StatCard label={t("paidThisYear")} value={euro(format, paid._sum.amountCents ?? 0)} icon={WalletIcon} />
+        <StatCard index={0} label={t("nextGig")} value={next ? (eventDate(format, next.booking.eventDate, "short") ?? "—") : "—"} hint={next ? next.booking.organization.name : t("noGigs")} icon={CalendarClockIcon} />
+        <StatCard index={1} label={t("requests")} value={requests.length} icon={InboxIcon} />
+        <StatCard index={2} label={t("upcomingEarnings")} value={euro(format, upcoming)} hint={t("gigCount", { count: gigs.length })} icon={HandCoinsIcon} />
+        <StatCard index={3} label={t("paidThisYear")} value={euro(format, paid._sum.amountCents ?? 0)} icon={WalletIcon} />
       </section>
 
       {requests.length > 0 && (

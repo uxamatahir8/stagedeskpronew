@@ -12,7 +12,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Switch } from "@/components/ui/switch";
 import { useRouter } from "@/i18n/navigation";
 
-export function FeeDealDialog({ organizationId, agency, rule }: { organizationId: string; agency: string; rule: FeeRule | null }) {
+export function FeeDealDialog({ organizationId, agency, rule, variant }: { organizationId: string; agency: string; rule: FeeRule | null; variant?: "outline" }) {
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -36,7 +36,7 @@ export function FeeDealDialog({ organizationId, agency, rule }: { organizationId
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={rule ? "secondary" : "ghost"} size="sm">
+        <Button variant={variant ?? (rule ? "secondary" : "ghost")} size="sm">
           <HandshakeIcon />
           {t("agencyFee.deal")}
         </Button>

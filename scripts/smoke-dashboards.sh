@@ -34,8 +34,8 @@ has "support page" cust /en/app/support "Ask a question"
 has "support queue for admins" padmin /en/app/support "Waiting for us"
 
 echo "Admin tools"
-has "users list" padmin /en/app/users "sanne@klant.local"
-has "users search" padmin "/en/app/users?q=sanne" "Showing 1 of 1"
+has "users list filtered to admins" padmin "/en/app/users?filter=platform_admin" "admin@stagedesk.local"
+has "users search" padmin "/en/app/users?q=sanne" "sanne@klant.local"
 has "audit log" padmin /en/app/audit "Audit log"
 blocked "owner can't open users" owner /en/app/users
 blocked "owner can't open audit log" owner /en/app/audit

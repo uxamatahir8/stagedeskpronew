@@ -91,6 +91,8 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
     currentPeriodEnd: item?.current_period_end ? new Date(item.current_period_end * 1000) : null,
     cancelAtPeriodEnd: sub.cancel_at_period_end,
     pastDueSince: failing ? (existing?.pastDueSince ?? now) : null,
+    // A paid Stripe subscription replaces a plan the admin granted by hand.
+    complimentary: false,
   };
   return prisma.subscription.upsert({
     where: { organizationId },

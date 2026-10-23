@@ -1,7 +1,7 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
 import { type CountLimit, type FeatureFlag, withinLimit } from "@stagedesk/core";
-import { agencyBilling, agencyUsage } from "@stagedesk/db";
+import { agencyBilling, agencyUsage, prisma } from "@stagedesk/db";
 import { PaymentsError } from "@stagedesk/payments";
 
 /**
@@ -10,6 +10,8 @@ import { PaymentsError } from "@stagedesk/payments";
  */
 
 export async function writeBlocked(organizationId: string): Promise<string | null> {
+  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { suspendedAt: true } });
+  if (org?.suspendedAt) return (await getTranslations("agencySuspended"))("title");
   const { access } = await agencyBilling(organizationId);
   return access.level === "read_only" ? (await getTranslations("billing"))("readOnly") : null;
 }

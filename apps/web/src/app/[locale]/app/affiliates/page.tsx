@@ -1,4 +1,4 @@
-import { HandshakeIcon } from "lucide-react";
+import { BanknoteIcon, ClockIcon, HandshakeIcon, UsersIcon, WalletIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
@@ -8,13 +8,14 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate, percent } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
-import { AffiliateMenu, ApplicationButtons, AssetDialog, type AssetValues, DeleteAssetButton, ReviewButtons } from "./controls";
+import { AffiliateMenu, ApplicationButtons, CreatePartnerDialog, AssetDialog, type AssetValues, DeleteAssetButton, ReviewButtons } from "./controls";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/affiliates">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "affiliatesAdmin" });
@@ -68,13 +69,14 @@ async function Affiliates() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader title={t("title")} description={t("description")} actions={<CreatePartnerDialog />} />
+      <HowPartnersJoin />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("active")} value={affiliates.filter((a) => a.status === "approved").length} hint={t("applicationsWaiting", { count: applications.length })} />
-        <StatCard label={t("toApprove")} value={euro(format, sum(null, ["pending", "review"]))} hint={t("reviewWaiting", { count: review.length })} />
-        <StatCard label={t("due")} value={euro(format, sum(null, ["approved"]))} hint={t("dueHint", { day: program.payoutDayOfMonth })} />
-        <StatCard label={t("paidOut")} value={euro(format, sum(null, ["paid"]))} />
+        <StatCard index={0} icon={UsersIcon} label={t("active")} value={affiliates.filter((a) => a.status === "approved").length} hint={t("applicationsWaiting", { count: applications.length })} />
+        <StatCard index={1} icon={ClockIcon} label={t("toApprove")} value={euro(format, sum(null, ["pending", "review"]))} hint={t("reviewWaiting", { count: review.length })} />
+        <StatCard index={2} icon={WalletIcon} label={t("due")} value={euro(format, sum(null, ["approved"]))} hint={t("dueHint", { day: program.payoutDayOfMonth })} />
+        <StatCard index={3} icon={BanknoteIcon} label={t("paidOut")} value={euro(format, sum(null, ["paid"]))} />
       </div>
 
       {applications.length > 0 && (
@@ -160,8 +162,14 @@ async function Affiliates() {
                           affiliateId={a.id}
                           name={a.user.name}
                           status={a.status}
-                          ratePercent={a.commissionBps === null ? "" : String(a.commissionBps / 100).replace(".", locale === "en" ? "." : ",")}
                           canPay={a.status === "approved" && a.payoutsEnabled && unpaid > 0}
+                          values={{
+                            code: a.code,
+                            promoCode: a.promoCode,
+                            website: a.website ?? "",
+                            pitch: a.pitch ?? "",
+                            ratePercent: a.commissionBps === null ? "" : String(a.commissionBps / 100).replace(".", locale === "en" ? "." : ","),
+                          }}
                         />
                       </TableCell>
                     </TableRow>
@@ -266,5 +274,39 @@ async function Affiliates() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/** Explains the two ways a partner gets in, with the public application link. */
+async function HowPartnersJoin() {
+  const t = await getTranslations("affiliatesAdmin");
+  const steps = ["join1", "join2", "join3"] as const;
+  return (
+    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-transparent to-magenta/5">
+      <CardHeader>
+        <CardTitle>{t("joinTitle")}</CardTitle>
+        <CardDescription>{t("joinHint")}</CardDescription>
+        <CardAction>
+          <Button asChild variant="outline" size="sm">
+            <a href="/partners" target="_blank" rel="noopener">
+              {t("openPartnerPage")}
+            </a>
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        <ol className="grid gap-4 sm:grid-cols-3">
+          {steps.map((s, i) => (
+            <li key={s} className="grid grid-cols-[2rem_1fr] gap-3">
+              <span className="flex size-8 items-center justify-center rounded-full bg-brand-gradient text-sm font-semibold text-white tabular-nums">{i + 1}</span>
+              <span className="grid gap-0.5 text-sm">
+                <span className="font-medium">{t(`${s}Title`)}</span>
+                <span className="text-muted-foreground">{t(`${s}Body`)}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </CardContent>
+    </Card>
   );
 }

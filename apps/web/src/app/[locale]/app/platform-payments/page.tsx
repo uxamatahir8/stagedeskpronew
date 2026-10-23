@@ -66,10 +66,10 @@ async function PlatformPayments() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("volume")} value={euro(format, volume._sum.amountCents ?? 0)} icon={BanknoteIcon} />
-        <StatCard label={t("fees")} value={euro(format, ledgerSum("platform_fee") + ledgerSum("refund_cost"))} icon={PercentIcon} />
-        <StatCard label={t("refunds")} value={euro(format, ledgerSum("refund"))} icon={Undo2Icon} />
-        <StatCard label={t("mrr")} value={euro(format, mrr)} icon={RepeatIcon} />
+        <StatCard index={0} label={t("volume")} value={euro(format, volume._sum.amountCents ?? 0)} icon={BanknoteIcon} />
+        <StatCard index={1} label={t("fees")} value={euro(format, ledgerSum("platform_fee") + ledgerSum("refund_cost"))} icon={PercentIcon} />
+        <StatCard index={2} label={t("refunds")} value={euro(format, ledgerSum("refund"))} icon={Undo2Icon} />
+        <StatCard index={3} label={t("mrr")} value={euro(format, mrr)} icon={RepeatIcon} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">

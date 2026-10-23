@@ -35,7 +35,7 @@ export default async function DashboardHome({ params }: PageProps<"/[locale]/app
 async function RoleHome() {
   const [{ role, user, organization }, t] = await Promise.all([requireViewer(), getTranslations("home")]);
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
-  const header = <PageHeader title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />;
+  const header = <PageHeader hero title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />;
 
   let body: React.ReactNode = null;
   if (organization && can(role, "agency.bookings")) {

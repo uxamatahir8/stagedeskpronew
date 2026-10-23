@@ -125,6 +125,11 @@ model Organization {
   stripeCustomerId   String?                @unique @db.VarChar(64)
   /// Platform fee deal for this agency (FeeRule); overrides the plan and platform default.
   feeRule            Json?
+  /// Set by the platform admin: the agency team is locked out and the booking page is offline. Data is kept.
+  suspendedAt        DateTime?
+  suspendReason      String?                @db.VarChar(191)
+  /// Internal notes, only visible to platform admins.
+  adminNotes         String?                @db.Text
   createdAt          DateTime               @default(now())
   subscription       Subscription?
   connectedAccounts  ConnectedAccount[]
@@ -594,6 +599,8 @@ model Subscription {
   cancelAtPeriodEnd    Boolean      @default(false)
   /// Start of a failed-payment period; read-only access begins after the grace days.
   pastDueSince         DateTime?
+  /// Granted by the platform admin without Stripe (no invoices are sent).
+  complimentary        Boolean      @default(false)
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
 

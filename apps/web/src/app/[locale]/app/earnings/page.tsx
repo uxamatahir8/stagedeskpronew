@@ -82,10 +82,10 @@ async function Earnings() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("earned")} value={euro(format, total((r) => r.share, done))} icon={HandCoinsIcon} />
-        <StatCard label={t("paidOut")} value={euro(format, total((r) => r.paidOut))} icon={WalletIcon} />
-        <StatCard label={t("owed")} value={euro(format, total((r) => r.owed))} icon={HourglassIcon} />
-        <StatCard label={t("upcoming")} value={euro(format, total((r) => r.share, upcoming))} icon={CalendarClockIcon} />
+        <StatCard index={0} label={t("earned")} value={euro(format, total((r) => r.share, done))} icon={HandCoinsIcon} />
+        <StatCard index={1} label={t("paidOut")} value={euro(format, total((r) => r.paidOut))} icon={WalletIcon} />
+        <StatCard index={2} label={t("owed")} value={euro(format, total((r) => r.owed))} icon={HourglassIcon} />
+        <StatCard index={3} label={t("upcoming")} value={euro(format, total((r) => r.share, upcoming))} icon={CalendarClockIcon} />
       </div>
 
       <Card>

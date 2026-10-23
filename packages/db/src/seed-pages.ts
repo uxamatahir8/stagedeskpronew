@@ -21,41 +21,6 @@ interface Starter {
 
 const starters: Starter[] = [
   {
-    slugNl: "over-ons",
-    slugEn: "about",
-    kind: "standard",
-    legalKey: null,
-    acceptance: "none",
-    placement: "footer_company",
-    position: 0,
-    content: {
-      nl: {
-        title: "Over StageDesk",
-        seoTitle: "Over StageDesk",
-        seoDescription: "StageDesk is software voor DJ- en bandbureaus in Nederland: aanvragen, offertes, artiesten en betalingen op één plek.",
-        blocks: [
-          p("StageDesk is gemaakt voor DJ- en bandbureaus die meer tijd willen voor hun artiesten en klanten, en minder voor spreadsheets en losse mails."),
-          h("Wat we doen"),
-          p("Van de eerste aanvraag via je eigen boekingspagina tot de uitbetaling aan je artiest na het feest: offertes, planning, berichten en betalingen staan op één plek."),
-          h("Waar we zitten"),
-          p("We werken vanuit Nederland, in het Nederlands en Engels, met iDEAL en betaalkaarten. Vragen? Mail ons via [support@stagedesk.pro](mailto:support@stagedesk.pro)."),
-        ],
-      },
-      en: {
-        title: "About StageDesk",
-        seoTitle: "About StageDesk",
-        seoDescription: "StageDesk is software for DJ and band agencies in the Netherlands: inquiries, quotes, artists and payments in one place.",
-        blocks: [
-          p("StageDesk is built for DJ and band agencies that want more time for their artists and customers, and less for spreadsheets and scattered emails."),
-          h("What we do"),
-          p("From the first inquiry on your own booking page to paying your artist after the party: quotes, planning, messages and payments in one place."),
-          h("Where we are"),
-          p("We work from the Netherlands, in Dutch and English, with iDEAL and cards. Questions? Email [support@stagedesk.pro](mailto:support@stagedesk.pro)."),
-        ],
-      },
-    },
-  },
-  {
     slugNl: "algemene-voorwaarden",
     slugEn: "terms",
     kind: "legal",

@@ -5,10 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * StageDesk theme. Brand purple comes from v1 (#5b2a86); neutrals carry a
- * slight violet tint so greys read as part of the brand. Status colours
- * (success/warning/info/destructive) are separate from the brand accent.
- * Dark mode is class-based (next-themes), defaulting to the system setting.
+ * StageDesk theme. Brand purple is the logo's (#572261), with a vibrant
+ * magenta for highlights and the purple→magenta brand gradient. Neutrals
+ * carry a slight violet tint so greys read as part of the brand. The sidebar
+ * is deep brand purple in both themes. Status colours (success/warning/info/
+ * destructive) stay separate from the brand colours. Dark mode is class-based
+ * (next-themes), defaulting to the system setting.
  */
 :root {
   --radius: 0.625rem;
@@ -20,14 +22,17 @@
   --popover: oklch(1 0 0);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.42 0.14 305);
-  --primary-foreground: oklch(0.985 0.005 300);
+  --primary: oklch(0.4 0.14 322);
+  --primary-foreground: oklch(0.985 0.005 320);
+  /* Brand accent for highlights, badges and gradients. */
+  --magenta: oklch(0.6 0.22 352);
+  --magenta-foreground: oklch(0.99 0.005 350);
   --secondary: oklch(0.955 0.012 300);
   --secondary-foreground: oklch(0.28 0.04 300);
   --muted: oklch(0.96 0.008 300);
   --muted-foreground: oklch(0.5 0.025 300);
-  --accent: oklch(0.95 0.025 305);
-  --accent-foreground: oklch(0.3 0.08 305);
+  --accent: oklch(0.95 0.03 330);
+  --accent-foreground: oklch(0.3 0.09 325);
 
   --destructive: oklch(0.56 0.21 27);
   --success: oklch(0.55 0.13 155);
@@ -36,7 +41,7 @@
 
   --border: oklch(0.91 0.012 300);
   --input: oklch(0.89 0.014 300);
-  --ring: oklch(0.6 0.12 305);
+  --ring: oklch(0.58 0.16 335);
 
   /* Categorical chart palette: distinct hues at similar lightness. */
   --chart-1: oklch(0.5 0.15 305);
@@ -45,14 +50,17 @@
   --chart-4: oklch(0.6 0.15 355);
   --chart-5: oklch(0.6 0.12 150);
 
-  --sidebar: oklch(0.975 0.008 300);
-  --sidebar-foreground: oklch(0.28 0.03 300);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.935 0.025 305);
-  --sidebar-accent-foreground: oklch(0.25 0.07 305);
-  --sidebar-border: oklch(0.91 0.014 300);
-  --sidebar-ring: var(--ring);
+  /* Deep brand purple sidebar with light text, in both themes. */
+  --sidebar: oklch(0.27 0.09 322);
+  --sidebar-foreground: oklch(0.9 0.03 330);
+  --sidebar-primary: var(--magenta);
+  --sidebar-primary-foreground: var(--magenta-foreground);
+  --sidebar-accent: oklch(0.35 0.11 328);
+  --sidebar-accent-foreground: oklch(0.99 0.005 330);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: var(--magenta);
+
+  --brand-gradient: linear-gradient(135deg, oklch(0.4 0.14 322), oklch(0.6 0.22 352));
 }
 
 .dark {
@@ -63,14 +71,16 @@
   --popover: oklch(0.22 0.02 300);
   --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.76 0.11 305);
-  --primary-foreground: oklch(0.2 0.04 300);
+  --primary: oklch(0.74 0.13 320);
+  --primary-foreground: oklch(0.2 0.05 320);
+  --magenta: oklch(0.72 0.18 352);
+  --magenta-foreground: oklch(0.18 0.04 350);
   --secondary: oklch(0.26 0.02 300);
   --secondary-foreground: oklch(0.92 0.01 300);
   --muted: oklch(0.25 0.018 300);
   --muted-foreground: oklch(0.7 0.02 300);
-  --accent: oklch(0.29 0.04 305);
-  --accent-foreground: oklch(0.93 0.02 305);
+  --accent: oklch(0.29 0.05 325);
+  --accent-foreground: oklch(0.94 0.02 325);
 
   --destructive: oklch(0.68 0.18 25);
   --success: oklch(0.72 0.13 155);
@@ -79,7 +89,7 @@
 
   --border: oklch(1 0 0 / 9%);
   --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.65 0.1 305);
+  --ring: oklch(0.68 0.14 340);
 
   /* Dark chart hues are stepped for the dark surface (validated: lightness band, CVD separation, contrast). */
   --chart-1: oklch(0.56 0.18 300);
@@ -88,14 +98,16 @@
   --chart-4: oklch(0.72 0.14 355);
   --chart-5: oklch(0.74 0.12 150);
 
-  --sidebar: oklch(0.15 0.015 300);
-  --sidebar-foreground: oklch(0.86 0.015 300);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: var(--primary-foreground);
-  --sidebar-accent: oklch(0.25 0.03 305);
-  --sidebar-accent-foreground: oklch(0.95 0.015 305);
+  --sidebar: oklch(0.2 0.06 322);
+  --sidebar-foreground: oklch(0.88 0.03 330);
+  --sidebar-primary: var(--magenta);
+  --sidebar-primary-foreground: var(--magenta-foreground);
+  --sidebar-accent: oklch(0.29 0.08 326);
+  --sidebar-accent-foreground: oklch(0.98 0.005 330);
   --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: var(--ring);
+  --sidebar-ring: var(--magenta);
+
+  --brand-gradient: linear-gradient(135deg, oklch(0.5 0.16 322), oklch(0.66 0.2 352));
 }
 
 @theme inline {
@@ -111,6 +123,8 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-magenta: var(--magenta);
+  --color-magenta-foreground: var(--magenta-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -163,5 +177,33 @@
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+}
+
+/* Brand gradient (purple → magenta) for hero accents, CTAs and highlights. */
+@utility bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+@utility text-brand-gradient {
+  background-image: var(--brand-gradient);
+  background-clip: text;
+  color: transparent;
+}
+
+/* Top-of-page activity bar while navigating or saving. */
+@keyframes activity-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+@utility animate-activity {
+  animation: activity-slide 1.1s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-activity {
+    animation: none;
   }
 }

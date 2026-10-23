@@ -1,9 +1,10 @@
 import { Suspense } from "react";
 import { getLocale, setRequestLocale } from "next-intl/server";
 import { can } from "@stagedesk/core";
-import { pendingLegal } from "@stagedesk/db";
+import { pendingLegal, prisma } from "@stagedesk/db";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SubscriptionBanner } from "@/components/shell/subscription-banner";
+import { SuspendedNotice } from "@/components/shell/suspended-notice";
 import { TopBar } from "@/components/shell/top-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,13 +27,17 @@ async function Shell({ children }: { children: React.ReactNode }) {
   const { user, role, organization, memberships } = await requireViewer();
   // New Terms (or, for agencies, a new data processing agreement) are accepted before anything else.
   if ((await pendingLegal(user.id)).length > 0) redirect({ href: "/accept-terms", locale: (await getLocale()) as Locale });
+  // A suspended agency is closed to its team and customers; they can still switch agency or sign out.
+  const suspended = organization ? await prisma.organization.findUnique({ where: { id: organization.id }, select: { suspendedAt: true, suspendReason: true } }) : null;
   return (
     <SidebarProvider>
       <AppSidebar viewer={{ user, role, organization, memberships }} />
       <SidebarInset>
         <TopBar role={role} />
-        {organization && can(role, "agency.bookings") && <SubscriptionBanner organizationId={organization.id} role={role} />}
-        <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">{children}</div>
+        {organization && can(role, "agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} role={role} />}
+        <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
+          {suspended?.suspendedAt ? <SuspendedNotice agency={organization!.name} reason={suspended.suspendReason} /> : children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

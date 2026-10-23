@@ -24,6 +24,7 @@ export function TopBar({ role }: { role: Role }) {
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-4 backdrop-blur">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-brand-gradient" />
       <SidebarTrigger className="-ml-1" aria-label={t("shell.toggleSidebar")} />
       <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-4" />
       <Breadcrumb className="hidden md:block">
@@ -41,7 +42,13 @@ export function TopBar({ role }: { role: Role }) {
             <>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{t(`nav.${current.key}`)}</BreadcrumbPage>
+                {current.href === pathname ? (
+                  <BreadcrumbPage>{t(`nav.${current.key}`)}</BreadcrumbPage>
+                ) : (
+                  <BreadcrumbLink asChild>
+                    <Link href={current.href}>{t(`nav.${current.key}`)}</Link>
+                  </BreadcrumbLink>
+                )}
               </BreadcrumbItem>
             </>
           )}

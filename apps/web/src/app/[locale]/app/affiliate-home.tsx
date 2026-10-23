@@ -32,10 +32,10 @@ export async function AffiliateHome({ affiliateId }: { affiliateId: string }) {
   return (
     <div className="grid gap-6">
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("clicksMonth")} value={funnel.clicksMonth} hint={t("clicksTotal", { count: funnel.clicksTotal })} icon={MousePointerClickIcon} />
-        <StatCard label={t("payingAgencies")} value={funnel.paying} hint={t("signupsTotal", { count: funnel.signups })} icon={CoinsIcon} />
-        <StatCard label={t("pending")} value={euro(format, earnings.pending)} hint={t("approvedHint", { amount: euro(format, earnings.approved) })} icon={HourglassIcon} />
-        <StatCard
+        <StatCard index={0} label={t("clicksMonth")} value={funnel.clicksMonth} hint={t("clicksTotal", { count: funnel.clicksTotal })} icon={MousePointerClickIcon} />
+        <StatCard index={1} label={t("payingAgencies")} value={funnel.paying} hint={t("signupsTotal", { count: funnel.signups })} icon={CoinsIcon} />
+        <StatCard index={2} label={t("pending")} value={euro(format, earnings.pending)} hint={t("approvedHint", { amount: euro(format, earnings.approved) })} icon={HourglassIcon} />
+        <StatCard index={3}
           label={t("nextPayout")}
           value={euro(format, o.nextPayout.amountCents)}
           hint={o.nextPayout.amountCents > 0 ? eventDate(format, o.nextPayout.date) : t("belowMinimum", { amount: euro(format, o.program.minPayoutCents) })}

@@ -1,4 +1,5 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Logo } from "@/components/brand/logo";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 
@@ -9,9 +10,9 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
 
   return (
     <div className="grid min-h-svh lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary p-10 text-primary-foreground lg:flex">
-        <Link href="/" className="text-lg font-bold tracking-tight">
-          StageDesk
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-gradient p-10 text-primary-foreground lg:flex">
+        <Link href="/" className="w-fit" aria-label="StageDesk Pro">
+          <Logo onDark className="h-12" priority />
         </Link>
         <p className="max-w-sm text-2xl leading-snug font-medium text-balance">{t("brandLine")}</p>
         <div
@@ -20,8 +21,8 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
         />
       </aside>
       <main className="flex flex-col items-center justify-center px-4 py-12">
-        <Link href="/" className="mb-10 text-lg font-bold tracking-tight text-primary lg:hidden">
-          StageDesk
+        <Link href="/" className="mb-10 lg:hidden" aria-label="StageDesk Pro">
+          <Logo className="h-10" />
         </Link>
         {children}
       </main>

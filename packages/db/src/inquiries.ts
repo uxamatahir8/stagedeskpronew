@@ -11,7 +11,7 @@ import { tenantDb } from "./tenant";
 
 export async function publicAgency(slug: string) {
   return prisma.organization.findFirst({
-    where: { slug, bookingPageEnabled: true },
+    where: { slug, bookingPageEnabled: true, suspendedAt: null },
     select: {
       id: true,
       slug: true,

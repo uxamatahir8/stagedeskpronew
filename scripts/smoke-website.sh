@@ -13,13 +13,18 @@ has()  { if curl -s -b "$D/${3:-none}" "$B$1" | grep -q "$2"; then ok "$1 shows 
 signin() { curl -s -c "$D/$1" "${H[@]}" -d "{\"email\":\"$2\",\"password\":\"$PW\"}" -o /dev/null -w '%{http_code}' $B/api/auth/sign-in/email; }
 
 echo "Pages"
-for p in / /en /features /pricing /for-agencies /for-artists /partners /blog /help /changelog /contact /en/pricing /en/blog/aanbetaling-en-uitbetaling /help/online-betalingen; do
+for p in / /en /features /pricing /for-agencies /for-artists /partners /blog /help /changelog /contact /en/pricing /en/blog/aanbetaling-en-uitbetaling /help/online-betalingen /about /en/about /features/booking-page /features/quotes-invoices /features/payments-payouts /features/artist-management /solutions/weddings-events /solutions/band-agencies /en/solutions/band-agencies; do
   c=$(code "$p"); [ "$c" = 200 ] && ok "$p 200" || bad "$p" "$c"
 done
 has /pricing "Meest gekozen"
 has /en "From inquiry to payout"
 has /algemene-voorwaarden "Laatst bijgewerkt"
 has /en/terms "Last updated"
+has /features/quotes-invoices "Offertes en facturen voor je bureau"
+has /en/about "Why we built StageDesk"
+has /solutions/weddings-events "FAQPage"
+has /sitemap.xml "/solutions/band-agencies"
+nf2=$(curl -s "$B/features/does-not-exist"); echo "$nf2" | grep -q 'content="noindex"' && ok "unknown feature page is a noindex 404" || bad "unknown feature page" "no noindex"
 # Builder pages are looked up while streaming, so an unknown address is a not-found page marked noindex.
 nf=$(curl -s "$B/does-not-exist"); echo "$nf" | grep -q 'content="noindex"' && echo "$nf" | grep -q "404" && ok "unknown page is a noindex 404" || bad "unknown page" "no noindex 404"
 

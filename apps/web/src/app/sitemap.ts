@@ -18,11 +18,15 @@ function both(paths: { nl: string; en: string }, extra: Partial<Entry> = {}): En
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
-  const fixed = ["/", "/features", "/pricing", "/for-agencies", "/for-artists", "/partners", "/blog", "/help", "/changelog", "/contact"];
+  const fixed = [
+    "/", "/features", "/pricing", "/about", "/for-agencies", "/for-artists", "/partners", "/blog", "/help", "/changelog", "/contact",
+    "/features/booking-page", "/features/quotes-invoices", "/features/payments-payouts", "/features/artist-management",
+    "/solutions/weddings-events", "/solutions/band-agencies",
+  ];
   const [pages, agencies] = await Promise.all([
     prisma.page.findMany({ where: { status: "published" }, select: { slugNl: true, slugEn: true, updatedAt: true } }),
     // Public booking pages that are switched on.
-    prisma.organization.findMany({ where: { bookingPageEnabled: true }, select: { slug: true } }),
+    prisma.organization.findMany({ where: { bookingPageEnabled: true, suspendedAt: null }, select: { slug: true } }),
   ]);
   return [
     ...fixed.flatMap((p) => both({ nl: p, en: p }, { changeFrequency: "weekly", priority: p === "/" ? 1 : 0.8 })),

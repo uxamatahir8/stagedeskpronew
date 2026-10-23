@@ -116,6 +116,14 @@ export const copy = {
       heading: "Bericht via de website",
       body: (name: string, email: string, company: string) => `${name} (${email}${company ? `, ${company}` : ""}) schreef via het contactformulier:`,
     },
+    agencyCreated: {
+      subject: (agency: string) => `Je bureau ${agency} staat klaar op StageDesk`,
+      preview: "We hebben een StageDesk-account voor je bureau aangemaakt.",
+      heading: "Welkom bij StageDesk",
+      body: (name: string, agency: string) =>
+        `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Log in met je e-mailadres: je krijgt een code per mail, een wachtwoord is niet nodig. Je proefperiode loopt al.`,
+      button: "Inloggen",
+    },
     quoteSent: {
       subject: (agency: string) => `Je offerte van ${agency}`,
       preview: "Je offerte staat klaar.",
@@ -238,6 +246,14 @@ export const copy = {
       preview: "A new message through the contact form.",
       heading: "Message from the website",
       body: (name: string, email: string, company: string) => `${name} (${email}${company ? `, ${company}` : ""}) wrote through the contact form:`,
+    },
+    agencyCreated: {
+      subject: (agency: string) => `Your agency ${agency} is ready on StageDesk`,
+      preview: "We've created a StageDesk account for your agency.",
+      heading: "Welcome to StageDesk",
+      body: (name: string, agency: string) =>
+        `Hi ${name}, we've set up ${agency} for you on StageDesk. Sign in with your email address: we'll email you a code, no password needed. Your trial has started.`,
+      button: "Sign in",
     },
     quoteSent: {
       subject: (agency: string) => `Your quote from ${agency}`,

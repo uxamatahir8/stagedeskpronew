@@ -4,7 +4,8 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { audit, prisma, reviewCommission, setAffiliateStatus } from "@stagedesk/db";
+import { affiliateCodePattern, promoCodePattern } from "@stagedesk/core";
+import { AffiliateAdminError, audit, createAffiliateByAdmin, deleteAffiliateByAdmin, prisma, reviewCommission, setAffiliateStatus, updateAffiliateByAdmin } from "@stagedesk/db";
 import { getStripe, payAffiliate, syncAffiliatePromo } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { referralLink } from "@/lib/affiliate";
@@ -44,19 +45,6 @@ export async function setAffiliateStatusAction(affiliateId: string, status: "app
   await audit({ actorId: viewer.user.id, action: "affiliate.status", targetType: "affiliate", targetId: affiliateId, data: { status } });
   done();
   return { ok: true, message: t(`statusSaved_${status}`) };
-}
-
-/** A personal commission rate in percent, or empty to follow the tiers. */
-export async function setAffiliateRateAction(affiliateId: string, percentText: string): Promise<ActionResult> {
-  const viewer = await requirePermission("platform.affiliates");
-  const t = await getTranslations("affiliatesAdmin");
-  const raw = percentText.trim().replace(",", ".");
-  const value = raw === "" ? null : Number(raw);
-  if (value !== null && (!Number.isFinite(value) || value < 0 || value > 100)) return { ok: false, message: t("invalidRate") };
-  await prisma.affiliate.update({ where: { id: affiliateId }, data: { commissionBps: value === null ? null : Math.round(value * 100) } });
-  await audit({ actorId: viewer.user.id, action: "affiliate.rate", targetType: "affiliate", targetId: affiliateId, data: { percent: value } });
-  done();
-  return { ok: true, message: t("rateSaved") };
 }
 
 export async function reviewCommissionAction(commissionId: string, approve: boolean): Promise<ActionResult> {
@@ -121,4 +109,95 @@ export async function deleteAssetAction(id: string): Promise<ActionResult> {
   await prisma.affiliateAsset.deleteMany({ where: { id } });
   done();
   return { ok: true, message: (await getTranslations("affiliatesAdmin"))("assetDeleted") };
+}
+
+const partnerSchema = z.object({
+  name: z.string().trim().min(2).max(191),
+  email: z.email().max(191),
+  code: z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim().toLowerCase() : null), z.string().regex(affiliateCodePattern).nullable()),
+  website: z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim() : null), z.string().max(191).nullable()),
+  ratePercent: z.string().trim().max(6),
+  locale: z.enum(["nl", "en"]),
+  sendEmail: z.boolean(),
+});
+
+/** Parses "25" or "27,5" into basis points; empty means "follow the tiers". */
+function rateToBps(text: string): number | null | "invalid" {
+  if (!text.trim()) return null;
+  const n = Number(text.replace(",", "."));
+  return Number.isFinite(n) && n >= 0 && n <= 100 ? Math.round(n * 100) : "invalid";
+}
+
+async function affiliateError(error: unknown) {
+  const t = await getTranslations("affiliatesAdmin");
+  if (error instanceof AffiliateAdminError) return t(`error_${error.code}`);
+  throw error;
+}
+
+/** The admin adds a partner directly; they're approved straight away. */
+export async function createPartnerAction(input: z.input<typeof partnerSchema>): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("affiliatesAdmin");
+  const parsed = partnerSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: t("invalidPartner") };
+  const bps = rateToBps(parsed.data.ratePercent);
+  if (bps === "invalid") return { ok: false, message: t("invalidRate") };
+  try {
+    const { affiliate } = await createAffiliateByAdmin({ ...parsed.data, commissionBps: bps });
+    const stripe = getStripe();
+    if (stripe) await syncAffiliatePromo(stripe, affiliate.id).catch((error) => console.error("[affiliates] promo sync failed", error));
+    if (parsed.data.sendEmail) {
+      const locale = parsed.data.locale;
+      deliver({
+        kind: "affiliateApproved",
+        to: affiliate.user.email,
+        params: { locale, name: parsed.data.name.split(/\s+/)[0] ?? parsed.data.name, link: referralLink(affiliate.code), promo: affiliate.promoCode, url: absoluteUrl(locale, "/sign-in") },
+      });
+    }
+    await audit({ actorId: viewer.user.id, action: "affiliate.create", targetType: "affiliate", targetId: affiliate.id, data: { email: affiliate.user.email } });
+  } catch (error) {
+    return { ok: false, message: await affiliateError(error) };
+  }
+  done();
+  return { ok: true, message: t("partnerCreated") };
+}
+
+const editSchema = z.object({
+  code: z.string().trim().toLowerCase().regex(affiliateCodePattern),
+  promoCode: z.string().trim().toUpperCase().regex(promoCodePattern),
+  website: z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim() : null), z.string().max(191).nullable()),
+  pitch: z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim() : null), z.string().max(2000).nullable()),
+  ratePercent: z.string().trim().max(6),
+});
+
+export async function updatePartnerAction(affiliateId: string, input: z.input<typeof editSchema>): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("affiliatesAdmin");
+  const parsed = editSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: t("invalidCodes") };
+  const bps = rateToBps(parsed.data.ratePercent);
+  if (bps === "invalid") return { ok: false, message: t("invalidRate") };
+  try {
+    await updateAffiliateByAdmin(affiliateId, { ...parsed.data, commissionBps: bps });
+    const stripe = getStripe();
+    if (stripe) await syncAffiliatePromo(stripe, affiliateId).catch((error) => console.error("[affiliates] promo sync failed", error));
+  } catch (error) {
+    return { ok: false, message: await affiliateError(error) };
+  }
+  await audit({ actorId: viewer.user.id, action: "affiliate.update", targetType: "affiliate", targetId: affiliateId });
+  done();
+  return { ok: true, message: t("partnerSaved") };
+}
+
+export async function deletePartnerAction(affiliateId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("affiliatesAdmin");
+  try {
+    const affiliate = await deleteAffiliateByAdmin(affiliateId);
+    await audit({ actorId: viewer.user.id, action: "affiliate.delete", targetType: "affiliate", targetId: affiliateId, data: { code: affiliate.code } });
+  } catch (error) {
+    return { ok: false, message: await affiliateError(error) };
+  }
+  done();
+  return { ok: true, message: t("partnerDeleted") };
 }

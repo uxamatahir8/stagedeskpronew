@@ -111,10 +111,10 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
   return (
     <>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={t("stats.newInquiries")} value={newInquiries} icon={InboxIcon} />
-        <StatCard label={t("stats.quotesExpiring")} value={quotesExpiring} icon={TimerIcon} />
-        <StatCard label={t("stats.eventsThisWeek")} value={eventsThisWeek} icon={CalendarCheckIcon} />
-        <StatCard label={t("stats.collected")} value={collected ? euro(format, collected._sum.amountCents ?? 0) : "—"} icon={EuroIcon} />
+        <StatCard index={0} label={t("stats.newInquiries")} value={newInquiries} icon={InboxIcon} />
+        <StatCard index={1} label={t("stats.quotesExpiring")} value={quotesExpiring} icon={TimerIcon} />
+        <StatCard index={2} label={t("stats.eventsThisWeek")} value={eventsThisWeek} icon={CalendarCheckIcon} />
+        <StatCard index={3} label={t("stats.collected")} value={collected ? euro(format, collected._sum.amountCents ?? 0) : "—"} icon={EuroIcon} />
       </section>
 
       <Card>

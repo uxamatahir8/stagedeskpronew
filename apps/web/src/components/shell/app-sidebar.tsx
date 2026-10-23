@@ -28,6 +28,7 @@ import {
 import { footerNavigationFor, navigationFor, type NavItem } from "@/config/navigation";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { Viewer } from "@/lib/viewer";
+import { Logo } from "@/components/brand/logo";
 import { UserMenu } from "./user-menu";
 
 export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships"> & { role: Role };
@@ -40,6 +41,10 @@ export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
+        <Link href="/app" className="flex h-11 items-center px-2" aria-label="StageDesk Pro">
+          <Logo onDark className="h-8 group-data-[collapsible=icon]:hidden" priority />
+          <Logo variant="mark" className="hidden size-8 group-data-[collapsible=icon]:block" />
+        </Link>
         <WorkspaceSwitcher viewer={viewer} />
       </SidebarHeader>
 
