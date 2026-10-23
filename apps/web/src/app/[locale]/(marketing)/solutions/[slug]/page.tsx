@@ -40,6 +40,7 @@ async function Solution({ params }: Pick<PageProps<"/[locale]/solutions/[slug]">
     <DetailPage
       namespace={`featureDetail.${slug}`}
       mockup={slug === "weddings-events" ? "form" : "artist"}
+      screenshot={slug === "weddings-events" ? "customer" : "calendar"}
       related={[
         { href: "/features/quotes-invoices", label: t("feature_quotes-invoices") },
         { href: "/features/payments-payouts", label: t("feature_payments-payouts") },

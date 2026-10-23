@@ -74,6 +74,8 @@ if (!apply) {
       await tx.blogComment.deleteMany({ where: { OR: onTestDomain("authorEmail") } });
       // Their offers go with them.
       await tx.lead.deleteMany({ where: { OR: onTestDomain("email") } });
+      // The communication spec writes on a demo booking, ending each message with its run id (Date.now() in base 36).
+      await tx.$executeRaw`DELETE FROM booking_messages WHERE body REGEXP ${" m[a-z0-9]{7}$"}`;
       // Notifications for demo accounts that pointed at the removed bookings.
       for (const b of bookings) await tx.notification.deleteMany({ where: { url: { contains: b.trackingCode } } });
     },

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import { jsonLd } from "@/lib/seo";
 import { type MockupKey, mockups } from "./mockups";
+import { type ScreenKey, Screenshot, screens } from "./screenshot";
 import { primaryCta } from "./site-chrome";
 
 /** The message shape every feature and solution page shares (see featureDetail.* in the message files). */
@@ -17,7 +18,18 @@ type DetailNamespace = `featureDetail.${string}`;
  * helps, how it works step by step, the details, and the questions people
  * ask, with FAQ structured data for search engines.
  */
-export async function DetailPage({ namespace, mockup, related }: { namespace: DetailNamespace; mockup: MockupKey; related: { href: string; label: string }[] }) {
+export async function DetailPage({
+  namespace,
+  mockup,
+  related,
+  screenshot,
+}: {
+  namespace: DetailNamespace;
+  mockup: MockupKey;
+  related: { href: string; label: string }[];
+  /** A real screen from the app, shown under the benefits. */
+  screenshot?: ScreenKey;
+}) {
   const t = await getTranslations(namespace as "featureDetail.booking-page");
   const tc = await getTranslations("detailPage");
   const Mock = mockups[mockup];
@@ -52,6 +64,17 @@ export async function DetailPage({ namespace, mockup, related }: { namespace: De
           </article>
         ))}
       </section>
+
+      {screenshot && (
+        <section className="mx-auto grid w-full max-w-6xl justify-items-center gap-6 px-4 pb-20 sm:px-6">
+          <div className="grid max-w-2xl gap-2 text-center">
+            <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{tc("inAppEyebrow")}</p>
+            <h2 className="text-3xl font-bold tracking-tight text-balance">{tc("inAppTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{tc("demoData")}</p>
+          </div>
+          <Screenshot name={screenshot} className={screens[screenshot].kind === "phone" ? "max-w-xs" : undefined} />
+        </section>
+      )}
 
       <section className="border-y bg-muted/30">
         <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">

@@ -166,6 +166,24 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
 | stripe-mock (API contract tests) | `localhost:12111` | |
 | Prisma Studio | `pnpm db:studio` | |
 
+## Payments setup
+
+- **Stripe** keys are entered under Settings → Payment setup (encrypted in `platform_secrets` with
+  `SECRETS_KEY`, falling back to `BETTER_AUTH_SECRET`; STRIPE_* in .env apply when none are saved).
+  The page shows the webhook URL and the events to send, and tests the connection.
+- **Payment methods:** the platform allows online, bank transfer and cash; each agency picks within
+  that and enters its IBAN. Customers report a transfer or cash payment ("I've paid"); the agency
+  confirms receipt (payment recorded, receipt emailed) or marks it not received with a note.
+
+## Demo data and screenshots
+
+- `pnpm db:seed-showcase` adds about twenty realistic bookings to the demo agency (customers on
+  @voorbeeld.nl), so dashboards and charts look like a working agency.
+- The website's product screenshots live in `apps/web/public/screens/<nl|en>/` and are shown by
+  `components/site/screenshot.tsx` (home, /tour, feature and solution pages). They are captured from
+  the running app with demo data and framed (browser window, phone, hero collage) by scripts; capture
+  again after visible UI changes.
+
 ## Checks
 
 ```sh

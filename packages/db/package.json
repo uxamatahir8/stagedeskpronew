@@ -14,7 +14,8 @@
     "studio": "prisma studio",
     "typecheck": "tsc",
     "test": "vitest run",
-    "clean-test": "tsx src/clean-test-data.ts"
+    "clean-test": "tsx src/clean-test-data.ts",
+    "seed-showcase": "tsx src/seed-showcase.ts"
   },
   "dependencies": {
     "@prisma/adapter-mariadb": "7.10.1",

@@ -20,23 +20,29 @@ export async function QuoteTable({ quote }: { quote: QuoteTableData }) {
   return (
     <div className="grid gap-3">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[520px] text-sm">
+        {/* On a phone, unit price and VAT move under the description so nothing scrolls sideways. */}
+        <table className="w-full text-sm sm:min-w-[520px]">
           <thead>
             <tr className="border-b text-left text-muted-foreground">
               <th className="py-2 font-medium">{t("description")}</th>
               <th className="py-2 text-right font-medium">{t("quantity")}</th>
-              <th className="py-2 text-right font-medium">{t("unitPrice")}</th>
-              <th className="py-2 text-right font-medium">{t("vat")}</th>
+              <th className="hidden py-2 text-right font-medium sm:table-cell">{t("unitPrice")}</th>
+              <th className="hidden py-2 text-right font-medium sm:table-cell">{t("vat")}</th>
               <th className="py-2 text-right font-medium">{t("lineTotal")}</th>
             </tr>
           </thead>
           <tbody>
             {quote.items.map((i) => (
               <tr key={i.id} className="border-b last:border-0">
-                <td className="py-2">{i.description}</td>
+                <td className="py-2">
+                  {i.description}
+                  <span className="block text-xs text-muted-foreground tabular-nums sm:hidden">
+                    {euro(format, i.unitPriceCents)} · {t("vat")} {percent(format, i.vatBps)}
+                  </span>
+                </td>
                 <td className="py-2 text-right tabular-nums">{format.number(i.quantityHundredths / 100)}</td>
-                <td className="py-2 text-right tabular-nums">{euro(format, i.unitPriceCents)}</td>
-                <td className="py-2 text-right tabular-nums">{percent(format, i.vatBps)}</td>
+                <td className="hidden py-2 text-right tabular-nums sm:table-cell">{euro(format, i.unitPriceCents)}</td>
+                <td className="hidden py-2 text-right tabular-nums sm:table-cell">{percent(format, i.vatBps)}</td>
                 <td className="py-2 text-right tabular-nums">{euro(format, i.subtotalCents)}</td>
               </tr>
             ))}

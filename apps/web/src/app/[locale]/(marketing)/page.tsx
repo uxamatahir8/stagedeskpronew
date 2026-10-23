@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { splitBookingPayment } from "@stagedesk/core";
 import { BeforeAfter, CapabilityFigures, EventTypes, HubDiagram, JourneyFlow, TrustStrip } from "@/components/site/infographics";
+import { Screenshot } from "@/components/site/screenshot";
 import { MockArtistRequest, MockPayout, MockQuote } from "@/components/site/mockups";
 import { primaryCta } from "@/components/site/site-chrome";
 import { WaitlistForm } from "@/components/site/waitlist-form";
@@ -97,6 +98,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
           <JourneyFlow />
         </div>
       </section>
+
+      <LookInside />
 
       <Showcase />
 
@@ -353,6 +356,39 @@ async function Showcase() {
           </div>
         </div>
       ))}
+    </section>
+  );
+}
+
+/** Real screens of the app with demo data, and the way into the full tour. */
+async function LookInside() {
+  const t = await getTranslations("tour");
+  const gallery = ["bookings", "booking", "payments"] as const;
+  return (
+    <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+      <div className="mx-auto grid max-w-2xl gap-3 text-center">
+        <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("lookEyebrow")}</p>
+        <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">{t("lookTitle")}</h2>
+        <p className="text-lg text-muted-foreground">{t("lookIntro")}</p>
+      </div>
+      <Screenshot name="hero-collage" className="rounded-3xl shadow-2xl shadow-primary/20" />
+      <div className="grid gap-6 md:grid-cols-3">
+        {gallery.map((key) => (
+          <Link key={key} href={`/tour#${key}`} className="group grid content-start gap-3">
+            <Screenshot name={key} className="transition-transform group-hover:-translate-y-1" />
+            <span className="font-semibold">{t(`${key}_eyebrow`)}</span>
+          </Link>
+        ))}
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <Button asChild size="lg" variant="outline">
+          <Link href="/tour">
+            {t("takeTour")}
+            <ArrowRightIcon />
+          </Link>
+        </Button>
+        <p className="text-sm text-muted-foreground">{t("demoData")}</p>
+      </div>
     </section>
   );
 }

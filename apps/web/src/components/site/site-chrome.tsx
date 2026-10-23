@@ -24,6 +24,7 @@ async function navEntries(): Promise<NavEntry[]> {
       label: t("nav.product"),
       children: [
         { href: "/features", label: t("nav.features"), description: t("nav.featuresHint"), icon: "grid" },
+        { href: "/tour", label: t("nav.tour"), description: t("nav.tourHint"), icon: "sparkles" },
         ...featurePages.map((slug) => ({ href: `/features/${slug}`, label: t(`nav.feature_${slug}`), description: t(`nav.feature_${slug}Hint`), icon: featureIcons[slug] })),
       ],
     },
@@ -98,6 +99,7 @@ async function FooterColumns() {
       title: t("footer.product"),
       links: [
         { href: "/features", label: t("nav.features") },
+        { href: "/tour", label: t("nav.tour") },
         ...featurePages.map((slug) => ({ href: `/features/${slug}`, label: t(`nav.feature_${slug}`) })),
         { href: "/pricing", label: t("nav.pricing") },
         { href: "/changelog", label: t("nav.changelog") },

@@ -17,7 +17,8 @@
     "db:migrate": "pnpm --filter @stagedesk/db migrate",
     "db:seed": "pnpm --filter @stagedesk/db seed",
     "db:studio": "pnpm --filter @stagedesk/db studio",
-    "db:clean-test": "pnpm --filter @stagedesk/db clean-test"
+    "db:clean-test": "pnpm --filter @stagedesk/db clean-test",
+    "db:seed-showcase": "pnpm --filter @stagedesk/db seed-showcase"
   },
   "devDependencies": {
     "turbo": "2.11.10",

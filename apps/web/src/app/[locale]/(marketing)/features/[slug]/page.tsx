@@ -4,12 +4,21 @@ import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { DetailPage } from "@/components/site/detail-page";
 import type { MockupKey } from "@/components/site/mockups";
+import type { ScreenKey } from "@/components/site/screenshot";
 import { featurePages } from "@/components/site/site-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type Locale, routing } from "@/i18n/routing";
 import { pageMetadata } from "@/lib/seo";
 
 type FeatureSlug = (typeof featurePages)[number];
+/** The real screen shown on each feature page. */
+const screenFor: Record<FeatureSlug, ScreenKey> = {
+  "booking-page": "booking-page",
+  "quotes-invoices": "booking",
+  "payments-payouts": "payments",
+  "artist-management": "artist",
+};
+
 const mockupFor: Record<FeatureSlug, MockupKey> = {
   "booking-page": "form",
   "quotes-invoices": "quote",
@@ -43,5 +52,5 @@ async function Feature({ params }: Pick<PageProps<"/[locale]/features/[slug]">, 
   if (!isFeature(slug)) notFound();
   const t = await getTranslations("site.nav");
   const related = featurePages.filter((s) => s !== slug).map((s) => ({ href: `/features/${s}`, label: t(`feature_${s}`) }));
-  return <DetailPage namespace={`featureDetail.${slug}`} mockup={mockupFor[slug]} related={[...related, { href: "/pricing", label: t("pricing") }]} />;
+  return <DetailPage namespace={`featureDetail.${slug}`} mockup={mockupFor[slug]} screenshot={screenFor[slug]} related={[...related, { href: "/pricing", label: t("pricing") }]} />;
 }
