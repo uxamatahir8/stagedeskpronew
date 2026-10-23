@@ -54,7 +54,8 @@
     "users": "Users",
     "audit": "Audit log",
     "emails": "Emails",
-    "notifications": "Notifications"
+    "notifications": "Notifications",
+    "platformBookings": "Bookings"
   },
   "shell": {
     "search": "Search…",
@@ -457,7 +458,8 @@
     "emptyTitle": "No bookings here",
     "emptyBody": "New inquiries and bookings show up here.",
     "noDate": "No date yet",
-    "noCustomer": "No customer"
+    "noCustomer": "No customer",
+    "source": "Came in"
   },
   "newBooking": {
     "title": "New booking",
@@ -864,7 +866,9 @@
     "noArtist": "{name}: booked, no artist yet",
     "artistDeclined": "{name}: artist declined, choose another",
     "balanceDue": "{name}: {amount} still to pay",
-    "viaPage": "via booking page"
+    "via_booking_page": "via booking page",
+    "via_platform": "created by StageDesk",
+    "via_lead": "StageDesk lead"
   },
   "billing": {
     "title": "Subscription",
@@ -1600,6 +1604,9 @@
       "comment": {
         "approve": "Approved a comment",
         "reject": "Rejected a comment"
+      },
+      "booking": {
+        "create_for_agency": "Created a booking for an agency"
       }
     },
     "group_page": "Pages",
@@ -2252,7 +2259,13 @@
     "recentBookings": "Recent bookings",
     "noBookings": "No bookings yet.",
     "activity": "Admin activity",
-    "noActivity": "Nothing recorded yet."
+    "noActivity": "Nothing recorded yet.",
+    "newBooking": "New booking",
+    "newBookingTitle": "New booking for an agency",
+    "newBookingHint": "The booking goes into {agency}'s queue as a new inquiry. Their team gets an email and a notification, and takes it from there.",
+    "notifyCustomer": "Email the customer",
+    "notifyCustomerHint": "Sends the 'inquiry received' email with the booking reference and how to sign in.",
+    "bookingSuspended": "This agency is suspended. Reactivate it before adding bookings."
   },
   "infographics": {
     "trustStripe": "Payments through Stripe",
@@ -2709,5 +2722,30 @@
     "kind_ticketReplyHint": "When support answers a question",
     "kind_contactMessage": "Contact form",
     "kind_contactMessageHint": "To the StageDesk team"
+  },
+  "platformBookings": {
+    "title": "Bookings",
+    "description": "Every booking on the platform, across all agencies.",
+    "new": "New booking",
+    "newHint": "Choose the agency the booking is for. It goes into their queue and their team takes it from there.",
+    "agency": "Agency",
+    "chooseAgency": "Choose an agency",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "search": "Search",
+    "searchPlaceholder": "Reference, customer name or email, city",
+    "allAgencies": "All agencies",
+    "filterStatus": "Filter by status",
+    "allStatuses": "All",
+    "booking": "Booking",
+    "customer": "Customer",
+    "status": "Status",
+    "total": "Total",
+    "created": "Created",
+    "empty": "No bookings found",
+    "emptyHint": "Try another search or clear the filters.",
+    "source_booking_page": "booking page",
+    "source_platform": "by StageDesk",
+    "source_lead": "lead"
   }
 }

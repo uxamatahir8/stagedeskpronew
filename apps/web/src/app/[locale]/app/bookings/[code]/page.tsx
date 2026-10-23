@@ -213,7 +213,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 {preferredArtist && <Detail label={t("bookingPage.artist")}>{preferredArtist.stageName}</Detail>}
                 {booking.preferredGenre && <Detail label={t("bookingPage.genre")}>{booking.preferredGenre}</Detail>}
                 {booking.ceremony && <Detail label={t("eventTypes.wedding")}>{t("bookingPage.ceremony")}</Detail>}
-                {booking.source === "booking_page" && <Detail label={t("bookings.event")}>{t("attention.viaPage")}</Detail>}
+                {booking.source !== "manual" && <Detail label={t("bookings.source")}>{t(`attention.via_${booking.source as "booking_page"}`)}</Detail>}
               </dl>
               {booking.message && (
                 <div className="rounded-lg bg-muted/60 p-3 text-sm">

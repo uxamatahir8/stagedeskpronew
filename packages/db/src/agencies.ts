@@ -208,3 +208,50 @@ export async function agencyOverview(organizationId: string, now = new Date()) {
     activity,
   };
 }
+
+/** Every booking on the platform, for the admin's overview: deliberately not tenant-scoped. */
+export async function listAllBookings({
+  q = "",
+  status = null,
+  organizationId = null,
+  page = 1,
+  pageSize = 25,
+}: { q?: string; status?: string | null; organizationId?: string | null; page?: number; pageSize?: number }) {
+  const search = q.trim();
+  const where: Prisma.BookingWhereInput = {
+    ...(status ? { status } : {}),
+    ...(organizationId ? { organizationId } : {}),
+    ...(search
+      ? {
+          OR: [
+            { trackingCode: { contains: search.toUpperCase() } },
+            { customer: { is: { OR: [{ name: { contains: search } }, { email: { contains: search } }] } } },
+            { venueCity: { contains: search } },
+          ],
+        }
+      : {}),
+  };
+  const [rows, total] = await Promise.all([
+    prisma.booking.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (Math.max(1, page) - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        trackingCode: true,
+        status: true,
+        eventType: true,
+        eventDate: true,
+        venueCity: true,
+        source: true,
+        totalCents: true,
+        createdAt: true,
+        organization: { select: { id: true, name: true } },
+        customer: { select: { name: true, email: true } },
+      },
+    }),
+    prisma.booking.count({ where }),
+  ]);
+  return { rows, total, pages: Math.max(1, Math.ceil(total / pageSize)) };
+}

@@ -73,7 +73,7 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
       key: `i-${b.id}`,
       href: `/app/bookings/${b.trackingCode}`,
       text: ta("newInquiry", { name: name(b) }),
-      detail: [eventDate(format, b.eventDate, "short"), b.source === "booking_page" ? ta("viaPage") : null].filter(Boolean).join(" · "),
+      detail: [eventDate(format, b.eventDate, "short"), b.source !== "manual" ? ta(`via_${b.source as "booking_page"}`) : null].filter(Boolean).join(" · "),
       tone: "info" as const,
       icon: InboxIcon,
     })),

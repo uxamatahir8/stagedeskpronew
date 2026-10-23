@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CalendarCheckIcon, CreditCardIcon, ExternalLinkIcon, EuroIcon, Music2Icon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarCheckIcon, CalendarPlusIcon, CreditCardIcon, ExternalLinkIcon, EuroIcon, Music2Icon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -69,6 +69,14 @@ async function Agency({ params }: Pick<PageProps<"/[locale]/app/agencies/[id]">,
         description={[org.city, owner ? `${owner.name} · ${owner.email}` : null, t("since", { date: format.dateTime(org.createdAt, { day: "numeric", month: "long", year: "numeric" }) })].filter(Boolean).join(" · ")}
         actions={
           <div className="flex flex-wrap gap-2">
+            {!org.suspendedAt && (
+              <Button asChild>
+                <Link href={`/app/agencies/${org.id}/new-booking`}>
+                  <CalendarPlusIcon />
+                  {t("newBooking")}
+                </Link>
+              </Button>
+            )}
             <Button asChild variant="outline">
               <a href={`/b/${org.slug}`} target="_blank" rel="noopener">
                 <ExternalLinkIcon />

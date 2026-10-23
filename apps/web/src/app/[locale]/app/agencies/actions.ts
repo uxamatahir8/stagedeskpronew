@@ -2,21 +2,29 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import {
   AgencyAdminError,
   audit,
   createAgencyForOwner,
+  createBooking,
+  prisma,
+  resolveBookingCustomer,
   deleteAgency,
   extendTrial,
   grantPlan,
   setAgencySuspended,
   updateAgencyDetails,
 } from "@stagedesk/db";
+import { redirect } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import type { ActionResult } from "@/lib/actions";
-import { absoluteUrl, deliver } from "@/lib/mail";
+import { announceNewBooking } from "@/lib/announce";
+import { newBookingSchema, translateErrors } from "@/lib/booking-form";
+import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { clientIp } from "@/lib/rate-limit";
+import type { FormState } from "@/lib/validation";
 import { requirePermission } from "@/lib/viewer";
 
 const text = (max: number) => z.preprocess((v) => (typeof v === "string" && v.trim() ? v.trim() : null), z.string().max(max).nullable());
@@ -144,4 +152,65 @@ export async function deleteAgencyAction(organizationId: string, confirmName: st
   await audit({ actorId: viewer.user.id, action: "agency.delete", agencyId: null, targetType: "agency", targetId: organizationId, data: { name: expectedName }, ip: clientIp(await headers()) });
   done();
   return { ok: true };
+}
+
+/**
+ * A platform admin books for an agency (a phone-in, a partner deal). The
+ * booking is the agency's own: its team is told and takes it from there.
+ * Bound to the agency id where the form is rendered.
+ */
+export async function createBookingForAgencyAction(organizationId: string, _prev: FormState, form: FormData): Promise<FormState> {
+  const viewer = await requirePermission("platform.agencies");
+  const [t, tb] = await Promise.all([getTranslations("agencyAdmin"), getTranslations("newBooking")]);
+  const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true, name: true, suspendedAt: true } });
+  if (!agency) return { message: t("error_not_found") };
+  if (agency.suspendedAt) return { message: t("bookingSuspended") };
+  const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
+  const d = parsed.data;
+
+  const customerId = await resolveBookingCustomer(
+    agency.id,
+    d.customerMode === "existing" ? { mode: "existing", id: d.customerId } : { mode: "new", name: d.customerName, email: d.customerEmail, phone: d.customerPhone },
+  );
+  if (!customerId) return { message: tb("customerRequired") };
+  const booking = await createBooking(
+    agency.id,
+    {
+      customerId,
+      eventType: d.eventType,
+      eventDate: d.eventDate,
+      startTime: d.startTime,
+      endTime: d.endTime,
+      venueName: d.venueName,
+      venueAddress: d.venueAddress,
+      venueCity: d.venueCity,
+      guestCount: d.guestCount,
+      budgetCents: d.budget,
+      partnerName: d.partnerName,
+      message: d.message,
+      source: "platform",
+    },
+    viewer.user.id,
+  );
+  const customer = await prisma.user.findUniqueOrThrow({ where: { id: customerId }, select: { name: true, email: true, locale: true } });
+  await announceNewBooking(agency.id, booking, customer.name);
+  if (form.get("notifyCustomer") === "on") {
+    const locale = userLocale(customer.locale);
+    deliver({
+      kind: "inquiryReceived",
+      to: customer.email,
+      params: {
+        locale,
+        name: customer.name.split(/\s+/)[0] ?? customer.name,
+        agency: agency.name,
+        code: booking.trackingCode,
+        url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`),
+      },
+    });
+  }
+  await audit({ actorId: viewer.user.id, action: "booking.create_for_agency", agencyId: agency.id, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode }, ip: clientIp(await headers()) });
+  done(agency.id);
+  redirect({ href: `/app/agencies/${agency.id}`, locale: (await getLocale()) as Locale });
+  return {};
 }

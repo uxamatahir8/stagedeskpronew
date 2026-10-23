@@ -63,6 +63,7 @@ export const navigation: NavGroup[] = [
     key: "platform",
     items: [
       { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies" },
+      { key: "platformBookings", href: "/app/platform-bookings", icon: CalendarCheckIcon, permission: "platform.agencies" },
       { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans" },
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates" },

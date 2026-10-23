@@ -118,7 +118,35 @@ export interface NewBooking {
   preferredGenre?: string | null;
   budgetRange?: string | null;
   ceremony?: boolean | null;
-  source?: "manual" | "booking_page";
+  /** manual: the agency; booking_page: the public form; platform: a platform admin; lead: a platform lead an agency accepted. */
+  source?: "manual" | "booking_page" | "platform" | "lead";
+}
+
+export type CustomerChoice =
+  | { mode: "existing"; id: string | null }
+  | { mode: "new"; name: string | null; email: string | null; phone: string | null };
+
+/**
+ * The customer for a new booking: an existing customer of the agency, or a
+ * (new or existing) account that becomes one. Returns null when the person
+ * can't be the agency's customer (e.g. they're on its team).
+ */
+export async function resolveBookingCustomer(organizationId: string, input: CustomerChoice) {
+  const db = tenantDb(organizationId);
+  if (input.mode === "existing") {
+    if (!input.id) return null;
+    const member = await db.member.findFirst({ where: { userId: input.id, role: "customer" }, select: { userId: true } });
+    return member?.userId ?? null;
+  }
+  if (!input.name || !input.email) return null;
+  const email = input.email.trim().toLowerCase();
+  const user =
+    (await prisma.user.findUnique({ where: { email }, select: { id: true } })) ??
+    (await prisma.user.create({ data: { id: randomUUID(), email, name: input.name.trim(), phone: input.phone }, select: { id: true } }));
+  const existing = await db.member.findFirst({ where: { userId: user.id }, select: { role: true } });
+  if (existing && existing.role !== "customer") return null;
+  if (!existing) await db.member.create({ data: { id: randomUUID(), userId: user.id, role: "customer", organizationId } });
+  return user.id;
 }
 
 export async function createBooking(organizationId: string, input: NewBooking, actorId: string | null) {

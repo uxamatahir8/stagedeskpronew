@@ -3,13 +3,14 @@
 import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, parseEuros, parseQuantity, type QuoteLineInput } from "@stagedesk/core";
+import { parseEuros, parseQuantity, type QuoteLineInput } from "@stagedesk/core";
 import {
   acceptQuote,
   assignArtist,
   BookingError,
   changeBookingStatus,
   createBooking,
+  resolveBookingCustomer,
   getSetting,
   issueInvoice,
   prisma,
@@ -21,104 +22,23 @@ import { redirect } from "@/i18n/navigation";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import type { Locale } from "@/i18n/routing";
 import { type ActionResult, runAction } from "@/lib/actions";
-import { fieldErrorKeys, type FormState, optionalText } from "@/lib/validation";
+import { type FormState } from "@/lib/validation";
 import { limitBlocked, writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
-
-const time = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? null : v),
-  z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "invalidTime").nullable(),
-);
-const wholeNumber = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? null : Number(v)),
-  z.number().int("invalidNumber").min(0, "invalidNumber").max(100_000, "invalidNumber").nullable(),
-);
-const euros = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? parseEuros(v) : v),
-  z.number({ error: "invalidPrice" }).int().min(0, "invalidPrice").nullable(),
-);
-const date = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? null : v),
-  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate").nullable(),
-);
-const lines = z.preprocess(
-  (v) => (typeof v === "string" ? v.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 30) : []),
-  z.array(z.string().max(200)),
-);
-
-const eventFields = {
-  eventType: z.enum(eventTypes),
-  eventDate: date,
-  startTime: time,
-  endTime: time,
-  venueName: optionalText(191),
-  venueAddress: optionalText(191),
-  venueCity: optionalText(96),
-  guestCount: wholeNumber,
-  budget: euros,
-  partnerName: optionalText(191),
-};
-
-const newBookingSchema = z.object({
-  ...eventFields,
-  customerMode: z.enum(["existing", "new"]),
-  customerId: optionalText(64),
-  customerName: optionalText(191),
-  customerEmail: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), z.email("invalidEmail").max(191).nullable()),
-  customerPhone: optionalText(32),
-  message: optionalText(5000),
-});
-
-async function translateErrors(error: z.ZodError) {
-  const [tb, ts] = await Promise.all([getTranslations("newBooking"), getTranslations("agencySettings")]);
-  const keys = fieldErrorKeys(error);
-  return Object.fromEntries(
-    Object.entries(keys).map(([field, key]) => [
-      field,
-      ["invalidTime", "invalidNumber", "invalidDate", "invalidPrice"].includes(key)
-        ? tb(key as "invalidTime")
-        : ts(key as "required"),
-    ]),
-  );
-}
-
-/** Customers are global accounts linked to the agency through a membership. */
-async function resolveCustomer(
-  db: Awaited<ReturnType<typeof requireAgency>>["db"],
-  organizationId: string,
-  input: { mode: "existing" | "new"; id: string | null; name: string | null; email: string | null; phone: string | null },
-) {
-  if (input.mode === "existing") {
-    if (!input.id) return null;
-    const member = await db.member.findFirst({ where: { userId: input.id, role: "customer" }, select: { userId: true } });
-    return member?.userId ?? null;
-  }
-  if (!input.name || !input.email) return null;
-  const email = input.email.toLowerCase();
-  const user =
-    (await prisma.user.findUnique({ where: { email }, select: { id: true } })) ??
-    (await prisma.user.create({ data: { id: randomUUID(), email, name: input.name, phone: input.phone }, select: { id: true } }));
-  const existing = await db.member.findFirst({ where: { userId: user.id }, select: { role: true } });
-  if (existing && existing.role !== "customer") return null;
-  if (!existing) await db.member.create({ data: { id: randomUUID(), userId: user.id, role: "customer", organizationId } });
-  return user.id;
-}
+import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
 
 export async function createBookingAction(_prev: FormState, form: FormData): Promise<FormState> {
-  const { viewer, organization, db } = await requireAgency("agency.bookings");
+  const { viewer, organization } = await requireAgency("agency.bookings");
   const blocked = await limitBlocked(organization.id, "maxBookingsPerMonth");
   if (blocked) return { message: blocked };
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const d = parsed.data;
 
-  const customerId = await resolveCustomer(db, organization.id, {
-    mode: d.customerMode,
-    id: d.customerId,
-    name: d.customerName,
-    email: d.customerEmail,
-    phone: d.customerPhone,
-  });
+  const customerId = await resolveBookingCustomer(
+    organization.id,
+    d.customerMode === "existing" ? { mode: "existing", id: d.customerId } : { mode: "new", name: d.customerName, email: d.customerEmail, phone: d.customerPhone },
+  );
   if (!customerId) return { message: (await getTranslations("newBooking"))("customerRequired") };
 
   const booking = await createBooking(

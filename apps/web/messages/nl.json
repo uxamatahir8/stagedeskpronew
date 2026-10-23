@@ -54,7 +54,8 @@
     "users": "Gebruikers",
     "audit": "Auditlog",
     "emails": "E-mails",
-    "notifications": "Meldingen"
+    "notifications": "Meldingen",
+    "platformBookings": "Boekingen"
   },
   "shell": {
     "search": "Zoeken…",
@@ -457,7 +458,8 @@
     "emptyTitle": "Geen boekingen",
     "emptyBody": "Nieuwe aanvragen en boekingen verschijnen hier.",
     "noDate": "Nog geen datum",
-    "noCustomer": "Geen klant"
+    "noCustomer": "Geen klant",
+    "source": "Binnengekomen"
   },
   "newBooking": {
     "title": "Nieuwe boeking",
@@ -864,7 +866,9 @@
     "noArtist": "{name}: geboekt, nog geen artiest",
     "artistDeclined": "{name}: artiest heeft afgewezen, kies een ander",
     "balanceDue": "{name}: nog {amount} te betalen",
-    "viaPage": "via boekingspagina"
+    "via_booking_page": "via boekingspagina",
+    "via_platform": "aangemaakt door StageDesk",
+    "via_lead": "StageDesk-lead"
   },
   "billing": {
     "title": "Abonnement",
@@ -1600,6 +1604,9 @@
       "comment": {
         "approve": "Reactie goedgekeurd",
         "reject": "Reactie afgewezen"
+      },
+      "booking": {
+        "create_for_agency": "Boeking aangemaakt voor een bureau"
       }
     },
     "group_page": "Pagina's",
@@ -2252,7 +2259,13 @@
     "recentBookings": "Recente boekingen",
     "noBookings": "Nog geen boekingen.",
     "activity": "Beheeractiviteit",
-    "noActivity": "Nog niets vastgelegd."
+    "noActivity": "Nog niets vastgelegd.",
+    "newBooking": "Nieuwe boeking",
+    "newBookingTitle": "Nieuwe boeking voor een bureau",
+    "newBookingHint": "De boeking komt als nieuwe aanvraag in de wachtrij van {agency}. Hun team krijgt een e-mail en een melding en neemt het daarna over.",
+    "notifyCustomer": "Klant e-mailen",
+    "notifyCustomerHint": "Verstuurt de e-mail 'aanvraag ontvangen' met het kenmerk van de boeking en hoe de klant inlogt.",
+    "bookingSuspended": "Dit bureau is opgeschort. Heractiveer het voordat je boekingen toevoegt."
   },
   "infographics": {
     "trustStripe": "Betalingen via Stripe",
@@ -2709,5 +2722,30 @@
     "kind_ticketReplyHint": "Als support een vraag beantwoordt",
     "kind_contactMessage": "Contactformulier",
     "kind_contactMessageHint": "Aan het StageDesk-team"
+  },
+  "platformBookings": {
+    "title": "Boekingen",
+    "description": "Elke boeking op het platform, bij alle bureaus.",
+    "new": "Nieuwe boeking",
+    "newHint": "Kies het bureau waarvoor de boeking is. Die komt in hun wachtrij en hun team neemt het over.",
+    "agency": "Bureau",
+    "chooseAgency": "Kies een bureau",
+    "continue": "Verder",
+    "cancel": "Annuleren",
+    "search": "Zoeken",
+    "searchPlaceholder": "Kenmerk, naam of e-mail klant, plaats",
+    "allAgencies": "Alle bureaus",
+    "filterStatus": "Filter op status",
+    "allStatuses": "Alle",
+    "booking": "Boeking",
+    "customer": "Klant",
+    "status": "Status",
+    "total": "Totaal",
+    "created": "Aangemaakt",
+    "empty": "Geen boekingen gevonden",
+    "emptyHint": "Probeer een andere zoekterm of wis de filters.",
+    "source_booking_page": "boekingspagina",
+    "source_platform": "door StageDesk",
+    "source_lead": "lead"
   }
 }

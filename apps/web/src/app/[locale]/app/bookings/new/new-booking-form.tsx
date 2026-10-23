@@ -14,9 +14,21 @@ import { Textarea } from "@/components/ui/textarea";
 import type { FormState } from "@/lib/validation";
 import { createBookingAction } from "../actions";
 
-export function NewBookingForm({ customers }: { customers: { id: string; name: string; email: string }[] }) {
+/**
+ * The booking form. Agencies use it with their own action; a platform admin
+ * passes an action bound to the chosen agency and can add fields with `extra`.
+ */
+export function NewBookingForm({
+  customers,
+  submitAction = createBookingAction,
+  extra,
+}: {
+  customers: { id: string; name: string; email: string }[];
+  submitAction?: (prev: FormState, form: FormData) => Promise<FormState>;
+  extra?: React.ReactNode;
+}) {
   const t = useTranslations();
-  const [state, action, pending] = useActionState(createBookingAction, {} as FormState);
+  const [state, action, pending] = useActionState(submitAction, {} as FormState);
   const [mode, setMode] = useState<"existing" | "new">(customers.length ? "existing" : "new");
   const [customerId, setCustomerId] = useState("");
   const errors = state.fieldErrors ?? {};
@@ -80,6 +92,7 @@ export function NewBookingForm({ customers }: { customers: { id: string; name: s
         </CardContent>
       </Card>
 
+      {extra}
       <FormMessage>{state.message}</FormMessage>
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
