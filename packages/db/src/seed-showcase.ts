@@ -6,7 +6,8 @@ import { existsSync } from "node:fs";
  * payments and a payment waiting for confirmation. Used for demos and the
  * website screenshots. Runs the real booking functions with past dates, so the
  * data is consistent. Customers use @voorbeeld.nl addresses. Safe to re-run:
- * it does nothing if the showcase customers already exist.
+ * bookings are only added once; the demo website is rebuilt and published
+ * each time (replacing edits made to the demo agency's site).
  *
  *   pnpm db:seed-showcase
  */
@@ -21,10 +22,8 @@ const { submitPaymentClaim } = await import("./payment-claims");
 const DOMAIN = "voorbeeld.nl";
 const org = await prisma.organization.findUnique({ where: { slug: "feestband-utrecht" } });
 if (!org) throw new Error("Run pnpm db:seed first: the demo agency is missing.");
-if (await prisma.user.count({ where: { email: { endsWith: `@${DOMAIN}` } } })) {
-  console.log("Showcase data is already there.");
-  process.exit(0);
-}
+// Bookings are added once; the demo website below is rebuilt on every run.
+const hasBookings = (await prisma.user.count({ where: { email: { endsWith: `@${DOMAIN}` } } })) > 0;
 const owner = await prisma.member.findFirstOrThrow({ where: { organizationId: org.id, role: "agency_owner" } });
 const artists = await prisma.artist.findMany({ where: { organizationId: org.id, active: true }, select: { id: true, userId: true, stageName: true } });
 const sem = artists.find((a) => a.userId);
@@ -77,7 +76,7 @@ const rows: Showcase[] = [
 const slug = (name: string) => name.toLowerCase().normalize("NFD").replace(/[^a-z]+/g, ".").replace(/^\.|\.$/g, "");
 let made = 0;
 
-for (const [i, r] of rows.entries()) {
+for (const [i, r] of hasBookings ? [] : rows.entries()) {
   // A quote goes out a few weeks after the inquiry; most are accepted within a week.
   const inquiredDays = Math.min(r.day - 30, -5 - i);
   const quotedDays = inquiredDays + 3;
@@ -134,5 +133,9 @@ for (const [i, r] of rows.entries()) {
   }
 }
 
-console.log(`Added ${made} showcase bookings to ${org.name}.`);
+console.log(hasBookings ? "Showcase bookings are already there." : `Added ${made} showcase bookings to ${org.name}.`);
+
+const { seedShowcaseSite } = await import("./seed-showcase-site");
+await seedShowcaseSite(org.id);
+console.log("Published the demo website: http://feestband-utrecht.localhost:3000");
 await prisma.$disconnect();

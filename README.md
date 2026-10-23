@@ -30,8 +30,12 @@ pnpm install
 pnpm services:up              # MySQL :3307, Redis :6379, storage :9000, Mailpit :8025
 pnpm db:migrate               # apply migrations
 pnpm db:seed                  # default settings + demo accounts (not in production)
+pnpm db:seed-showcase         # optional: realistic bookings + a published demo website
 pnpm dev                      # web on :3000 + worker
 ```
+
+The demo agency's website is then at http://feestband-utrecht.localhost:3000 (Chrome and Edge
+resolve `*.localhost` without any setup).
 
 ## Demo accounts
 
@@ -162,6 +166,45 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   export them as CSV under Pages → Waitlist.
 - **SEO:** canonical and hreflang links, Open Graph images (`/api/og`), `sitemap.xml`, `robots.txt`,
   and structured data (SoftwareApplication, FAQ, BlogPosting, TechArticle).
+
+## Agency websites
+
+Agencies build their own website under **Website** (permission `agency.settings`):
+
+- **Editor:** pick a page in the toolbar, add sections (hero, text, highlights, artists, packages,
+  reviews, gallery, video, FAQ, call to action, booking form, contact), drag them into order in the live
+  preview, and edit the selected section on the right. The Page tab has the title, Google title and
+  description, address, menu and order; the Design tab has colours, typeface, corners, header style and
+  an optional English version. Drafts save automatically; **Publish** makes them live, and the site can be
+  taken offline. Artists, packages and reviews come live from the agency's records.
+- **Addresses:** every agency gets `<slug>.${SITES_BASE_DOMAIN}` for free (`feestband-utrecht.localhost:3000`
+  in development). On plans with `customDomain` (Business) they connect their own domain: a CNAME to
+  `SITES_CNAME_TARGET` and a TXT record `_stagedesk.<domain>` with the token shown, then **Check**. In
+  development, deeper `.localhost` names (e.g. `www.mijnbureau.localhost`) are connected without DNS.
+- **How it's served:** `src/proxy.ts` rewrites any host that isn't the platform's to
+  `/sites/<host>/…` (no database work in the proxy); `lib/site-request.ts` resolves the live site. Each
+  site has its own `sitemap.xml` and `robots.txt`. Plans with `removeBranding` hide "Made with StageDesk".
+- **Production TLS:** point a wildcard and custom domains at the server and use Caddy on-demand TLS with
+  `ask https://<app>/api/sites/tls-allowed`, which answers 200 only for verified domains and existing
+  agency subdomains.
+
+## Demo on localhost
+
+Start Docker Desktop, then `pnpm services:up` and `pnpm dev` (web on :3000 and the worker). For a full
+demo run `pnpm db:seed-showcase` once; run it again to reset the demo website after tests. Emails
+arrive in Mailpit at http://localhost:8025. Password for every account: `StageDesk-demo-2026`.
+
+| What to show | Sign in as | Where |
+|---|---|---|
+| Platform admin booking for an agency | `admin@stagedesk.local` | Bookings → Create booking (filter "platform admin") |
+| Work inside an agency as support | `admin@stagedesk.local` | Agencies → an agency → Work as support |
+| Leads from the StageDesk site | anyone, then admin | http://localhost:3000/request → Leads → offer to agencies |
+| Accept a lead as an agency | `eigenaar@rotterdamdj.local` | Leads |
+| Stripe keys and payment methods | `admin@stagedesk.local` | Payment setup |
+| Bank transfer reported and confirmed | `sanne@klant.local`, then `eigenaar@feestband.local` | My payments → I've paid; then the booking → Confirm receipt |
+| Agency website builder | `eigenaar@feestband.local` | Website (live at http://feestband-utrecht.localhost:3000) |
+| Own domain (Business plan) | admin grants Business, then the agency owner | Website → Address & domain, e.g. `www.mijnbureau.localhost` |
+| Email templates | `admin@stagedesk.local` | Emails |
 
 ## Local services
 

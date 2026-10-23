@@ -12,6 +12,7 @@ export * from "./pages";
 export * from "./payment-claims";
 export * from "./reminders";
 export * from "./secrets";
+export * from "./sites";
 export * from "./support";
 export * from "./users";
 export * from "./billing";

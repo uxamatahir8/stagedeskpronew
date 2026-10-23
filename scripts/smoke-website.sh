@@ -26,6 +26,12 @@ has /solutions/weddings-events "FAQPage"
 has /sitemap.xml "/solutions/band-agencies"
 has /request "Vind de juiste"
 has /tour "een bureau runt"
+# Agency websites on their free subdomain (curl resolves *.localhost itself).
+S=http://feestband-utrecht.localhost:3000
+curl -s "$S/" | grep -q "Offerte aanvragen" && ok "agency site serves on its subdomain" || bad "agency site" "missing"
+curl -s "$S/sitemap.xml" | grep -q "<urlset" && ok "agency site sitemap" || bad "agency site sitemap" "missing"
+[ "$(curl -s -o /dev/null -w %{http_code} "$B/api/sites/tls-allowed?domain=feestband-utrecht.localhost")" = 200 ] && ok "TLS ask allows a known subdomain" || bad "TLS ask" "refused"
+[ "$(curl -s -o /dev/null -w %{http_code} "$B/api/sites/tls-allowed?domain=www.not-ours.example")" = 404 ] && ok "TLS ask refuses unknown domains" || bad "TLS ask" "allowed"
 has / "Een kijkje binnen"
 nf2=$(curl -s "$B/features/does-not-exist"); echo "$nf2" | grep -q 'content="noindex"' && ok "unknown feature page is a noindex 404" || bad "unknown feature page" "no noindex"
 # Builder pages are looked up while streaming, so an unknown address is a not-found page marked noindex.

@@ -28,6 +28,9 @@ export const tenantModels = [
   "LedgerEntry",
   "Subscription",
   "ConnectedAccount",
+  "AgencySite",
+  "AgencySitePage",
+  "AgencyDomain",
 ] as const satisfies readonly Prisma.ModelName[];
 
 const scopedReads = new Set(["findMany", "findFirst", "findFirstOrThrow", "count", "aggregate", "groupBy"]);

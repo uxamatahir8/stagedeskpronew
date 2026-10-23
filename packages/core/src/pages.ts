@@ -43,7 +43,8 @@ export function isValidSlug(slug: string) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) && slug.length <= 96 && !reservedSlugs.has(slug);
 }
 
-function isSafeImageUrl(url: string) {
+/** Uploaded files, or https images from elsewhere. */
+export function isSafeImageUrl(url: string) {
   return url.startsWith("/files/") || /^https:\/\/[^\s"'<>]+$/.test(url);
 }
 
