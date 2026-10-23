@@ -112,7 +112,8 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   Charts use one SQL aggregate each (`packages/db/src/analytics.ts`) and have a table view.
 - **Messages:** each booking has two conversations: agency with customer, and agency with the artist.
   Customers and artists also get an email for messages from the agency.
-- **Notifications:** the bell is live over server-sent events (`/api/notifications/stream`).
+- **Notifications:** the bell is live over server-sent events (`/api/notifications/stream`); the full
+  history is at `/app/notifications` (by day, unread filter, mark read, clear read).
 - **Emails** all go through the worker's `email` queue with retries. If no worker is running (or Redis
   is down) the web app sends them itself, so sign-in codes always arrive. Run the worker with `pnpm dev`.
 - **Reminders** (hourly): event reminders 7 days and 1 day before to customer and artist, quote expiry
@@ -127,6 +128,9 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   or money records).
 - **Users (platform admin):** search, filter by role or status, add platform admins, edit details, sign
   out everywhere, disable, confirm email, reset 2FA, and delete accounts without history. Plus the Audit log.
+- **Email previews (platform admin):** `/app/emails` shows every email in Dutch and English, as HTML
+  at desktop or phone width and as plain text, rendered by the real senders from example data
+  (`emailSamples` in `packages/emails/src/samples.ts`). "Send a test to me" mails the sample to the admin.
 - **Loading bar:** a thin bar at the top shows page changes and server calls (`components/activity-bar.tsx`).
 - **CSV export** for bookings, customers and payments (`/api/export/<kind>`).
 
@@ -176,6 +180,10 @@ pnpm --filter @stagedesk/web e2e           # Playwright: full booking flow in a 
 ```
 
 The Playwright test needs Chromium once: `pnpm --filter @stagedesk/web exec playwright install chromium`.
+
+Tests and smoke scripts leave accounts on test email domains in the dev database. `pnpm db:clean-test`
+lists them; `pnpm db:clean-test --yes` removes them with their agencies, bookings and partner records
+(demo accounts are kept).
 
 ## Conventions
 

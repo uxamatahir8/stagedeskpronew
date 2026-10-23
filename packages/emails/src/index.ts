@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { render } from "@react-email/render";
 import { createTransport, type Transporter } from "nodemailer";
 import { createElement, type ReactElement } from "react";
@@ -23,6 +24,16 @@ import {
 } from "./templates";
 
 export type { EmailLocale } from "./copy";
+export { emailSamples } from "./samples";
+
+export interface RenderedEmail {
+  subject: string;
+  html: string;
+  text: string;
+}
+
+/** Set while previewing: `send` hands the rendered email here instead of mailing it. */
+const previewing = new AsyncLocalStorage<(email: RenderedEmail) => void>();
 
 let transporter: Transporter | undefined;
 
@@ -38,6 +49,8 @@ function getTransporter() {
 
 async function send(to: string, subject: string, element: ReactElement, replyTo?: string) {
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
+  const capture = previewing.getStore();
+  if (capture) return capture({ subject, html, text });
   await getTransporter().sendMail({
     from: process.env["MAIL_FROM"] ?? "StageDesk <no-reply@stagedesk.local>",
     to,
@@ -155,6 +168,14 @@ export type EmailJob = { [K in EmailKind]: { kind: K; to: string; params: Parame
 export function sendEmailJob(job: EmailJob) {
   const sender = senders[job.kind] as (to: string, params: EmailJob["params"]) => Promise<void>;
   return sender(job.to, job.params);
+}
+
+/** Renders an email exactly as it would be sent, without sending it (admin previews). */
+export async function previewEmailJob(job: EmailJob): Promise<RenderedEmail> {
+  let rendered: RenderedEmail | undefined;
+  await previewing.run((email) => void (rendered = email), () => sendEmailJob(job));
+  if (!rendered) throw new Error(`Email ${job.kind} rendered nothing`);
+  return rendered;
 }
 
 /** Name of the BullMQ queue the worker reads emails from. */

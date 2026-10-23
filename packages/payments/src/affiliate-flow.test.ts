@@ -96,7 +96,8 @@ describe("affiliate program", () => {
     expect(await runAffiliatePayouts(stripe, new Date("2026-11-20T06:00:00Z"))).toEqual([]);
     const paid = await runAffiliatePayouts(stripe, new Date("2026-12-01T06:00:00Z"));
     expect(paid).toEqual([expect.objectContaining({ affiliateId: pim.id, amountCents: 7_450 })]);
-    const transfer = calls.find((c) => c.method === "transfers.create");
+    // Other tests share the database and the fake Stripe log, so look for this partner's transfer.
+    const transfer = calls.find((c) => c.method === "transfers.create" && (c.params as { destination?: string }).destination === `acct_${pim.id.slice(0, 8)}`);
     expect(transfer?.params).toMatchObject({ amount: 7_450, currency: "eur", destination: `acct_${pim.id.slice(0, 8)}` });
     const statuses = await prisma.commission.findMany({ where: { affiliateId: pim.id }, select: { status: true, payoutId: true } });
     expect(statuses.every((c) => c.status === "paid" && c.payoutId === paid[0]!.payoutId)).toBe(true);

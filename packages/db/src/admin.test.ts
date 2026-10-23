@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AffiliateAdminError, createAffiliateByAdmin, deleteAffiliateByAdmin, updateAffiliateByAdmin } from "./affiliates";
 import { AgencyAdminError, createAgencyForOwner, deleteAgency, extendTrial, grantPlan, listAgencies, setAgencySuspended } from "./agencies";
 import { prisma } from "./client";
+import { clearReadNotifications, listNotifications, markNotificationsRead, notify } from "./notifications";
 import { seedPlans } from "./seed-plans";
 import { createPlatformAdmin, deleteUserByAdmin, listUsers, signOutEverywhere, updateUserByAdmin, UserAdminError } from "./users";
 
@@ -118,5 +119,22 @@ describe("partner admin", () => {
     const user = await prisma.user.findUniqueOrThrow({ where: { email: email("partner") } });
     expect(user.platformRole).toBeNull();
     expect(await prisma.affiliate.findUnique({ where: { id: a.id } })).toBeNull();
+  });
+});
+
+describe("notifications page", () => {
+  it("pages through a user's notifications, filters unread and clears the read ones", async () => {
+    const id = randomUUID();
+    await prisma.user.create({ data: { id, name: "Noor", email: email("notified") } });
+    await notify([id], { type: "message", data: { name: "Sanne", code: "AAAA1111" } });
+    await notify([id], { type: "new_inquiry", data: { name: "Bram" } });
+    const [first] = (await listNotifications(id)).items;
+    await markNotificationsRead(id, [first!.id]);
+
+    const all = await listNotifications(id, { pageSize: 1 });
+    expect(all).toMatchObject({ total: 2, unread: 1, pages: 2 });
+    expect((await listNotifications(id, { unreadOnly: true })).total).toBe(1);
+    expect(await clearReadNotifications(id)).toBe(1);
+    expect((await listNotifications(id)).total).toBe(1);
   });
 });

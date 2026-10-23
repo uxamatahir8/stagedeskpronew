@@ -60,3 +60,19 @@ export async function markNotificationsRead(userId: string, ids: string[] | "all
     data: { readAt: new Date() },
   });
 }
+
+/** One page of a user's notifications for the notifications page, newest first. */
+export async function listNotifications(userId: string, { unreadOnly = false, page = 1, pageSize = 30 }: { unreadOnly?: boolean; page?: number; pageSize?: number } = {}) {
+  const where = { userId, ...(unreadOnly ? { readAt: null } : {}) };
+  const [items, total, unread] = await Promise.all([
+    prisma.notification.findMany({ where, orderBy: { createdAt: "desc" }, skip: (Math.max(1, page) - 1) * pageSize, take: pageSize }),
+    prisma.notification.count({ where }),
+    prisma.notification.count({ where: { userId, readAt: null } }),
+  ]);
+  return { items, total, unread, pages: Math.max(1, Math.ceil(total / pageSize)) };
+}
+
+/** Removes the user's notifications that are already read. */
+export async function clearReadNotifications(userId: string) {
+  return (await prisma.notification.deleteMany({ where: { userId, readAt: { not: null } } })).count;
+}

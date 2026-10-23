@@ -23,7 +23,7 @@ for (const key of settingKeys) {
 const { seedPlans } = await import("./seed-plans");
 await seedPlans(prisma);
 
-// Starter website pages (About and the legal pages), edited afterwards in the page builder.
+// Starter website pages (the legal pages), edited afterwards in the page builder.
 const { seedPages } = await import("./seed-pages");
 await seedPages(prisma);
 

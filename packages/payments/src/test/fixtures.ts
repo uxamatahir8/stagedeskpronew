@@ -6,7 +6,9 @@ import { acceptQuote, assignArtist, changeBookingStatus, createBooking, prisma, 
 export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
   const calls: { method: string; params: Record<string, unknown>; idempotencyKey?: string }[] = [];
   let n = 0;
-  const id = (prefix: string) => `${prefix}_test_${++n}`;
+  // Unique per fake, so ids stored by an earlier (interrupted) run never collide with this one.
+  const run = Math.random().toString(36).slice(2, 8);
+  const id = (prefix: string) => `${prefix}_test_${run}_${++n}`;
   const record = (method: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
     calls.push({ method, params, idempotencyKey: options?.idempotencyKey });
 

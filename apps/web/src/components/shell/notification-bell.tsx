@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { NOTIFICATION_EVENT } from "@/components/messages/composer";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { markReadAction } from "@/lib/notification-actions";
 import { cn } from "@/lib/utils";
 
@@ -109,6 +109,10 @@ export function NotificationBell() {
             ))}
           </div>
         )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="justify-center text-sm font-medium text-primary">
+          <Link href="/app/notifications">{t("viewAll")}</Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -1,6 +1,7 @@
 import {
   BadgePercentIcon,
   BanknoteIcon,
+  BellIcon,
   BuildingIcon,
   CalendarCheckIcon,
   CalendarDaysIcon,
@@ -15,6 +16,7 @@ import {
   LifeBuoyIcon,
   LinkIcon,
   type LucideIcon,
+  MailIcon,
   MessagesSquareIcon,
   Music2Icon,
   PaletteIcon,
@@ -65,6 +67,7 @@ export const navigation: NavGroup[] = [
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates" },
       { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages" },
+      { key: "emails", href: "/app/emails", icon: MailIcon, permission: "platform.settings" },
       { key: "users", href: "/app/users", icon: UsersRoundIcon, permission: "platform.users" },
       { key: "audit", href: "/app/audit", icon: ScrollTextIcon, permission: "platform.audit" },
       { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },
@@ -141,7 +144,10 @@ export function footerNavigationFor(role: Role): NavItem[] {
 }
 
 /** Pages reached from menus other than the sidebar; listed for breadcrumbs. */
-const otherPages: NavItem[] = [{ key: "profile", href: "/app/profile", icon: UserRoundIcon }];
+const otherPages: NavItem[] = [
+  { key: "profile", href: "/app/profile", icon: UserRoundIcon },
+  { key: "notifications", href: "/app/notifications", icon: BellIcon },
+];
 
 /** Finds the nav item for a path like "/app/bookings". */
 /** The item for a path, or for its closest parent section (so detail pages keep their section). */

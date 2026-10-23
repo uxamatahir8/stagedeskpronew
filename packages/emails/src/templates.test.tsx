@@ -1,5 +1,6 @@
 import { render } from "@react-email/render";
 import { describe, expect, it } from "vitest";
+import { emailSamples, type EmailJob, previewEmailJob } from "./index";
 import { AffiliatePayout, Invitation, LoginCode, VerifyEmail } from "./templates";
 
 describe("email templates", () => {
@@ -33,5 +34,18 @@ describe("email templates", () => {
     );
     expect(text).toContain("2 approved commissions");
     expect(text).toContain("Rotterdam DJ Collectief · €37.25");
+  });
+});
+
+describe("email previews", () => {
+  it("renders every email from its sample in both languages without sending", async () => {
+    for (const locale of ["nl", "en"] as const) {
+      const samples = emailSamples(locale, "http://localhost:3000");
+      for (const [kind, params] of Object.entries(samples)) {
+        const email = await previewEmailJob({ kind, to: "preview@example.com", params } as EmailJob);
+        expect(email.subject, `${locale} ${kind}`).not.toBe("");
+        expect(email.html, `${locale} ${kind}`).toContain("StageDesk");
+      }
+    }
   });
 });
