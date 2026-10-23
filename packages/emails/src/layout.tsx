@@ -1,3 +1,6 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
+// Declared here so every runner (Next, tsx in the worker, Vitest) uses the automatic JSX runtime.
 import { Body, Button, Container, Head, Heading, Hr, Html, Preview, Section, Text } from "@react-email/components";
 import { copy, type EmailLocale } from "./copy";
 

@@ -5,6 +5,7 @@ import { getFormatter, getTranslations, setRequestLocale } from "next-intl/serve
 import { prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ConnectCard } from "@/components/connect-card";
+import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
@@ -66,7 +67,7 @@ async function Payments() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader title={t("title")} description={t("description")} actions={<ExportButton kind="payments" />} />
       <ConnectCard
         stripeReady={isStripeConfigured()}
         account={account}

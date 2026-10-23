@@ -42,3 +42,8 @@ export function centsToInput(cents: number, locale: string) {
 export function startOfMonth(now = new Date()) {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
+
+/** The moment `days` days before now. */
+export function daysAgo(days: number, now = new Date()) {
+  return new Date(now.getTime() - days * 86_400_000);
+}

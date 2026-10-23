@@ -9,7 +9,7 @@ Build plan: https://claude.ai/artifact/2g4KvkN7ByigdSn5Vmh2aN
 | Path | What it is |
 |---|---|
 | `apps/web` | Next.js 16: marketing site, public booking pages, dashboard |
-| `apps/worker` | BullMQ background jobs (emails, Stripe events, payouts) |
+| `apps/worker` | BullMQ background jobs: the email queue, reminders, Stripe events, payouts, commissions |
 | `packages/core` | Business rules: money, fees, settings, booking states. No framework code. |
 | `packages/db` | Prisma 7 schema, migrations, client, settings service, seed |
 | `packages/config` | Shared TypeScript config |
@@ -102,6 +102,23 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
 - **Give a month, get a month:** each agency has an invite link on its Billing page (`?via=r-xxxxxx`).
   When the invited agency first pays, both get a Stripe balance credit.
 
+## Dashboards, messages and notifications
+
+- Every role has its own home page (`/app`): the platform admin sees revenue, growth and what needs
+  attention; agencies their action queue, booked vs collected, this month's events, artist workload and
+  plan usage; artists their requests and next gigs with the brief; customers a countdown and quick links.
+  Charts use one SQL aggregate each (`packages/db/src/analytics.ts`) and have a table view.
+- **Messages:** each booking has two conversations: agency with customer, and agency with the artist.
+  Customers and artists also get an email for messages from the agency.
+- **Notifications:** the bell is live over server-sent events (`/api/notifications/stream`).
+- **Emails** all go through the worker's `email` queue with retries. If no worker is running (or Redis
+  is down) the web app sends them itself, so sign-in codes always arrive. Run the worker with `pnpm dev`.
+- **Reminders** (hourly): event reminders 7 days and 1 day before to customer and artist, quote expiry
+  within 48 hours, and the balance-due reminder. Each is sent once (`reminder_logs`).
+- **Support:** anyone signed in can ask a question at `/app/support`; platform admins answer from the
+  same page. **Admin tools:** Users (search, disable, confirm email, reset 2FA) and the Audit log.
+- **CSV export** for bookings, customers and payments (`/api/export/<kind>`).
+
 ## Local services
 
 | Service | URL | Login |
@@ -121,6 +138,7 @@ bash scripts/smoke-accounts.sh             # accounts and agency isolation, agai
 bash scripts/smoke-bookings.sh             # bookings, artists, customers and PDF access
 bash scripts/smoke-payments.sh             # billing and payment screens by role
 bash scripts/smoke-affiliates.sh           # partner page, link tracking, affiliate and admin screens
+bash scripts/smoke-dashboards.sh           # dashboards, messages, support, admin tools, export, email queue
 pnpm --filter @stagedesk/web e2e           # Playwright: full booking flow in a real browser
 ```
 

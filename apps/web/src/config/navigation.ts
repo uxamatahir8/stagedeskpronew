@@ -27,6 +27,8 @@ import {
   UserRoundIcon,
   UsersIcon,
   WalletIcon,
+  ScrollTextIcon,
+  UsersRoundIcon,
 } from "lucide-react";
 import { can, type Permission, type Role } from "@stagedesk/core";
 import type { Messages } from "next-intl";
@@ -66,6 +68,8 @@ export const navigation: NavGroup[] = [
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates" },
       { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages", phase: 8 },
+      { key: "users", href: "/app/users", icon: UsersRoundIcon, permission: "platform.users" },
+      { key: "audit", href: "/app/audit", icon: ScrollTextIcon, permission: "platform.audit" },
       { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },
     ],
   },
@@ -107,7 +111,7 @@ export const navigation: NavGroup[] = [
   {
     key: "manage",
     items: [
-      { key: "messages", href: "/app/messages", icon: MessagesSquareIcon, permission: "messages", phase: 7 },
+      { key: "messages", href: "/app/messages", icon: MessagesSquareIcon, permission: "messages" },
       { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team" },
       { key: "agencySettings", href: "/app/agency-settings", icon: SettingsIcon, permission: "agency.settings" },
       { key: "bookingPage", href: "/app/booking-page", icon: GlobeIcon, permission: "agency.settings" },
@@ -118,7 +122,7 @@ export const navigation: NavGroup[] = [
 
 /** Shown at the bottom of the sidebar for everyone. */
 export const footerNavigation: NavItem[] = [
-  { key: "support", href: "/app/support", icon: LifeBuoyIcon, permission: "support", phase: 7 },
+  { key: "support", href: "/app/support", icon: LifeBuoyIcon, permission: "support" },
   { key: "designSystem", href: "/app/ui", icon: PaletteIcon, devOnly: true },
 ];
 

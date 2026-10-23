@@ -1,3 +1,6 @@
+/** @jsxRuntime automatic */
+/** @jsxImportSource react */
+// Declared here so every runner (Next, tsx in the worker, Vitest) uses the automatic JSX runtime.
 import { Text } from "@react-email/components";
 import { copy, type EmailLocale } from "./copy";
 import { ActionButton, EmailLayout, LinkFallback, Paragraph } from "./layout";
@@ -153,6 +156,74 @@ export function AffiliatePayout({
           {line}
         </Text>
       ))}
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function NewMessage({ locale, name, code, excerpt, url }: { locale: EmailLocale; name: string; code: string; excerpt: string; url: string }) {
+  const c = copy[locale].newMessage;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, code)}</Paragraph>
+      <Text style={{ margin: "0 0 16px", padding: "12px 16px", borderLeft: "3px solid #7c3aed", background: "#f6f4fb", whiteSpace: "pre-line" }}>{excerpt}</Text>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function EventReminder({ locale, days, name, event, date, agency, url }: { locale: EmailLocale; days: number; name: string; event: string; date: string; agency: string; url: string }) {
+  const c = copy[locale].eventReminder;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading(days)}>
+      <Paragraph>{c.body(name, event, date, agency)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function GigReminder({ locale, name, event, date, venue, url }: { locale: EmailLocale; name: string; event: string; date: string; venue: string; url: string }) {
+  const c = copy[locale].gigReminder;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, event, date, venue)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function QuoteExpiring({ locale, name, agency, until, url }: { locale: EmailLocale; name: string; agency: string; until: string; url: string }) {
+  const c = copy[locale].quoteExpiring;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, agency, until)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function BalanceDue({ locale, name, amount, date, agency, url }: { locale: EmailLocale; name: string; amount: string; date: string; agency: string; url: string }) {
+  const c = copy[locale].balanceDue;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, amount, date, agency)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function TicketReply({ locale, name, subject, excerpt, url }: { locale: EmailLocale; name: string; subject: string; excerpt: string; url: string }) {
+  const c = copy[locale].ticketReply;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, subject)}</Paragraph>
+      <Text style={{ margin: "0 0 16px", padding: "12px 16px", borderLeft: "3px solid #7c3aed", background: "#f6f4fb", whiteSpace: "pre-line" }}>{excerpt}</Text>
       <ActionButton href={url}>{c.button}</ActionButton>
       <LinkFallback locale={locale} href={url} />
     </EmailLayout>

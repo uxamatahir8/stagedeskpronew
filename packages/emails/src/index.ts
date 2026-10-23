@@ -2,7 +2,23 @@ import { render } from "@react-email/render";
 import { createTransport, type Transporter } from "nodemailer";
 import { createElement, type ReactElement } from "react";
 import { copy, type EmailLocale } from "./copy";
-import { AffiliateApproved, AffiliatePayout, InquiryReceived, Invitation, LoginCode, NewInquiry, QuoteSent, ResetPassword, VerifyEmail } from "./templates";
+import {
+  AffiliateApproved,
+  AffiliatePayout,
+  BalanceDue,
+  EventReminder,
+  GigReminder,
+  InquiryReceived,
+  Invitation,
+  LoginCode,
+  NewInquiry,
+  NewMessage,
+  QuoteExpiring,
+  QuoteSent,
+  ResetPassword,
+  TicketReply,
+  VerifyEmail,
+} from "./templates";
 
 export type { EmailLocale } from "./copy";
 
@@ -70,3 +86,63 @@ export function sendAffiliateApproved(to: string, p: { locale: EmailLocale; name
 export function sendAffiliatePayout(to: string, p: { locale: EmailLocale; name: string; amount: string; lines: string[]; url: string }) {
   return send(to, copy[p.locale].affiliatePayout.subject(p.amount), createElement(AffiliatePayout, p));
 }
+
+/** Cuts a message for an email preview without breaking a word. */
+const excerpt = (text: string, max = 400) => (text.length <= max ? text : `${text.slice(0, text.lastIndexOf(" ", max) > 0 ? text.lastIndexOf(" ", max) : max)}…`);
+
+export function sendNewMessage(to: string, p: { locale: EmailLocale; name: string; code: string; excerpt: string; url: string }) {
+  return send(to, copy[p.locale].newMessage.subject(p.name), createElement(NewMessage, { ...p, excerpt: excerpt(p.excerpt) }));
+}
+
+export function sendEventReminder(to: string, p: { locale: EmailLocale; days: number; name: string; event: string; date: string; agency: string; url: string }) {
+  return send(to, copy[p.locale].eventReminder.subject(p.days), createElement(EventReminder, p));
+}
+
+export function sendGigReminder(to: string, p: { locale: EmailLocale; name: string; event: string; date: string; venue: string; url: string }) {
+  return send(to, copy[p.locale].gigReminder.subject(p.date), createElement(GigReminder, p));
+}
+
+export function sendQuoteExpiring(to: string, p: { locale: EmailLocale; name: string; agency: string; until: string; url: string }) {
+  return send(to, copy[p.locale].quoteExpiring.subject(p.agency), createElement(QuoteExpiring, p));
+}
+
+export function sendBalanceDue(to: string, p: { locale: EmailLocale; name: string; amount: string; date: string; agency: string; url: string }) {
+  return send(to, copy[p.locale].balanceDue.subject(p.amount), createElement(BalanceDue, p));
+}
+
+export function sendTicketReply(to: string, p: { locale: EmailLocale; name: string; ref: string; subject: string; excerpt: string; url: string }) {
+  return send(to, copy[p.locale].ticketReply.subject(p.ref, p.subject), createElement(TicketReply, { ...p, excerpt: excerpt(p.excerpt) }));
+}
+
+/**
+ * Every email the app sends, by name. Web and worker describe an email as a
+ * job ({ kind, to, params }); the worker's email queue sends it with retries.
+ */
+const senders = {
+  verifyEmail: sendVerifyEmail,
+  loginCode: sendLoginCode,
+  resetPassword: sendResetPassword,
+  inquiryReceived: sendInquiryReceived,
+  newInquiry: sendNewInquiry,
+  quote: sendQuote,
+  invitation: sendInvitation,
+  affiliateApproved: sendAffiliateApproved,
+  affiliatePayout: sendAffiliatePayout,
+  newMessage: sendNewMessage,
+  eventReminder: sendEventReminder,
+  gigReminder: sendGigReminder,
+  quoteExpiring: sendQuoteExpiring,
+  balanceDue: sendBalanceDue,
+  ticketReply: sendTicketReply,
+} as const;
+
+export type EmailKind = keyof typeof senders;
+export type EmailJob = { [K in EmailKind]: { kind: K; to: string; params: Parameters<(typeof senders)[K]>[1] } }[EmailKind];
+
+export function sendEmailJob(job: EmailJob) {
+  const sender = senders[job.kind] as (to: string, params: EmailJob["params"]) => Promise<void>;
+  return sender(job.to, job.params);
+}
+
+/** Name of the BullMQ queue the worker reads emails from. */
+export const EMAIL_QUEUE = "email";

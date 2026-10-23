@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import type { BookingStatus, EventType } from "@stagedesk/core";
 import { EmptyState } from "@/components/empty-state";
+import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -41,12 +42,15 @@ export default async function BookingsPage({ params, searchParams }: PageProps<"
         title={t("title")}
         description={t("description")}
         actions={
-          <Button asChild>
-            <Link href="/app/bookings/new">
-              <PlusIcon />
-              {t("new")}
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <ExportButton kind="bookings" />
+            <Button asChild>
+              <Link href="/app/bookings/new">
+                <PlusIcon />
+                {t("new")}
+              </Link>
+            </Button>
+          </div>
         }
       />
       <Suspense fallback={<Skeleton className="h-96 w-full" />}>

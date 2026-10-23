@@ -66,6 +66,50 @@ export const copy = {
         `Hoi ${name}, we hebben ${amount} overgemaakt naar je Stripe-account voor ${count} goedgekeurde ${count === 1 ? "commissie" : "commissies"}. Stripe zet het geld volgens je uitbetalingsschema op je bankrekening.`,
       button: "Overzicht bekijken",
     },
+    newMessage: {
+      subject: (name: string) => `Nieuw bericht van ${name}`,
+      preview: "Je hebt een nieuw bericht over je boeking.",
+      heading: "Nieuw bericht",
+      body: (name: string, code: string) => `${name} heeft je een bericht gestuurd over boeking ${code}:`,
+      button: "Bericht beantwoorden",
+    },
+    eventReminder: {
+      subject: (days: number) => (days <= 1 ? "Morgen is het zover" : `Nog ${days} dagen tot je feest`),
+      preview: "Een herinnering aan je evenement.",
+      heading: (days: number) => (days <= 1 ? "Morgen is het zover!" : `Nog ${days} dagen`),
+      body: (name: string, event: string, date: string, agency: string) =>
+        `Hoi ${name}, je ${event} op ${date} komt eraan. Controleer de details en je wensen (playlist, momenten) zodat ${agency} alles goed kan voorbereiden.`,
+      button: "Bekijk je evenement",
+    },
+    gigReminder: {
+      subject: (date: string) => `Optreden op ${date}`,
+      preview: "Een herinnering aan je optreden.",
+      heading: "Je optreden komt eraan",
+      body: (name: string, event: string, date: string, venue: string) => `Hoi ${name}, je speelt op ${date} bij een ${event}${venue ? ` in ${venue}` : ""}. Bekijk de briefing met tijden, playlist en wensen.`,
+      button: "Briefing openen",
+    },
+    quoteExpiring: {
+      subject: (agency: string) => `Je offerte van ${agency} verloopt bijna`,
+      preview: "Je offerte is nog kort geldig.",
+      heading: "Je offerte verloopt bijna",
+      body: (name: string, agency: string, until: string) => `Hoi ${name}, de offerte van ${agency} is geldig tot ${until}. Accepteer hem op tijd om je datum vast te leggen.`,
+      button: "Offerte bekijken",
+    },
+    balanceDue: {
+      subject: (amount: string) => `Herinnering: nog ${amount} te betalen`,
+      preview: "Het restbedrag voor je evenement staat open.",
+      heading: "Restbedrag te betalen",
+      body: (name: string, amount: string, date: string, agency: string) =>
+        `Hoi ${name}, voor je evenement op ${date} staat nog ${amount} open bij ${agency}. Betaal vóór het evenement zodat alles rond is.`,
+      button: "Bekijken en betalen",
+    },
+    ticketReply: {
+      subject: (ref: string, subject: string) => `[${ref}] ${subject}`,
+      preview: "Support heeft je vraag beantwoord.",
+      heading: "Antwoord van support",
+      body: (name: string, subject: string) => `Hoi ${name}, we hebben je vraag "${subject}" beantwoord.`,
+      button: "Antwoord lezen",
+    },
     quoteSent: {
       subject: (agency: string) => `Je offerte van ${agency}`,
       preview: "Je offerte staat klaar.",
@@ -138,6 +182,50 @@ export const copy = {
       body: (name: string, amount: string, count: number) =>
         `Hi ${name}, we've transferred ${amount} to your Stripe account for ${count} approved ${count === 1 ? "commission" : "commissions"}. Stripe moves it to your bank account on your payout schedule.`,
       button: "View statement",
+    },
+    newMessage: {
+      subject: (name: string) => `New message from ${name}`,
+      preview: "You have a new message about your booking.",
+      heading: "New message",
+      body: (name: string, code: string) => `${name} sent you a message about booking ${code}:`,
+      button: "Reply",
+    },
+    eventReminder: {
+      subject: (days: number) => (days <= 1 ? "It's tomorrow" : `${days} days to go`),
+      preview: "A reminder about your event.",
+      heading: (days: number) => (days <= 1 ? "It's tomorrow!" : `${days} days to go`),
+      body: (name: string, event: string, date: string, agency: string) =>
+        `Hi ${name}, your ${event} on ${date} is coming up. Check the details and your wishes (playlist, key moments) so ${agency} can prepare everything.`,
+      button: "View your event",
+    },
+    gigReminder: {
+      subject: (date: string) => `Gig on ${date}`,
+      preview: "A reminder about your gig.",
+      heading: "Your gig is coming up",
+      body: (name: string, event: string, date: string, venue: string) => `Hi ${name}, you're playing a ${event} on ${date}${venue ? ` at ${venue}` : ""}. Check the brief for times, playlist and wishes.`,
+      button: "Open brief",
+    },
+    quoteExpiring: {
+      subject: (agency: string) => `Your quote from ${agency} expires soon`,
+      preview: "Your quote is only valid a little longer.",
+      heading: "Your quote expires soon",
+      body: (name: string, agency: string, until: string) => `Hi ${name}, the quote from ${agency} is valid until ${until}. Accept it in time to book your date.`,
+      button: "View quote",
+    },
+    balanceDue: {
+      subject: (amount: string) => `Reminder: ${amount} still to pay`,
+      preview: "The balance for your event is open.",
+      heading: "Balance due",
+      body: (name: string, amount: string, date: string, agency: string) =>
+        `Hi ${name}, ${amount} is still open with ${agency} for your event on ${date}. Please pay before the event so everything is settled.`,
+      button: "View and pay",
+    },
+    ticketReply: {
+      subject: (ref: string, subject: string) => `[${ref}] ${subject}`,
+      preview: "Support answered your question.",
+      heading: "Reply from support",
+      body: (name: string, subject: string) => `Hi ${name}, we've answered your question "${subject}".`,
+      button: "Read the reply",
     },
     quoteSent: {
       subject: (agency: string) => `Your quote from ${agency}`,

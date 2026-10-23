@@ -17,7 +17,6 @@ import {
   sendQuote,
   toDateOnly,
 } from "@stagedesk/db";
-import { sendQuote as sendQuoteEmail } from "@stagedesk/emails";
 import { redirect } from "@/i18n/navigation";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import type { Locale } from "@/i18n/routing";
@@ -226,16 +225,18 @@ async function emailQuote(quoteId: string, agencyName: string) {
   if (!quote || !customer) return;
   const locale = userLocale(customer.locale);
   const intl = locale === "en" ? "en-GB" : "nl-NL";
-  deliver(
-    sendQuoteEmail(customer.email, {
+  deliver({
+    kind: "quote",
+    to: customer.email,
+    params: {
       locale,
       name: customer.name.split(/\s+/)[0] ?? customer.name,
       agency: agencyName,
       total: new Intl.NumberFormat(intl, { style: "currency", currency: "EUR" }).format(quote.totalCents / 100),
       until: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(quote.expiresAt),
       url: absoluteUrl(locale, `/q/${quote.token}`),
-    }),
-  );
+    },
+  });
 }
 
 export async function acceptOnBehalfAction(quoteId: string, name: string): Promise<ActionResult> {

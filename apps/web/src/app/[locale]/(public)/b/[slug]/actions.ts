@@ -4,8 +4,7 @@ import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { eventTypes, generateTrackingCode, todayInNetherlands } from "@stagedesk/core";
-import { prisma, submitInquiry } from "@stagedesk/db";
-import { sendInquiryReceived, sendNewInquiry } from "@stagedesk/emails";
+import { notify, prisma, submitInquiry } from "@stagedesk/db";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -67,15 +66,17 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
   if (!result) return { ok: false, message: t("notFound") };
   const { agency, booking } = result;
 
-  deliver(
-    sendInquiryReceived(d.email, {
+  deliver({
+    kind: "inquiryReceived",
+    to: d.email,
+    params: {
       locale,
       name: d.name.split(/\s+/)[0] ?? d.name,
       agency: agency.name,
       code: booking.trackingCode,
       url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`),
-    }),
-  );
+    },
+  });
 
   // Let everyone who handles bookings at the agency know, each in their own language.
   const staff = await prisma.member.findMany({
@@ -85,8 +86,10 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
   for (const member of staff) {
     const staffLocale = userLocale(member.user.locale);
     const tt = await getTranslations({ locale: staffLocale, namespace: "eventTypes" });
-    deliver(
-      sendNewInquiry(member.user.email, {
+    deliver({
+      kind: "newInquiry",
+      to: member.user.email,
+      params: {
         locale: staffLocale,
         customer: d.name,
         event: tt(d.eventType).toLowerCase(),
@@ -94,9 +97,13 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
           new Date(`${d.eventDate}T12:00:00Z`),
         ),
         url: absoluteUrl(staffLocale, `/app/bookings/${booking.trackingCode}`),
-      }),
-    );
+      },
+    });
   }
+  await notify(
+    staff.map((m) => m.userId),
+    { type: "new_inquiry", data: { name: d.name, code: booking.trackingCode }, url: `/app/bookings/${booking.trackingCode}` },
+  );
 
   return { ok: true, code: booking.trackingCode, name: d.name.split(/\s+/)[0] ?? d.name };
 }

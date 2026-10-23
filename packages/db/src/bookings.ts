@@ -15,6 +15,7 @@ import {
 } from "@stagedesk/core";
 import { effectiveFeeSnapshot } from "./billing";
 import { prisma } from "./client";
+import { agencyDeskUserIds, notify } from "./notifications";
 import { Prisma } from "./generated/prisma/client";
 import { tenantDb, type TenantDb } from "./tenant";
 
@@ -217,7 +218,7 @@ export async function acceptQuote(
   // The platform fee in force now is frozen onto the booking, so later
   // changes to fee settings only affect new bookings.
   const feeSnapshot = await effectiveFeeSnapshot(organizationId);
-  return tenantDb(organizationId).$transaction(async (tx) => {
+  const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const quote = await tx.quote.findFirst({ where: { id: quoteId } });
     if (!quote) throw new BookingError("not_found");
     if (quote.status !== "sent") throw new BookingError("quote_not_current");
@@ -234,7 +235,13 @@ export async function acceptQuote(
       { version: quote.version, name: by.name },
     );
     await tx.quote.updateMany({ where: { id: quote.id }, data: { status: "accepted", acceptedAt: now, acceptedByName: by.name } });
+    return booking;
   });
+  await notify(
+    await agencyDeskUserIds(organizationId),
+    { type: "quote_accepted", data: { name: by.name, code: booking.trackingCode }, url: `/app/bookings/${booking.trackingCode}` },
+    by.actorId,
+  );
 }
 
 /** Artists the agency can book: its own, plus accepted shares from partner agencies. */
@@ -271,7 +278,7 @@ export async function assignArtist(organizationId: string, bookingId: string, ar
   const allowed = (await bookableArtists(organizationId)).find((a) => a.id === artistId);
   if (!allowed) throw new BookingError("artist_not_available_to_agency");
 
-  return tenantDb(organizationId).$transaction(async (tx) => {
+  const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     if (booking.status !== "booked" && booking.status !== "confirmed") throw new BookingError("invalid_status");
     if (booking.eventDate && !(await isArtistFree(artistId, booking.eventDate, booking.id))) {
@@ -287,6 +294,14 @@ export async function assignArtist(organizationId: string, bookingId: string, ar
       data: { id: randomUUID(), organizationId, bookingId, artistId, status: "pending", shareBps: allowed.defaultShareBps },
     });
     await logEvent(tx, bookingId, "artist_assigned", actorId, { artistId, stageName: allowed.stageName });
+    return booking;
+  });
+  const artistUser = await prisma.artist.findUnique({ where: { id: artistId }, select: { userId: true, organization: { select: { name: true } } } });
+  const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+  await notify([artistUser?.userId], {
+    type: "gig_request",
+    data: { name: agency?.name ?? "", code: booking.trackingCode },
+    url: `/app/gigs/${booking.trackingCode}`,
   });
 }
 
@@ -306,7 +321,7 @@ export async function respondToAssignment(
   });
   if (!assignment) throw new BookingError("no_open_assignment");
 
-  return tenantDb(assignment.organizationId).$transaction(async (tx) => {
+  const booking = await tenantDb(assignment.organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, assignment.bookingId);
     if (answer.accept) {
       await applyTransition(tx, booking, "artist_accepted", "artist", artistUserId, now);
@@ -318,6 +333,13 @@ export async function respondToAssignment(
       });
       await logEvent(tx, booking.id, "artist_declined", artistUserId, { reason: answer.reason });
     }
+    return booking;
+  });
+  const artist = await prisma.bookingAssignment.findUnique({ where: { id: assignment.id }, select: { artist: { select: { stageName: true } } } });
+  await notify(await agencyDeskUserIds(assignment.organizationId), {
+    type: "gig_response",
+    data: { name: artist?.artist.stageName ?? "", code: booking.trackingCode, accepted: answer.accept ? "yes" : "no" },
+    url: `/app/bookings/${booking.trackingCode}`,
   });
 }
 

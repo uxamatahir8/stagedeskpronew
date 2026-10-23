@@ -13,6 +13,7 @@ import {
   withinCookieWindow,
 } from "@stagedesk/core";
 import { prisma } from "./client";
+import { notify } from "./notifications";
 import { getSetting } from "./settings";
 
 /** Commissions that count as earned (not cancelled). */
@@ -252,7 +253,11 @@ export async function approveDueCommissions(now = new Date()) {
     const large = program.reviewThresholdCents > 0 && (month._sum.amountCents ?? 0) > program.reviewThresholdCents;
     await prisma.commission.update({ where: { id: c.id, status: "pending" }, data: { status: large ? "review" : "approved" } });
     if (large) review++;
-    else approved++;
+    else {
+      approved++;
+      const affiliate = await prisma.affiliate.findUnique({ where: { id: c.affiliateId }, select: { userId: true } });
+      await notify([affiliate?.userId], { type: "commission_approved", data: { cents: c.amountCents }, url: "/app/payouts" });
+    }
   }
   return { approved, review };
 }

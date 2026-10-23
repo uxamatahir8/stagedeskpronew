@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { prisma, tenantDb } from "@stagedesk/db";
+import { agencyDeskUserIds, notify, prisma, tenantDb } from "@stagedesk/db";
 import { PaymentsError } from "./subscriptions";
 
 /** What the customer should pay next: the rest of the deposit, else the balance. */
@@ -77,7 +77,7 @@ export async function recordStripePayment(stripe: Stripe, session: Stripe.Checko
   const kind = session.metadata?.["kind"] === "deposit" ? "deposit" : "balance";
 
   const db = tenantDb(organizationId);
-  return db.$transaction(async (tx) => {
+  const paymentId = await db.$transaction(async (tx) => {
     const booking = await tx.booking.findFirst({ where: { id: bookingId }, select: { id: true } });
     if (!booking) return null;
     const paymentId = randomUUID();
@@ -109,4 +109,13 @@ export async function recordStripePayment(stripe: Stripe, session: Stripe.Checko
     });
     return paymentId;
   });
+  if (paymentId) {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { trackingCode: true } });
+    await notify(await agencyDeskUserIds(organizationId, ["agency_owner", "agency_admin"]), {
+      type: "payment_received",
+      data: { cents: amount, code: booking?.trackingCode ?? "" },
+      url: `/app/bookings/${booking?.trackingCode ?? ""}`,
+    });
+  }
+  return paymentId;
 }

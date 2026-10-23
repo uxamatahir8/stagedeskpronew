@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { type BookingStatus, type EventType, paymentStatus, todayInNetherlands } from "@stagedesk/core";
 import { PayPanel } from "@/components/booking/pay-panel";
+import { MessageThread } from "@/components/messages/message-thread";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -140,6 +141,15 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("messages.withAgency", { agency: organization.name })}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <MessageThread bookingId={booking.id} code={booking.trackingCode} channel="customer" viewerId={viewer.user.id} />
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid content-start gap-6">

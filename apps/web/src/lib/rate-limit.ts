@@ -1,11 +1,5 @@
 import "server-only";
-import { Redis } from "ioredis";
-
-const globalForRedis = globalThis as unknown as { redis?: Redis };
-const redis = (globalForRedis.redis ??= new Redis(process.env.REDIS_URL ?? "redis://localhost:6379", {
-  maxRetriesPerRequest: 2,
-  lazyConnect: true,
-}));
+import { redis } from "./redis";
 
 /**
  * Fixed-window counter. Returns false once `key` has been used more than

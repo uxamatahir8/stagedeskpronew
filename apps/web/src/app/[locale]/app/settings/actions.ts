@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 import { feeRuleSchema, type SettingKey } from "@stagedesk/core";
-import { Prisma, prisma, updateSetting } from "@stagedesk/db";
+import { audit, Prisma, prisma, updateSetting } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 
@@ -15,6 +15,7 @@ export async function saveSettingAction(key: SettingKey, value: unknown): Promis
   if (!editable.includes(key)) return { ok: false, message: t("invalid") };
   try {
     await updateSetting(key, value, viewer.user.id);
+    await audit({ actorId: viewer.user.id, action: "settings.update", targetType: "setting", targetId: key });
     return { ok: true, message: t("saved") };
   } catch {
     return { ok: false, message: t("invalid") };
@@ -23,9 +24,10 @@ export async function saveSettingAction(key: SettingKey, value: unknown): Promis
 
 /** A special fee deal for one agency, or null to use its plan / the platform default. */
 export async function setAgencyFeeAction(organizationId: string, rule: unknown): Promise<ActionResult> {
-  await requirePermission("platform.agencies");
+  const viewer = await requirePermission("platform.agencies");
   const parsed = rule === null ? null : feeRuleSchema.safeParse(rule);
   if (parsed && !parsed.success) return { ok: false, message: (await getTranslations("platformSettings"))("invalid") };
   await prisma.organization.update({ where: { id: organizationId }, data: { feeRule: parsed ? parsed.data : Prisma.DbNull } });
+  await audit({ actorId: viewer.user.id, action: "agency.fee_deal", agencyId: organizationId, data: { rule: parsed ? parsed.data : null } });
   return { ok: true, message: (await getTranslations("agencyFee"))("saved") };
 }

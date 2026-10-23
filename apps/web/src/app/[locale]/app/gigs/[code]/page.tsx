@@ -1,4 +1,5 @@
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, MapPinIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarIcon, ClockIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
@@ -64,7 +65,15 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
           </p>
         </div>
         {assignment.status === "pending" && <RespondGig assignmentId={assignment.id} />}
-        {assignment.status === "accepted" && b.status === "confirmed" && eventReached && <CompleteGig assignmentId={assignment.id} />}
+        <div className="flex flex-wrap gap-2">
+          {assignment.status === "accepted" && b.status === "confirmed" && eventReached && <CompleteGig assignmentId={assignment.id} />}
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/app/messages/${b.trackingCode}?channel=artist`}>
+              <MessagesSquareIcon />
+              {t("messages.messageAgency")}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>

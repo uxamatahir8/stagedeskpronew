@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { EmptyState } from "@/components/empty-state";
+import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,7 +41,13 @@ async function Customers() {
 
   return (
     <div className="grid gap-8">
-      <PageHeader title={t("title")} description={t("description")} actions={<AddCustomerDialog />} />
+      <PageHeader title={t("title")} description={t("description")} actions={
+          <div className="flex flex-wrap gap-2">
+            <ExportButton kind="customers" />
+            <AddCustomerDialog />
+          </div>
+        }
+      />
       {customers.length === 0 ? (
         <EmptyState icon={ContactIcon} title={t("emptyTitle")} description={t("emptyBody")} />
       ) : (

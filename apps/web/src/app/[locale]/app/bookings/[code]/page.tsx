@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -337,6 +337,27 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   ))}
                 </ul>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("messages.title")}</CardTitle>
+              <CardDescription>{t("messages.bookingHint")}</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/app/messages/${booking.trackingCode}?channel=customer`}>
+                  <MessagesSquareIcon />
+                  {t("messages.channel_customer")}
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/app/messages/${booking.trackingCode}?channel=artist`}>
+                  <MessagesSquareIcon />
+                  {t("messages.channel_artist")}
+                </Link>
+              </Button>
             </CardContent>
           </Card>
 

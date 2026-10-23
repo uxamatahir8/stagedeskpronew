@@ -1,6 +1,5 @@
 "use client";
 
-import { BellIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Role } from "@stagedesk/core";
 import {
@@ -11,19 +10,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { findNavItem } from "@/config/navigation";
 import { Link, usePathname } from "@/i18n/navigation";
 import { CommandMenu } from "./command-menu";
+import { NotificationBell } from "./notification-bell";
 
 export function TopBar({ role }: { role: Role }) {
   const t = useTranslations();
@@ -58,18 +50,7 @@ export function TopBar({ role }: { role: Role }) {
 
       <div className="ml-auto flex items-center gap-2">
         <CommandMenu role={role} />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={t("shell.notifications")}>
-              <BellIcon />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            <DropdownMenuLabel>{t("shell.notifications")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">{t("shell.noNotifications")}</p>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationBell />
       </div>
     </header>
   );

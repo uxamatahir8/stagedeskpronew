@@ -19,27 +19,33 @@ datasource db {
 // merge by hand: model and field names must match what Better Auth expects.
 
 model User {
-  id               String       @id @db.VarChar(64)
-  name             String       @db.VarChar(191)
-  email            String       @unique @db.VarChar(191)
-  emailVerified    Boolean      @default(false)
-  image            String?      @db.Text
-  twoFactorEnabled Boolean?     @default(false)
+  id               String           @id @db.VarChar(64)
+  name             String           @db.VarChar(191)
+  email            String           @unique @db.VarChar(191)
+  emailVerified    Boolean          @default(false)
+  image            String?          @db.Text
+  twoFactorEnabled Boolean?         @default(false)
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
-  platformRole     String?      @db.VarChar(32)
-  locale           String?      @default("nl") @db.VarChar(8)
-  phone            String?      @db.VarChar(32)
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  platformRole     String?          @db.VarChar(32)
+  locale           String?          @default("nl") @db.VarChar(8)
+  /// Set by the platform admin: the user can't sign in.
+  disabledAt       DateTime?
+  phone            String?          @db.VarChar(32)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
   sessions         Session[]
   accounts         Account[]
   members          Member[]
   invitations      Invitation[]
   twofactors       TwoFactor[]
   artistProfiles   Artist[]
-  bookings         Booking[]    @relation("BookingCustomer")
+  bookings         Booking[]        @relation("BookingCustomer")
   reviews          Review[]
   affiliate        Affiliate?
+  notifications    Notification[]
+  bookingMessages  BookingMessage[]
+  supportTickets   SupportTicket[]
+  ticketMessages   TicketMessage[]
 
   @@map("users")
 }
@@ -126,6 +132,7 @@ model Organization {
   referralCode       String?                @unique @db.VarChar(24)
   referral           Referral?              @relation("ReferredAgency")
   referredAgencies   Referral[]             @relation("ReferringAgency")
+  bookingMessages    BookingMessage[]
   members            Member[]
   invitations        Invitation[]
   artists            Artist[]
@@ -342,6 +349,7 @@ model Booking {
   invoices          Invoice[]
   review            Review?
   ledger            LedgerEntry[]
+  messages          BookingMessage[]
 
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
@@ -846,4 +854,129 @@ model AffiliateAsset {
   createdAt   DateTime @default(now())
 
   @@map("affiliate_assets")
+}
+
+// ─── Messaging, notifications, support, audit ───────────────────────────
+
+/**
+ * A message in a booking's conversation.
+ */
+model BookingMessage {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// customer (agency with the customer) | artist (agency with the assigned artist)
+  channel        String       @db.VarChar(16)
+  authorId       String?      @db.VarChar(64)
+  author         User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  body           String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([bookingId, channel, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("booking_messages")
+}
+
+/**
+ * How far a user has read one conversation.
+ */
+model MessageRead {
+  userId     String   @db.VarChar(64)
+  bookingId  String   @db.VarChar(64)
+  channel    String   @db.VarChar(16)
+  lastReadAt DateTime
+
+  @@id([userId, bookingId, channel])
+  @@map("message_reads")
+}
+
+/**
+ * In-app notification. Text comes from the type and data, in the reader's language.
+ */
+model Notification {
+  id        String    @id @db.VarChar(64)
+  userId    String    @db.VarChar(64)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// new_inquiry | quote_accepted | gig_request | gig_response | payment_received | message | ticket_reply | ticket_new | reminder_event | commission_approved
+  type      String    @db.VarChar(40)
+  data      Json
+  /// Where clicking it goes, e.g. /app/bookings/K7Q2M9XA
+  url       String?   @db.VarChar(255)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model SupportTicket {
+  id            String          @id @db.VarChar(64)
+  /// Shown to people, e.g. T-K7Q2M9
+  reference     String          @unique @db.VarChar(12)
+  userId        String          @db.VarChar(64)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// The agency the user was working in, if any (platform-level, so not organizationId).
+  agencyId      String?         @db.VarChar(64)
+  subject       String          @db.VarChar(191)
+  /// billing | bookings | payments | account | other
+  category      String          @db.VarChar(16)
+  /// open (waiting on support) | answered (waiting on the user) | closed
+  status        String          @default("open") @db.VarChar(16)
+  lastMessageAt DateTime        @default(now())
+  closedAt      DateTime?
+  createdAt     DateTime        @default(now())
+  messages      TicketMessage[]
+
+  @@index([status, lastMessageAt])
+  @@index([userId, lastMessageAt])
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id        String        @id @db.VarChar(64)
+  ticketId  String        @db.VarChar(64)
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?       @db.VarChar(64)
+  author    User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  fromStaff Boolean       @default(false)
+  body      String        @db.Text
+  createdAt DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+  @@map("ticket_messages")
+}
+
+/**
+ * Who did what: admin, money and access changes. Append-only.
+ */
+model AuditEvent {
+  id         BigInt   @id @default(autoincrement())
+  actorId    String?  @db.VarChar(64)
+  /// The agency affected, if any (platform-level, so not organizationId).
+  agencyId   String?  @db.VarChar(64)
+  /// e.g. settings.update, plan.save, agency.fee_deal, affiliate.status, payment.refund, user.disable
+  action     String   @db.VarChar(64)
+  targetType String?  @db.VarChar(32)
+  targetId   String?  @db.VarChar(64)
+  data       Json?
+  ip         String?  @db.VarChar(64)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([agencyId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_events")
+}
+
+/**
+ * One row per reminder sent, so the hourly job never sends one twice.
+ */
+model ReminderLog {
+  key    String   @id @db.VarChar(120)
+  sentAt DateTime @default(now())
+
+  @@map("reminder_logs")
 }

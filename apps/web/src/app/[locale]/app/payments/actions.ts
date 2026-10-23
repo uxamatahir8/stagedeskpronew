@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getFormatter, getLocale, getTranslations } from "next-intl/server";
 import { parseEuros } from "@stagedesk/core";
+import { audit } from "@stagedesk/db";
 import { connectDashboardLink, connectOnboardingLink, getStripe, refundPayment } from "@stagedesk/payments";
 import type { RedirectResult } from "@/components/redirect-button";
 import type { ActionResult } from "@/lib/actions";
@@ -53,6 +54,7 @@ export async function refundAction(paymentId: string, amount: string): Promise<A
   if (cents === null || cents <= 0) return { ok: false, message: (await getTranslations("payments"))("errors_invalid_amount") };
   try {
     const { refunded } = await refundPayment(getStripe(), { organizationId: organization.id, paymentId, amountCents: cents, actorId: viewer.user.id });
+    await audit({ actorId: viewer.user.id, action: "payment.refund", agencyId: organization.id, targetType: "payment", targetId: paymentId, data: { cents: refunded } });
     revalidatePath("/[locale]/app", "layout");
     return { ok: true, message: (await getTranslations("payments"))("refunded_", { amount: euro(await getFormatter(), refunded) }) };
   } catch (error) {

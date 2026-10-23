@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { feeRuleSchema, parseEuros, planLimitsSchema } from "@stagedesk/core";
-import { Prisma, prisma } from "@stagedesk/db";
+import { audit, Prisma, prisma } from "@stagedesk/db";
 import { getStripe, syncPlanToStripe } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
@@ -32,7 +32,7 @@ const schema = z.object({
 });
 
 export async function savePlanAction(input: z.input<typeof schema>): Promise<ActionResult> {
-  await requirePermission("platform.plans");
+  const viewer = await requirePermission("platform.plans");
   const t = await getTranslations("plans");
   const parsed = schema.safeParse(input);
   const monthly = parsed.success ? parseEuros(parsed.data.monthly) : null;
@@ -66,6 +66,7 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
   if (d.recommended) await prisma.plan.updateMany({ where: { id: { not: id } }, data: { recommended: false } });
 
   const stripe = getStripe();
+  await audit({ actorId: viewer.user.id, action: "plan.save", targetType: "plan", targetId: d.key });
   if (!stripe) return { ok: true, message: t("savedNoStripe") };
   try {
     await syncPlanToStripe(stripe, id);

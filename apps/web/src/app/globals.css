@@ -81,8 +81,9 @@
   --input: oklch(1 0 0 / 14%);
   --ring: oklch(0.65 0.1 305);
 
-  --chart-1: oklch(0.72 0.13 305);
-  --chart-2: oklch(0.74 0.11 200);
+  /* Dark chart hues are stepped for the dark surface (validated: lightness band, CVD separation, contrast). */
+  --chart-1: oklch(0.56 0.18 300);
+  --chart-2: oklch(0.66 0.12 185);
   --chart-3: oklch(0.8 0.13 75);
   --chart-4: oklch(0.72 0.14 355);
   --chart-5: oklch(0.74 0.12 150);

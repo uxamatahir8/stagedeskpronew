@@ -7,10 +7,11 @@ import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { withinLimit } from "@stagedesk/core";
 import { agencyBilling, agencyUsage, prisma } from "@stagedesk/db";
-import { type EmailLocale, sendInvitation, sendLoginCode, sendResetPassword, sendVerifyEmail } from "@stagedesk/emails";
+import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
 import { ac, organizationRoles } from "./auth-roles";
+import { deliver } from "./deliver";
 
 const appUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 
@@ -34,11 +35,6 @@ function appPath(locale: EmailLocale, path: string) {
   return `${appUrl}${locale === "en" ? "/en" : ""}${path}`;
 }
 
-// Emails are sent without awaiting so response times don't reveal whether an account exists.
-function deliver(task: Promise<unknown>) {
-  task.catch((error: unknown) => console.error("[auth] email failed", error));
-}
-
 export const auth = betterAuth({
   appName: "StageDesk",
   baseURL: appUrl,
@@ -60,7 +56,7 @@ export const auth = betterAuth({
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
-      deliver(sendResetPassword(user.email, { locale: localeOf(user), name: user.name, url }));
+      deliver({ kind: "resetPassword", to: user.email, params: { locale: localeOf(user), name: user.name, url } });
     },
   },
 
@@ -70,7 +66,7 @@ export const auth = betterAuth({
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60 * 24,
     sendVerificationEmail: async ({ user, url }) => {
-      deliver(sendVerifyEmail(user.email, { locale: localeOf(user), name: user.name, url }));
+      deliver({ kind: "verifyEmail", to: user.email, params: { locale: localeOf(user), name: user.name, url } });
     },
   },
 
@@ -95,6 +91,17 @@ export const auth = betterAuth({
     },
   },
 
+  databaseHooks: {
+    session: {
+      create: {
+        // A user disabled by the platform admin can't start a new session, whatever the sign-in method.
+        before: async (session) => {
+          const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { disabledAt: true } });
+          if (user?.disabledAt) throw new APIError("FORBIDDEN", { message: "Account disabled", code: "ACCOUNT_DISABLED" });
+        },
+      },
+    },
+  },
   plugins: [
     organization({
       ac,
@@ -140,15 +147,17 @@ export const auth = betterAuth({
       },
       sendInvitationEmail: async ({ id, role, email, organization, inviter }) => {
         const locale = localeOf(inviter.user);
-        deliver(
-          sendInvitation(email, {
+        deliver({
+          kind: "invitation",
+          to: email,
+          params: {
             locale,
             agency: organization.name,
             inviter: inviter.user.name,
             role: roleLabels[locale][role] ?? role,
             url: appPath(locale, `/invite/${id}`),
-          }),
-        );
+          },
+        });
       },
     }),
     emailOTP({
@@ -159,7 +168,7 @@ export const auth = betterAuth({
       storeOTP: "hashed",
       sendVerificationOTP: async ({ email, otp }) => {
         const user = await prisma.user.findUnique({ where: { email }, select: { locale: true } });
-        deliver(sendLoginCode(email, { locale: localeOf(user), code: otp }));
+        deliver({ kind: "loginCode", to: email, params: { locale: localeOf(user), code: otp } });
       },
     }),
     twoFactor({ issuer: "StageDesk" }),
