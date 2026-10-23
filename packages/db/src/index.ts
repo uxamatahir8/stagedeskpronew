@@ -6,6 +6,7 @@ export * from "./analytics";
 export * from "./audit";
 export * from "./messages";
 export * from "./notifications";
+export * from "./pages";
 export * from "./reminders";
 export * from "./support";
 export * from "./billing";

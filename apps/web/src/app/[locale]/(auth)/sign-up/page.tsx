@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { legalPageSlugs } from "@stagedesk/db";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -31,6 +33,33 @@ export default async function SignUpPage({ params }: PageProps<"/[locale]/sign-u
       <Suspense>
         <SignUpForm />
       </Suspense>
+      <Suspense fallback={null}>
+        <TermsNotice />
+      </Suspense>
     </AuthCard>
+  );
+}
+
+/** Links to the current Terms and Privacy policy; acceptance itself is recorded after the first sign-in. */
+async function TermsNotice() {
+  await connection();
+  const [t, locale, terms, privacy] = await Promise.all([getTranslations("auth.signUp"), getLocale(), legalPageSlugs("terms"), legalPageSlugs("privacy")]);
+  if (!terms || !privacy) return null;
+  const href = (p: { slugNl: string; slugEn: string }) => `/${locale === "en" ? p.slugEn : p.slugNl}`;
+  return (
+    <p className="mt-4 text-xs text-muted-foreground">
+      {t.rich("termsNotice", {
+        terms: (chunks) => (
+          <Link href={href(terms)} target="_blank" className="underline underline-offset-4 hover:text-foreground">
+            {chunks}
+          </Link>
+        ),
+        privacy: (chunks) => (
+          <Link href={href(privacy)} target="_blank" className="underline underline-offset-4 hover:text-foreground">
+            {chunks}
+          </Link>
+        ),
+      })}
+    </p>
   );
 }

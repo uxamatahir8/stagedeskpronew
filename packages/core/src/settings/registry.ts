@@ -46,6 +46,8 @@ export const siteGeneralSchema = z.object({
   defaultLocale: z.enum(["nl", "en"]),
   supportEmail: z.email(),
   maintenanceMode: z.boolean(),
+  /** Before launch: the website collects waitlist sign-ups instead of offering a free trial. */
+  waitlistMode: z.boolean().default(false),
 });
 
 /**
@@ -61,6 +63,7 @@ export const settingsRegistry = {
       defaultLocale: "nl",
       supportEmail: "support@stagedesk.pro",
       maintenanceMode: false,
+      waitlistMode: false,
     },
   },
   "fees.platform": {

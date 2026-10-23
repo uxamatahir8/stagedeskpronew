@@ -201,6 +201,13 @@ export function SettingsForms({
             </label>
             <Switch id="set-maint" checked={s.maintenanceMode} onCheckedChange={(c) => setS({ ...s, maintenanceMode: c })} />
           </div>
+          <div className="flex items-center justify-between gap-4 sm:col-span-2">
+            <label htmlFor="set-waitlist" className="text-sm">
+              {t("waitlistMode")}
+              <span className="block text-xs text-muted-foreground">{t("waitlistModeHint")}</span>
+            </label>
+            <Switch id="set-waitlist" checked={s.waitlistMode} onCheckedChange={(c) => setS({ ...s, waitlistMode: c })} />
+          </div>
           <div className="sm:col-span-2">
             <Button disabled={pending} onClick={() => save("site.general", s, t("invalid"))}>
               {t("save")}

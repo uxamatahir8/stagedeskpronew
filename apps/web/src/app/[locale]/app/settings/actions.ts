@@ -2,7 +2,9 @@
 
 import { getTranslations } from "next-intl/server";
 import { feeRuleSchema, type SettingKey } from "@stagedesk/core";
+import { updateTag } from "next/cache";
 import { audit, Prisma, prisma, updateSetting } from "@stagedesk/db";
+import { SITE_TAGS } from "@/lib/site";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 
@@ -16,6 +18,8 @@ export async function saveSettingAction(key: SettingKey, value: unknown): Promis
   try {
     await updateSetting(key, value, viewer.user.id);
     await audit({ actorId: viewer.user.id, action: "settings.update", targetType: "setting", targetId: key });
+    // The website shows fees, the waitlist switch and the partner program.
+    updateTag(SITE_TAGS.settings);
     return { ok: true, message: t("saved") };
   } catch {
     return { ok: false, message: t("invalid") };

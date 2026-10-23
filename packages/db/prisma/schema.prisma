@@ -19,33 +19,34 @@ datasource db {
 // merge by hand: model and field names must match what Better Auth expects.
 
 model User {
-  id               String           @id @db.VarChar(64)
-  name             String           @db.VarChar(191)
-  email            String           @unique @db.VarChar(191)
-  emailVerified    Boolean          @default(false)
-  image            String?          @db.Text
-  twoFactorEnabled Boolean?         @default(false)
+  id               String            @id @db.VarChar(64)
+  name             String            @db.VarChar(191)
+  email            String            @unique @db.VarChar(191)
+  emailVerified    Boolean           @default(false)
+  image            String?           @db.Text
+  twoFactorEnabled Boolean?          @default(false)
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
-  platformRole     String?          @db.VarChar(32)
-  locale           String?          @default("nl") @db.VarChar(8)
+  platformRole     String?           @db.VarChar(32)
+  locale           String?           @default("nl") @db.VarChar(8)
   /// Set by the platform admin: the user can't sign in.
   disabledAt       DateTime?
-  phone            String?          @db.VarChar(32)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  phone            String?           @db.VarChar(32)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   sessions         Session[]
   accounts         Account[]
   members          Member[]
   invitations      Invitation[]
   twofactors       TwoFactor[]
   artistProfiles   Artist[]
-  bookings         Booking[]        @relation("BookingCustomer")
+  bookings         Booking[]         @relation("BookingCustomer")
   reviews          Review[]
   affiliate        Affiliate?
   notifications    Notification[]
   bookingMessages  BookingMessage[]
   supportTickets   SupportTicket[]
   ticketMessages   TicketMessage[]
+  legalAcceptances LegalAcceptance[]
 
   @@map("users")
 }
@@ -979,4 +980,114 @@ model ReminderLog {
   sentAt DateTime @default(now())
 
   @@map("reminder_logs")
+}
+
+// ─── Website: pages, legal, blog comments, waitlist ─────────────────────
+
+/**
+ * A page the super admin builds: About, Terms, Privacy and other footer or header pages.
+ */
+model Page {
+  id                 String            @id @db.VarChar(64)
+  slugNl             String            @unique @db.VarChar(96)
+  slugEn             String            @unique @db.VarChar(96)
+  /// standard | legal (legal pages show "last updated" and keep every published version)
+  kind               String            @default("standard") @db.VarChar(16)
+  /// terms | privacy | cookies | dpa | imprint: a fixed name so the app can link to it
+  legalKey           String?           @unique @db.VarChar(16)
+  /// none | all | agencies: who must accept a new published version at their next sign-in
+  acceptance         String            @default("none") @db.VarChar(16)
+  /// none | header | footer_product | footer_company | footer_legal
+  placement          String            @default("none") @db.VarChar(24)
+  position           Int               @default(0)
+  /// draft | published
+  status             String            @default("draft") @db.VarChar(16)
+  publishedVersionId String?           @unique @db.VarChar(64)
+  publishedVersion   PageVersion?      @relation("PublishedVersion", fields: [publishedVersionId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  versions           PageVersion[]     @relation("PageVersions")
+  acceptances        LegalAcceptance[]
+
+  @@index([placement, position])
+  @@map("pages")
+}
+
+/**
+ * Every save is a version; one of them is published.
+ */
+model PageVersion {
+  id           String            @id @db.VarChar(64)
+  pageId       String            @db.VarChar(64)
+  page         Page              @relation("PageVersions", fields: [pageId], references: [id], onDelete: Cascade)
+  number       Int
+  /// { nl: { title, seoTitle, seoDescription, blocks }, en: { ... } }
+  content      Json
+  /// What changed, shown in the history.
+  note         String?           @db.VarChar(191)
+  createdById  String?           @db.VarChar(64)
+  createdAt    DateTime          @default(now())
+  publishedAt  DateTime?
+  publishedFor Page?             @relation("PublishedVersion")
+  acceptances  LegalAcceptance[]
+
+  @@unique([pageId, number])
+  @@map("page_versions")
+}
+
+/**
+ * Someone accepted one published version of a legal page.
+ */
+model LegalAcceptance {
+  id         String      @id @db.VarChar(64)
+  userId     String      @db.VarChar(64)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pageId     String      @db.VarChar(64)
+  page       Page        @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  versionId  String      @db.VarChar(64)
+  version    PageVersion @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  acceptedAt DateTime    @default(now())
+  ip         String?     @db.VarChar(64)
+
+  @@unique([userId, versionId])
+  @@index([pageId])
+  @@map("legal_acceptances")
+}
+
+/**
+ * A reader's comment on a blog post; shown after the admin approves it.
+ */
+model BlogComment {
+  id          String   @id @db.VarChar(64)
+  postSlug    String   @db.VarChar(120)
+  locale      String   @db.VarChar(8)
+  authorName  String   @db.VarChar(120)
+  authorEmail String   @db.VarChar(191)
+  userId      String?  @db.VarChar(64)
+  body        String   @db.Text
+  /// pending | approved | rejected
+  status      String   @default("pending") @db.VarChar(16)
+  createdAt   DateTime @default(now())
+
+  @@index([postSlug, locale, status])
+  @@index([status, createdAt])
+  @@map("blog_comments")
+}
+
+/**
+ * Interest before launch (or for news).
+ */
+model WaitlistEntry {
+  id        String   @id @db.VarChar(64)
+  email     String   @unique @db.VarChar(191)
+  name      String?  @db.VarChar(120)
+  /// agency | artist | other
+  role      String   @default("agency") @db.VarChar(16)
+  company   String?  @db.VarChar(191)
+  locale    String   @db.VarChar(8)
+  /// The referral code or campaign they came with, if any.
+  source    String?  @db.VarChar(64)
+  createdAt DateTime @default(now())
+
+  @@map("waitlist_entries")
 }

@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, test } from "@playwright/test";
-import { DEMO_PASSWORD, signIn } from "./helpers";
+import { acceptTerms, DEMO_PASSWORD, signIn } from "./helpers";
 
 const MAILPIT = "http://localhost:8025";
 
@@ -42,8 +42,10 @@ test("a partner applies, is approved, and gets credit for an agency from their l
     await partner.getByRole("button", { name: "Aanmelding versturen" }).click();
     await expect(partner.getByText("Aanmelding ontvangen")).toBeVisible();
 
-    // Confirming signs them in and lands on the dashboard.
+    // Confirming signs them in; they accept the Terms, then land on the dashboard.
     await partner.goto(await verifyLink(partner.request, partnerEmail));
+    await expect(partner).toHaveURL(/\/accept-terms$/);
+    await acceptTerms(partner);
     await expect(partner).toHaveURL(/\/app$/);
     await expect(partner.getByText("We bekijken hem nu.", { exact: false })).toBeVisible();
   });
@@ -82,6 +84,10 @@ test("a partner applies, is approved, and gets credit for an agency from their l
     await agency.getByLabel("Naam van het bureau").fill(`E2E Bureau ${run}`);
     await agency.getByLabel("Partnercode (optioneel)").fill("");
     await agency.getByRole("button", { name: "Bureau aanmaken" }).click();
+    // Agency members accept the Terms and the data processing agreement.
+    await expect(agency).toHaveURL(/\/accept-terms$/);
+    await expect(agency.getByText("Verwerkersovereenkomst")).toBeVisible();
+    await acceptTerms(agency);
     await expect(agency).toHaveURL(/\/app$/);
   });
 

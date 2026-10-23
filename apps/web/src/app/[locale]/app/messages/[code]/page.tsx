@@ -22,8 +22,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app/mess
   return { title: t("title") };
 }
 
-export default async function ConversationPage({ params, searchParams }: PageProps<"/[locale]/app/messages/[code]">) {
-  setRequestLocale((await params).locale as Locale);
+export default function ConversationPage({ params, searchParams }: PageProps<"/[locale]/app/messages/[code]">) {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <Conversation params={params} searchParams={searchParams} />
@@ -32,6 +31,7 @@ export default async function ConversationPage({ params, searchParams }: PagePro
 }
 
 async function Conversation({ params, searchParams }: Pick<PageProps<"/[locale]/app/messages/[code]">, "params" | "searchParams">) {
+  setRequestLocale((await params).locale as Locale);
   const viewer = await requirePermission("messages");
   const { code } = await params;
   const access = await messageAccess(viewer, code);

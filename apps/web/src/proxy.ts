@@ -7,7 +7,7 @@ import { routing } from "./i18n/routing";
 const intl = createMiddleware(routing);
 
 // Optimistic check only: pages verify the session for real (lib/viewer.ts).
-const protectedPrefixes = ["/app", "/onboarding"];
+const protectedPrefixes = ["/app", "/onboarding", "/accept-terms"];
 
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname, search } = request.nextUrl;

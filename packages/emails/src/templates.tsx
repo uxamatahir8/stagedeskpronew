@@ -229,3 +229,13 @@ export function TicketReply({ locale, name, subject, excerpt, url }: { locale: E
     </EmailLayout>
   );
 }
+
+export function ContactMessage({ locale, name, email, company, message }: { locale: EmailLocale; name: string; email: string; company: string; message: string }) {
+  const c = copy[locale].contactMessage;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, email, company)}</Paragraph>
+      <Text style={{ margin: "0 0 16px", padding: "12px 16px", borderLeft: "3px solid #7c3aed", background: "#f6f4fb", whiteSpace: "pre-line" }}>{message}</Text>
+    </EmailLayout>
+  );
+}

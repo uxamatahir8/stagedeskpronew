@@ -23,6 +23,10 @@ for (const key of settingKeys) {
 const { seedPlans } = await import("./seed-plans");
 await seedPlans(prisma);
 
+// Starter website pages (About and the legal pages), edited afterwards in the page builder.
+const { seedPages } = await import("./seed-pages");
+await seedPages(prisma);
+
 // Demo accounts for every role, never in production.
 if (process.env["NODE_ENV"] !== "production") {
   const { seedDemo, DEMO_PASSWORD } = await import("./seed-demo");

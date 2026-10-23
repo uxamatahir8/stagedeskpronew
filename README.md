@@ -119,6 +119,25 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   same page. **Admin tools:** Users (search, disable, confirm email, reset 2FA) and the Audit log.
 - **CSV export** for bookings, customers and payments (`/api/export/<kind>`).
 
+## Website, pages and legal
+
+- **Public site** (`app/[locale]/(marketing)`): home, features, pricing (from the plans in Settings),
+  for agencies, for artists, partner program, blog, help centre, changelog and contact, in Dutch and English.
+- **Blog, help and changelog** are MDX files in `apps/web/src/content`. To add a post: write
+  `blog/posts/<slug>.nl.mdx` and `.en.mdx` and add its entry to `blog/index.ts` (help works the same way).
+  Blog comments wait for approval under Pages → Blog comments.
+- **Page builder** (`/app/pages`, platform admin): About, Terms, Privacy and any other page, built from
+  blocks (headings, text, lists, tables, images, callouts) in both languages, placed in the header or a footer
+  column. Every save is a version; compare any version with the live one, restore it, or publish it.
+- **Legal acceptance:** a legal page set to "ask everyone" (Terms) or "agency teams" (data processing
+  agreement) is put to users at their next sign-in after a new version is published; `legal_acceptances`
+  records who accepted which version, when and from which IP. The seeded legal pages are starter templates
+  with [bracketed] details: have a lawyer review them before launch.
+- **Waitlist mode** (Settings → Site): the site collects waitlist sign-ups instead of offering a trial;
+  export them as CSV under Pages → Waitlist.
+- **SEO:** canonical and hreflang links, Open Graph images (`/api/og`), `sitemap.xml`, `robots.txt`,
+  and structured data (SoftwareApplication, FAQ, BlogPosting, TechArticle).
+
 ## Local services
 
 | Service | URL | Login |
@@ -139,6 +158,7 @@ bash scripts/smoke-bookings.sh             # bookings, artists, customers and PD
 bash scripts/smoke-payments.sh             # billing and payment screens by role
 bash scripts/smoke-affiliates.sh           # partner page, link tracking, affiliate and admin screens
 bash scripts/smoke-dashboards.sh           # dashboards, messages, support, admin tools, export, email queue
+bash scripts/smoke-website.sh              # public site, SEO files, page builder access
 pnpm --filter @stagedesk/web e2e           # Playwright: full booking flow in a real browser
 ```
 

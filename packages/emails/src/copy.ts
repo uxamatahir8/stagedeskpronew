@@ -110,6 +110,12 @@ export const copy = {
       body: (name: string, subject: string) => `Hoi ${name}, we hebben je vraag "${subject}" beantwoord.`,
       button: "Antwoord lezen",
     },
+    contactMessage: {
+      subject: (name: string) => `Contactformulier: ${name}`,
+      preview: "Nieuw bericht via het contactformulier.",
+      heading: "Bericht via de website",
+      body: (name: string, email: string, company: string) => `${name} (${email}${company ? `, ${company}` : ""}) schreef via het contactformulier:`,
+    },
     quoteSent: {
       subject: (agency: string) => `Je offerte van ${agency}`,
       preview: "Je offerte staat klaar.",
@@ -226,6 +232,12 @@ export const copy = {
       heading: "Reply from support",
       body: (name: string, subject: string) => `Hi ${name}, we've answered your question "${subject}".`,
       button: "Read the reply",
+    },
+    contactMessage: {
+      subject: (name: string) => `Contact form: ${name}`,
+      preview: "A new message through the contact form.",
+      heading: "Message from the website",
+      body: (name: string, email: string, company: string) => `${name} (${email}${company ? `, ${company}` : ""}) wrote through the contact form:`,
     },
     quoteSent: {
       subject: (agency: string) => `Your quote from ${agency}`,

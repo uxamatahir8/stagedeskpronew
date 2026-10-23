@@ -6,6 +6,7 @@ import {
   AffiliateApproved,
   AffiliatePayout,
   BalanceDue,
+  ContactMessage,
   EventReminder,
   GigReminder,
   InquiryReceived,
@@ -34,12 +35,13 @@ function getTransporter() {
   return transporter;
 }
 
-async function send(to: string, subject: string, element: ReactElement) {
+async function send(to: string, subject: string, element: ReactElement, replyTo?: string) {
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   await getTransporter().sendMail({
     from: process.env["MAIL_FROM"] ?? "StageDesk <no-reply@stagedesk.local>",
     to,
     subject,
+    ...(replyTo ? { replyTo } : {}),
     html,
     text,
   });
@@ -114,6 +116,10 @@ export function sendTicketReply(to: string, p: { locale: EmailLocale; name: stri
   return send(to, copy[p.locale].ticketReply.subject(p.ref, p.subject), createElement(TicketReply, { ...p, excerpt: excerpt(p.excerpt) }));
 }
 
+export function sendContactMessage(to: string, p: { locale: EmailLocale; name: string; email: string; company: string; message: string }) {
+  return send(to, copy[p.locale].contactMessage.subject(p.name), createElement(ContactMessage, p), p.email);
+}
+
 /**
  * Every email the app sends, by name. Web and worker describe an email as a
  * job ({ kind, to, params }); the worker's email queue sends it with retries.
@@ -134,6 +140,7 @@ const senders = {
   quoteExpiring: sendQuoteExpiring,
   balanceDue: sendBalanceDue,
   ticketReply: sendTicketReply,
+  contactMessage: sendContactMessage,
 } as const;
 
 export type EmailKind = keyof typeof senders;

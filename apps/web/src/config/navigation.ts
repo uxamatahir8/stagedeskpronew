@@ -35,7 +35,6 @@ import type { Messages } from "next-intl";
 
 export type NavKey = keyof Messages["nav"];
 export type NavGroupKey = keyof Messages["navGroups"];
-export type Phase = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface NavItem {
   key: NavKey;
@@ -44,8 +43,6 @@ export interface NavItem {
   icon: LucideIcon;
   /** Omit for pages every signed-in role sees. */
   permission?: Permission;
-  /** Plan phase that builds the page; pages without a phase exist already. */
-  phase?: Phase;
   /** Only listed while developing. */
   devOnly?: boolean;
 }
@@ -67,7 +64,7 @@ export const navigation: NavGroup[] = [
       { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans" },
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
       { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates" },
-      { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages", phase: 8 },
+      { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages" },
       { key: "users", href: "/app/users", icon: UsersRoundIcon, permission: "platform.users" },
       { key: "audit", href: "/app/audit", icon: ScrollTextIcon, permission: "platform.audit" },
       { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },

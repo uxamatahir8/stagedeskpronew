@@ -21,8 +21,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app/supp
   return { title: t("title") };
 }
 
-export default async function TicketPage({ params }: PageProps<"/[locale]/app/support/[reference]">) {
-  setRequestLocale((await params).locale as Locale);
+export default function TicketPage({ params }: PageProps<"/[locale]/app/support/[reference]">) {
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <Ticket params={params} />
@@ -33,6 +32,7 @@ export default async function TicketPage({ params }: PageProps<"/[locale]/app/su
 const statusTone = { open: "warning", answered: "info", closed: "neutral" } as const;
 
 async function Ticket({ params }: Pick<PageProps<"/[locale]/app/support/[reference]">, "params">) {
+  setRequestLocale((await params).locale as Locale);
   const viewer = await requirePermission("support");
   const staff = can(viewer.role, "platform.support");
   const { reference } = await params;

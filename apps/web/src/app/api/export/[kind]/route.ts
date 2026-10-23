@@ -1,11 +1,12 @@
 import { can, type Permission } from "@stagedesk/core";
-import { tenantDb } from "@stagedesk/db";
+import { prisma, tenantDb } from "@stagedesk/db";
 import { getViewer } from "@/lib/viewer";
 
 const kinds: Record<string, Permission> = {
   bookings: "agency.bookings",
   customers: "agency.customers",
   payments: "agency.payments",
+  waitlist: "platform.pages",
 };
 
 /** RFC 4180 field: quoted when needed; a leading =, +, - or @ is defused so spreadsheets don't run it as a formula. */
@@ -18,16 +19,32 @@ function cell(value: unknown) {
 const euros = (cents: number) => (cents / 100).toFixed(2);
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
 
-/** The agency's own data as CSV (UTF-8 with BOM so Excel reads accents). */
+/** UTF-8 with BOM so Excel reads accents. */
+function csvResponse(kind: string, rows: unknown[][]) {
+  const csv = "﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
+  const filename = `stagedesk-${kind}-${new Date().toISOString().slice(0, 10)}.csv`;
+  return new Response(csv, {
+    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store" },
+  });
+}
+
+/** The agency's own data as CSV; the waitlist for platform admins. */
 export async function GET(_request: Request, { params }: RouteContext<"/api/export/[kind]">) {
   const { kind } = await params;
   const permission = kinds[kind];
   const viewer = await getViewer();
   if (!permission) return new Response(null, { status: 404 });
-  if (!viewer?.role || !viewer.organization || !can(viewer.role, permission)) return new Response(null, { status: 403 });
-  const db = tenantDb(viewer.organization.id);
+  if (!viewer?.role || !can(viewer.role, permission)) return new Response(null, { status: 403 });
 
-  let rows: unknown[][] = [];
+  if (kind === "waitlist") {
+    // Platform-level list, not agency data.
+    const entries = await prisma.waitlistEntry.findMany({ orderBy: { createdAt: "asc" } });
+    return csvResponse(kind, [["email", "name", "role", "company", "language", "source", "joined"], ...entries.map((e) => [e.email, e.name, e.role, e.company, e.locale, e.source, e.createdAt])]);
+  }
+
+  if (!viewer.organization) return new Response(null, { status: 403 });
+  const db = tenantDb(viewer.organization.id);
+  let rows: unknown[][];
   if (kind === "bookings") {
     const bookings = await db.booking.findMany({
       orderBy: { createdAt: "desc" },
@@ -50,10 +67,5 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
       ...payments.map((p) => [day(p.receivedAt), p.booking.trackingCode, p.kind, p.method, euros(p.amountCents), euros(p.refundedCents), p.reference]),
     ];
   }
-
-  const csv = "﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n") + "\r\n";
-  const filename = `stagedesk-${kind}-${new Date().toISOString().slice(0, 10)}.csv`;
-  return new Response(csv, {
-    headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${filename}"`, "Cache-Control": "no-store" },
-  });
+  return csvResponse(kind, rows);
 }

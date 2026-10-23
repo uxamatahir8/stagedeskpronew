@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { feeRuleSchema, parseEuros, planLimitsSchema } from "@stagedesk/core";
+import { updateTag } from "next/cache";
 import { audit, Prisma, prisma } from "@stagedesk/db";
+import { SITE_TAGS } from "@/lib/site";
 import { getStripe, syncPlanToStripe } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
@@ -67,6 +69,8 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
 
   const stripe = getStripe();
   await audit({ actorId: viewer.user.id, action: "plan.save", targetType: "plan", targetId: d.key });
+  // The pricing page shows plans; refresh it now.
+  updateTag(SITE_TAGS.plans);
   if (!stripe) return { ok: true, message: t("savedNoStripe") };
   try {
     await syncPlanToStripe(stripe, id);
