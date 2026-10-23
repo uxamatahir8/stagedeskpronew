@@ -39,6 +39,18 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
         return { id: id("re") };
       },
     },
+    invoices: {
+      retrieve: async (invoiceId: string) => ({
+        id: invoiceId,
+        payments: { data: [{ payment: { type: "payment_intent", payment_intent: `pi_for_${invoiceId}` } }] },
+      }),
+    },
+    customers: {
+      createBalanceTransaction: async (customerId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) => {
+        record("customers.createBalanceTransaction", { customerId, ...params }, options);
+        return { id: id("cbtxn") };
+      },
+    },
   };
   return { stripe: stripe as unknown as Stripe, calls };
 }

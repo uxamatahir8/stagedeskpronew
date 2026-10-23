@@ -50,6 +50,22 @@ export const copy = {
       body: (customer: string, event: string, date: string) => `${customer} vraagt een offerte aan voor ${event} op ${date}.`,
       button: "Aanvraag openen",
     },
+    affiliateApproved: {
+      subject: "Je bent StageDesk-partner",
+      preview: "Je aanmelding als partner is goedgekeurd.",
+      heading: "Welkom als partner",
+      body: (name: string, link: string, promo: string) =>
+        `Hoi ${name}, je aanmelding is goedgekeurd. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Koppel een Stripe-account in je dashboard om uitbetaald te worden.`,
+      button: "Naar je partnerdashboard",
+    },
+    affiliatePayout: {
+      subject: (amount: string) => `Uitbetaling van ${amount} onderweg`,
+      preview: "Je partnercommissie is uitbetaald.",
+      heading: "Je uitbetaling",
+      body: (name: string, amount: string, count: number) =>
+        `Hoi ${name}, we hebben ${amount} overgemaakt naar je Stripe-account voor ${count} goedgekeurde ${count === 1 ? "commissie" : "commissies"}. Stripe zet het geld volgens je uitbetalingsschema op je bankrekening.`,
+      button: "Overzicht bekijken",
+    },
     quoteSent: {
       subject: (agency: string) => `Je offerte van ${agency}`,
       preview: "Je offerte staat klaar.",
@@ -106,6 +122,22 @@ export const copy = {
       heading: "New inquiry",
       body: (customer: string, event: string, date: string) => `${customer} is asking for a quote for ${event} on ${date}.`,
       button: "Open inquiry",
+    },
+    affiliateApproved: {
+      subject: "You're a StageDesk partner",
+      preview: "Your partner application was approved.",
+      heading: "Welcome, partner",
+      body: (name: string, link: string, promo: string) =>
+        `Hi ${name}, your application was approved. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Connect a Stripe account in your dashboard to get paid.`,
+      button: "Open your partner dashboard",
+    },
+    affiliatePayout: {
+      subject: (amount: string) => `Payout of ${amount} on its way`,
+      preview: "Your partner commission has been paid out.",
+      heading: "Your payout",
+      body: (name: string, amount: string, count: number) =>
+        `Hi ${name}, we've transferred ${amount} to your Stripe account for ${count} approved ${count === 1 ? "commission" : "commissions"}. Stripe moves it to your bank account on your payout schedule.`,
+      button: "View statement",
     },
     quoteSent: {
       subject: (agency: string) => `Your quote from ${agency}`,

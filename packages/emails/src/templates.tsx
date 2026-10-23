@@ -118,3 +118,43 @@ export function Invitation({
     </EmailLayout>
   );
 }
+
+export function AffiliateApproved({ locale, name, link, promo, url }: { locale: EmailLocale; name: string; link: string; promo: string; url: string }) {
+  const c = copy[locale].affiliateApproved;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, link, promo)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function AffiliatePayout({
+  locale,
+  name,
+  amount,
+  lines,
+  url,
+}: {
+  locale: EmailLocale;
+  name: string;
+  amount: string;
+  /** One line per commission, e.g. "Feestband Utrecht · invoice 15 Oct · €37.25". */
+  lines: string[];
+  url: string;
+}) {
+  const c = copy[locale].affiliatePayout;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, amount, lines.length)}</Paragraph>
+      {lines.map((line) => (
+        <Text key={line} style={{ margin: "0 0 4px", fontSize: "14px" }}>
+          {line}
+        </Text>
+      ))}
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}

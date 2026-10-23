@@ -1,6 +1,6 @@
 import { render } from "@react-email/render";
 import { describe, expect, it } from "vitest";
-import { Invitation, LoginCode, VerifyEmail } from "./templates";
+import { AffiliatePayout, Invitation, LoginCode, VerifyEmail } from "./templates";
 
 describe("email templates", () => {
   it("renders the verification link in both languages", async () => {
@@ -24,5 +24,14 @@ describe("email templates", () => {
     );
     expect(text).toContain("Feestband Utrecht");
     expect(text).toContain("als artiest");
+  });
+
+  it("lists every commission on a payout statement", async () => {
+    const text = await render(
+      <AffiliatePayout locale="en" name="Pim" amount="€74.50" lines={["Feestband Utrecht · €37.25", "Rotterdam DJ Collectief · €37.25"]} url="http://x/app/payouts" />,
+      { plainText: true },
+    );
+    expect(text).toContain("2 approved commissions");
+    expect(text).toContain("Rotterdam DJ Collectief · €37.25");
   });
 });

@@ -2,7 +2,7 @@ import { render } from "@react-email/render";
 import { createTransport, type Transporter } from "nodemailer";
 import { createElement, type ReactElement } from "react";
 import { copy, type EmailLocale } from "./copy";
-import { InquiryReceived, Invitation, LoginCode, NewInquiry, QuoteSent, ResetPassword, VerifyEmail } from "./templates";
+import { AffiliateApproved, AffiliatePayout, InquiryReceived, Invitation, LoginCode, NewInquiry, QuoteSent, ResetPassword, VerifyEmail } from "./templates";
 
 export type { EmailLocale } from "./copy";
 
@@ -61,4 +61,12 @@ export function sendInvitation(
   p: { locale: EmailLocale; agency: string; inviter: string; role: string; url: string },
 ) {
   return send(to, copy[p.locale].invitation.subject(p.agency), createElement(Invitation, p));
+}
+
+export function sendAffiliateApproved(to: string, p: { locale: EmailLocale; name: string; link: string; promo: string; url: string }) {
+  return send(to, copy[p.locale].affiliateApproved.subject, createElement(AffiliateApproved, p));
+}
+
+export function sendAffiliatePayout(to: string, p: { locale: EmailLocale; name: string; amount: string; lines: string[]; url: string }) {
+  return send(to, copy[p.locale].affiliatePayout.subject(p.amount), createElement(AffiliatePayout, p));
 }

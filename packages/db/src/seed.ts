@@ -30,6 +30,8 @@ if (process.env["NODE_ENV"] !== "production") {
   // Every demo agency starts on a trial, like a real sign-up.
   const { startTrial } = await import("./billing");
   for (const org of await prisma.organization.findMany({ select: { id: true } })) await startTrial(org.id);
+  const { seedAffiliates } = await import("./seed-affiliates");
+  await seedAffiliates(prisma);
   console.log(`\n  Demo accounts use the password: ${DEMO_PASSWORD}`);
 }
 

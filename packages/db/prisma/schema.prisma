@@ -39,6 +39,7 @@ model User {
   artistProfiles   Artist[]
   bookings         Booking[]    @relation("BookingCustomer")
   reviews          Review[]
+  affiliate        Affiliate?
 
   @@map("users")
 }
@@ -121,6 +122,10 @@ model Organization {
   subscription       Subscription?
   connectedAccounts  ConnectedAccount[]
   ledger             LedgerEntry[]
+  /// Give-a-month code other agencies sign up with (e.g. r-k7q2m9).
+  referralCode       String?                @unique @db.VarChar(24)
+  referral           Referral?              @relation("ReferredAgency")
+  referredAgencies   Referral[]             @relation("ReferringAgency")
   members            Member[]
   invitations        Invitation[]
   artists            Artist[]
@@ -700,4 +705,145 @@ model SettingChange {
 
   @@index([key, changedAt])
   @@map("settings_history")
+}
+
+// ─── Affiliate program ──────────────────────────────────────────────────
+// Platform-level: rows point at agencies through agencyId, not organizationId,
+// so they are never read through an agency's tenantDb.
+
+/// A partner who brings in agencies. Applies at /partners; the platform admin approves.
+model Affiliate {
+  id                    String            @id @db.VarChar(64)
+  userId                String            @unique @db.VarChar(64)
+  user                  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// pending | approved | rejected | suspended
+  status                String            @default("pending") @db.VarChar(16)
+  /// Link code: ?via=<code>
+  code                  String            @unique @db.VarChar(24)
+  /// Code agencies type at signup or checkout, e.g. PIM20.
+  promoCode             String            @unique @db.VarChar(24)
+  stripePromotionCodeId String?           @db.VarChar(64)
+  website               String?           @db.VarChar(191)
+  /// The application: who they reach and how.
+  pitch                 String?           @db.Text
+  /// Overrides tier and program rate for new referrals.
+  commissionBps         Int?
+  stripeAccountId       String?           @unique @db.VarChar(64)
+  payoutsEnabled        Boolean           @default(false)
+  approvedAt            DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  clicks                AffiliateClick[]
+  referrals             Referral[]
+  commissions           Commission[]
+  payouts               AffiliatePayout[]
+
+  @@index([status])
+  @@map("affiliates")
+}
+
+model AffiliateClick {
+  id          BigInt    @id @default(autoincrement())
+  affiliateId String    @db.VarChar(64)
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  campaign    String?   @db.VarChar(48)
+  landingPath String?   @db.VarChar(191)
+  /// Hashed, never the raw IP.
+  visitorHash String?   @db.VarChar(64)
+  createdAt   DateTime  @default(now())
+
+  @@index([affiliateId, createdAt])
+  @@map("affiliate_clicks")
+}
+
+/// How an agency came to StageDesk. One per agency, stored permanently.
+model Referral {
+  id                String        @id @db.VarChar(64)
+  agencyId          String        @unique @db.VarChar(64)
+  agency            Organization  @relation("ReferredAgency", fields: [agencyId], references: [id], onDelete: Cascade)
+  /// affiliate | agency (give a month, get a month)
+  type              String        @db.VarChar(16)
+  affiliateId       String?       @db.VarChar(64)
+  affiliate         Affiliate?    @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  referringAgencyId String?       @db.VarChar(64)
+  referringAgency   Organization? @relation("ReferringAgency", fields: [referringAgencyId], references: [id], onDelete: SetNull)
+  /// cookie | promo_code
+  source            String        @db.VarChar(16)
+  campaign          String?       @db.VarChar(48)
+  /// Frozen when the agency signed up.
+  commissionBps     Int           @default(0)
+  /// null = lifetime
+  commissionMonths  Int?
+  /// active | rejected (fraud rule)
+  status            String        @default("active") @db.VarChar(16)
+  rejectReason      String?       @db.VarChar(64)
+  firstPaidAt       DateTime?
+  /// Give-a-month credits applied.
+  rewardedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  commissions       Commission[]
+
+  @@index([affiliateId, createdAt])
+  @@index([referringAgencyId])
+  @@map("referrals")
+}
+
+/// A share of one paid subscription invoice.
+model Commission {
+  id                    String           @id @db.VarChar(64)
+  affiliateId           String           @db.VarChar(64)
+  affiliate             Affiliate        @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  referralId            String           @db.VarChar(64)
+  referral              Referral         @relation(fields: [referralId], references: [id], onDelete: Restrict)
+  agencyId              String           @db.VarChar(64)
+  stripeInvoiceId       String           @unique @db.VarChar(80)
+  stripePaymentIntentId String?          @db.VarChar(64)
+  /// Invoice amount paid, excluding VAT.
+  baseCents             Int
+  commissionBps         Int
+  amountCents           Int
+  /// pending | review | approved | paid | cancelled
+  status                String           @default("pending") @db.VarChar(16)
+  /// End of the approval window.
+  availableAt           DateTime
+  cancelReason          String?          @db.VarChar(64)
+  payoutId              String?          @db.VarChar(64)
+  payout                AffiliatePayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  createdAt             DateTime         @default(now())
+
+  @@index([affiliateId, status])
+  @@index([status, availableAt])
+  @@index([stripePaymentIntentId])
+  @@map("commissions")
+}
+
+model AffiliatePayout {
+  id               String       @id @db.VarChar(64)
+  affiliateId      String       @db.VarChar(64)
+  affiliate        Affiliate    @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  amountCents      Int
+  /// paid | failed
+  status           String       @db.VarChar(16)
+  stripeTransferId String?      @unique @db.VarChar(64)
+  error            String?      @db.Text
+  createdAt        DateTime     @default(now())
+  commissions      Commission[]
+
+  @@index([affiliateId, createdAt])
+  @@map("affiliate_payouts")
+}
+
+/// Logos, banners, email templates and videos affiliates can use.
+model AffiliateAsset {
+  id          String   @id @db.VarChar(64)
+  /// logo | banner | email | video | other
+  kind        String   @db.VarChar(16)
+  /// { nl, en }
+  title       Json
+  description Json?
+  url         String   @db.VarChar(500)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@map("affiliate_assets")
 }

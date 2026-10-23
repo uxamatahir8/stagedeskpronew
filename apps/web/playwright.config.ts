@@ -6,6 +6,8 @@ export default defineConfig({
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
+  // The specs share demo data and one dev server; in parallel, slow first compiles time out.
+  workers: 1,
   retries: 0,
   reporter: [["list"]],
   use: {

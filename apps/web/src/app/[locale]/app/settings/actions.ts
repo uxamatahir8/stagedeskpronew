@@ -6,7 +6,7 @@ import { Prisma, prisma, updateSetting } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 
-const editable: SettingKey[] = ["fees.platform", "bookings.defaults", "billing.defaults", "site.general"];
+const editable: SettingKey[] = ["fees.platform", "bookings.defaults", "billing.defaults", "site.general", "affiliates.program"];
 
 /** Saves one platform setting; the registry schema validates it and the change is logged. */
 export async function saveSettingAction(key: SettingKey, value: unknown): Promise<ActionResult> {

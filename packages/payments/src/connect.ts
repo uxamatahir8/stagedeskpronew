@@ -45,6 +45,8 @@ export async function connectOnboardingLink(
 
 /** Keeps our copy of an account's capabilities in step (account.updated webhook). */
 export async function applyStripeAccount(account: Stripe.Account) {
+  // Affiliates only receive transfers.
+  await prisma.affiliate.updateMany({ where: { stripeAccountId: account.id }, data: { payoutsEnabled: account.payouts_enabled ?? false } });
   await prisma.connectedAccount.updateMany({
     where: { stripeAccountId: account.id },
     data: {

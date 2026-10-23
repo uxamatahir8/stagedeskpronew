@@ -24,6 +24,9 @@ export function OnboardingForm() {
       <FormField id="onb-kvk" label={t("kvk")} error={errors["kvkNumber"]}>
         <Input id="onb-kvk" name="kvkNumber" inputMode="numeric" maxLength={8} />
       </FormField>
+      <FormField id="onb-promo" label={t("partnerCode")} hint={t("partnerCodeHint")} error={errors["promoCode"]}>
+        <Input id="onb-promo" name="promoCode" maxLength={24} autoCapitalize="characters" className="uppercase" />
+      </FormField>
       <Button type="submit" disabled={pending}>
         {t("submit")}
       </Button>

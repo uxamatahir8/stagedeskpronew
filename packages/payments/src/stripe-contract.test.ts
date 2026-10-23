@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import Stripe from "stripe";
-import { prisma } from "@stagedesk/db";
+import { applyForAffiliate, prisma, setAffiliateStatus } from "@stagedesk/db";
+import { affiliateOnboardingLink, payAffiliate, recordInvoiceCommission, syncAffiliatePromo } from "./affiliates";
 import { bookingCheckout, recordStripePayment } from "./booking-payments";
 import { connectOnboardingLink } from "./connect";
 import { syncPlanToStripe } from "./plans";
@@ -104,5 +105,29 @@ describe.skipIf(!mockUp)("Stripe API contract (stripe-mock)", () => {
     expect(transferred).toBeGreaterThan(0);
     await refundPayment(stripe, { organizationId: agency.organizationId, paymentId: paymentId!, amountCents: 10_000, actorId: agency.owner });
     expect(await prisma.ledgerEntry.count({ where: { bookingId: booking.id, type: "transfer_reversal" } })).toBe(2);
+  });
+
+  it("creates an affiliate promo code, onboarding link, commission and payout", async () => {
+    const userId = `${run}-aff`;
+    await prisma.user.create({ data: { id: userId, name: "Contract Partner", email: `${run}-aff@test.local` } });
+    const affiliate = await applyForAffiliate({ userId, name: "Contract Partner", website: null, pitch: null, wantedCode: null });
+    await setAffiliateStatus(affiliate.id, "approved");
+    expect(await syncAffiliatePromo(stripe, affiliate.id)).toMatch(/^promo_/);
+    expect(await affiliateOnboardingLink(stripe, { affiliateId: affiliate.id, email: "a@test.local", returnUrl: "http://localhost:3000/app/payouts", refreshUrl: "http://localhost:3000/app/payouts" })).toMatch(/^https?:\/\//);
+
+    await prisma.organization.update({ where: { id: agency.organizationId }, data: { stripeCustomerId: `cus_${run}` } });
+    await prisma.referral.create({ data: { id: `${run}-ref`, agencyId: agency.organizationId, type: "affiliate", affiliateId: affiliate.id, source: "cookie", commissionBps: 5_000 } });
+    const invoice = { id: `in_${run}`, customer: `cus_${run}`, amount_paid: 12_100, total_excluding_tax: 10_000, status_transitions: { paid_at: Math.floor(Date.now() / 1000) } } as unknown as Stripe.Invoice;
+    const commission = await recordInvoiceCommission(stripe, invoice);
+    expect(commission?.amountCents).toBe(5_000);
+    await prisma.commission.update({ where: { id: commission!.id }, data: { status: "approved" } });
+    await prisma.affiliate.update({ where: { id: affiliate.id }, data: { payoutsEnabled: true } });
+    expect((await payAffiliate(stripe, affiliate.id))?.amountCents).toBe(5_000);
+
+    await prisma.commission.deleteMany({ where: { affiliateId: affiliate.id } });
+    await prisma.affiliatePayout.deleteMany({ where: { affiliateId: affiliate.id } });
+    await prisma.referral.deleteMany({ where: { id: `${run}-ref` } });
+    await prisma.affiliate.delete({ where: { id: affiliate.id } });
+    await prisma.user.delete({ where: { id: userId } });
   });
 });

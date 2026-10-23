@@ -40,7 +40,7 @@ All use the password `StageDesk-demo-2026`. Emails sent by the app land in Mailp
 | Email | Role | Agency |
 |---|---|---|
 | `admin@stagedesk.local` | Platform admin | — |
-| `partner@stagedesk.local` | Affiliate | — |
+| `partner@stagedesk.local` | Affiliate (Pim, link `?via=pim`, code `PIM20`) | — |
 | `eigenaar@feestband.local` | Agency owner | Feestband Utrecht |
 | `beheer@feestband.local` | Agency admin | Feestband Utrecht |
 | `planning@feestband.local` | Agency staff | Feestband Utrecht |
@@ -83,6 +83,25 @@ rule frozen when the quote was accepted and transfers the artist's and agency's 
 unconnected artist's share goes to the agency and is recorded as owed. Refunds reverse transfers
 proportionally; the platform absorbs Stripe's unreturned fee. Every movement is in `ledger_entries`.
 
+## Affiliate program
+
+Partners apply at `/partners`; the platform admin approves them under Affiliates. Program rules
+(rate, period, cookie window, approval period, payout minimum and day, promo discount, give-a-month
+reward, review threshold, tiers) are in Settings and apply to new referrals only.
+
+- **Tracking:** `?via=<code>&c=<campaign>` on any page sets a first-party cookie and logs the click.
+  When someone creates an agency, a partner code typed at onboarding wins; otherwise the last link
+  within the cookie window counts. The referral, with its commission rate, is stored on the agency.
+- **Commission:** from Stripe's `invoice.paid`, on the amount excluding VAT, for the referral's period.
+  Pending for the approval period, then approved by the worker; months above the review threshold
+  wait for the admin. Refunds and disputes reduce or cancel unpaid commission.
+- **Payouts:** on the payout day the worker transfers approved commission above the minimum to the
+  partner's Stripe Express account and emails a statement.
+- **Fraud rules:** no credit for the partner's own account or company email domain (public mailbox
+  providers excepted); clicks are rate limited per visitor; blocked referrals are listed for the admin.
+- **Give a month, get a month:** each agency has an invite link on its Billing page (`?via=r-xxxxxx`).
+  When the invited agency first pays, both get a Stripe balance credit.
+
 ## Local services
 
 | Service | URL | Login |
@@ -101,6 +120,7 @@ pnpm lint && pnpm typecheck && pnpm test   # db tests use the stagedesk_test dat
 bash scripts/smoke-accounts.sh             # accounts and agency isolation, against pnpm dev
 bash scripts/smoke-bookings.sh             # bookings, artists, customers and PDF access
 bash scripts/smoke-payments.sh             # billing and payment screens by role
+bash scripts/smoke-affiliates.sh           # partner page, link tracking, affiliate and admin screens
 pnpm --filter @stagedesk/web e2e           # Playwright: full booking flow in a real browser
 ```
 

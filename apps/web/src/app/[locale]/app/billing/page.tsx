@@ -15,6 +15,7 @@ import { dateTime, euro, percent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { requireAgency } from "@/lib/viewer";
 import { ManageBillingButton, PlanPicker } from "./plan-picker";
+import { ReferralCard } from "./referral-card";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/billing">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "billing" });
@@ -144,6 +145,8 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
             };
           })}
       />
+
+      <ReferralCard organizationId={organization.id} />
     </div>
   );
 }

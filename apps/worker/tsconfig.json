@@ -1,7 +1,8 @@
 {
   "extends": "@stagedesk/config/tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node"],
+    "jsx": "react-jsx"
   },
   "include": ["src"]
 }

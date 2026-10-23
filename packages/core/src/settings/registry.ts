@@ -21,6 +21,8 @@ export const affiliateProgramSchema = z.object({
   promoDiscountMonths: z.int().min(0),
   agencyReferralFreeMonths: z.int().min(0),
   manualApproval: z.boolean(),
+  /** An affiliate earning more than this in one month waits for manual review. */
+  reviewThresholdCents: z.int().min(0).default(100_000),
   tiers: z.array(tierSchema),
 });
 
@@ -83,6 +85,7 @@ export const settingsRegistry = {
       promoDiscountMonths: 3,
       agencyReferralFreeMonths: 1,
       manualApproval: true,
+      reviewThresholdCents: 100_000,
       tiers: [
         { name: "Partner", minPayingAgencies: 0, commissionBps: 2_500, perks: "" },
         { name: "Pro", minPayingAgencies: 5, commissionBps: 3_000, perks: "" },

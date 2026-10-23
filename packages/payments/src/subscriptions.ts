@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { prisma } from "@stagedesk/db";
+import { referralPromotionCode } from "./affiliates";
 
 export class PaymentsError extends Error {
   constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount") {
@@ -36,12 +37,14 @@ export async function subscriptionCheckout(
     ? Math.floor(current.trialEndsAt.getTime() / 1000)
     : undefined;
 
+  // A referred agency gets its partner's discount automatically; others may type a code.
+  const promotionCode = await referralPromotionCode(input.organizationId);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer,
     line_items: [{ price, quantity: 1 }],
     locale: input.locale,
-    allow_promotion_codes: true,
+    ...(promotionCode ? { discounts: [{ promotion_code: promotionCode }] } : { allow_promotion_codes: true }),
     subscription_data: { metadata: { organizationId: input.organizationId, planId: plan.id }, ...(trialEnd ? { trial_end: trialEnd } : {}) },
     metadata: { organizationId: input.organizationId, planId: plan.id },
     success_url: input.successUrl,

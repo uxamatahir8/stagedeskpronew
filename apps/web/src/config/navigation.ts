@@ -64,7 +64,7 @@ export const navigation: NavGroup[] = [
       { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies" },
       { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans" },
       { key: "platformPayments", href: "/app/platform-payments", icon: BanknoteIcon, permission: "platform.payments" },
-      { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates", phase: 6 },
+      { key: "affiliates", href: "/app/affiliates", icon: BadgePercentIcon, permission: "platform.affiliates" },
       { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages", phase: 8 },
       { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },
     ],
@@ -100,8 +100,8 @@ export const navigation: NavGroup[] = [
   {
     key: "affiliate",
     items: [
-      { key: "links", href: "/app/links", icon: LinkIcon, permission: "affiliate.links", phase: 6 },
-      { key: "payouts", href: "/app/payouts", icon: HandCoinsIcon, permission: "affiliate.payouts", phase: 6 },
+      { key: "links", href: "/app/links", icon: LinkIcon, permission: "affiliate.links" },
+      { key: "payouts", href: "/app/payouts", icon: HandCoinsIcon, permission: "affiliate.payouts" },
     ],
   },
   {

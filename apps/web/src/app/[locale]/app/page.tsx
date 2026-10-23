@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import type { Messages } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { can, type Role } from "@stagedesk/core";
-import { tenantDb } from "@stagedesk/db";
+import { prisma, tenantDb } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { requireViewer } from "@/lib/viewer";
+import { AffiliateHome } from "./affiliate-home";
 import { AgencyHome } from "./agency-home";
 
 type StatKey = keyof Messages["home"]["stats"];
@@ -56,6 +57,18 @@ async function RoleHome() {
         <AgencyHome db={tenantDb(organization.id)} role={role} />
       </div>
     );
+  }
+
+  if (role === "affiliate") {
+    const affiliate = await prisma.affiliate.findUnique({ where: { userId: user.id }, select: { id: true } });
+    if (affiliate) {
+      return (
+        <div className="grid gap-8">
+          {header}
+          <AffiliateHome affiliateId={affiliate.id} />
+        </div>
+      );
+    }
   }
 
   // Other roles get their figures in phase 7 (dashboards).

@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { Prisma, prisma } from "@stagedesk/db";
+import { adjustCommissionsForCharge, attributeSubscriptionPromo, recordInvoiceCommission } from "./affiliates";
 import { recordStripePayment } from "./booking-payments";
 import { applyStripeAccount } from "./connect";
 import { applyStripeSubscription } from "./subscriptions";
@@ -49,6 +50,9 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       return false;
     }
     case "customer.subscription.created":
+      await applyStripeSubscription(event.data.object);
+      await attributeSubscriptionPromo(stripe, event.data.object);
+      return true;
     case "customer.subscription.updated":
     case "customer.subscription.deleted":
       await applyStripeSubscription(event.data.object);
@@ -59,18 +63,30 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       const subscriptionId = event.data.object.parent?.subscription_details?.subscription;
       const id = typeof subscriptionId === "string" ? subscriptionId : subscriptionId?.id;
       if (!id) return false;
-      await applyStripeSubscription(await stripe.subscriptions.retrieve(id));
+      const sub = await stripe.subscriptions.retrieve(id);
+      await applyStripeSubscription(sub);
+      if (event.type === "invoice.paid") {
+        // The promo code decides the referral before the first commission is booked.
+        await attributeSubscriptionPromo(stripe, sub);
+        await recordInvoiceCommission(stripe, event.data.object);
+      }
       return true;
     }
     case "account.updated":
       await applyStripeAccount(event.data.object);
       return true;
+    case "charge.refunded":
+      return (await adjustCommissionsForCharge(event.data.object, "refund")) > 0;
     case "charge.dispute.created":
     case "charge.dispute.closed": {
       const dispute = event.data.object;
+      const adjusted =
+        event.type === "charge.dispute.created"
+          ? await adjustCommissionsForCharge({ payment_intent: dispute.payment_intent, amount: dispute.amount, amount_refunded: 0 }, "dispute")
+          : 0;
       const chargeId = typeof dispute.charge === "string" ? dispute.charge : dispute.charge.id;
       const payment = await prisma.payment.findFirst({ where: { stripeChargeId: chargeId } });
-      if (!payment) return false;
+      if (!payment) return adjusted > 0;
       const open = event.type === "charge.dispute.created";
       const lost = !open && dispute.status === "lost";
       await prisma.$transaction([

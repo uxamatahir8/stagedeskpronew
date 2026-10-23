@@ -11,9 +11,10 @@
   "dependencies": {
     "@stagedesk/core": "workspace:*",
     "@stagedesk/db": "workspace:*",
+    "@stagedesk/emails": "workspace:*",
+    "@stagedesk/payments": "workspace:*",
     "bullmq": "5.81.5",
-    "ioredis": "5.11.1",
-    "@stagedesk/payments": "workspace:*"
+    "ioredis": "5.11.1"
   },
   "devDependencies": {
     "@stagedesk/config": "workspace:*",
