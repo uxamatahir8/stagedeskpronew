@@ -55,7 +55,7 @@ async function PlatformPayments() {
   ]);
   const ledgerSum = (type: string) => ledger.find((l) => l.type === type)?._sum.amountCents ?? 0;
   const mrr = paying.reduce((sum, s) => sum + (s.interval === "year" ? Math.round(s.plan.yearlyPriceCents / 12) : s.plan.monthlyPriceCents), 0);
-  const stripeReady = isStripeConfigured();
+  const stripeReady = await isStripeConfigured();
 
   return (
     <div className="grid gap-6">

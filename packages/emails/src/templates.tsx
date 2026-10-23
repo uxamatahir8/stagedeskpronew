@@ -271,3 +271,71 @@ export function LeadOffer({ locale, agency, event, date, city, url }: { locale: 
     </EmailLayout>
   );
 }
+
+export function PaymentReceipt({
+  locale,
+  name,
+  agency,
+  code,
+  amount,
+  method,
+  date,
+  paid,
+  remaining,
+  url,
+}: {
+  locale: EmailLocale;
+  name: string;
+  agency: string;
+  code: string;
+  amount: string;
+  method: string;
+  date: string;
+  paid: string;
+  remaining: string;
+  url: string;
+}) {
+  const c = copy[locale].paymentReceipt;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, amount, agency, code)}</Paragraph>
+      <Paragraph>
+        {c.method}: {method}
+        <br />
+        {c.date}: {date}
+        <br />
+        {c.paid}: {paid}
+        <br />
+        {c.remaining}: {remaining}
+      </Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
+export function PaymentNotReceived({ locale, name, agency, amount, reason, url }: { locale: EmailLocale; name: string; agency: string; amount: string; reason: string; url: string }) {
+  const c = copy[locale].paymentNotReceived;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, amount, agency)}</Paragraph>
+      {reason && (
+        <Paragraph>
+          {c.reason}: {reason}
+        </Paragraph>
+      )}
+      <Paragraph>{c.after}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
+export function PaymentReported({ locale, customer, amount, method, code, url }: { locale: EmailLocale; customer: string; amount: string; method: string; code: string; url: string }) {
+  const c = copy[locale].paymentReported;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(customer, amount, method, code)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}

@@ -21,6 +21,7 @@ export const tenantModels = [
   "Quote",
   "QuoteItem",
   "Payment",
+  "PaymentClaim",
   "Invoice",
   "OrganizationCounter",
   "Review",

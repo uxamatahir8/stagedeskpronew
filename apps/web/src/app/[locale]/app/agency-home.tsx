@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, CalendarCheckIcon, EuroIcon, InboxIcon, Music2Icon, TimerIcon, WalletIcon } from "lucide-react";
+import { BanknoteIcon, AlertTriangleIcon, CalendarCheckIcon, EuroIcon, InboxIcon, Music2Icon, TimerIcon, WalletIcon } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { can, type Role, todayInNetherlands } from "@stagedesk/core";
 import { getSetting, type TenantDb, toDateOnly } from "@stagedesk/db";
@@ -41,7 +41,7 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
   const showMoney = can(role, "agency.payments");
   const customer = { customer: { select: { name: true } } };
 
-  const [newInquiries, quotesExpiring, eventsThisWeek, collected, inquiries, expiring, booked, balanceDue] = await Promise.all([
+  const [newInquiries, quotesExpiring, eventsThisWeek, collected, inquiries, expiring, booked, balanceDue, claims] = await Promise.all([
     db.booking.count({ where: { status: "inquiry" } }),
     db.booking.count({ where: { status: "quoted", quoteExpiresAt: { lte: addDays(today, 7) } } }),
     db.booking.count({ where: { status: { in: ["booked", "confirmed"] }, eventDate: { gte: toDateOnly(today), lte: weekEnd } } }),
@@ -65,10 +65,20 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
           include: customer,
         })
       : [],
+    // Payments customers reported (bank transfer, cash) that wait for someone to confirm receipt.
+    showMoney ? db.paymentClaim.findMany({ where: { status: "pending" }, orderBy: { createdAt: "asc" }, take: 8, include: { booking: { select: { trackingCode: true, ...customer } } } }) : [],
   ]);
 
   const name = (b: { customer: { name: string } | null; trackingCode: string }) => b.customer?.name ?? b.trackingCode;
   const items: AttentionItem[] = [
+    ...claims.map((c) => ({
+      key: `c-${c.id}`,
+      href: `/app/bookings/${c.booking.trackingCode}`,
+      text: ta("paymentReported", { name: name(c.booking), amount: euro(format, c.amountCents) }),
+      detail: ta("confirmReceipt"),
+      tone: "info" as const,
+      icon: BanknoteIcon,
+    })),
     ...inquiries.map((b) => ({
       key: `i-${b.id}`,
       href: `/app/bookings/${b.trackingCode}`,

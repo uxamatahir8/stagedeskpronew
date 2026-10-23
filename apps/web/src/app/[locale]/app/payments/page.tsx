@@ -2,8 +2,9 @@ import { ArrowDownLeftIcon, ArrowUpRightIcon, Undo2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { prisma } from "@stagedesk/db";
+import { getSetting, pendingPaymentClaims, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
+import { ClaimReview } from "@/components/booking/claim-review";
 import { ConnectCard } from "@/components/connect-card";
 import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { euro, eventDate, startOfMonth } from "@/lib/format";
+import { daysAgo, euro, eventDate, startOfMonth } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { agencyDashboardAction, connectAgencyAction } from "./actions";
 import { RefundDialog } from "./refund-dialog";
@@ -38,7 +39,7 @@ const sum = (rows: { amountCents: number }[]) => rows.reduce((total, r) => total
 async function Payments() {
   const { organization, db } = await requireAgency("agency.payments");
   const since = startOfMonth();
-  const [t, tm, format, account, payments, monthLedger] = await Promise.all([
+  const [t, tm, format, account, payments, monthLedger, claims, tc, methods] = await Promise.all([
     getTranslations("payments"),
     getTranslations("paymentMethods"),
     getFormatter(),
@@ -53,7 +54,12 @@ async function Payments() {
       where: { organizationId: organization.id, createdAt: { gte: since }, type: { in: ["transfer", "transfer_reversal", "refund"] } },
       select: { type: true, party: true, amountCents: true },
     }),
+    pendingPaymentClaims(organization.id),
+    getTranslations("paymentClaims"),
+    getSetting("payments.methods"),
   ]);
+  // A report older than the platform's confirmation window is flagged.
+  const overdueBefore = daysAgo(methods.confirmWithinDays);
   const received = sum(payments.filter((p) => p.receivedAt >= since));
   const paidOut = sum(monthLedger.filter((l) => l.party === "agency"));
   const refunded = sum(monthLedger.filter((l) => l.type === "refund"));
@@ -69,13 +75,41 @@ async function Payments() {
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} actions={<ExportButton kind="payments" />} />
       <ConnectCard
-        stripeReady={isStripeConfigured()}
+        stripeReady={await isStripeConfigured()}
         account={account}
         body={t("connectBody")}
         connectedText={t("connected")}
         connect={connectAgencyAction}
         dashboard={agencyDashboardAction}
       />
+
+      {claims.length > 0 && (
+        <Card className="border-info/40">
+          <CardHeader>
+            <CardTitle>{tc("waitingTitle", { count: claims.length })}</CardTitle>
+          </CardHeader>
+          <CardContent className="divide-y">
+            {claims.map((c) => (
+              <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="grid gap-0.5 text-sm">
+                  <span className="font-medium">
+                    {euro(format, c.amountCents)} · {tm(c.method as "cash")}
+                    {c.createdAt < overdueBefore && <Pill tone="warning" className="ml-2">{tc("overdue")}</Pill>}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {c.booking.customer?.name ?? "—"} ·{" "}
+                    <Link href={`/app/bookings/${c.booking.trackingCode}`} className="font-mono underline-offset-4 hover:underline">
+                      {c.booking.trackingCode}
+                    </Link>{" "}
+                    · {tc("reportedDetail", { date: format.dateTime(c.paidOn, { day: "numeric", month: "long", timeZone: "UTC" }), reference: c.reference ?? "—" })}
+                  </span>
+                </div>
+                <ClaimReview claimId={c.id} paidOn={c.paidOn.toISOString().slice(0, 10)} />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard index={0} label={t("received")} value={euro(format, received)} icon={ArrowDownLeftIcon} />

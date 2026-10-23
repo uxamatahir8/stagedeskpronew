@@ -18,6 +18,9 @@ import {
   LoginCode,
   NewInquiry,
   NewMessage,
+  PaymentNotReceived,
+  PaymentReceipt,
+  PaymentReported,
   QuoteExpiring,
   QuoteSent,
   ResetPassword,
@@ -148,6 +151,21 @@ export function sendLeadOffer(to: string, p: { locale: EmailLocale; agency: stri
   return send(to, copy[p.locale].leadOffer.subject(p.event, p.date), createElement(LeadOffer, p));
 }
 
+export function sendPaymentReceipt(
+  to: string,
+  p: { locale: EmailLocale; name: string; agency: string; code: string; amount: string; method: string; date: string; paid: string; remaining: string; url: string },
+) {
+  return send(to, copy[p.locale].paymentReceipt.subject(p.agency, p.code), createElement(PaymentReceipt, p));
+}
+
+export function sendPaymentNotReceived(to: string, p: { locale: EmailLocale; name: string; agency: string; code: string; amount: string; reason: string; url: string }) {
+  return send(to, copy[p.locale].paymentNotReceived.subject(p.agency, p.code), createElement(PaymentNotReceived, p));
+}
+
+export function sendPaymentReported(to: string, p: { locale: EmailLocale; customer: string; amount: string; method: string; code: string; url: string }) {
+  return send(to, copy[p.locale].paymentReported.subject(p.customer, p.amount), createElement(PaymentReported, p));
+}
+
 /**
  * Every email the app sends, by name. Web and worker describe an email as a
  * job ({ kind, to, params }); the worker's email queue sends it with retries.
@@ -172,6 +190,9 @@ const senders = {
   agencyCreated: sendAgencyCreated,
   leadReceived: sendLeadReceived,
   leadOffer: sendLeadOffer,
+  paymentReceipt: sendPaymentReceipt,
+  paymentNotReceived: sendPaymentNotReceived,
+  paymentReported: sendPaymentReported,
 } as const;
 
 export type EmailKind = keyof typeof senders;

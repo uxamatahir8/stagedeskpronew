@@ -404,11 +404,12 @@ export async function recordPayment(organizationId: string, bookingId: string, i
   return tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     if (booking.status === "inquiry" || booking.status === "declined") throw new BookingError("invalid_status");
-    await tx.payment.create({
+    const payment = await tx.payment.create({
       data: { ...input, id: randomUUID(), organizationId, bookingId, recordedById: actorId },
     });
     await tx.booking.updateMany({ where: { id: bookingId }, data: { paidCents: { increment: input.amountCents } } });
     await logEvent(tx, bookingId, "payment_recorded", actorId, { amountCents: input.amountCents, method: input.method });
+    return payment;
   });
 }
 

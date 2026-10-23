@@ -1,4 +1,4 @@
-export { getStripe, isStripeConfigured, type Stripe } from "./client";
+export { createStripe, getStripe, isStripeConfigured, resetStripeConfig, type Stripe, stripeConfig, type StripeConfig } from "./client";
 export { syncPlanToStripe } from "./plans";
 export {
   adjustCommissionsForCharge,
@@ -14,4 +14,4 @@ export { applyStripeAccount, connectDashboardLink, connectOnboardingLink } from 
 export { amountDue, bookingCheckout, recordStripePayment } from "./booking-payments";
 export { payoutBooking, runDuePayouts } from "./payouts";
 export { refundPayment } from "./refunds";
-export { processStoredEvent, receiveWebhook } from "./webhooks";
+export { handledStripeEvents, processStoredEvent, receiveWebhook } from "./webhooks";

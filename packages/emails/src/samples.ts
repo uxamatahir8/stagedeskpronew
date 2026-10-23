@@ -43,5 +43,27 @@ export function emailSamples(locale: EmailLocale, appUrl: string): { [K in Email
     agencyCreated: { locale, name: "Olga", agency: "Feestbureau Noord", url: url("/sign-in") },
     leadReceived: { locale, name: "Lotte", reference: "L-7KQ2M9", url: url("/") },
     leadOffer: { locale, agency: "Feestband Utrecht", event: nl ? "bruiloft" : "wedding", date: nl ? "14 juni 2027" : "14 June 2027", city: "Utrecht", url: url("/app/lead-offers") },
+    paymentReceipt: {
+      locale,
+      name: "Sanne",
+      agency: "Feestband Utrecht",
+      code: "K7Q2M9XA",
+      amount: "€ 324,89",
+      method: nl ? "bankoverschrijving" : "bank transfer",
+      date: nl ? "20 oktober 2026" : "20 October 2026",
+      paid: "€ 324,89",
+      remaining: "€ 758,06",
+      url: url("/app/my-payments"),
+    },
+    paymentNotReceived: {
+      locale,
+      name: "Sanne",
+      agency: "Feestband Utrecht",
+      code: "K7Q2M9XA",
+      amount: "€ 324,89",
+      reason: nl ? "We zien nog geen bijschrijving met dit kenmerk." : "We can't see a transfer with this reference yet.",
+      url: url("/app/my-payments"),
+    },
+    paymentReported: { locale, customer: "Sanne de Vries", amount: "€ 324,89", method: nl ? "bankoverschrijving" : "bank transfer", code: "K7Q2M9XA", url: url("/app/bookings/K7Q2M9XA") },
   };
 }

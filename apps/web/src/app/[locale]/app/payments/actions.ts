@@ -15,7 +15,7 @@ import { requireAgency } from "@/lib/viewer";
 /** Stripe Express onboarding for the agency's own account (start or finish). */
 export async function connectAgencyAction(): Promise<RedirectResult> {
   const { viewer, organization } = await requireAgency("agency.payments");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return { message: (await getTranslations("payments"))("stripeMissing") };
   const locale = await getLocale();
   try {
@@ -35,7 +35,7 @@ export async function connectAgencyAction(): Promise<RedirectResult> {
 
 export async function agencyDashboardAction(): Promise<RedirectResult> {
   const { db } = await requireAgency("agency.payments");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   const account = await db.connectedAccount.findFirst({ where: { artistId: null } });
   if (!stripe || !account) return { message: (await getTranslations("payments"))("stripeMissing") };
   try {
@@ -53,7 +53,7 @@ export async function refundAction(paymentId: string, amount: string): Promise<A
   const cents = parseEuros(amount);
   if (cents === null || cents <= 0) return { ok: false, message: (await getTranslations("payments"))("errors_invalid_amount") };
   try {
-    const { refunded } = await refundPayment(getStripe(), { organizationId: organization.id, paymentId, amountCents: cents, actorId: viewer.user.id });
+    const { refunded } = await refundPayment(await getStripe(), { organizationId: organization.id, paymentId, amountCents: cents, actorId: viewer.user.id });
     await audit({ actorId: viewer.user.id, action: "payment.refund", agencyId: organization.id, targetType: "payment", targetId: paymentId, data: { cents: refunded } });
     revalidatePath("/[locale]/app", "layout");
     return { ok: true, message: (await getTranslations("payments"))("refunded_", { amount: euro(await getFormatter(), refunded) }) };

@@ -50,6 +50,17 @@ export const siteGeneralSchema = z.object({
   waitlistMode: z.boolean().default(false),
 });
 
+/** Which ways of paying agencies may offer. Each agency then chooses within these. */
+export const paymentMethodsSchema = z.object({
+  online: z.boolean(),
+  bankTransfer: z.boolean(),
+  cash: z.boolean(),
+  /** Days an agency has to confirm a reported payment before it shows as overdue to review. */
+  confirmWithinDays: z.int().min(1).max(60),
+  /** Email the customer a receipt whenever a payment is recorded or confirmed. */
+  sendReceipts: z.boolean(),
+});
+
 /**
  * Every setting the platform knows about. Admin screens edit values;
  * code adds keys. A record copies the value it was created under, so later
@@ -99,6 +110,10 @@ export const settingsRegistry = {
   "billing.defaults": {
     schema: billingDefaultsSchema,
     defaults: { graceDays: 7, trialPlanKey: "pro" },
+  },
+  "payments.methods": {
+    schema: paymentMethodsSchema,
+    defaults: { online: true, bankTransfer: true, cash: true, confirmWithinDays: 5, sendReceipts: true },
   },
   "bookings.defaults": {
     schema: bookingDefaultsSchema,

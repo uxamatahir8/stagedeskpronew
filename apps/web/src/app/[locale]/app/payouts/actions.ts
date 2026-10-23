@@ -9,7 +9,7 @@ import { absoluteUrl } from "@/lib/mail";
 
 export async function connectAffiliateAction(): Promise<RedirectResult> {
   const { viewer, affiliate } = await requireAffiliate("affiliate.payouts");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe || affiliate.status !== "approved") return { message: (await getTranslations("payments"))("stripeMissing") };
   const locale = await getLocale();
   try {
@@ -28,7 +28,7 @@ export async function connectAffiliateAction(): Promise<RedirectResult> {
 
 export async function affiliateDashboardAction(): Promise<RedirectResult> {
   const { affiliate } = await requireAffiliate("affiliate.payouts");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe || !affiliate.stripeAccountId) return { message: (await getTranslations("payments"))("stripeMissing") };
   try {
     return { url: await connectDashboardLink(stripe, affiliate.stripeAccountId) };

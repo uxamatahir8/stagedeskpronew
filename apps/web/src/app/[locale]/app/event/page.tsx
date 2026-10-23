@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
-import { payBookingAction } from "@/lib/pay-actions";
+import { payBookingAction, reportPaymentAction } from "@/lib/pay-actions";
 import { requireAgency } from "@/lib/viewer";
 import { ReviewForm } from "./review-form";
 
@@ -178,7 +178,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
                 <p>{t("customerEvent.paidOf", { paid: euro(format, booking.paidCents), total: euro(format, booking.totalCents) })}</p>
-                <PayPanel booking={booking} pay={payBookingAction.bind(null, booking.id, "event")} paid={query["paid"]} />
+                <PayPanel booking={booking} pay={payBookingAction.bind(null, booking.id, "event")} report={reportPaymentAction.bind(null, booking.id)} paid={query["paid"]} />
                 {booking.invoices.map((inv) => (
                   <Button key={inv.id} variant="outline" size="sm" asChild className="w-fit">
                     <a href={`/api/pdf/invoice/${inv.id}?lang=${locale}`} target="_blank" rel="noopener">

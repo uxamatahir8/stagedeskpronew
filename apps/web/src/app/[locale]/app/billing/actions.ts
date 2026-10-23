@@ -11,7 +11,7 @@ import { requireAgency } from "@/lib/viewer";
 /** Starts Stripe Checkout for a plan. Only the agency owner manages billing. */
 export async function choosePlanAction(planId: string, interval: "month" | "year"): Promise<RedirectResult> {
   const { viewer, organization } = await requireAgency("agency.billing");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
   const locale = (await getLocale()) === "en" ? "en" : "nl";
   try {
@@ -33,7 +33,7 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
 
 export async function billingPortalAction(): Promise<RedirectResult> {
   const { organization } = await requireAgency("agency.billing");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
   try {
     return { url: await billingPortal(stripe, organization.id, absoluteUrl(await getLocale(), "/app/billing")) };

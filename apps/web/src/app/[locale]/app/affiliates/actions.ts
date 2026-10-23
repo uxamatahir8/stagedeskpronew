@@ -24,7 +24,7 @@ export async function setAffiliateStatusAction(affiliateId: string, status: "app
   const affiliate = await setAffiliateStatus(affiliateId, status);
 
   if (status === "approved") {
-    const stripe = getStripe();
+    const stripe = await getStripe();
     // Without Stripe the code still works at signup; it's created in Stripe once keys are added.
     if (stripe) await syncAffiliatePromo(stripe, affiliateId).catch((error) => console.error("[affiliates] promo sync failed", error));
     if (!before.approvedAt) {
@@ -64,7 +64,7 @@ export async function reviewCommissionAction(commissionId: string, approve: bool
 export async function payNowAction(affiliateId: string): Promise<ActionResult> {
   const viewer = await requirePermission("platform.affiliates");
   const t = await getTranslations("affiliatesAdmin");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return { ok: false, message: (await getTranslations("platformPayments"))("notConfigured") };
   try {
     const paid = await payAffiliate(stripe, affiliateId);
@@ -144,7 +144,7 @@ export async function createPartnerAction(input: z.input<typeof partnerSchema>):
   if (bps === "invalid") return { ok: false, message: t("invalidRate") };
   try {
     const { affiliate } = await createAffiliateByAdmin({ ...parsed.data, commissionBps: bps });
-    const stripe = getStripe();
+    const stripe = await getStripe();
     if (stripe) await syncAffiliatePromo(stripe, affiliate.id).catch((error) => console.error("[affiliates] promo sync failed", error));
     if (parsed.data.sendEmail) {
       const locale = parsed.data.locale;
@@ -179,7 +179,7 @@ export async function updatePartnerAction(affiliateId: string, input: z.input<ty
   if (bps === "invalid") return { ok: false, message: t("invalidRate") };
   try {
     await updateAffiliateByAdmin(affiliateId, { ...parsed.data, commissionBps: bps });
-    const stripe = getStripe();
+    const stripe = await getStripe();
     if (stripe) await syncAffiliatePromo(stripe, affiliateId).catch((error) => console.error("[affiliates] promo sync failed", error));
   } catch (error) {
     return { ok: false, message: await affiliateError(error) };

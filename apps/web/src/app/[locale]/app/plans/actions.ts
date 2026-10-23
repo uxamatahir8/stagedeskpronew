@@ -67,7 +67,7 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
   // Only one plan is recommended at a time.
   if (d.recommended) await prisma.plan.updateMany({ where: { id: { not: id } }, data: { recommended: false } });
 
-  const stripe = getStripe();
+  const stripe = await getStripe();
   await audit({ actorId: viewer.user.id, action: "plan.save", targetType: "plan", targetId: d.key });
   // The pricing page shows plans; refresh it now.
   updateTag(SITE_TAGS.plans);

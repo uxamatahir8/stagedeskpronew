@@ -17,6 +17,8 @@ interface DemoAgency {
   name: string;
   city: string;
   kvkNumber: string;
+  /** Example bank details so bank transfers work in the demo (a well-known test IBAN). */
+  bank?: { iban: string; name: string };
   members: { email: string; role: "agency_owner" | "agency_admin" | "agency_staff" | "artist" | "customer" }[];
 }
 
@@ -39,6 +41,7 @@ const agencies: DemoAgency[] = [
     name: "Feestband Utrecht",
     city: "Utrecht",
     kvkNumber: "12345678",
+    bank: { iban: "NL91ABNA0417164300", name: "Feestband Utrecht B.V." },
     members: [
       { email: "eigenaar@feestband.local", role: "agency_owner" },
       { email: "beheer@feestband.local", role: "agency_admin" },
@@ -91,7 +94,14 @@ export async function seedDemo(prisma: PrismaClient) {
     const org =
       (await prisma.organization.findUnique({ where: { slug: a.slug } })) ??
       (await prisma.organization.create({
-        data: { id: randomUUID(), slug: a.slug, name: a.name, city: a.city, kvkNumber: a.kvkNumber },
+        data: {
+          id: randomUUID(),
+          slug: a.slug,
+          name: a.name,
+          city: a.city,
+          kvkNumber: a.kvkNumber,
+          ...(a.bank ? { iban: a.bank.iban, bankAccountName: a.bank.name, acceptBankTransfer: true, acceptCash: true } : {}),
+        },
       }));
     for (const m of a.members) {
       const userId = ids.get(m.email)!;

@@ -1,4 +1,4 @@
-import { getStripe, processStoredEvent, receiveWebhook } from "@stagedesk/payments";
+import { getStripe, processStoredEvent, receiveWebhook, stripeConfig } from "@stagedesk/payments";
 
 /**
  * Stripe webhooks. Each event is verified, stored once by id and processed
@@ -6,8 +6,9 @@ import { getStripe, processStoredEvent, receiveWebhook } from "@stagedesk/paymen
  * Stripe always gets a 200 once the event is safely stored.
  */
 export async function POST(request: Request) {
-  const stripe = getStripe();
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+  const stripe = await getStripe();
+  // Entered under Settings → Payments, or STRIPE_WEBHOOK_SECRET in .env.
+  const secret = (await stripeConfig()).webhookSecret;
   if (!stripe || !secret) return new Response("Stripe isn't configured", { status: 503 });
 
   const signature = request.headers.get("stripe-signature");

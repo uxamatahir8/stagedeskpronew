@@ -57,7 +57,8 @@
     "notifications": "Notifications",
     "platformBookings": "Bookings",
     "leads": "Leads",
-    "leadOffers": "Leads"
+    "leadOffers": "Leads",
+    "paymentSetup": "Payment setup"
   },
   "shell": {
     "search": "Search…",
@@ -870,7 +871,9 @@
     "balanceDue": "{name}: {amount} still to pay",
     "via_booking_page": "via booking page",
     "via_platform": "created by StageDesk",
-    "via_lead": "StageDesk lead"
+    "via_lead": "StageDesk lead",
+    "paymentReported": "{name} reports a payment of {amount}",
+    "confirmReceipt": "Confirm receipt"
   },
   "billing": {
     "title": "Subscription",
@@ -1063,7 +1066,34 @@
     "methods": "iDEAL or card, via Stripe",
     "offline": "Your agency will send you payment details.",
     "thanks": "Thanks! Your payment is being processed and will show here shortly.",
-    "cancelled": "Payment cancelled. You can try again any time."
+    "cancelled": "Payment cancelled. You can try again any time.",
+    "claimPending": "You reported a payment of {amount} on {date}. The agency confirms it once the money is in.",
+    "claimRejected": "The agency couldn't find your payment of {amount}: {reason}. Check the transfer and report it again.",
+    "transfer": "Pay {amount} by bank transfer",
+    "orTransfer": "Or pay {amount} by bank transfer",
+    "iban": "IBAN",
+    "accountName": "In the name of",
+    "amount": "Amount",
+    "reference": "Description (booking reference)",
+    "reportButton": "I've paid",
+    "reportTitle": "Let the agency know you've paid",
+    "reportHint": "The agency confirms once the money is in, and you get a receipt by email.",
+    "reportMethod": "How did you pay?",
+    "reportAmount": "Amount (€)",
+    "reportDate": "Paid on",
+    "reportReference": "Description you used",
+    "reportReferenceHint": "Helps the agency find your transfer.",
+    "reportSubmit": "Send",
+    "cancel": "Cancel",
+    "reported": "Thanks! The agency will confirm your payment.",
+    "report_not_found": "This booking can't be paid right now.",
+    "report_method": "This agency doesn't take that way of paying.",
+    "report_invalid_amount": "Enter the amount you paid, e.g. 250,00.",
+    "report_date": "Enter the date you paid (today or earlier).",
+    "report_not_payable": "This booking can't be paid right now.",
+    "report_too_much": "That's more than is still open on this booking.",
+    "report_open_claim": "You already reported a payment; wait for the agency to confirm it.",
+    "report_already_reviewed": "This payment was already handled."
   },
   "earnings": {
     "title": "Earnings",
@@ -1388,7 +1418,10 @@
     "viewAll": "View all notifications",
     "lead_new": "New lead from {name} ({code})",
     "lead_offer": "New lead {code} offered to your agency{city, select, other { in {city}}}",
-    "lead_accepted": "{name} took lead {code}"
+    "lead_accepted": "{name} took lead {code}",
+    "payment_reported": "{name} reports a payment of {amount, number, ::currency/EUR} for {code}",
+    "payment_confirmed": "{name} confirmed your payment of {amount, number, ::currency/EUR} ({code})",
+    "payment_rejected": "{name} hasn't received your payment of {amount, number, ::currency/EUR} yet ({code})"
   },
   "messages": {
     "title": "Messages",
@@ -1558,7 +1591,8 @@
     "system": "System",
     "action": {
       "settings": {
-        "update": "Changed a platform setting"
+        "update": "Changed a platform setting",
+        "stripe_keys": "Changed the Stripe keys"
       },
       "plan": {
         "save": "Saved a plan"
@@ -1584,7 +1618,9 @@
         "delete": "Deleted a partner"
       },
       "payment": {
-        "refund": "Refunded a payment"
+        "refund": "Refunded a payment",
+        "claim_confirm": "Confirmed a reported payment",
+        "claim_reject": "Marked a reported payment as not received"
       },
       "user": {
         "disable": "Disabled an account",
@@ -2748,7 +2784,13 @@
     "kind_leadReceived": "Request received",
     "kind_leadReceivedHint": "To the customer, after the public request form",
     "kind_leadOffer": "Lead offered",
-    "kind_leadOfferHint": "To an agency team, when StageDesk offers a lead"
+    "kind_leadOfferHint": "To an agency team, when StageDesk offers a lead",
+    "kind_paymentReported": "Payment reported",
+    "kind_paymentReportedHint": "To the agency team, when a customer reports a transfer or cash payment",
+    "kind_paymentReceipt": "Payment receipt",
+    "kind_paymentReceiptHint": "To the customer, when a payment is confirmed or recorded",
+    "kind_paymentNotReceived": "Payment not received",
+    "kind_paymentNotReceivedHint": "To the customer, when the agency can't find the payment"
   },
   "platformBookings": {
     "title": "Bookings",
@@ -2899,5 +2941,111 @@
     "error_agency_suspended": "Your agency is suspended.",
     "error_not_offered": "This lead is no longer offered to you.",
     "error_customer_on_team": "This customer is on your team, so it can't be your booking."
+  },
+  "paymentSetup": {
+    "title": "Payment setup",
+    "description": "Connect Stripe for online payments and choose how customers may pay agencies.",
+    "stripeTitle": "Stripe",
+    "stripeHint": "Online payments (iDEAL, cards), agency and artist payouts and subscriptions all run through your Stripe account. Keys are encrypted and never shown again in full.",
+    "notSetUp": "Not set up",
+    "modeTest": "Test mode",
+    "modeLive": "Live",
+    "sourceDashboard": "Keys from this page",
+    "sourceEnv": "Keys from the server's .env",
+    "label_secretKey": "Secret key",
+    "label_publishableKey": "Publishable key",
+    "label_webhookSecret": "Webhook signing secret",
+    "hint_secretKey": "Stripe Dashboard → Developers → API keys. Starts with sk_test_ or sk_live_ (a restricted rk_ key works too).",
+    "hint_publishableKey": "Starts with pk_test_ or pk_live_, in the same mode as the secret key.",
+    "hint_webhookSecret": "Shown when you add the webhook endpoint below in Stripe. Starts with whsec_.",
+    "placeholder_secretKey": "sk_live_…",
+    "placeholder_publishableKey": "pk_live_…",
+    "placeholder_webhookSecret": "whsec_…",
+    "savedHint": "Saved: {hint} ({date}). Type a new value to replace it.",
+    "webhookUrl": "Webhook endpoint",
+    "webhookHint": "In Stripe, add this endpoint (Developers → Webhooks) and select these events:",
+    "webhookMissing": "No webhook signing secret yet: payments won't be confirmed until you add one.",
+    "connectedAgencies": "{count} of {total} agencies have connected Stripe and can take online payments.",
+    "saveKeys": "Save keys",
+    "test": "Test connection",
+    "remove": "Remove saved keys",
+    "removeTitle": "Remove the saved Stripe keys?",
+    "removeHint": "Online payments stop working unless the server's .env has keys. Payments already made are not affected.",
+    "cancel": "Cancel",
+    "nothingToSave": "Type at least one key to save.",
+    "invalid_secretKey": "That doesn't look like a Stripe secret key (sk_test_…, sk_live_… or rk_…).",
+    "invalid_publishableKey": "That doesn't look like a publishable key (pk_test_… or pk_live_…).",
+    "invalid_webhookSecret": "That doesn't look like a webhook signing secret (whsec_…).",
+    "modeMismatch": "The secret and publishable keys must both be test keys or both be live keys.",
+    "keyRejected": "Stripe didn't accept that secret key. Check it and try again; nothing was changed.",
+    "saved": "Stripe keys saved.",
+    "removed": "Saved Stripe keys removed.",
+    "notConfigured": "No Stripe key is set.",
+    "testOk": "Connected to Stripe account {name} ({country}).",
+    "testFailed": "Stripe didn't accept the key. Check it under Developers → API keys.",
+    "methodsTitle": "Payment methods",
+    "methodsHint": "What agencies may offer their customers. Each agency chooses within these on its own settings page.",
+    "method_online": "Online (iDEAL and cards)",
+    "method_onlineHint": "Through Stripe, with automatic split and payouts.",
+    "onlineNeedsStripe": "Needs Stripe keys above before customers can pay online.",
+    "method_bankTransfer": "Bank transfer",
+    "method_bankTransferHint": "Customers transfer to the agency's IBAN and report it; the agency confirms receipt.",
+    "method_cash": "Cash",
+    "method_cashHint": "Paid in person; the customer reports it and the agency confirms receipt.",
+    "confirmWithinDays": "Confirm within (days)",
+    "confirmWithinDaysHint": "After this, a reported payment shows as overdue for the agency.",
+    "sendReceipts": "Email receipts",
+    "sendReceiptsHint": "Customers get a receipt for every recorded or confirmed payment.",
+    "saveMethods": "Save payment methods"
+  },
+  "agencyPayments": {
+    "title": "Payment methods",
+    "description": "How your customers can pay you. Online payments go through Stripe; bank transfers and cash are reported by the customer and confirmed by you.",
+    "method_online": "Online (iDEAL and cards)",
+    "method_onlineHint": "Customers pay in the app; the money is split and paid out automatically.",
+    "onlineNotConnected": "Connect Stripe first to take online payments.",
+    "connectStripe": "Connect Stripe",
+    "method_bankTransfer": "Bank transfer",
+    "method_bankTransferHint": "Customers see your IBAN, transfer the amount and let you know; you confirm receipt.",
+    "method_cash": "Cash",
+    "method_cashHint": "Paid in person; the customer reports it and you confirm receipt.",
+    "notOffered": "Switched off by StageDesk for now.",
+    "iban": "IBAN",
+    "ibanHint": "Shown to customers with the amount and booking reference.",
+    "accountName": "Account holder",
+    "accountNameHint": "The name on the account, as the bank shows it.",
+    "instructions": "Payment instructions (optional)",
+    "instructionsHint": "E.g. \"Please pay the deposit within 7 days.\" Shown with the bank details.",
+    "save": "Save payment methods",
+    "saved": "Payment methods saved.",
+    "invalidIban": "That IBAN isn't valid. Check the letters and digits.",
+    "bankDetailsRequired": "Bank transfer needs an IBAN and the account holder's name.",
+    "oneMethod": "Switch on at least one way to pay."
+  },
+  "paymentClaims": {
+    "reportedTitle": "Customer reports {amount} paid by {method}",
+    "reportedDetail": "paid on {date}, description: {reference}",
+    "waitingTitle": "{count, plural, one {# payment to confirm} other {# payments to confirm}}",
+    "overdue": "Waiting long",
+    "confirm": "Confirm receipt",
+    "confirmTitle": "Confirm you received this payment",
+    "confirmHint": "The payment is added to the booking and the customer gets a receipt.",
+    "receivedOn": "Received on",
+    "reject": "Not received",
+    "rejectTitle": "Mark as not received?",
+    "rejectHint": "The customer gets an email with your note and can report the payment again.",
+    "reason": "Note for the customer",
+    "reasonPlaceholder": "E.g. we don't see a transfer with this reference yet",
+    "reasonRequired": "Add a short note for the customer.",
+    "cancel": "Cancel",
+    "confirmed": "Payment confirmed and receipt sent.",
+    "rejected": "Marked as not received; the customer has been told.",
+    "invalidDate": "Enter the date the money arrived.",
+    "error_not_found": "That payment report doesn't exist.",
+    "error_already_reviewed": "Someone already handled this payment.",
+    "error_not_payable": "This booking can't take payments in its current status.",
+    "error_invalid_amount": "The amount isn't valid.",
+    "error_too_much": "That's more than is still open.",
+    "error_open_claim": "There's already a payment waiting."
   }
 }

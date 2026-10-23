@@ -162,6 +162,16 @@ model Organization {
   leadsAssigned Lead[]      @relation("LeadAgency")
   leadOffers    LeadOffer[] @relation("LeadOffers")
 
+  /// Payment methods the agency offers its customers (within what the platform allows).
+  acceptOnline        Boolean        @default(true)
+  acceptBankTransfer  Boolean        @default(true)
+  acceptCash          Boolean        @default(false)
+  iban                String?        @db.VarChar(34)
+  bankAccountName     String?        @db.VarChar(191)
+  /// Shown to customers with the bank details, e.g. "Please pay within 7 days".
+  paymentInstructions String?        @db.Text
+  paymentClaims       PaymentClaim[]
+
   @@map("organizations")
 }
 
@@ -361,6 +371,7 @@ model Booking {
   review            Review?
   ledger            LedgerEntry[]
   messages          BookingMessage[]
+  paymentClaims     PaymentClaim[]
 
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
@@ -1159,4 +1170,50 @@ model LeadOffer {
   @@unique([leadId, agencyId])
   @@index([agencyId, status])
   @@map("lead_offers")
+}
+
+/// Credentials the platform admin enters in the dashboard (e.g. Stripe keys),
+/// encrypted with AES-256-GCM (packages/db/src/secrets.ts). Never sent to a browser;
+/// screens show only `hint`.
+model PlatformSecret {
+  key         String   @id @db.VarChar(64)
+  ciphertext  String   @db.Text
+  /// e.g. "sk_test_…4242"
+  hint        String   @db.VarChar(48)
+  updatedById String?  @db.VarChar(64)
+  updatedAt   DateTime @updatedAt
+
+  @@map("platform_secrets")
+}
+
+/// A customer saying they paid outside Stripe (bank transfer or cash). The agency
+/// confirms receipt (which records the Payment) or marks it not received.
+model PaymentClaim {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId     String?      @db.VarChar(64)
+  /// bank_transfer | cash
+  method         String       @db.VarChar(24)
+  /// deposit | balance | other
+  kind           String       @db.VarChar(16)
+  amountCents    Int
+  paidOn         DateTime     @db.Date
+  /// What the customer wrote in the transfer description, or a note.
+  reference      String?      @db.VarChar(191)
+  note           String?      @db.Text
+  /// pending | confirmed | rejected
+  status         String       @default("pending") @db.VarChar(16)
+  reviewedById   String?      @db.VarChar(64)
+  reviewedAt     DateTime?
+  rejectReason   String?      @db.VarChar(191)
+  /// The payment recorded when the agency confirmed receipt.
+  paymentId      String?      @unique @db.VarChar(64)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, status])
+  @@index([bookingId])
+  @@map("payment_claims")
 }

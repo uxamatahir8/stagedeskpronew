@@ -24,6 +24,7 @@ import type { Locale } from "@/i18n/routing";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
 import { limitBlocked, writeBlocked } from "@/lib/billing";
+import { sendReceipt } from "@/lib/payment-claims";
 import { requireAgency } from "@/lib/viewer";
 import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
 
@@ -210,8 +211,8 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
     return { ok: false, message: (await getTranslations("bookingErrors"))("invalid_amount") };
   }
   return runAction(
-    () =>
-      recordPayment(
+    async () => {
+      const payment = await recordPayment(
         organization.id,
         bookingId,
         {
@@ -222,7 +223,10 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
           reference: parsed.data.reference?.trim() || null,
         },
         viewer.user.id,
-      ),
+      );
+      // Offline refunds are negative amounts; only money in gets a receipt.
+      if (payment.amountCents > 0) await sendReceipt(payment);
+    },
     t("paymentRecorded"),
   );
 }

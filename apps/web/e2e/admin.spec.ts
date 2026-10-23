@@ -140,4 +140,14 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await page.goto("/app/audit?group=support");
     await expect(page.getByText("Supportmodus verlaten").first()).toBeVisible();
   });
+
+  await test.step("payment setup refuses a malformed Stripe key and saves the payment methods", async () => {
+    await page.goto("/app/settings/payments");
+    await expect(page.getByText("Webhook-endpoint", { exact: true })).toBeVisible();
+    await page.getByRole("textbox", { name: "Geheime sleutel" }).fill("not-a-key");
+    await page.getByRole("button", { name: "Sleutels opslaan" }).click();
+    await expect(page.getByText("Dat lijkt geen geheime Stripe-sleutel", { exact: false })).toBeVisible();
+    await page.getByRole("button", { name: "Betaalmethoden opslaan" }).click();
+    await expect(page.getByText("Instellingen opgeslagen.").first()).toBeVisible();
+  });
 });

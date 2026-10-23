@@ -73,7 +73,7 @@ async function Earnings() {
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} />
       <ConnectCard
-        stripeReady={isStripeConfigured()}
+        stripeReady={await isStripeConfigured()}
         account={artist.connectedAccount}
         body={t("connectBody")}
         connectedText={tp("connected")}

@@ -52,7 +52,7 @@ async function Payouts() {
       <PageHeader title={tn("payouts")} description={t("payoutsDescription", { amount: euro(format, program.minPayoutCents), day: program.payoutDayOfMonth })} />
       {affiliate.status === "approved" && (
         <ConnectCard
-          stripeReady={isStripeConfigured()}
+          stripeReady={await isStripeConfigured()}
           account={affiliate.stripeAccountId ? { detailsSubmitted: true, payoutsEnabled: affiliate.payoutsEnabled } : null}
           body={t("connectBody")}
           connectedText={t("connected")}

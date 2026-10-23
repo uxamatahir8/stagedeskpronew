@@ -17,7 +17,10 @@ export type NotificationType =
   | "comment_new"
   | "lead_new"
   | "lead_offer"
-  | "lead_accepted";
+  | "lead_accepted"
+  | "payment_reported"
+  | "payment_confirmed"
+  | "payment_rejected";
 
 export interface NotificationInput {
   type: NotificationType;

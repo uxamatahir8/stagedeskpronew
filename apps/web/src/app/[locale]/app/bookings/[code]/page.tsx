@@ -22,6 +22,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { RefundDialog } from "../../payments/refund-dialog";
 import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
+import { ClaimReview } from "@/components/booking/claim-review";
 import { requireAgency } from "@/lib/viewer";
 import {
   AddNote,
@@ -59,6 +60,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       assignments: { orderBy: { createdAt: "desc" }, include: { artist: { include: { organization: { select: { id: true, name: true } } } } } },
       quotes: { orderBy: { version: "desc" }, include: { items: { orderBy: { position: "asc" } } } },
       payments: { orderBy: { receivedAt: "asc" } },
+      paymentClaims: { where: { status: "pending" }, orderBy: { createdAt: "asc" } },
       notes: { orderBy: { createdAt: "desc" } },
       events: { orderBy: { createdAt: "desc" }, take: 50 },
       invoices: true,
@@ -310,6 +312,18 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   <Figure label={t("booking.due")} value={euro(format, Math.max(0, booking.totalCents - booking.paidCents))} />
                 </dl>
               )}
+              {booking.paymentClaims.map((c) => (
+                <div key={c.id} className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4">
+                  <p className="text-sm">
+                    <span className="font-medium">{t("paymentClaims.reportedTitle", { amount: euro(format, c.amountCents), method: t(`paymentMethods.${c.method as "cash"}`) })}</span>
+                    <br />
+                    <span className="text-muted-foreground">
+                      {t("paymentClaims.reportedDetail", { date: format.dateTime(c.paidOn, { day: "numeric", month: "long", timeZone: "UTC" }), reference: c.reference ?? "—" })}
+                    </span>
+                  </p>
+                  {canPay && <ClaimReview claimId={c.id} paidOn={c.paidOn.toISOString().slice(0, 10)} />}
+                </div>
+              ))}
               {booking.payments.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t("booking.noPayments")}</p>
               ) : (

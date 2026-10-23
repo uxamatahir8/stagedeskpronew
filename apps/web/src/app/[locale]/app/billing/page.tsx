@@ -125,7 +125,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
       </div>
 
       <PlanPicker
-        stripeReady={isStripeConfigured()}
+        stripeReady={await isStripeConfigured()}
         currentPlanId={access.reason === "active" ? (plan?.id ?? null) : null}
         plans={plans
           .filter((p) => p.visible)

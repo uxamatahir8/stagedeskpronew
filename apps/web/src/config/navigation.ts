@@ -75,6 +75,7 @@ export const navigation: NavGroup[] = [
       { key: "users", href: "/app/users", icon: UsersRoundIcon, permission: "platform.users" },
       { key: "audit", href: "/app/audit", icon: ScrollTextIcon, permission: "platform.audit" },
       { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },
+      { key: "paymentSetup", href: "/app/settings/payments", icon: CreditCardIcon, permission: "platform.settings" },
     ],
   },
   {

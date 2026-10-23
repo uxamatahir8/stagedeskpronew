@@ -20,7 +20,7 @@ async function ownArtist() {
 
 export async function connectArtistAction(): Promise<RedirectResult> {
   const { viewer, organization, artist } = await ownArtist();
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe || !artist) return { message: (await getTranslations("payments"))("stripeMissing") };
   const locale = await getLocale();
   try {
@@ -40,7 +40,7 @@ export async function connectArtistAction(): Promise<RedirectResult> {
 
 export async function artistDashboardAction(): Promise<RedirectResult> {
   const { artist } = await ownArtist();
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe || !artist?.connectedAccount) return { message: (await getTranslations("payments"))("stripeMissing") };
   try {
     return { url: await connectDashboardLink(stripe, artist.connectedAccount.stripeAccountId) };

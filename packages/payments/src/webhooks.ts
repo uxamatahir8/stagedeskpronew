@@ -112,3 +112,18 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       return false;
   }
 }
+
+/** The events StageDesk handles; the webhook endpoint in Stripe should send exactly these. */
+export const handledStripeEvents = [
+  "checkout.session.completed",
+  "checkout.session.async_payment_succeeded",
+  "charge.refunded",
+  "charge.dispute.created",
+  "charge.dispute.closed",
+  "account.updated",
+  "customer.subscription.created",
+  "customer.subscription.updated",
+  "customer.subscription.deleted",
+  "invoice.paid",
+  "invoice.payment_failed",
+] as const;

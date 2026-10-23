@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
-import { payBookingAction } from "@/lib/pay-actions";
+import { payBookingAction, reportPaymentAction } from "@/lib/pay-actions";
 import { requireAgency } from "@/lib/viewer";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/my-payments">): Promise<Metadata> {
@@ -73,7 +73,7 @@ async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-pay
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
                 <p>{t("customerEvent.paidOf", { paid: euro(format, b.paidCents), total: euro(format, b.totalCents) })}</p>
-                <PayPanel booking={b} pay={payBookingAction.bind(null, b.id, "payments")} />
+                <PayPanel booking={b} pay={payBookingAction.bind(null, b.id, "payments")} report={reportPaymentAction.bind(null, b.id)} />
               </CardContent>
             </Card>
           ))}

@@ -9,7 +9,7 @@ import { requirePermission } from "@/lib/viewer";
 /** Processes a stored Stripe event again, e.g. after a failure was fixed. */
 export async function retryEventAction(eventId: string): Promise<ActionResult> {
   await requirePermission("platform.payments");
-  const stripe = getStripe();
+  const stripe = await getStripe();
   const t = await getTranslations("platformPayments");
   if (!stripe) return { ok: false, message: t("notConfigured") };
   try {

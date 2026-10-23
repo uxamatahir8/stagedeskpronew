@@ -58,6 +58,9 @@ const icons: Record<string, { icon: LucideIcon; tone: string }> = {
   lead_new: { icon: SparklesIcon, tone: "bg-magenta/12 text-magenta" },
   lead_offer: { icon: SparklesIcon, tone: "bg-magenta/12 text-magenta" },
   lead_accepted: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
+  payment_reported: { icon: BanknoteIcon, tone: "bg-info/12 text-info" },
+  payment_confirmed: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
+  payment_rejected: { icon: BanknoteIcon, tone: "bg-warning/18 text-foreground" },
 };
 const fallback = { icon: ReceiptIcon, tone: "bg-muted text-muted-foreground" };
 

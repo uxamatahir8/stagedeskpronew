@@ -57,7 +57,8 @@
     "notifications": "Meldingen",
     "platformBookings": "Boekingen",
     "leads": "Leads",
-    "leadOffers": "Leads"
+    "leadOffers": "Leads",
+    "paymentSetup": "Betaalinstellingen"
   },
   "shell": {
     "search": "Zoeken…",
@@ -870,7 +871,9 @@
     "balanceDue": "{name}: nog {amount} te betalen",
     "via_booking_page": "via boekingspagina",
     "via_platform": "aangemaakt door StageDesk",
-    "via_lead": "StageDesk-lead"
+    "via_lead": "StageDesk-lead",
+    "paymentReported": "{name} meldt een betaling van {amount}",
+    "confirmReceipt": "Ontvangst bevestigen"
   },
   "billing": {
     "title": "Abonnement",
@@ -1063,7 +1066,34 @@
     "methods": "iDEAL of kaart, via Stripe",
     "offline": "Je bureau stuurt je de betaalgegevens.",
     "thanks": "Bedankt! Je betaling wordt verwerkt en verschijnt hier zo.",
-    "cancelled": "Betaling afgebroken. Je kunt het altijd opnieuw proberen."
+    "cancelled": "Betaling afgebroken. Je kunt het altijd opnieuw proberen.",
+    "claimPending": "Je hebt op {date} een betaling van {amount} gemeld. Het bureau bevestigt die zodra het geld binnen is.",
+    "claimRejected": "Het bureau kon je betaling van {amount} niet vinden: {reason}. Controleer de overboeking en meld hem opnieuw.",
+    "transfer": "Betaal {amount} per bankoverschrijving",
+    "orTransfer": "Of betaal {amount} per bankoverschrijving",
+    "iban": "IBAN",
+    "accountName": "Ten name van",
+    "amount": "Bedrag",
+    "reference": "Omschrijving (kenmerk boeking)",
+    "reportButton": "Ik heb betaald",
+    "reportTitle": "Laat het bureau weten dat je hebt betaald",
+    "reportHint": "Het bureau bevestigt zodra het geld binnen is, en je krijgt een betaalbewijs per e-mail.",
+    "reportMethod": "Hoe heb je betaald?",
+    "reportAmount": "Bedrag (€)",
+    "reportDate": "Betaald op",
+    "reportReference": "Gebruikte omschrijving",
+    "reportReferenceHint": "Helpt het bureau je overboeking te vinden.",
+    "reportSubmit": "Versturen",
+    "cancel": "Annuleren",
+    "reported": "Bedankt! Het bureau bevestigt je betaling.",
+    "report_not_found": "Deze boeking kan nu niet worden betaald.",
+    "report_method": "Dit bureau accepteert die manier van betalen niet.",
+    "report_invalid_amount": "Vul het betaalde bedrag in, bijv. 250,00.",
+    "report_date": "Vul de betaaldatum in (vandaag of eerder).",
+    "report_not_payable": "Deze boeking kan nu niet worden betaald.",
+    "report_too_much": "Dat is meer dan er nog openstaat voor deze boeking.",
+    "report_open_claim": "Je hebt al een betaling gemeld; wacht tot het bureau die bevestigt.",
+    "report_already_reviewed": "Deze betaling is al afgehandeld."
   },
   "earnings": {
     "title": "Inkomsten",
@@ -1388,7 +1418,10 @@
     "viewAll": "Alle meldingen bekijken",
     "lead_new": "Nieuwe lead van {name} ({code})",
     "lead_offer": "Nieuwe lead {code} aangeboden aan je bureau{city, select, other { in {city}}}",
-    "lead_accepted": "{name} heeft lead {code} aangenomen"
+    "lead_accepted": "{name} heeft lead {code} aangenomen",
+    "payment_reported": "{name} meldt een betaling van {amount, number, ::currency/EUR} voor {code}",
+    "payment_confirmed": "{name} heeft je betaling van {amount, number, ::currency/EUR} bevestigd ({code})",
+    "payment_rejected": "{name} heeft je betaling van {amount, number, ::currency/EUR} nog niet ontvangen ({code})"
   },
   "messages": {
     "title": "Berichten",
@@ -1558,7 +1591,8 @@
     "system": "Systeem",
     "action": {
       "settings": {
-        "update": "Platforminstelling gewijzigd"
+        "update": "Platforminstelling gewijzigd",
+        "stripe_keys": "Stripe-sleutels gewijzigd"
       },
       "plan": {
         "save": "Abonnement opgeslagen"
@@ -1584,7 +1618,9 @@
         "delete": "Partner verwijderd"
       },
       "payment": {
-        "refund": "Betaling terugbetaald"
+        "refund": "Betaling terugbetaald",
+        "claim_confirm": "Gemelde betaling bevestigd",
+        "claim_reject": "Gemelde betaling als niet ontvangen gemarkeerd"
       },
       "user": {
         "disable": "Account uitgeschakeld",
@@ -2748,7 +2784,13 @@
     "kind_leadReceived": "Aanvraag ontvangen",
     "kind_leadReceivedHint": "Aan de klant, na het openbare aanvraagformulier",
     "kind_leadOffer": "Lead aangeboden",
-    "kind_leadOfferHint": "Aan een bureauteam, als StageDesk een lead aanbiedt"
+    "kind_leadOfferHint": "Aan een bureauteam, als StageDesk een lead aanbiedt",
+    "kind_paymentReported": "Betaling gemeld",
+    "kind_paymentReportedHint": "Aan het bureauteam, als een klant een overboeking of contante betaling meldt",
+    "kind_paymentReceipt": "Betaalbewijs",
+    "kind_paymentReceiptHint": "Aan de klant, als een betaling is bevestigd of geregistreerd",
+    "kind_paymentNotReceived": "Betaling niet ontvangen",
+    "kind_paymentNotReceivedHint": "Aan de klant, als het bureau de betaling niet kan vinden"
   },
   "platformBookings": {
     "title": "Boekingen",
@@ -2899,5 +2941,111 @@
     "error_agency_suspended": "Je bureau is opgeschort.",
     "error_not_offered": "Deze lead wordt je niet meer aangeboden.",
     "error_customer_on_team": "Deze klant zit in je team en kan geen boeking bij je hebben."
+  },
+  "paymentSetup": {
+    "title": "Betaalinstellingen",
+    "description": "Koppel Stripe voor online betalingen en kies hoe klanten bureaus mogen betalen.",
+    "stripeTitle": "Stripe",
+    "stripeHint": "Online betalingen (iDEAL, kaarten), uitbetalingen aan bureaus en artiesten en abonnementen lopen via je Stripe-account. Sleutels worden versleuteld en nooit meer volledig getoond.",
+    "notSetUp": "Niet ingesteld",
+    "modeTest": "Testmodus",
+    "modeLive": "Live",
+    "sourceDashboard": "Sleutels van deze pagina",
+    "sourceEnv": "Sleutels uit de .env van de server",
+    "label_secretKey": "Geheime sleutel",
+    "label_publishableKey": "Publieke sleutel",
+    "label_webhookSecret": "Webhook-ondertekeningsgeheim",
+    "hint_secretKey": "Stripe Dashboard → Developers → API keys. Begint met sk_test_ of sk_live_ (een beperkte rk_-sleutel werkt ook).",
+    "hint_publishableKey": "Begint met pk_test_ of pk_live_, in dezelfde modus als de geheime sleutel.",
+    "hint_webhookSecret": "Zie je als je het webhook-endpoint hieronder in Stripe toevoegt. Begint met whsec_.",
+    "placeholder_secretKey": "sk_live_…",
+    "placeholder_publishableKey": "pk_live_…",
+    "placeholder_webhookSecret": "whsec_…",
+    "savedHint": "Opgeslagen: {hint} ({date}). Typ een nieuwe waarde om te vervangen.",
+    "webhookUrl": "Webhook-endpoint",
+    "webhookHint": "Voeg dit endpoint toe in Stripe (Developers → Webhooks) en kies deze events:",
+    "webhookMissing": "Nog geen webhook-geheim: betalingen worden pas bevestigd als je er een toevoegt.",
+    "connectedAgencies": "{count} van {total} bureaus hebben Stripe gekoppeld en kunnen online betalingen ontvangen.",
+    "saveKeys": "Sleutels opslaan",
+    "test": "Verbinding testen",
+    "remove": "Opgeslagen sleutels verwijderen",
+    "removeTitle": "Opgeslagen Stripe-sleutels verwijderen?",
+    "removeHint": "Online betalen werkt niet meer, tenzij de .env van de server sleutels heeft. Gedane betalingen blijven staan.",
+    "cancel": "Annuleren",
+    "nothingToSave": "Typ minstens één sleutel om op te slaan.",
+    "invalid_secretKey": "Dat lijkt geen geheime Stripe-sleutel (sk_test_…, sk_live_… of rk_…).",
+    "invalid_publishableKey": "Dat lijkt geen publieke sleutel (pk_test_… of pk_live_…).",
+    "invalid_webhookSecret": "Dat lijkt geen webhook-geheim (whsec_…).",
+    "modeMismatch": "De geheime en publieke sleutel moeten allebei test- of allebei live-sleutels zijn.",
+    "keyRejected": "Stripe accepteerde die geheime sleutel niet. Controleer hem en probeer opnieuw; er is niets gewijzigd.",
+    "saved": "Stripe-sleutels opgeslagen.",
+    "removed": "Opgeslagen Stripe-sleutels verwijderd.",
+    "notConfigured": "Er is geen Stripe-sleutel ingesteld.",
+    "testOk": "Verbonden met Stripe-account {name} ({country}).",
+    "testFailed": "Stripe accepteerde de sleutel niet. Controleer hem onder Developers → API keys.",
+    "methodsTitle": "Betaalmethoden",
+    "methodsHint": "Wat bureaus hun klanten mogen aanbieden. Elk bureau kiest daarbinnen op zijn eigen instellingenpagina.",
+    "method_online": "Online (iDEAL en kaarten)",
+    "method_onlineHint": "Via Stripe, met automatische verdeling en uitbetaling.",
+    "onlineNeedsStripe": "Vul eerst hierboven Stripe-sleutels in voordat klanten online kunnen betalen.",
+    "method_bankTransfer": "Bankoverschrijving",
+    "method_bankTransferHint": "Klanten maken over naar de IBAN van het bureau en melden dat; het bureau bevestigt de ontvangst.",
+    "method_cash": "Contant",
+    "method_cashHint": "Persoonlijk betaald; de klant meldt het en het bureau bevestigt de ontvangst.",
+    "confirmWithinDays": "Bevestigen binnen (dagen)",
+    "confirmWithinDaysHint": "Daarna staat een gemelde betaling als te laat bij het bureau.",
+    "sendReceipts": "Betaalbewijzen e-mailen",
+    "sendReceiptsHint": "Klanten krijgen een betaalbewijs voor elke geregistreerde of bevestigde betaling.",
+    "saveMethods": "Betaalmethoden opslaan"
+  },
+  "agencyPayments": {
+    "title": "Betaalmethoden",
+    "description": "Hoe je klanten je kunnen betalen. Online betalingen lopen via Stripe; overboekingen en contante betalingen meldt de klant en bevestig jij.",
+    "method_online": "Online (iDEAL en kaarten)",
+    "method_onlineHint": "Klanten betalen in de app; het geld wordt automatisch verdeeld en uitbetaald.",
+    "onlineNotConnected": "Koppel eerst Stripe om online betalingen te ontvangen.",
+    "connectStripe": "Stripe koppelen",
+    "method_bankTransfer": "Bankoverschrijving",
+    "method_bankTransferHint": "Klanten zien je IBAN, maken het bedrag over en laten het weten; jij bevestigt de ontvangst.",
+    "method_cash": "Contant",
+    "method_cashHint": "Persoonlijk betaald; de klant meldt het en jij bevestigt de ontvangst.",
+    "notOffered": "Staat nu uit bij StageDesk.",
+    "iban": "IBAN",
+    "ibanHint": "Klanten zien dit met het bedrag en het kenmerk van de boeking.",
+    "accountName": "Tenaamstelling",
+    "accountNameHint": "De naam op de rekening, zoals de bank die toont.",
+    "instructions": "Betaalinstructies (optioneel)",
+    "instructionsHint": "Bijv. \"Graag de aanbetaling binnen 7 dagen.\" Staat bij de bankgegevens.",
+    "save": "Betaalmethoden opslaan",
+    "saved": "Betaalmethoden opgeslagen.",
+    "invalidIban": "Dat IBAN klopt niet. Controleer de letters en cijfers.",
+    "bankDetailsRequired": "Voor bankoverschrijving zijn een IBAN en de tenaamstelling nodig.",
+    "oneMethod": "Zet minstens één manier van betalen aan."
+  },
+  "paymentClaims": {
+    "reportedTitle": "Klant meldt {amount} betaald per {method}",
+    "reportedDetail": "betaald op {date}, omschrijving: {reference}",
+    "waitingTitle": "{count, plural, one {# betaling te bevestigen} other {# betalingen te bevestigen}}",
+    "overdue": "Wacht lang",
+    "confirm": "Ontvangst bevestigen",
+    "confirmTitle": "Bevestig dat je deze betaling hebt ontvangen",
+    "confirmHint": "De betaling komt bij de boeking en de klant krijgt een betaalbewijs.",
+    "receivedOn": "Ontvangen op",
+    "reject": "Niet ontvangen",
+    "rejectTitle": "Markeren als niet ontvangen?",
+    "rejectHint": "De klant krijgt een e-mail met je toelichting en kan de betaling opnieuw melden.",
+    "reason": "Toelichting voor de klant",
+    "reasonPlaceholder": "Bijv. we zien nog geen overboeking met dit kenmerk",
+    "reasonRequired": "Geef een korte toelichting voor de klant.",
+    "cancel": "Annuleren",
+    "confirmed": "Betaling bevestigd en betaalbewijs verstuurd.",
+    "rejected": "Gemarkeerd als niet ontvangen; de klant is ingelicht.",
+    "invalidDate": "Vul de datum in waarop het geld binnenkwam.",
+    "error_not_found": "Die betaalmelding bestaat niet.",
+    "error_already_reviewed": "Iemand heeft deze betaling al afgehandeld.",
+    "error_not_payable": "Deze boeking kan in deze status geen betalingen ontvangen.",
+    "error_invalid_amount": "Het bedrag klopt niet.",
+    "error_too_much": "Dat is meer dan er nog openstaat.",
+    "error_open_claim": "Er wacht al een betaling."
   }
 }

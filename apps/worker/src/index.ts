@@ -12,7 +12,6 @@ const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379
 // Housekeeping on a schedule. Stripe webhooks are stored and processed by the
 // web app; "retry-stripe-events" picks up any that failed, so none are lost.
 const systemQueue = new Queue("system", { connection });
-const stripe = getStripe();
 
 // Every email goes through this queue: the web app and the jobs below add
 // { kind, to, params }; failed sends are retried with backoff.
@@ -28,6 +27,8 @@ const emailWorker = new Worker(EMAIL_QUEUE, async (job) => {
 const systemWorker = new Worker(
   "system",
   async (job) => {
+    // Looked up per job: the admin can enter or change the keys while the worker runs.
+    const stripe = await getStripe();
     switch (job.name) {
       case "heartbeat": {
         const settings = await prisma.platformSetting.count();
@@ -102,7 +103,7 @@ await systemQueue.upsertJobScheduler("payouts", { every: 60 * 60_000 }, { name: 
 await systemQueue.upsertJobScheduler("approve-commissions", { every: 60 * 60_000 }, { name: "approve-commissions" });
 await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }, { name: "affiliate-payouts" });
 await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 5 * 60_000 }, { name: "retry-stripe-events" });
-console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${stripe ? "configured" : "not configured"}.`);
+console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${(await getStripe()) ? "configured" : "not configured"}.`);
 
 async function shutdown() {
   await Promise.all([systemWorker.close(), emailWorker.close()]);

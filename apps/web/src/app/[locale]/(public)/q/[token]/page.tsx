@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, eventDate } from "@/lib/format";
-import { payByQuoteTokenAction } from "@/lib/pay-actions";
+import { payByQuoteTokenAction, reportPaymentByTokenAction } from "@/lib/pay-actions";
 import { AcceptQuoteForm } from "./accept-form";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
@@ -41,7 +41,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
     include: {
       items: { orderBy: { position: "asc" } },
       organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true } },
-      booking: { select: { trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true, customer: { select: { name: true } } } },
+      booking: { select: { id: true, customerId: true, trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true, customer: { select: { name: true } } } },
     },
   });
   if (!quote) return <FormMessage>{t("quotePage.notFound")}</FormMessage>;
@@ -93,7 +93,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
       {quote.status === "accepted" && quote.acceptedAt ? (
         <>
           <FormMessage tone="success">{t("quotePage.alreadyAccepted", { date: dateTime(format, quote.acceptedAt) })}</FormMessage>
-          <PayPanel booking={quote.booking} pay={payByQuoteTokenAction.bind(null, token)} paid={(await searchParams)["paid"]} />
+          <PayPanel booking={quote.booking} pay={payByQuoteTokenAction.bind(null, token)} report={reportPaymentByTokenAction.bind(null, token)} paid={(await searchParams)["paid"]} />
         </>
       ) : quote.status === "superseded" ? (
         <FormMessage>{t("quotePage.superseded")}</FormMessage>
