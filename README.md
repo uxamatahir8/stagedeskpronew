@@ -126,6 +126,14 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   admin edits details and internal notes, extends a trial, grants a plan without payment, sets a fee deal,
   suspends it (team locked out, booking page offline, nothing deleted) or deletes it (only without bookings
   or money records).
+- **Platform admin bookings:** a platform admin creates a booking for any agency from Bookings →
+  "Create booking" (or "Create booking" on an agency's page): pick the agency, an existing or new
+  customer and the event, and optionally email the customer. The booking goes into the agency's queue
+  as an inquiry (source `platform_admin`, shown as "created by platform admin (name)"), the agency
+  team gets an email and a notification, and the overview confirms it with a link to open it. Bookings
+  can be filtered by source; "Open" works on any booking through support mode.
+- **Support mode:** "Work as support" on an agency page lets a platform admin act as that agency's
+  admin (no billing) behind a banner; starting and leaving are audited.
 - **Users (platform admin):** search, filter by role or status, add platform admins, edit details, sign
   out everywhere, disable, confirm email, reset 2FA, and delete accounts without history. Plus the Audit log.
 - **Email previews (platform admin):** `/app/emails` shows every email in Dutch and English, as HTML

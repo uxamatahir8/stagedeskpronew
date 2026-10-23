@@ -1,9 +1,9 @@
-import { ArrowRightIcon, CalendarCheckIcon, SearchIcon } from "lucide-react";
+import { ArrowRightIcon, CalendarCheckIcon, CircleCheckIcon, SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { bookingStatuses, type BookingStatus } from "@stagedesk/core";
-import { listAllBookings, prisma } from "@stagedesk/db";
+import { bookingSources, type BookingSource, listAllBookings, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { FilterChips, Pager } from "@/components/list-controls";
 import { PageHeader } from "@/components/page-header";
@@ -20,12 +20,12 @@ import { startSupportAction } from "@/lib/support-actions";
 import { requirePermission } from "@/lib/viewer";
 import { NewBookingPicker } from "./pick-agency";
 
-export async function generateMetadata({ params }: PageProps<"/[locale]/app/platform-bookings">): Promise<Metadata> {
-  const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "platformBookings" });
+export async function generateMetadata({ params }: PageProps<"/[locale]/app/admin-bookings">): Promise<Metadata> {
+  const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "adminBookings" });
   return { title: t("title") };
 }
 
-export default async function PlatformBookingsPage({ params, searchParams }: PageProps<"/[locale]/app/platform-bookings">) {
+export default async function AdminBookingsPage({ params, searchParams }: PageProps<"/[locale]/app/admin-bookings">) {
   setRequestLocale((await params).locale as Locale);
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>
@@ -36,37 +36,65 @@ export default async function PlatformBookingsPage({ params, searchParams }: Pag
 
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
-async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/platform-bookings">, "searchParams">) {
+async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bookings">, "searchParams">) {
   await requirePermission("platform.agencies");
   const sp = await searchParams;
   const q = (one(sp["q"]) ?? "").trim().slice(0, 100);
   const requested = one(sp["status"]);
   const status = requested && (bookingStatuses as readonly string[]).includes(requested) ? (requested as BookingStatus) : null;
   const agencyId = one(sp["agency"]) || null;
+  const requestedSource = one(sp["source"]) as BookingSource | undefined;
+  const source = requestedSource && bookingSources.includes(requestedSource) ? requestedSource : null;
+  // Set after a platform admin created a booking, to confirm it and offer to open it.
+  const created = one(sp["created"]);
   const page = Math.max(1, Number.parseInt(one(sp["page"]) ?? "1", 10) || 1);
   // Platform-wide view: deliberately not tenant-scoped.
   const [t, ts, te, format, list, agencies] = await Promise.all([
-    getTranslations("platformBookings"),
+    getTranslations("adminBookings"),
     getTranslations("bookingStatus"),
     getTranslations("eventTypes"),
     getFormatter(),
-    listAllBookings({ q, status, organizationId: agencyId, page }),
+    listAllBookings({ q, status, organizationId: agencyId, source, page }),
     prisma.organization.findMany({ where: { suspendedAt: null }, select: { id: true, name: true, city: true }, orderBy: { name: "asc" } }),
   ]);
-  const href = (patch: { status?: string | null; page?: number }) => {
+  const createdBooking = created
+    ? await prisma.booking.findUnique({ where: { trackingCode: created }, select: { trackingCode: true, organizationId: true, organization: { select: { name: true } } } })
+    : null;
+  // Who created the admin bookings in this page, to name them.
+  const creators = await prisma.user.findMany({
+    where: { id: { in: [...new Set(list.rows.filter((b) => b.source === "platform_admin" && b.createdById).map((b) => b.createdById!))] } },
+    select: { id: true, name: true },
+  });
+  const href = (patch: { status?: string | null; source?: string | null; page?: number }) => {
     const next = new URLSearchParams();
     const s = patch.status === undefined ? status : patch.status;
+    const src = patch.source === undefined ? source : patch.source;
     if (q) next.set("q", q);
     if (s) next.set("status", s);
+    if (src) next.set("source", src);
     if (agencyId) next.set("agency", agencyId);
     if (patch.page && patch.page > 1) next.set("page", String(patch.page));
     const str = next.toString();
-    return `/app/platform-bookings${str ? `?${str}` : ""}`;
+    return `/app/admin-bookings${str ? `?${str}` : ""}`;
   };
 
   return (
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} actions={<NewBookingPicker agencies={agencies} />} />
+      {createdBooking && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3">
+          <p className="flex items-center gap-2 text-sm">
+            <CircleCheckIcon className="size-4 shrink-0 text-success" aria-hidden />
+            {t("created", { code: createdBooking.trackingCode, agency: createdBooking.organization.name })}
+          </p>
+          <form action={startSupportAction.bind(null, createdBooking.organizationId, `/app/bookings/${createdBooking.trackingCode}`)}>
+            <Button type="submit" size="sm" variant="outline">
+              {t("openCreated")}
+              <ArrowRightIcon />
+            </Button>
+          </form>
+        </div>
+      )}
       <div className="grid gap-3">
         <form className="flex flex-wrap gap-2" role="search">
           <label htmlFor="pb-q" className="sr-only">
@@ -92,6 +120,10 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/platform
             {t("search")}
           </Button>
         </form>
+        <FilterChips
+          label={t("filterSource")}
+          options={[null, ...bookingSources].map((src) => ({ key: src ?? "all", label: src ? t(`source_${src}`) : t("allSources"), href: href({ source: src }), active: src === source }))}
+        />
         <FilterChips
           label={t("filterStatus")}
           options={[null, ...bookingStatuses].map((s) => ({ key: s ?? "all", label: s ? ts(s) : t("allStatuses"), href: href({ status: s }), active: s === status }))}
@@ -125,7 +157,8 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/platform
                       <div className="font-mono text-xs text-muted-foreground">
                         {b.trackingCode}
                         {b.venueCity ? ` · ${b.venueCity}` : ""}
-                        {b.source !== "manual" ? ` · ${t(`source_${b.source as "platform"}`)}` : ""}
+                        {b.source !== "manual" ? ` · ${t(`source_${b.source as BookingSource}`)}` : ""}
+                        {b.source === "platform_admin" && creators.find((c) => c.id === b.createdById) ? ` (${creators.find((c) => c.id === b.createdById)!.name})` : ""}
                       </div>
                     </TableCell>
                     <TableCell>

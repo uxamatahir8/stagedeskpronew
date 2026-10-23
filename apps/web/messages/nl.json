@@ -55,10 +55,10 @@
     "audit": "Auditlog",
     "emails": "E-mails",
     "notifications": "Meldingen",
-    "platformBookings": "Boekingen",
     "leads": "Leads",
     "leadOffers": "Leads",
-    "paymentSetup": "Betaalinstellingen"
+    "paymentSetup": "Betaalinstellingen",
+    "adminBookings": "Boekingen"
   },
   "shell": {
     "search": "Zoeken…",
@@ -870,10 +870,10 @@
     "artistDeclined": "{name}: artiest heeft afgewezen, kies een ander",
     "balanceDue": "{name}: nog {amount} te betalen",
     "via_booking_page": "via boekingspagina",
-    "via_platform": "aangemaakt door StageDesk",
     "via_lead": "StageDesk-lead",
     "paymentReported": "{name} meldt een betaling van {amount}",
-    "confirmReceipt": "Ontvangst bevestigen"
+    "confirmReceipt": "Ontvangst bevestigen",
+    "via_platform_admin": "aangemaakt door platformbeheerder"
   },
   "billing": {
     "title": "Abonnement",
@@ -1647,7 +1647,7 @@
         "reject": "Reactie afgewezen"
       },
       "booking": {
-        "create_for_agency": "Boeking aangemaakt voor een bureau"
+        "create_for_agency": "Boeking aangemaakt als platformbeheerder"
       },
       "support": {
         "start": "Supportmodus gestart in een bureau",
@@ -2319,9 +2319,9 @@
     "noBookings": "Nog geen boekingen.",
     "activity": "Beheeractiviteit",
     "noActivity": "Nog niets vastgelegd.",
-    "newBooking": "Nieuwe boeking",
-    "newBookingTitle": "Nieuwe boeking voor een bureau",
-    "newBookingHint": "De boeking komt als nieuwe aanvraag in de wachtrij van {agency}. Hun team krijgt een e-mail en een melding en neemt het daarna over.",
+    "newBooking": "Boeking aanmaken",
+    "newBookingTitle": "Boeking door platformbeheerder",
+    "newBookingHint": "Je maakt deze boeking aan als platformbeheerder. Hij komt als nieuwe aanvraag in de wachtrij van {agency}; hun team krijgt een e-mail en een melding en neemt het daarna over.",
     "notifyCustomer": "Klant e-mailen",
     "notifyCustomerHint": "Verstuurt de e-mail 'aanvraag ontvangen' met het kenmerk van de boeking en hoe de klant inlogt.",
     "bookingSuspended": "Dit bureau is opgeschort. Heractiveer het voordat je boekingen toevoegt.",
@@ -2797,33 +2797,6 @@
     "kind_paymentNotReceived": "Betaling niet ontvangen",
     "kind_paymentNotReceivedHint": "Aan de klant, als het bureau de betaling niet kan vinden"
   },
-  "platformBookings": {
-    "title": "Boekingen",
-    "description": "Elke boeking op het platform, bij alle bureaus.",
-    "new": "Nieuwe boeking",
-    "newHint": "Kies het bureau waarvoor de boeking is. Die komt in hun wachtrij en hun team neemt het over.",
-    "agency": "Bureau",
-    "chooseAgency": "Kies een bureau",
-    "continue": "Verder",
-    "cancel": "Annuleren",
-    "search": "Zoeken",
-    "searchPlaceholder": "Kenmerk, naam of e-mail klant, plaats",
-    "allAgencies": "Alle bureaus",
-    "filterStatus": "Filter op status",
-    "allStatuses": "Alle",
-    "booking": "Boeking",
-    "customer": "Klant",
-    "status": "Status",
-    "total": "Totaal",
-    "created": "Aangemaakt",
-    "empty": "Geen boekingen gevonden",
-    "emptyHint": "Probeer een andere zoekterm of wis de filters.",
-    "source_booking_page": "boekingspagina",
-    "source_platform": "door StageDesk",
-    "source_lead": "lead",
-    "open": "Openen",
-    "openBooking": "Boeking {code} openen in supportmodus"
-  },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
     "leave": "Supportmodus verlaten"
@@ -3130,5 +3103,36 @@
     "alt_artist": "De gigbriefing van de artiest op een telefoon",
     "alt_customer": "De eventpagina van de klant op een telefoon, met offerte en betalingen",
     "alt_hero_collage": "StageDesk op een laptop en een telefoon: het bureaudashboard en de artiestenapp"
+  },
+  "adminBookings": {
+    "title": "Boekingen",
+    "description": "Elke boeking op het platform. Als platformbeheerder kun je ook een boeking aanmaken voor elk bureau.",
+    "new": "Boeking aanmaken",
+    "newHint": "Boeking door de platformbeheerder: kies het bureau waarvoor hij is. Die komt in hun wachtrij en hun team neemt het over.",
+    "agency": "Bureau",
+    "chooseAgency": "Kies een bureau",
+    "continue": "Verder",
+    "cancel": "Annuleren",
+    "search": "Zoeken",
+    "searchPlaceholder": "Kenmerk, naam of e-mail klant, plaats",
+    "allAgencies": "Alle bureaus",
+    "filterStatus": "Filter op status",
+    "allStatuses": "Alle",
+    "booking": "Boeking",
+    "customer": "Klant",
+    "status": "Status",
+    "total": "Totaal",
+    "created": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht.",
+    "empty": "Geen boekingen gevonden",
+    "emptyHint": "Probeer een andere zoekterm of wis de filters.",
+    "source_booking_page": "boekingspagina",
+    "source_lead": "lead",
+    "open": "Openen",
+    "openBooking": "Boeking {code} openen in supportmodus",
+    "filterSource": "Filter op herkomst",
+    "allSources": "Alle herkomsten",
+    "source_manual": "door het bureau",
+    "source_platform_admin": "platformbeheerder",
+    "openCreated": "Boeking openen"
   }
 }

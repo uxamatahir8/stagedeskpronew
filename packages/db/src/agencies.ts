@@ -214,13 +214,15 @@ export async function listAllBookings({
   q = "",
   status = null,
   organizationId = null,
+  source = null,
   page = 1,
   pageSize = 25,
-}: { q?: string; status?: string | null; organizationId?: string | null; page?: number; pageSize?: number }) {
+}: { q?: string; status?: string | null; organizationId?: string | null; source?: string | null; page?: number; pageSize?: number }) {
   const search = q.trim();
   const where: Prisma.BookingWhereInput = {
     ...(status ? { status } : {}),
     ...(organizationId ? { organizationId } : {}),
+    ...(source ? { source } : {}),
     ...(search
       ? {
           OR: [
@@ -247,6 +249,7 @@ export async function listAllBookings({
         source: true,
         totalCents: true,
         createdAt: true,
+        createdById: true,
         organization: { select: { id: true, name: true } },
         customer: { select: { name: true, email: true } },
       },

@@ -74,7 +74,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     db.serviceItem.findMany({ where: { active: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
     getSetting("bookings.defaults"),
     prisma.user.findMany({
-      where: { id: { in: [...new Set([...booking.notes.map((n) => n.authorId), ...booking.events.flatMap((e) => (e.actorId ? [e.actorId] : []))])] } },
+      where: { id: { in: [...new Set([...(booking.createdById ? [booking.createdById] : []), ...booking.notes.map((n) => n.authorId), ...booking.events.flatMap((e) => (e.actorId ? [e.actorId] : []))])] } },
       select: { id: true, name: true },
     }),
   ]);
@@ -215,7 +215,12 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 {preferredArtist && <Detail label={t("bookingPage.artist")}>{preferredArtist.stageName}</Detail>}
                 {booking.preferredGenre && <Detail label={t("bookingPage.genre")}>{booking.preferredGenre}</Detail>}
                 {booking.ceremony && <Detail label={t("eventTypes.wedding")}>{t("bookingPage.ceremony")}</Detail>}
-                {booking.source !== "manual" && <Detail label={t("bookings.source")}>{t(`attention.via_${booking.source as "booking_page"}`)}</Detail>}
+                {booking.source !== "manual" && (
+                  <Detail label={t("bookings.source")}>
+                    {t(`attention.via_${booking.source as "booking_page"}`)}
+                    {booking.source === "platform_admin" && nameOf(booking.createdById) ? ` (${nameOf(booking.createdById)})` : ""}
+                  </Detail>
+                )}
               </dl>
               {booking.message && (
                 <div className="rounded-lg bg-muted/60 p-3 text-sm">

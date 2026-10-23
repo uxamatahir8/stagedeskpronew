@@ -37,6 +37,7 @@ async function errorMessage(error: unknown) {
 
 function done(id?: string) {
   revalidatePath("/[locale]/app/agencies", "page");
+  revalidatePath("/[locale]/app/admin-bookings", "page");
   if (id) revalidatePath("/[locale]/app/agencies/[id]", "page");
 }
 
@@ -189,7 +190,7 @@ export async function createBookingForAgencyAction(organizationId: string, _prev
       budgetCents: d.budget,
       partnerName: d.partnerName,
       message: d.message,
-      source: "platform",
+      source: "platform_admin",
     },
     viewer.user.id,
   );
@@ -211,6 +212,7 @@ export async function createBookingForAgencyAction(organizationId: string, _prev
   }
   await audit({ actorId: viewer.user.id, action: "booking.create_for_agency", agencyId: agency.id, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode }, ip: clientIp(await headers()) });
   done(agency.id);
-  redirect({ href: `/app/agencies/${agency.id}`, locale: (await getLocale()) as Locale });
+  // Back to the bookings overview, which confirms the booking and offers to open it.
+  redirect({ href: `/app/admin-bookings?created=${booking.trackingCode}`, locale: (await getLocale()) as Locale });
   return {};
 }

@@ -101,6 +101,10 @@ async function logEvent(tx: Tx, bookingId: string, type: string, actorId: string
   });
 }
 
+/** How a booking came in. */
+export const bookingSources = ["manual", "booking_page", "platform_admin", "lead"] as const;
+export type BookingSource = (typeof bookingSources)[number];
+
 export interface NewBooking {
   customerId: string | null;
   eventType: EventType;
@@ -118,8 +122,8 @@ export interface NewBooking {
   preferredGenre?: string | null;
   budgetRange?: string | null;
   ceremony?: boolean | null;
-  /** manual: the agency; booking_page: the public form; platform: a platform admin; lead: a platform lead an agency accepted. */
-  source?: "manual" | "booking_page" | "platform" | "lead";
+  /** manual: the agency; booking_page: the public form; platform_admin: created by a platform admin; lead: a platform lead an agency accepted. */
+  source?: BookingSource;
 }
 
 export type CustomerChoice =

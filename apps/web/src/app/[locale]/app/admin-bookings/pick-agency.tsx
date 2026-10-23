@@ -11,7 +11,7 @@ import { useRouter } from "@/i18n/navigation";
 
 /** "New booking" for the platform admin: first choose the agency it's for. */
 export function NewBookingPicker({ agencies }: { agencies: { id: string; name: string; city: string | null }[] }) {
-  const t = useTranslations("platformBookings");
+  const t = useTranslations("adminBookings");
   const router = useRouter();
   const [agencyId, setAgencyId] = useState("");
   return (

@@ -100,24 +100,24 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await expect(page.getByText("Testmail verstuurd naar admin@stagedesk.local.")).toBeVisible();
   });
 
-  await test.step("a booking is created for an agency and shows up platform-wide", async () => {
-    await page.goto("/app/platform-bookings");
-    await page.getByRole("button", { name: "Nieuwe boeking" }).click();
+  await test.step("the platform admin creates a booking for an agency, which shows up in the overview", async () => {
+    await page.goto("/app/admin-bookings");
+    await page.getByRole("button", { name: "Boeking aanmaken" }).click();
     await page.getByRole("dialog").getByRole("combobox").click();
     await page.getByRole("option", { name: /Feestband Utrecht/ }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Verder" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Nieuwe boeking voor een bureau" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Boeking door platformbeheerder" })).toBeVisible();
     await page.getByRole("tab", { name: "Nieuwe klant" }).click();
     await page.getByLabel("Je naam").fill(`Klant Platform ${run}`);
     await page.getByLabel("E-mailadres").fill(`platform.${run}@test.local`);
     await page.getByLabel("Plaats").fill("Utrecht");
     await page.getByRole("button", { name: "Boeking aanmaken" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Feestband Utrecht" })).toBeVisible();
-    await expect(page.getByText(`Klant Platform ${run}`).first()).toBeVisible();
+    // Back on the overview, which confirms the booking.
+    await expect(page.getByText("door de platformbeheerder aangemaakt voor Feestband Utrecht", { exact: false })).toBeVisible();
 
-    await page.goto(`/app/platform-bookings?q=platform.${run}`);
+    await page.goto(`/app/admin-bookings?source=platform_admin&q=platform.${run}`);
     const row = page.getByRole("row").filter({ hasText: `Klant Platform ${run}` });
-    await expect(row).toContainText("door StageDesk");
+    await expect(row).toContainText("platformbeheerder (Iris Platform)");
     await expect(row).toContainText("Aanvraag");
   });
 

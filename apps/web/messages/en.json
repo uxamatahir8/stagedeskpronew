@@ -55,10 +55,10 @@
     "audit": "Audit log",
     "emails": "Emails",
     "notifications": "Notifications",
-    "platformBookings": "Bookings",
     "leads": "Leads",
     "leadOffers": "Leads",
-    "paymentSetup": "Payment setup"
+    "paymentSetup": "Payment setup",
+    "adminBookings": "Bookings"
   },
   "shell": {
     "search": "Search…",
@@ -870,10 +870,10 @@
     "artistDeclined": "{name}: artist declined, choose another",
     "balanceDue": "{name}: {amount} still to pay",
     "via_booking_page": "via booking page",
-    "via_platform": "created by StageDesk",
     "via_lead": "StageDesk lead",
     "paymentReported": "{name} reports a payment of {amount}",
-    "confirmReceipt": "Confirm receipt"
+    "confirmReceipt": "Confirm receipt",
+    "via_platform_admin": "created by platform admin"
   },
   "billing": {
     "title": "Subscription",
@@ -1647,7 +1647,7 @@
         "reject": "Rejected a comment"
       },
       "booking": {
-        "create_for_agency": "Created a booking for an agency"
+        "create_for_agency": "Created a platform admin booking"
       },
       "support": {
         "start": "Started support mode in an agency",
@@ -2319,9 +2319,9 @@
     "noBookings": "No bookings yet.",
     "activity": "Admin activity",
     "noActivity": "Nothing recorded yet.",
-    "newBooking": "New booking",
-    "newBookingTitle": "New booking for an agency",
-    "newBookingHint": "The booking goes into {agency}'s queue as a new inquiry. Their team gets an email and a notification, and takes it from there.",
+    "newBooking": "Create booking",
+    "newBookingTitle": "Platform admin booking",
+    "newBookingHint": "You're creating this booking as platform admin. It goes into {agency}'s queue as a new inquiry; their team gets an email and a notification, and takes it from there.",
     "notifyCustomer": "Email the customer",
     "notifyCustomerHint": "Sends the 'inquiry received' email with the booking reference and how to sign in.",
     "bookingSuspended": "This agency is suspended. Reactivate it before adding bookings.",
@@ -2797,33 +2797,6 @@
     "kind_paymentNotReceived": "Payment not received",
     "kind_paymentNotReceivedHint": "To the customer, when the agency can't find the payment"
   },
-  "platformBookings": {
-    "title": "Bookings",
-    "description": "Every booking on the platform, across all agencies.",
-    "new": "New booking",
-    "newHint": "Choose the agency the booking is for. It goes into their queue and their team takes it from there.",
-    "agency": "Agency",
-    "chooseAgency": "Choose an agency",
-    "continue": "Continue",
-    "cancel": "Cancel",
-    "search": "Search",
-    "searchPlaceholder": "Reference, customer name or email, city",
-    "allAgencies": "All agencies",
-    "filterStatus": "Filter by status",
-    "allStatuses": "All",
-    "booking": "Booking",
-    "customer": "Customer",
-    "status": "Status",
-    "total": "Total",
-    "created": "Created",
-    "empty": "No bookings found",
-    "emptyHint": "Try another search or clear the filters.",
-    "source_booking_page": "booking page",
-    "source_platform": "by StageDesk",
-    "source_lead": "lead",
-    "open": "Open",
-    "openBooking": "Open booking {code} in support mode"
-  },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
     "leave": "Leave support mode"
@@ -3130,5 +3103,36 @@
     "alt_artist": "The artist's gig brief on a phone",
     "alt_customer": "The customer's event page on a phone with quote and payments",
     "alt_hero_collage": "StageDesk on a laptop and a phone: the agency dashboard and the artist app"
+  },
+  "adminBookings": {
+    "title": "Bookings",
+    "description": "Every booking on the platform. As platform admin you can also create a booking for any agency.",
+    "new": "Create booking",
+    "newHint": "Platform admin booking: choose the agency it's for. It goes into their queue and their team takes it from there.",
+    "agency": "Agency",
+    "chooseAgency": "Choose an agency",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "search": "Search",
+    "searchPlaceholder": "Reference, customer name or email, city",
+    "allAgencies": "All agencies",
+    "filterStatus": "Filter by status",
+    "allStatuses": "All",
+    "booking": "Booking",
+    "customer": "Customer",
+    "status": "Status",
+    "total": "Total",
+    "created": "Platform admin booking {code} created for {agency}. Their team has been notified.",
+    "empty": "No bookings found",
+    "emptyHint": "Try another search or clear the filters.",
+    "source_booking_page": "booking page",
+    "source_lead": "lead",
+    "open": "Open",
+    "openBooking": "Open booking {code} in support mode",
+    "filterSource": "Filter by how it came in",
+    "allSources": "All sources",
+    "source_manual": "by the agency",
+    "source_platform_admin": "platform admin",
+    "openCreated": "Open the booking"
   }
 }
