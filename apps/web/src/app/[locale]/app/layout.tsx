@@ -4,6 +4,7 @@ import { can } from "@stagedesk/core";
 import { pendingLegal, prisma } from "@stagedesk/db";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SubscriptionBanner } from "@/components/shell/subscription-banner";
+import { SupportBanner } from "@/components/shell/support-banner";
 import { SuspendedNotice } from "@/components/shell/suspended-notice";
 import { TopBar } from "@/components/shell/top-bar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -24,7 +25,7 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
 }
 
 async function Shell({ children }: { children: React.ReactNode }) {
-  const { user, role, organization, memberships } = await requireViewer();
+  const { user, role, organization, memberships, support } = await requireViewer();
   // New Terms (or, for agencies, a new data processing agreement) are accepted before anything else.
   if ((await pendingLegal(user.id)).length > 0) redirect({ href: "/accept-terms", locale: (await getLocale()) as Locale });
   // A suspended agency is closed to its team and customers; they can still switch agency or sign out.
@@ -34,9 +35,11 @@ async function Shell({ children }: { children: React.ReactNode }) {
       <AppSidebar viewer={{ user, role, organization, memberships }} />
       <SidebarInset>
         <TopBar role={role} />
+        {support && <SupportBanner agency={support.name} />}
         {organization && can(role, "agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} role={role} />}
         <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
-          {suspended?.suspendedAt ? <SuspendedNotice agency={organization!.name} reason={suspended.suspendReason} /> : children}
+          {/* Support can still look inside a suspended agency; writes stay blocked by writeBlocked. */}
+          {suspended?.suspendedAt && !support ? <SuspendedNotice agency={organization!.name} reason={suspended.suspendReason} /> : children}
         </div>
       </SidebarInset>
     </SidebarProvider>

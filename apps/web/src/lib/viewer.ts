@@ -23,6 +23,11 @@ export interface Viewer {
   /** The active agency; null for platform-level roles. */
   organization: ViewerOrganization | null;
   memberships: ViewerOrganization[];
+  /**
+   * Set when a platform admin works inside an agency as support: they act as an
+   * agency admin there (no billing), behind a banner, until they leave.
+   */
+  support?: { organizationId: string; name: string };
 }
 
 export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
@@ -50,7 +55,14 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   };
 
   const platformRole = session.user.platformRole;
-  if (platformRole === "platform_admin") return { user, role: "platform_admin", organization: null, memberships };
+  if (platformRole === "platform_admin") {
+    const supportId = session.session.supportOrganizationId;
+    const agency = supportId ? await prisma.organization.findUnique({ where: { id: supportId }, select: { id: true, name: true, slug: true, logo: true } }) : null;
+    if (agency) {
+      return { user, role: "agency_admin", organization: { ...agency, role: "agency_admin" }, memberships, support: { organizationId: agency.id, name: agency.name } };
+    }
+    return { user, role: "platform_admin", organization: null, memberships };
+  }
 
   const active =
     memberships.find((m) => m.id === session.session.activeOrganizationId) ?? memberships[0] ?? null;

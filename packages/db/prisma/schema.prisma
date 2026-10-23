@@ -52,16 +52,18 @@ model User {
 }
 
 model Session {
-  id                   String   @id @db.VarChar(64)
-  token                String   @unique @db.VarChar(191)
-  expiresAt            DateTime
-  ipAddress            String?  @db.VarChar(64)
-  userAgent            String?  @db.Text
-  userId               String   @db.VarChar(64)
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activeOrganizationId String?  @db.VarChar(64)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                    String   @id @db.VarChar(64)
+  token                 String   @unique @db.VarChar(191)
+  expiresAt             DateTime
+  ipAddress             String?  @db.VarChar(64)
+  userAgent             String?  @db.Text
+  userId                String   @db.VarChar(64)
+  /// Platform admins only: the agency they're working in as support (set by the server, never by the client).
+  supportOrganizationId String?  @db.VarChar(64)
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganizationId  String?  @db.VarChar(64)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([userId])
   @@map("sessions")

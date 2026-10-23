@@ -1607,10 +1607,16 @@
       },
       "booking": {
         "create_for_agency": "Created a booking for an agency"
+      },
+      "support": {
+        "start": "Started support mode in an agency",
+        "stop": "Left support mode"
       }
     },
     "group_page": "Pages",
-    "group_comment": "Comments"
+    "group_comment": "Comments",
+    "group_booking": "Bookings",
+    "group_support": "Support mode"
   },
   "charts": {
     "showChart": "Chart",
@@ -2265,7 +2271,8 @@
     "newBookingHint": "The booking goes into {agency}'s queue as a new inquiry. Their team gets an email and a notification, and takes it from there.",
     "notifyCustomer": "Email the customer",
     "notifyCustomerHint": "Sends the 'inquiry received' email with the booking reference and how to sign in.",
-    "bookingSuspended": "This agency is suspended. Reactivate it before adding bookings."
+    "bookingSuspended": "This agency is suspended. Reactivate it before adding bookings.",
+    "openAsSupport": "Work as support"
   },
   "infographics": {
     "trustStripe": "Payments through Stripe",
@@ -2746,6 +2753,12 @@
     "emptyHint": "Try another search or clear the filters.",
     "source_booking_page": "booking page",
     "source_platform": "by StageDesk",
-    "source_lead": "lead"
+    "source_lead": "lead",
+    "open": "Open",
+    "openBooking": "Open booking {code} in support mode"
+  },
+  "supportMode": {
+    "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
+    "leave": "Leave support mode"
   }
 }

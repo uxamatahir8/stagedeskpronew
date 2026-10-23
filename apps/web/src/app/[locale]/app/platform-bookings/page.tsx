@@ -1,4 +1,4 @@
-import { CalendarCheckIcon, SearchIcon } from "lucide-react";
+import { ArrowRightIcon, CalendarCheckIcon, SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
+import { startSupportAction } from "@/lib/support-actions";
 import { requirePermission } from "@/lib/viewer";
 import { NewBookingPicker } from "./pick-agency";
 
@@ -111,6 +112,7 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/platform
                   <TableHead>{t("status")}</TableHead>
                   <TableHead className="text-right">{t("total")}</TableHead>
                   <TableHead>{t("created")}</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -146,6 +148,15 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/platform
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{b.totalCents ? euro(format, b.totalCents) : "—"}</TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">{format.dateTime(b.createdAt, { day: "numeric", month: "short", year: "numeric" })}</TableCell>
+                    <TableCell className="text-right">
+                      {/* Opens the booking inside its agency, in support mode. */}
+                      <form action={startSupportAction.bind(null, b.organization.id, `/app/bookings/${b.trackingCode}`)}>
+                        <Button type="submit" variant="ghost" size="sm" aria-label={t("openBooking", { code: b.trackingCode })}>
+                          {t("open")}
+                          <ArrowRightIcon />
+                        </Button>
+                      </form>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

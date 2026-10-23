@@ -120,4 +120,24 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await expect(row).toContainText("door StageDesk");
     await expect(row).toContainText("Aanvraag");
   });
+
+  await test.step("support mode opens the booking inside its agency and is left again", async () => {
+    const row = page.getByRole("row").filter({ hasText: `Klant Platform ${run}` });
+    await row.getByRole("button", { name: /in supportmodus/ }).click();
+    await expect(page).toHaveURL(/\/app\/bookings\/[A-Z2-9]{8}$/);
+    await expect(page.getByText("Supportmodus: je werkt in", { exact: false })).toBeVisible();
+    await expect(page.getByText(`Klant Platform ${run}`).first()).toBeVisible();
+
+    // Platform pages are closed while supporting; the agency's own pages are open.
+    await page.goto("/app/agencies");
+    await expect(page.getByText("Je hebt geen toegang", { exact: false })).toBeVisible();
+    await page.goto("/app/bookings");
+    await expect(page.getByText(`Klant Platform ${run}`).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Supportmodus verlaten" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Feestband Utrecht" })).toBeVisible();
+    await expect(page.getByText("Supportmodus: je werkt in", { exact: false })).toHaveCount(0);
+    await page.goto("/app/audit?group=support");
+    await expect(page.getByText("Supportmodus verlaten").first()).toBeVisible();
+  });
 });

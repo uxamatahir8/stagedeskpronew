@@ -1607,10 +1607,16 @@
       },
       "booking": {
         "create_for_agency": "Boeking aangemaakt voor een bureau"
+      },
+      "support": {
+        "start": "Supportmodus gestart in een bureau",
+        "stop": "Supportmodus verlaten"
       }
     },
     "group_page": "Pagina's",
-    "group_comment": "Reacties"
+    "group_comment": "Reacties",
+    "group_booking": "Boekingen",
+    "group_support": "Supportmodus"
   },
   "charts": {
     "showChart": "Grafiek",
@@ -2265,7 +2271,8 @@
     "newBookingHint": "De boeking komt als nieuwe aanvraag in de wachtrij van {agency}. Hun team krijgt een e-mail en een melding en neemt het daarna over.",
     "notifyCustomer": "Klant e-mailen",
     "notifyCustomerHint": "Verstuurt de e-mail 'aanvraag ontvangen' met het kenmerk van de boeking en hoe de klant inlogt.",
-    "bookingSuspended": "Dit bureau is opgeschort. Heractiveer het voordat je boekingen toevoegt."
+    "bookingSuspended": "Dit bureau is opgeschort. Heractiveer het voordat je boekingen toevoegt.",
+    "openAsSupport": "Werken als support"
   },
   "infographics": {
     "trustStripe": "Betalingen via Stripe",
@@ -2746,6 +2753,12 @@
     "emptyHint": "Probeer een andere zoekterm of wis de filters.",
     "source_booking_page": "boekingspagina",
     "source_platform": "door StageDesk",
-    "source_lead": "lead"
+    "source_lead": "lead",
+    "open": "Openen",
+    "openBooking": "Boeking {code} openen in supportmodus"
+  },
+  "supportMode": {
+    "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
+    "leave": "Supportmodus verlaten"
   }
 }

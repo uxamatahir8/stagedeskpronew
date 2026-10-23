@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CalendarCheckIcon, CalendarPlusIcon, CreditCardIcon, ExternalLinkIcon, EuroIcon, Music2Icon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarCheckIcon, CalendarPlusIcon, CreditCardIcon, ExternalLinkIcon, EuroIcon, LifeBuoyIcon, Music2Icon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
+import { startSupportAction } from "@/lib/support-actions";
 import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, eventDate } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
@@ -77,6 +78,12 @@ async function Agency({ params }: Pick<PageProps<"/[locale]/app/agencies/[id]">,
                 </Link>
               </Button>
             )}
+            <form action={startSupportAction.bind(null, org.id, "/app")}>
+              <Button type="submit" variant="outline">
+                <LifeBuoyIcon />
+                {t("openAsSupport")}
+              </Button>
+            </form>
             <Button asChild variant="outline">
               <a href={`/b/${org.slug}`} target="_blank" rel="noopener">
                 <ExternalLinkIcon />

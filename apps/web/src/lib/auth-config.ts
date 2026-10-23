@@ -73,6 +73,10 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
+    additionalFields: {
+      // Support mode for platform admins; written only by the server (lib/support.ts).
+      supportOrganizationId: { type: "string", required: false, input: false },
+    },
   },
 
   rateLimit: {
