@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
-import { approveDueCommissions, expireQuotes, prisma } from "@stagedesk/db";
+import { parseEcbRates } from "@stagedesk/core";
+import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, processStoredEvent, runAffiliatePayouts, runDuePayouts } from "@stagedesk/payments";
 import { sendReminders } from "./reminders";
@@ -49,6 +50,8 @@ const systemWorker = new Worker(
         for (const p of paid) await queuePayoutStatement(p.payoutId).catch((e) => console.error("[affiliates] statement email failed", e));
         return { paid: paid.length };
       }
+      case "exchange-rates":
+        return updateExchangeRates();
       case "retry-stripe-events": {
         // Picks up events whose immediate processing failed or never ran.
         if (!stripe) return { skipped: "Stripe not configured" };
@@ -66,6 +69,18 @@ const systemWorker = new Worker(
   },
   { connection },
 );
+
+const ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+
+/** The ECB publishes euro reference rates once a working day, around 16:00 CET. */
+async function updateExchangeRates() {
+  const response = await fetch(ECB_URL, { signal: AbortSignal.timeout(20_000) });
+  if (!response.ok) throw new Error(`ECB rates: HTTP ${response.status}`);
+  const parsed = parseEcbRates(await response.text());
+  if (!parsed) throw new Error("ECB rates: no rates in the response");
+  await saveExchangeRates(parsed.date, parsed.rates);
+  return { date: parsed.date, currencies: Object.keys(parsed.rates).length };
+}
 
 /** Emails the affiliate a statement listing every commission in the payout. */
 async function queuePayoutStatement(payoutId: string) {
@@ -102,6 +117,9 @@ await systemQueue.upsertJobScheduler("reminders", { every: 60 * 60_000 }, { name
 await systemQueue.upsertJobScheduler("payouts", { every: 60 * 60_000 }, { name: "payouts" });
 await systemQueue.upsertJobScheduler("approve-commissions", { every: 60 * 60_000 }, { name: "approve-commissions" });
 await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }, { name: "affiliate-payouts" });
+// Every six hours, and once at start so a fresh install has rates straight away.
+await systemQueue.upsertJobScheduler("exchange-rates", { every: 6 * 60 * 60_000 }, { name: "exchange-rates" });
+await systemQueue.add("exchange-rates", {}, { attempts: 3, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: 100 });
 await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 5 * 60_000 }, { name: "retry-stripe-events" });
 console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${(await getStripe()) ? "configured" : "not configured"}.`);
 

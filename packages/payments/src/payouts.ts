@@ -49,7 +49,7 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
         ? stripe.transfers.create(
             {
               amount: cents,
-              currency: "eur",
+              currency: booking.currency.toLowerCase(),
               destination,
               transfer_group: booking.id,
               source_transaction: payment.stripeChargeId!,

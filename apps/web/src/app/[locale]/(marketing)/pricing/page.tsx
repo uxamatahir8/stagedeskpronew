@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
-import { countLimits, featureFlags, feeRuleSchema, type FeeRule } from "@stagedesk/core";
+import { convertCents, countLimits, featureFlags, feeRuleSchema, type FeeRule } from "@stagedesk/core";
 import { container, CtaBand, FaqList, Proofs, SectionHeading } from "@/components/site/marketing-blocks";
 import { primaryCta } from "@/components/site/site-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { displayCurrency, siteRates } from "@/lib/display-currency";
 import { euro, percent } from "@/lib/format";
 import { jsonLd, pageMetadata } from "@/lib/seo";
 import { sitePlans, siteSettings } from "@/lib/site";
@@ -92,7 +93,7 @@ function feeCents(rule: FeeRule, amount: number) {
 
 async function Plans() {
   await connection();
-  const [t, tb, format, locale, plans, cta, { fees }] = await Promise.all([
+  const [t, tb, format, locale, plans, cta, { fees }, shown, { rates, date }] = await Promise.all([
     getTranslations("pricingPage"),
     getTranslations("billing"),
     getFormatter(),
@@ -100,7 +101,12 @@ async function Plans() {
     sitePlans(),
     primaryCta(),
     siteSettings(),
+    displayCurrency(),
+    siteRates(),
   ]);
+  // Prices are euros; a visitor who picked another currency sees an estimate at the ECB rate.
+  const converted = shown !== "EUR" && convertCents(100, "EUR", shown, rates) !== null;
+  const money = (cents: number) => (converted ? euro(format, convertCents(cents, "EUR", shown, rates)!, shown) : euro(format, cents));
   if (plans.length === 0) return <p className="text-muted-foreground">{t("noPlans")}</p>;
 
   const ruleOf = (p: (typeof plans)[number]) => {
@@ -111,7 +117,7 @@ async function Plans() {
     if (rule.type === "none") return short ? "—" : t("feeNone");
     const parts = [];
     if (rule.type === "percentage" || rule.type === "percentage_plus_fixed") parts.push(percent(format, rule.percentageBps));
-    if (rule.type === "fixed" || rule.type === "percentage_plus_fixed") parts.push(euro(format, rule.fixedCents));
+    if (rule.type === "fixed" || rule.type === "percentage_plus_fixed") parts.push(money(rule.fixedCents));
     return short ? parts.join(" + ") : t("feeLine", { fee: parts.join(" + ") });
   };
   const loc = (v: Record<string, string>) => v[locale] ?? v["nl"] ?? "";
@@ -130,10 +136,11 @@ async function Plans() {
       key: p.key,
       name: loc(p.name),
       description: loc(p.description),
-      monthly: euro(format, p.monthlyPriceCents),
-      yearly: euro(format, p.yearlyPriceCents),
-      yearlyPerMonth: euro(format, yearlyPerMonth),
-      savings: savings > 0 ? euro(format, savings) : null,
+      monthly: money(p.monthlyPriceCents),
+      yearly: money(p.yearlyPriceCents),
+      yearlyPerMonth: money(yearlyPerMonth),
+      savings: savings > 0 ? money(savings) : null,
+      billedInEuro: converted ? t("billedInEuro", { amount: euro(format, p.monthlyPriceCents) }) : null,
       savingsPercent: p.monthlyPriceCents > 0 && savings > 0 ? Math.round((savings / (p.monthlyPriceCents * 12)) * 100) : 0,
       // The admin's own feature list wins; without one, the list comes from the plan's limits.
       features: [...new Set(features)],
@@ -147,6 +154,7 @@ async function Plans() {
   return (
     <div className="grid gap-20">
       <PricingCards plans={cards} cta={cta} trialDays={Math.max(0, ...plans.map((p) => p.trialDays))} />
+      {converted && <p className="-mt-14 text-center text-sm text-muted-foreground">{t("convertedNote", { currency: shown, date: date ? format.dateTime(new Date(`${date}T12:00:00Z`), { day: "numeric", month: "long", year: "numeric" }) : "" })}</p>}
 
       <div className="grid gap-8">
         <SectionHeading title={t("compareTitle")} intro={t("compareIntro")} />
@@ -172,7 +180,7 @@ async function Plans() {
                 </th>
                 {plans.map((p) => (
                   <td key={p.id} className={cn(cell, "font-semibold")}>
-                    {euro(format, p.monthlyPriceCents)}
+                    {money(p.monthlyPriceCents)}
                   </td>
                 ))}
               </tr>
@@ -236,7 +244,9 @@ async function Plans() {
 /** What the platform fee comes to on a real booking, with the recommended plan's rule. */
 async function FeeExample() {
   await connection();
-  const [t, format, plans, { fees }] = await Promise.all([getTranslations("pricingPage"), getFormatter(), sitePlans(), siteSettings()]);
+  const [t, format, plans, { fees }, shown, { rates }] = await Promise.all([getTranslations("pricingPage"), getFormatter(), sitePlans(), siteSettings(), displayCurrency(), siteRates()]);
+  const converted = shown !== "EUR" && convertCents(100, "EUR", shown, rates) !== null;
+  const money = (cents: number) => (converted ? euro(format, convertCents(cents, "EUR", shown, rates)!, shown) : euro(format, cents));
   const plan = plans.find((p) => p.recommended) ?? plans[0];
   const parsed = plan ? feeRuleSchema.safeParse(plan.feeRule) : null;
   const rule = plan?.feeRule && parsed?.success ? parsed.data : fees.defaultRule;
@@ -254,18 +264,18 @@ async function FeeExample() {
             <dl className="grid gap-1.5 text-sm tabular-nums">
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">{t("feeExampleBooking")}</dt>
-                <dd>{euro(format, EXAMPLE_CENTS)}</dd>
+                <dd>{money(EXAMPLE_CENTS)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">{t("feeExampleFee")}</dt>
-                <dd>− {euro(format, fee)}</dd>
+                <dd>− {money(fee)}</dd>
               </div>
               <div className="flex justify-between gap-4 border-t pt-1.5 font-semibold">
                 <dt>{t("feeExampleRest")}</dt>
-                <dd>{euro(format, EXAMPLE_CENTS - fee)}</dd>
+                <dd>{money(EXAMPLE_CENTS - fee)}</dd>
               </div>
             </dl>
-            <p className="text-sm text-muted-foreground">{t("feeExampleBody", { amount: euro(format, EXAMPLE_CENTS), fee: euro(format, fee) })}</p>
+            <p className="text-sm text-muted-foreground">{t("feeExampleBody", { amount: money(EXAMPLE_CENTS), fee: money(fee) })}</p>
           </>
         )}
         <p className="text-sm text-muted-foreground">{t("feeExampleOffline")}</p>

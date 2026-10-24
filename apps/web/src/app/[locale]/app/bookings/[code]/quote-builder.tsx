@@ -46,6 +46,7 @@ export function QuoteBuilder({
   initialLines,
   defaultDepositBps,
   defaultExpiryDays,
+  currency,
   onDone,
 }: {
   bookingId: string;
@@ -54,6 +55,7 @@ export function QuoteBuilder({
   initialLines: Omit<BuilderLine, "key">[];
   defaultDepositBps: number;
   defaultExpiryDays: number;
+  currency: string;
   onDone: () => void;
 }) {
   const t = useTranslations("booking");
@@ -84,7 +86,7 @@ export function QuoteBuilder({
   const lineTotal = (l: BuilderLine) => {
     const q = parseQuantity(l.quantity);
     const p = parseEuros(l.unitPrice);
-    return q !== null && p !== null ? euro(format, Math.round((q * p) / 100)) : "—";
+    return q !== null && p !== null ? euro(format, Math.round((q * p) / 100), currency) : "—";
   };
 
   function addFromCatalog(item: CatalogItem) {
@@ -188,7 +190,7 @@ export function QuoteBuilder({
               {catalog.map((item) => (
                 <DropdownMenuItem key={item.id} onSelect={() => addFromCatalog(item)}>
                   <span className="flex-1">{item.name}</span>
-                  <span className="text-muted-foreground tabular-nums">{euro(format, item.unitPriceCents)}</span>
+                  <span className="text-muted-foreground tabular-nums">{euro(format, item.unitPriceCents, currency)}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -211,22 +213,22 @@ export function QuoteBuilder({
         <dl className="grid content-start gap-2 rounded-xl bg-muted/60 p-4 text-sm">
           <div className="flex justify-between">
             <dt>{t("subtotal")}</dt>
-            <dd className="tabular-nums">{euro(format, totals.subtotalCents)}</dd>
+            <dd className="tabular-nums">{euro(format, totals.subtotalCents, currency)}</dd>
           </div>
           {totals.vatGroups.map((g) => (
             <div key={g.rateBps} className="flex justify-between text-muted-foreground">
               <dt>{t("vatLine", { rate: percent(format, g.rateBps) })}</dt>
-              <dd className="tabular-nums">{euro(format, g.vatCents)}</dd>
+              <dd className="tabular-nums">{euro(format, g.vatCents, currency)}</dd>
             </div>
           ))}
           <div className="flex justify-between border-t pt-2 text-base font-semibold">
             <dt>{t("total")}</dt>
-            <dd className="tabular-nums">{euro(format, totals.totalCents)}</dd>
+            <dd className="tabular-nums">{euro(format, totals.totalCents, currency)}</dd>
           </div>
           {totals.depositCents > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <dt>{t("depositLine", { pct: depositPct.replace(".", ",") + "%" })}</dt>
-              <dd className="tabular-nums">{euro(format, totals.depositCents)}</dd>
+              <dd className="tabular-nums">{euro(format, totals.depositCents, currency)}</dd>
             </div>
           )}
         </dl>

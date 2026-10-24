@@ -118,7 +118,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
                 <CardTitle>{t("customerEvent.quote")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <QuoteTable quote={quote} />
+                <QuoteTable quote={quote} currency={booking.currency} />
               </CardContent>
             </Card>
           )}
@@ -177,7 +177,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
-                <p>{t("customerEvent.paidOf", { paid: euro(format, booking.paidCents), total: euro(format, booking.totalCents) })}</p>
+                <p>{t("customerEvent.paidOf", { paid: euro(format, booking.paidCents, booking.currency), total: euro(format, booking.totalCents, booking.currency) })}</p>
                 <PayPanel booking={booking} pay={payBookingAction.bind(null, booking.id, "event")} report={reportPaymentAction.bind(null, booking.id)} paid={query["paid"]} />
                 {booking.invoices.map((inv) => (
                   <Button key={inv.id} variant="outline" size="sm" asChild className="w-fit">

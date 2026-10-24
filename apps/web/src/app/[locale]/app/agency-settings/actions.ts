@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { isValidIban, normalizeIban } from "@stagedesk/core";
+import { currencies, isValidIban, normalizeIban } from "@stagedesk/core";
 import { getSetting, prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { auth } from "@/lib/auth";
@@ -35,6 +35,7 @@ const schema = z.object({
   postalCode,
   city: optionalText(96),
   brandColor,
+  currency: z.enum(currencies).default("EUR"),
 });
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -54,7 +55,11 @@ export async function saveAgency(_prev: FormState, form: FormData): Promise<Form
     return { fieldErrors: Object.fromEntries(Object.entries(keys).map(([f, k]) => [f, t(k as "required")])) };
   }
 
-  await updateOrganization(organization.id, parsed.data);
+  const { currency, ...details } = parsed.data;
+  await updateOrganization(organization.id, details);
+  // The currency isn't one of Better Auth's organization fields; existing bookings keep theirs.
+  await prisma.organization.update({ where: { id: organization.id }, data: { currency } });
+  revalidatePath("/[locale]/app", "layout");
   return { ok: true, message: t("saved") };
 }
 

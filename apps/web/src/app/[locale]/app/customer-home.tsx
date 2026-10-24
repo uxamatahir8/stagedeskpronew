@@ -33,8 +33,8 @@ export async function CustomerHome({ db, userId, agency }: { db: TenantDb; userI
     <>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard index={0} label={t("daysToGo")} value={days === null ? "—" : days < 0 ? t("past") : days} hint={eventDate(format, next.eventDate) ?? undefined} icon={CalendarHeartIcon} />
-        <StatCard index={1} label={t("paid")} value={euro(format, next.paidCents)} icon={CheckCircle2Icon} />
-        <StatCard index={2} label={t("due")} value={euro(format, Math.max(0, next.totalCents - next.paidCents))} icon={WalletIcon} />
+        <StatCard index={1} label={t("paid")} value={euro(format, next.paidCents, next.currency)} icon={CheckCircle2Icon} />
+        <StatCard index={2} label={t("due")} value={euro(format, Math.max(0, next.totalCents - next.paidCents), next.currency)} icon={WalletIcon} />
         <StatCard index={3} label={t("artist")} value={artist ?? "—"} hint={artist ? undefined : t("noArtistYet")} icon={Music2Icon} />
       </section>
       <Card>

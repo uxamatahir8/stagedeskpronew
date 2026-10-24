@@ -158,6 +158,12 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   article; without it English readers see the Dutch text with a notice. Starter content is Markdown in
   `packages/db/content` and is added by `pnpm db:seed` (or only that: `pnpm db:seed-content`); it never
   overwrites what was edited in the admin panel. Blog comments wait for approval under Pages → Blog comments.
+- **Currencies:** each agency picks the currency it works in (Agency settings). A booking copies it when it is
+  created, and its quotes, invoices, PDFs, emails, Stripe payments and payouts use it; changing the setting
+  only affects new bookings. Fixed platform-fee amounts are set in euros and converted at the day's rate when
+  a booking's fee is fixed. The worker fetches the ECB reference rates every six hours (`exchange_rates`).
+  Visitors can show website prices in their own currency (header menu, cookie `display_currency`); plans are
+  still billed in euros and the page says so.
 - **Website texts** (`/app/texts`, platform admin): every text of the website and the app, in both languages,
   grouped per page, with search. Changes are stored in `site_texts` and merged over `apps/web/messages/*.json`
   in `i18n/request.ts` (cached, tag `site-texts`). A change may only use the placeholders and tags of the original

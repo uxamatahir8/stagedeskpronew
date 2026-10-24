@@ -13,7 +13,7 @@ export interface QuoteTableData {
 }
 
 /** Quote lines and totals, as the agency, the customer and the public quote page see them. */
-export async function QuoteTable({ quote }: { quote: QuoteTableData }) {
+export async function QuoteTable({ quote, currency = "EUR" }: { quote: QuoteTableData; currency?: string }) {
   const [t, format] = await Promise.all([getTranslations("booking"), getFormatter()]);
   const vatGroups = (Array.isArray(quote.vatGroups) ? quote.vatGroups : []) as VatGroup[];
 
@@ -37,13 +37,13 @@ export async function QuoteTable({ quote }: { quote: QuoteTableData }) {
                 <td className="py-2">
                   {i.description}
                   <span className="block text-xs text-muted-foreground tabular-nums sm:hidden">
-                    {euro(format, i.unitPriceCents)} · {t("vat")} {percent(format, i.vatBps)}
+                    {euro(format, i.unitPriceCents, currency)} · {t("vat")} {percent(format, i.vatBps)}
                   </span>
                 </td>
                 <td className="py-2 text-right tabular-nums">{format.number(i.quantityHundredths / 100)}</td>
-                <td className="hidden py-2 text-right tabular-nums sm:table-cell">{euro(format, i.unitPriceCents)}</td>
+                <td className="hidden py-2 text-right tabular-nums sm:table-cell">{euro(format, i.unitPriceCents, currency)}</td>
                 <td className="hidden py-2 text-right tabular-nums sm:table-cell">{percent(format, i.vatBps)}</td>
-                <td className="py-2 text-right tabular-nums">{euro(format, i.subtotalCents)}</td>
+                <td className="py-2 text-right tabular-nums">{euro(format, i.subtotalCents, currency)}</td>
               </tr>
             ))}
           </tbody>
@@ -52,22 +52,22 @@ export async function QuoteTable({ quote }: { quote: QuoteTableData }) {
       <dl className="ml-auto grid w-full max-w-72 gap-1 text-sm">
         <div className="flex justify-between">
           <dt>{t("subtotal")}</dt>
-          <dd className="tabular-nums">{euro(format, quote.subtotalCents)}</dd>
+          <dd className="tabular-nums">{euro(format, quote.subtotalCents, currency)}</dd>
         </div>
         {vatGroups.map((g) => (
           <div key={g.rateBps} className="flex justify-between text-muted-foreground">
             <dt>{t("vatLine", { rate: percent(format, g.rateBps) })}</dt>
-            <dd className="tabular-nums">{euro(format, g.vatCents)}</dd>
+            <dd className="tabular-nums">{euro(format, g.vatCents, currency)}</dd>
           </div>
         ))}
         <div className="flex justify-between border-t pt-1 font-semibold">
           <dt>{t("total")}</dt>
-          <dd className="tabular-nums">{euro(format, quote.totalCents)}</dd>
+          <dd className="tabular-nums">{euro(format, quote.totalCents, currency)}</dd>
         </div>
         {quote.depositCents > 0 && (
           <div className="flex justify-between text-muted-foreground">
             <dt>{t("depositLine", { pct: percent(format, quote.depositBps) })}</dt>
-            <dd className="tabular-nums">{euro(format, quote.depositCents)}</dd>
+            <dd className="tabular-nums">{euro(format, quote.depositCents, currency)}</dd>
           </div>
         )}
       </dl>

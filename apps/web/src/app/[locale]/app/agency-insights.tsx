@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * The second half of the agency home: revenue booked vs collected, this
  * month's events, artist workload and plan usage.
  */
-export async function AgencyInsights({ organizationId, db, role }: { organizationId: string; db: TenantDb; role: Role }) {
+export async function AgencyInsights({ organizationId, db, role, currency }: { organizationId: string; db: TenantDb; role: Role; currency: string }) {
   const showMoney = can(role, "agency.payments");
   const showPlan = can(role, "agency.billing");
   const today = todayInNetherlands();
@@ -62,6 +62,7 @@ export async function AgencyInsights({ organizationId, db, role }: { organizatio
             <ColumnChart
               label={t("revenue")}
               unit="cents"
+              currency={currency}
               data={revenue}
               series={[
                 { key: "booked", label: t("booked"), color: "var(--chart-1)" },

@@ -50,6 +50,7 @@ async function AgencySettings() {
           postalCode: agency.postalCode ?? "",
           city: agency.city ?? "",
           brandColor: agency.brandColor ?? "",
+          currency: agency.currency,
         }}
       />
       <PaymentMethodsForm

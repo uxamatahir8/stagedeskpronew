@@ -153,7 +153,7 @@ async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/booki
                     <TableCell>
                       <BookingStatusBadge status={b.status as BookingStatus} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{b.totalCents ? euro(format, b.totalCents) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{b.totalCents ? euro(format, b.totalCents, b.currency) : "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

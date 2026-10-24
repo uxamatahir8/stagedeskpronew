@@ -109,6 +109,8 @@ model Organization {
   logo               String?                @db.Text
   metadata           String?                @db.Text
   kvkNumber          String?                @db.VarChar(16)
+  /// ISO 4217 code for quotes, invoices and payments; new bookings copy it.
+  currency           String                 @default("EUR") @db.VarChar(3)
   vatNumber          String?                @db.VarChar(20)
   contactEmail       String?                @db.VarChar(191)
   phone              String?                @db.VarChar(32)
@@ -315,6 +317,8 @@ model Booking {
   organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   /// Public reference, e.g. K7Q2M9XA.
   trackingCode      String              @unique @db.VarChar(8)
+  /// The agency's currency when the booking was made; all amounts on it are in this currency.
+  currency          String              @default("EUR") @db.VarChar(3)
   status            String              @default("inquiry") @db.VarChar(16)
   customerId        String?             @db.VarChar(64)
   customer          User?               @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
@@ -1334,4 +1338,16 @@ model SiteText {
 
   @@id([locale, key])
   @@map("site_texts")
+}
+
+/// Euro reference rates from the European Central Bank, fetched daily by the
+/// worker: one euro is `perEur` of the currency.
+model ExchangeRate {
+  currency  String   @id @db.VarChar(3)
+  perEur    Decimal  @db.Decimal(18, 8)
+  /// The ECB publication date of the rate.
+  rateDate  DateTime @db.Date
+  updatedAt DateTime @updatedAt
+
+  @@map("exchange_rates")
 }

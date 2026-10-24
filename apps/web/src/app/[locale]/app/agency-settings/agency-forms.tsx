@@ -1,7 +1,7 @@
 "use client";
 
 import { ImageUpIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useActionState, useRef, useTransition } from "react";
 import { toast } from "sonner";
 import { FormMessage } from "@/components/auth/auth-card";
@@ -9,12 +9,13 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { currencies } from "@stagedesk/core";
 import { useRouter } from "@/i18n/navigation";
 import type { FormState } from "@/lib/validation";
 import { removeLogo, saveAgency, uploadLogo } from "./actions";
 
 type Values = Record<
-  "name" | "kvkNumber" | "vatNumber" | "contactEmail" | "phone" | "website" | "addressLine" | "postalCode" | "city" | "brandColor",
+  "name" | "kvkNumber" | "vatNumber" | "contactEmail" | "phone" | "website" | "addressLine" | "postalCode" | "city" | "brandColor" | "currency",
   string
 >;
 
@@ -94,6 +95,8 @@ export function LogoForm({ name, logo }: { name: string; logo: string | null }) 
 
 export function AgencyForm({ values }: { values: Values }) {
   const t = useTranslations("agencySettings");
+  const locale = useLocale();
+  const currencyName = (code: string) => new Intl.DisplayNames([locale], { type: "currency" }).of(code) ?? code;
   const [state, action, pending] = useToastAction(saveAgency);
   const errors = state.fieldErrors ?? {};
 
@@ -118,6 +121,15 @@ export function AgencyForm({ values }: { values: Values }) {
           {field("name", { required: true, maxLength: 191, className: "sm:col-span-2" })}
           {field("kvkNumber", { inputMode: "numeric", maxLength: 8, placeholder: "12345678" })}
           {field("vatNumber", { maxLength: 20, placeholder: "NL123456789B01" })}
+          <FormField id="agency-currency" label={t("currency")} hint={t("currencyHint")} className="sm:col-span-2">
+            <select id="agency-currency" name="currency" defaultValue={values.currency} className="h-9 w-full rounded-md border bg-background px-3 text-sm sm:w-64">
+              {currencies.map((c) => (
+                <option key={c} value={c}>
+                  {c} · {currencyName(c)}
+                </option>
+              ))}
+            </select>
+          </FormField>
         </CardContent>
       </Card>
 

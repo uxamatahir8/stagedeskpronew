@@ -274,7 +274,7 @@ export function SiteSection({ section, data, preview = false, ctaHref, contactHr
                 {p.description && <p className="text-sm text-neutral-600">{p.description}</p>}
                 {section.showPrices && (
                   <p className="mt-2 text-2xl font-bold tabular-nums">
-                    {format.number(p.priceCents / 100, { style: "currency", currency: "EUR" })}
+                    {format.number(p.priceCents / 100, { style: "currency", currency: data.agency.currency })}
                     <span className="ml-1 text-sm font-normal text-neutral-500">{tu.has(p.unit as "hour") ? tu(p.unit as "hour") : ""}</span>
                   </p>
                 )}

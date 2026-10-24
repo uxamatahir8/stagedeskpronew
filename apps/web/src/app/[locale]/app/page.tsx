@@ -42,8 +42,8 @@ async function RoleHome() {
     const db = tenantDb(organization.id);
     body = (
       <>
-        <AgencyHome db={db} role={role} />
-        <AgencyInsights organizationId={organization.id} db={db} role={role} />
+        <AgencyHome db={db} role={role} currency={organization.currency} />
+        <AgencyInsights organizationId={organization.id} db={db} role={role} currency={organization.currency} />
       </>
     );
   } else if (role === "platform_admin") {

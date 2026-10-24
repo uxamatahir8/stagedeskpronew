@@ -30,7 +30,7 @@ export async function ArtistHome({ userId }: { userId: string }) {
         booking: {
           select: {
             trackingCode: true, eventType: true, eventDate: true, startTime: true, endTime: true, venueName: true, venueCity: true,
-            guestCount: true, totalCents: true, dos: true, donts: true, playlistUrl: true, organization: { select: { name: true } },
+            guestCount: true, totalCents: true, currency: true, dos: true, donts: true, playlistUrl: true, organization: { select: { name: true } },
           },
         },
       },
@@ -42,7 +42,9 @@ export async function ArtistHome({ userId }: { userId: string }) {
   ]);
   const requests = assignments.filter((a) => a.status === "pending");
   const gigs = assignments.filter((a) => a.status === "accepted");
-  const upcoming = gigs.reduce((sum, a) => sum + percentOf(a.booking.totalCents, a.shareBps), 0);
+  // In the currency of the next gig; gigs in another currency are left out of the sum.
+  const currency = gigs[0]?.booking.currency ?? "EUR";
+  const upcoming = gigs.filter((a) => a.booking.currency === currency).reduce((sum, a) => sum + percentOf(a.booking.totalCents, a.shareBps), 0);
   const next = gigs[0];
 
   return (
@@ -50,8 +52,8 @@ export async function ArtistHome({ userId }: { userId: string }) {
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard index={0} label={t("nextGig")} value={next ? (eventDate(format, next.booking.eventDate, "short") ?? "—") : "—"} hint={next ? next.booking.organization.name : t("noGigs")} icon={CalendarClockIcon} />
         <StatCard index={1} label={t("requests")} value={requests.length} icon={InboxIcon} />
-        <StatCard index={2} label={t("upcomingEarnings")} value={euro(format, upcoming)} hint={t("gigCount", { count: gigs.length })} icon={HandCoinsIcon} />
-        <StatCard index={3} label={t("paidThisYear")} value={euro(format, paid._sum.amountCents ?? 0)} icon={WalletIcon} />
+        <StatCard index={2} label={t("upcomingEarnings")} value={euro(format, upcoming, currency)} hint={t("gigCount", { count: gigs.length })} icon={HandCoinsIcon} />
+        <StatCard index={3} label={t("paidThisYear")} value={euro(format, paid._sum.amountCents ?? 0, currency)} icon={WalletIcon} />
       </section>
 
       {requests.length > 0 && (

@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/q
     include: {
       items: { orderBy: { position: "asc" } },
       organization: true,
-      booking: { select: { trackingCode: true, eventDate: true, customerId: true, organizationId: true, customer: { select: { name: true, email: true } } } },
+      booking: { select: { trackingCode: true, currency: true, eventDate: true, customerId: true, organizationId: true, customer: { select: { name: true, email: true } } } },
     },
   });
   if (!quote) return new Response("Not found", { status: 404 });
@@ -28,6 +28,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/q
   const a = quote.organization;
   const buffer = await renderBookingPdf("quote", pdfLocale(request), {
     agency: { name: a.name, addressLine: a.addressLine, postalCode: a.postalCode, city: a.city, contactEmail: a.contactEmail, kvkNumber: a.kvkNumber, vatNumber: a.vatNumber, brandColor: a.brandColor, logo: a.logo },
+    currency: quote.booking.currency,
     customer: quote.booking.customer,
     number: `${quote.booking.trackingCode}-${quote.version}`,
     issued: quote.sentAt ?? quote.createdAt,

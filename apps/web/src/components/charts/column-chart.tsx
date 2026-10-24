@@ -39,6 +39,7 @@ export function ColumnChart({
   unit,
   height = 200,
   label,
+  currency = "EUR",
 }: {
   series: ColumnSeries[];
   data: ColumnPoint[];
@@ -46,6 +47,8 @@ export function ColumnChart({
   height?: number;
   /** What the chart shows, for screen readers and the table caption. */
   label: string;
+  /** For money charts; euros unless the agency works in another currency. */
+  currency?: string;
 }) {
   const t = useTranslations("charts");
   const format = useFormatter();
@@ -54,7 +57,7 @@ export function ColumnChart({
   const [asTable, setAsTable] = useState(false);
 
   const empty = data.every((d) => d.values.every((v) => v === 0));
-  // Money is in cents; steps are chosen in euros so ticks read €0 / €2.5K / €5K.
+  // Money is in cents; steps are chosen in whole units so ticks read €0 / €2.5K / €5K.
   const scale = unit === "cents" ? 100 : 1;
   const step = niceStep(Math.max(0, ...data.flatMap((d) => d.values)) / scale, unit === "count") * scale;
   const max = step * 4;
@@ -62,7 +65,7 @@ export function ColumnChart({
   const ticks = empty ? [0] : [0, 1, 2, 3, 4].map((i) => i * step);
   const value = (v: number, compact = false) =>
     unit === "cents"
-      ? format.number(v / 100, { style: "currency", currency: "EUR", maximumFractionDigits: 0, ...(compact ? { notation: "compact" } : {}) })
+      ? format.number(v / 100, { style: "currency", currency, maximumFractionDigits: 0, ...(compact ? { notation: "compact" } : {}) })
       : format.number(v, compact ? { notation: "compact" } : {});
   const month = (m: string, style: "short" | "long") =>
     format.dateTime(new Date(`${m}-15T12:00:00Z`), style === "short" ? { month: "short" } : { month: "long", year: "numeric" });

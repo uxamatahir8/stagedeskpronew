@@ -3,8 +3,12 @@ import type { createFormatter } from "next-intl";
 /** next-intl's formatter, from getFormatter() on the server or useFormatter() in the browser. */
 type Formatter = ReturnType<typeof createFormatter>;
 
-export function euro(format: Formatter, cents: number) {
-  return format.number(cents / 100, { style: "currency", currency: "EUR" });
+/**
+ * An amount in cents as money. Bookings carry their own currency (the agency's
+ * when it was made); platform amounts such as plans and commissions are euros.
+ */
+export function euro(format: Formatter, cents: number, currency = "EUR") {
+  return format.number(cents / 100, { style: "currency", currency });
 }
 
 /** Basis points as a percentage, e.g. 2100 → "21%". */

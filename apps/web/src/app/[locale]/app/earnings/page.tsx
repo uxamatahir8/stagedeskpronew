@@ -49,7 +49,7 @@ async function Earnings() {
   const [assignments, ledger] = await Promise.all([
     prisma.bookingAssignment.findMany({
       where: { artistId: artist.id, status: "accepted", booking: { status: { in: [...done, ...upcoming] } } },
-      include: { booking: { select: { id: true, trackingCode: true, eventType: true, eventDate: true, status: true, totalCents: true } } },
+      include: { booking: { select: { id: true, trackingCode: true, currency: true, eventType: true, eventDate: true, status: true, totalCents: true } } },
       orderBy: { booking: { eventDate: "desc" } },
     }),
     prisma.ledgerEntry.findMany({
@@ -66,8 +66,12 @@ async function Earnings() {
     paidOut: ledgerFor(a.booking.id, ["transfer", "transfer_reversal"]),
     owed: ledgerFor(a.booking.id, ["owed_by_agency"]),
   }));
+  // Totals are in the currency most gigs are in; an artist working across currencies sees each gig in its own below.
+  const counts = new Map<string, number>();
+  for (const r of rows) counts.set(r.currency, (counts.get(r.currency) ?? 0) + 1);
+  const currency = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "EUR";
   const total = (pick: (r: (typeof rows)[number]) => number, statuses?: string[]) =>
-    rows.filter((r) => !statuses || statuses.includes(r.status)).reduce((sum, r) => sum + pick(r), 0);
+    rows.filter((r) => r.currency === currency && (!statuses || statuses.includes(r.status))).reduce((sum, r) => sum + pick(r), 0);
 
   return (
     <div className="grid gap-6">
@@ -82,10 +86,10 @@ async function Earnings() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard index={0} label={t("earned")} value={euro(format, total((r) => r.share, done))} icon={HandCoinsIcon} />
-        <StatCard index={1} label={t("paidOut")} value={euro(format, total((r) => r.paidOut))} icon={WalletIcon} />
-        <StatCard index={2} label={t("owed")} value={euro(format, total((r) => r.owed))} icon={HourglassIcon} />
-        <StatCard index={3} label={t("upcoming")} value={euro(format, total((r) => r.share, upcoming))} icon={CalendarClockIcon} />
+        <StatCard index={0} label={t("earned")} value={euro(format, total((r) => r.share, done), currency)} icon={HandCoinsIcon} />
+        <StatCard index={1} label={t("paidOut")} value={euro(format, total((r) => r.paidOut), currency)} icon={WalletIcon} />
+        <StatCard index={2} label={t("owed")} value={euro(format, total((r) => r.owed), currency)} icon={HourglassIcon} />
+        <StatCard index={3} label={t("upcoming")} value={euro(format, total((r) => r.share, upcoming), currency)} icon={CalendarClockIcon} />
       </div>
 
       <Card>
@@ -116,11 +120,11 @@ async function Earnings() {
                       <BookingStatusBadge status={r.status as BookingStatus} />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {euro(format, r.share)}
+                      {euro(format, r.share, r.currency)}
                       <div className="text-xs text-muted-foreground">{percent(format, r.shareBps)}</div>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{r.paidOut ? euro(format, r.paidOut) : "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.owed ? euro(format, r.owed) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.paidOut ? euro(format, r.paidOut, r.currency) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{r.owed ? euro(format, r.owed, r.currency) : "—"}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

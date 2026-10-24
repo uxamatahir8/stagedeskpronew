@@ -93,7 +93,7 @@ async function Payments() {
               <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div className="grid gap-0.5 text-sm">
                   <span className="font-medium">
-                    {euro(format, c.amountCents)} · {tm(c.method as "cash")}
+                    {euro(format, c.amountCents, organization.currency)} · {tm(c.method as "cash")}
                     {c.createdAt < overdueBefore && <Pill tone="warning" className="ml-2">{tc("overdue")}</Pill>}
                   </span>
                   <span className="text-muted-foreground">
@@ -112,9 +112,9 @@ async function Payments() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard index={0} label={t("received")} value={euro(format, received)} icon={ArrowDownLeftIcon} />
-        <StatCard index={1} label={t("paidOut")} value={euro(format, paidOut)} icon={ArrowUpRightIcon} />
-        <StatCard index={2} label={t("refunded")} value={euro(format, refunded)} icon={Undo2Icon} />
+        <StatCard index={0} label={t("received")} value={euro(format, received, organization.currency)} icon={ArrowDownLeftIcon} />
+        <StatCard index={1} label={t("paidOut")} value={euro(format, paidOut, organization.currency)} icon={ArrowUpRightIcon} />
+        <StatCard index={2} label={t("refunded")} value={euro(format, refunded, organization.currency)} icon={Undo2Icon} />
       </div>
 
       <Card>
@@ -150,15 +150,15 @@ async function Payments() {
                       <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, p.receivedAt, "short")}</TableCell>
                       <TableCell>{tm(p.method as "cash")}</TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {euro(format, p.amountCents)}
-                        {p.refundedCents > 0 && <div className="text-xs font-normal text-muted-foreground">−{euro(format, p.refundedCents)}</div>}
+                        {euro(format, p.amountCents, organization.currency)}
+                        {p.refundedCents > 0 && <div className="text-xs font-normal text-muted-foreground">−{euro(format, p.refundedCents, organization.currency)}</div>}
                       </TableCell>
                       <TableCell>
                         <Pill tone={s.tone}>{t(`status_${s.key}`)}</Pill>
                       </TableCell>
                       <TableCell className="text-right">
                         {refundable > 0 && (
-                          <RefundDialog paymentId={p.id} refundableCents={refundable} refundableLabel={euro(format, refundable)} online={p.method === "stripe"} />
+                          <RefundDialog paymentId={p.id} refundableCents={refundable} refundableLabel={euro(format, refundable, organization.currency)} online={p.method === "stripe"} />
                         )}
                       </TableCell>
                     </TableRow>

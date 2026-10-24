@@ -14,7 +14,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/i
   const { id } = await params;
   const invoice = await prisma.invoice.findUnique({
     where: { id },
-    include: { booking: { select: { organizationId: true, customerId: true, paidCents: true } }, organization: { select: { brandColor: true } } },
+    include: { booking: { select: { organizationId: true, customerId: true, paidCents: true, currency: true } }, organization: { select: { brandColor: true } } },
   });
   if (!invoice || !(await canOpenBooking(request, invoice.booking))) return new Response("Not found", { status: 404 });
 
@@ -22,6 +22,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/i
   const snap = invoice.data as unknown as InvoiceSnapshot;
   const buffer = await renderBookingPdf("invoice", pdfLocale(request), {
     agency: { ...snap.agency, brandColor: invoice.organization.brandColor },
+    currency: invoice.booking.currency,
     customer: snap.customer,
     number: invoice.number,
     issued: invoice.issuedAt,

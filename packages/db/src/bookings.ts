@@ -160,11 +160,14 @@ export async function createBooking(organizationId: string, input: NewBooking, a
       return await db.$transaction(async (tx) => {
         const id = randomUUID();
         const { eventDate, ...rest } = input;
+        // The booking keeps the currency the agency works in today.
+        const org = await tx.organization.findUnique({ where: { id: organizationId }, select: { currency: true } });
         await tx.booking.create({
           data: {
             ...rest,
             id,
             organizationId,
+            currency: org?.currency ?? "EUR",
             trackingCode: generateTrackingCode(),
             eventDate: eventDate ? toDateOnly(eventDate) : null,
             createdById: actorId,

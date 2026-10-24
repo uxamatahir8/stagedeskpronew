@@ -8,7 +8,7 @@ const link = (locale: Locale, path: string) => `${appUrl}${locale === "en" ? "/e
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
 const intl = (locale: Locale) => (locale === "en" ? "en-GB" : "nl-NL");
 const date = (locale: Locale, value: Date) => new Intl.DateTimeFormat(intl(locale), { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(value);
-const money = (locale: Locale, cents: number) => new Intl.NumberFormat(intl(locale), { style: "currency", currency: "EUR" }).format(cents / 100);
+const money = (locale: Locale, cents: number, currency = "EUR") => new Intl.NumberFormat(intl(locale), { style: "currency", currency }).format(cents / 100);
 
 // Lowercase, as they appear mid-sentence in emails.
 const eventNames: Record<Locale, Record<string, string>> = {
@@ -77,7 +77,7 @@ export async function sendReminders(queue: (job: EmailJob) => Promise<unknown>, 
     await queue({
       kind: "balanceDue",
       to: b.customer.email,
-      params: { locale, name: firstName(b.customer.name), amount: money(locale, b.totalCents - b.paidCents), date: date(locale, b.eventDate), agency: b.organization.name, url: link(locale, "/app/my-payments") },
+      params: { locale, name: firstName(b.customer.name), amount: money(locale, b.totalCents - b.paidCents, b.currency), date: date(locale, b.eventDate), agency: b.organization.name, url: link(locale, "/app/my-payments") },
     });
     sent++;
   }

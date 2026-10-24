@@ -56,7 +56,7 @@ export async function refundAction(paymentId: string, amount: string): Promise<A
     const { refunded } = await refundPayment(await getStripe(), { organizationId: organization.id, paymentId, amountCents: cents, actorId: viewer.user.id });
     await audit({ actorId: viewer.user.id, action: "payment.refund", agencyId: organization.id, targetType: "payment", targetId: paymentId, data: { cents: refunded } });
     revalidatePath("/[locale]/app", "layout");
-    return { ok: true, message: (await getTranslations("payments"))("refunded_", { amount: euro(await getFormatter(), refunded) }) };
+    return { ok: true, message: (await getTranslations("payments"))("refunded_", { amount: euro(await getFormatter(), refunded, organization.currency) }) };
   } catch (error) {
     return { ok: false, message: await paymentsErrorMessage(error) };
   }

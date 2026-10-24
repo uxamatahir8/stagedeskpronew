@@ -189,7 +189,7 @@ export async function agencyOverview(organizationId: string, now = new Date()) {
       where: { organizationId },
       orderBy: { createdAt: "desc" },
       take: 8,
-      select: { id: true, trackingCode: true, status: true, eventType: true, eventDate: true, totalCents: true, customer: { select: { name: true } } },
+      select: { id: true, trackingCode: true, status: true, eventType: true, eventDate: true, totalCents: true, currency: true, customer: { select: { name: true } } },
     }),
     prisma.auditEvent.findMany({ where: { agencyId: organizationId }, orderBy: { createdAt: "desc" }, take: 10 }),
   ]);
@@ -248,6 +248,7 @@ export async function listAllBookings({
         venueCity: true,
         source: true,
         totalCents: true,
+        currency: true,
         createdAt: true,
         createdById: true,
         organization: { select: { id: true, name: true } },

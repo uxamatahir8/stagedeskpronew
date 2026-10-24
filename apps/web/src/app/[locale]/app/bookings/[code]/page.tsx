@@ -132,7 +132,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       stageName: String(data["stageName"] ?? ""),
       reason: String(data["reason"] ?? ""),
       number: String(data["number"] ?? ""),
-      amount: typeof data["amountCents"] === "number" ? euro(format, data["amountCents"]) : "",
+      amount: typeof data["amountCents"] === "number" ? euro(format, data["amountCents"], booking.currency) : "",
     };
     return t.has(key) ? t(key, params) : e.type;
   };
@@ -208,7 +208,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   {booking.guestCount ? t("booking.guests", { count: booking.guestCount }) : "—"}
                 </Detail>
                 {booking.partnerName && <Detail label={t("newBooking.partnerName")}>{booking.partnerName}</Detail>}
-                {booking.budgetCents && <Detail label={t("newBooking.budget")}>{euro(format, booking.budgetCents)}</Detail>}
+                {booking.budgetCents && <Detail label={t("newBooking.budget")}>{euro(format, booking.budgetCents, booking.currency)}</Detail>}
                 {booking.budgetRange && isBudgetRange(booking.budgetRange) && (
                   <Detail label={t("bookingPage.budget")}>{t(`budgetRanges.${booking.budgetRange}`)}</Detail>
                 )}
@@ -258,7 +258,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
             </CardHeader>
             <CardContent className="grid gap-4">
               {shownQuote ? (
-                <QuoteTable quote={shownQuote} />
+                <QuoteTable quote={shownQuote} currency={booking.currency} />
               ) : (
                 <p className="text-sm text-muted-foreground">{t("booking.noQuote")}</p>
               )}
@@ -281,6 +281,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 }))}
                 defaultDepositBps={current?.depositBps ?? defaults.depositBps}
                 defaultExpiryDays={defaults.quoteExpiryDays}
+                currency={booking.currency}
               />
             </CardContent>
           </Card>
@@ -312,15 +313,15 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
             <CardContent className="grid gap-4">
               {booking.totalCents > 0 && (
                 <dl className="grid grid-cols-3 gap-3 text-sm">
-                  <Figure label={t("booking.total")} value={euro(format, booking.totalCents)} />
-                  <Figure label={t("booking.paid")} value={euro(format, booking.paidCents)} />
-                  <Figure label={t("booking.due")} value={euro(format, Math.max(0, booking.totalCents - booking.paidCents))} />
+                  <Figure label={t("booking.total")} value={euro(format, booking.totalCents, booking.currency)} />
+                  <Figure label={t("booking.paid")} value={euro(format, booking.paidCents, booking.currency)} />
+                  <Figure label={t("booking.due")} value={euro(format, Math.max(0, booking.totalCents - booking.paidCents), booking.currency)} />
                 </dl>
               )}
               {booking.paymentClaims.map((c) => (
                 <div key={c.id} className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4">
                   <p className="text-sm">
-                    <span className="font-medium">{t("paymentClaims.reportedTitle", { amount: euro(format, c.amountCents), method: t(`paymentMethods.${c.method as "cash"}`) })}</span>
+                    <span className="font-medium">{t("paymentClaims.reportedTitle", { amount: euro(format, c.amountCents, booking.currency), method: t(`paymentMethods.${c.method as "cash"}`) })}</span>
                     <br />
                     <span className="text-muted-foreground">
                       {t("paymentClaims.reportedDetail", { date: format.dateTime(c.paidOn, { day: "numeric", month: "long", timeZone: "UTC" }), reference: c.reference ?? "—" })}
@@ -341,13 +342,13 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                       </span>
                       <span className="flex items-center gap-3 tabular-nums">
                         <span className="text-muted-foreground">{eventDate(format, p.receivedAt, "short")}</span>
-                        <span className="font-medium">{euro(format, p.amountCents)}</span>
-                        {p.refundedCents > 0 && <span className="text-muted-foreground">−{euro(format, p.refundedCents)}</span>}
+                        <span className="font-medium">{euro(format, p.amountCents, booking.currency)}</span>
+                        {p.refundedCents > 0 && <span className="text-muted-foreground">−{euro(format, p.refundedCents, booking.currency)}</span>}
                         {canPay && p.kind !== "refund" && p.amountCents > p.refundedCents && (
                           <RefundDialog
                             paymentId={p.id}
                             refundableCents={p.amountCents - p.refundedCents}
-                            refundableLabel={euro(format, p.amountCents - p.refundedCents)}
+                            refundableLabel={euro(format, p.amountCents - p.refundedCents, booking.currency)}
                             online={p.method === "stripe"}
                           />
                         )}

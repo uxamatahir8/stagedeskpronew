@@ -16,6 +16,8 @@ export interface PricingCard {
   yearlyPerMonth: string;
   savings: string | null;
   savingsPercent: number;
+  /** Set when prices are shown converted: what is actually billed, in euros. */
+  billedInEuro: string | null;
   features: string[];
   limits: string[];
   fee: string;
@@ -54,7 +56,7 @@ export function PricingCards({ plans, cta, trialDays }: { plans: PricingCard[]; 
             <article
               key={p.key}
               className={cn(
-                "relative grid grid-rows-[auto_auto_auto_1fr_auto] gap-6 rounded-3xl border p-7",
+                "relative grid grid-rows-[auto_auto_auto_auto_1fr_auto] gap-6 rounded-3xl border p-7",
                 dark ? "border-transparent bg-[oklch(0.24_0.08_322)] text-white shadow-2xl shadow-primary/25 lg:-my-4 lg:py-11" : "bg-card",
               )}
             >
@@ -75,6 +77,7 @@ export function PricingCards({ plans, cta, trialDays }: { plans: PricingCard[]; 
                   {interval === "year" && p.savings && <span className={cn("ml-1 font-medium", dark ? "text-[oklch(0.85_0.15_150)]" : "text-success")}>{t("save", { amount: p.savings })}</span>}
                 </p>
               </div>
+              {p.billedInEuro && <p className={cn("-mt-4 text-xs", dark ? "text-white/60" : "text-muted-foreground")}>{p.billedInEuro}</p>}
               <Button asChild size="lg" variant={dark ? "default" : "outline"} className={cn("w-full", dark && "bg-[oklch(0.66_0.2_352)] text-white hover:bg-[oklch(0.6_0.2_352)]")}>
                 <Link href={cta.href}>
                   {cta.label}

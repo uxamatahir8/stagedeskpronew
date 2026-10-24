@@ -23,7 +23,7 @@ export async function PayPanel({
   report,
   paid,
 }: {
-  booking: { id: string; trackingCode: string; organizationId: string; customerId: string | null; status: string; totalCents: number; depositCents: number; paidCents: number };
+  booking: { id: string; trackingCode: string; organizationId: string; customerId: string | null; status: string; currency: string; totalCents: number; depositCents: number; paidCents: number };
   pay: () => Promise<RedirectResult>;
   report?: (input: ReportPaymentInput) => Promise<ActionResult>;
   paid?: string | string[];
@@ -44,7 +44,7 @@ export async function PayPanel({
   const pending = claims.find((c) => c.status === "pending");
   const lastRejected = !pending && claims[0]?.status === "rejected" ? claims[0] : null;
   const methods = [...(options.bank ? (["bank_transfer"] as const) : []), ...(options.cash ? (["cash"] as const) : [])];
-  const amount = euro(format, due.amountCents);
+  const amount = euro(format, due.amountCents, booking.currency);
   const date = (d: Date) => format.dateTime(d, { day: "numeric", month: "long", timeZone: "UTC" });
 
   return (
@@ -54,13 +54,13 @@ export async function PayPanel({
       {pending && (
         <p role="status" className="flex items-start gap-2 rounded-lg bg-info/10 px-3 py-2 text-sm">
           <ClockIcon className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
-          {t("claimPending", { amount: euro(format, pending.amountCents), date: date(pending.paidOn) })}
+          {t("claimPending", { amount: euro(format, pending.amountCents, booking.currency), date: date(pending.paidOn) })}
         </p>
       )}
       {lastRejected && (
         <p role="status" className="flex items-start gap-2 rounded-lg bg-warning/18 px-3 py-2 text-sm">
           <TriangleAlertIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-          {t("claimRejected", { amount: euro(format, lastRejected.amountCents), reason: lastRejected.rejectReason ?? "—" })}
+          {t("claimRejected", { amount: euro(format, lastRejected.amountCents, booking.currency), reason: lastRejected.rejectReason ?? "—" })}
         </p>
       )}
 

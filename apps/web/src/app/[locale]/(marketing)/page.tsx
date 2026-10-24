@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { displayCurrency, fromEuros } from "@/lib/display-currency";
 import { euro, percent } from "@/lib/format";
 import { jsonLd, pageMetadata } from "@/lib/seo";
 import { sitePlans, siteSettings } from "@/lib/site";
@@ -224,7 +225,11 @@ async function MoneySplit() {
 
 async function PricingTeaser() {
   await connection();
-  const [t, format, plans] = await Promise.all([getTranslations("landing"), getFormatter(), sitePlans()]);
+  const [t, format, plans, shown] = await Promise.all([getTranslations("landing"), getFormatter(), sitePlans(), displayCurrency()]);
+  const inShown = async (cents: number) => {
+    const c = await fromEuros(cents, shown);
+    return c === null ? euro(format, cents) : euro(format, c, shown);
+  };
   const cheapest = plans.reduce<number | null>((min, p) => (min === null || p.monthlyPriceCents < min ? p.monthlyPriceCents : min), null);
   const trial = Math.max(0, ...plans.map((p) => p.trialDays));
   return (
@@ -232,7 +237,7 @@ async function PricingTeaser() {
       <div className="grid gap-3">
         <h2 className="text-3xl font-bold tracking-tight text-balance">{t("pricingTitle")}</h2>
         <p className="text-lg text-muted-foreground">
-          {cheapest !== null ? t("pricingIntro", { price: euro(format, cheapest), days: trial }) : t("pricingIntroNoPlans")}
+          {cheapest !== null ? t("pricingIntro", { price: await inShown(cheapest), days: trial }) : t("pricingIntroNoPlans")}
         </p>
       </div>
       <Button asChild size="lg" className="w-fit">

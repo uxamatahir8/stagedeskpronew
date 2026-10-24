@@ -13,6 +13,8 @@ export interface ViewerOrganization {
   name: string;
   slug: string;
   logo: string | null;
+  /** ISO 4217; what new bookings and the agency's totals are in. */
+  currency: string;
   role: Role;
 }
 
@@ -39,7 +41,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   const rows = await prisma.member.findMany({
     where: { userId: session.user.id },
-    include: { organization: { select: { id: true, name: true, slug: true, logo: true } } },
+    include: { organization: { select: { id: true, name: true, slug: true, logo: true, currency: true } } },
     orderBy: { createdAt: "asc" },
   });
   const memberships: ViewerOrganization[] = rows
@@ -57,7 +59,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   const platformRole = session.user.platformRole;
   if (platformRole === "platform_admin") {
     const supportId = session.session.supportOrganizationId;
-    const agency = supportId ? await prisma.organization.findUnique({ where: { id: supportId }, select: { id: true, name: true, slug: true, logo: true } }) : null;
+    const agency = supportId ? await prisma.organization.findUnique({ where: { id: supportId }, select: { id: true, name: true, slug: true, logo: true, currency: true } }) : null;
     if (agency) {
       return { user, role: "agency_admin", organization: { ...agency, role: "agency_admin" }, memberships, support: { organizationId: agency.id, name: agency.name } };
     }

@@ -25,7 +25,7 @@ interface AttentionItem {
 }
 
 /** The agency's home: four headline figures and the queue of bookings that need someone to act. */
-export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
+export async function AgencyHome({ db, role, currency }: { db: TenantDb; role: Role; currency: string }) {
   const [t, ta, format, defaults] = await Promise.all([
     getTranslations("home"),
     getTranslations("attention"),
@@ -74,7 +74,7 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
     ...claims.map((c) => ({
       key: `c-${c.id}`,
       href: `/app/bookings/${c.booking.trackingCode}`,
-      text: ta("paymentReported", { name: name(c.booking), amount: euro(format, c.amountCents) }),
+      text: ta("paymentReported", { name: name(c.booking), amount: euro(format, c.amountCents, currency) }),
       detail: ta("confirmReceipt"),
       tone: "info" as const,
       icon: BanknoteIcon,
@@ -109,7 +109,7 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
       .map((b) => ({
         key: `p-${b.id}`,
         href: `/app/bookings/${b.trackingCode}`,
-        text: ta("balanceDue", { name: name(b), amount: euro(format, b.totalCents - b.paidCents) }),
+        text: ta("balanceDue", { name: name(b), amount: euro(format, b.totalCents - b.paidCents, currency) }),
         detail: eventDate(format, b.eventDate, "short") ?? undefined,
         tone: "warning" as const,
         icon: WalletIcon,
@@ -124,7 +124,7 @@ export async function AgencyHome({ db, role }: { db: TenantDb; role: Role }) {
         <StatCard index={0} label={t("stats.newInquiries")} value={newInquiries} icon={InboxIcon} />
         <StatCard index={1} label={t("stats.quotesExpiring")} value={quotesExpiring} icon={TimerIcon} />
         <StatCard index={2} label={t("stats.eventsThisWeek")} value={eventsThisWeek} icon={CalendarCheckIcon} />
-        <StatCard index={3} label={t("stats.collected")} value={collected ? euro(format, collected._sum.amountCents ?? 0) : "—"} icon={EuroIcon} />
+        <StatCard index={3} label={t("stats.collected")} value={collected ? euro(format, collected._sum.amountCents ?? 0, currency) : "—"} icon={EuroIcon} />
       </section>
 
       <Card>

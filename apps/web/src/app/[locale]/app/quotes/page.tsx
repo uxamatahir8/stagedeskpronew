@@ -39,7 +39,7 @@ async function Quotes() {
     db.quote.findMany({
       orderBy: { createdAt: "desc" },
       take: 200,
-      include: { booking: { select: { trackingCode: true, customer: { select: { name: true } } } } },
+      include: { booking: { select: { trackingCode: true, currency: true, customer: { select: { name: true } } } } },
     }),
   ]);
   const now = new Date();
@@ -78,7 +78,7 @@ async function Quotes() {
                     <TableCell className={q.status === "sent" && q.expiresAt < now ? "text-destructive" : undefined}>
                       {q.status === "sent" ? dateTime(format, q.expiresAt) : "—"}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{euro(format, q.totalCents)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{euro(format, q.totalCents, q.booking.currency)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

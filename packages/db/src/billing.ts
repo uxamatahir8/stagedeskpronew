@@ -7,10 +7,12 @@ import {
   parseLimits,
   type PlanLimits,
   resolveFeeRule,
+  feeRuleInCurrency,
   subscriptionAccess,
   type SubscriptionAccess,
 } from "@stagedesk/core";
 import { prisma } from "./client";
+import { exchangeRates } from "./rates";
 import { getSetting } from "./settings";
 import { tenantDb } from "./tenant";
 
@@ -82,11 +84,14 @@ export async function startTrial(organizationId: string, now = new Date()) {
 export async function effectiveFeeSnapshot(organizationId: string): Promise<FeeSnapshot> {
   const [fees, org, sub] = await Promise.all([
     getSetting("fees.platform"),
-    prisma.organization.findUnique({ where: { id: organizationId }, select: { feeRule: true } }),
+    prisma.organization.findUnique({ where: { id: organizationId }, select: { feeRule: true, currency: true } }),
     prisma.subscription.findUnique({ where: { organizationId }, include: { plan: { select: { feeRule: true } } } }),
   ]);
+  const rule = resolveFeeRule({ platform: fees.defaultRule, plan: parseFeeRule(sub?.plan.feeRule), agency: parseFeeRule(org?.feeRule) });
+  // Fixed amounts in the rule are euros; the booking is in the agency's currency.
+  const currency = org?.currency ?? "EUR";
   return {
-    rule: resolveFeeRule({ platform: fees.defaultRule, plan: parseFeeRule(sub?.plan.feeRule), agency: parseFeeRule(org?.feeRule) }),
+    rule: currency === "EUR" ? rule : feeRuleInCurrency(rule, currency, (await exchangeRates()).rates),
     stripeFeePaidBy: fees.stripeFeePaidBy,
   };
 }

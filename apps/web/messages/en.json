@@ -338,7 +338,9 @@
     "invalidEmail": "Enter a valid email address.",
     "invalidUrl": "Enter a full address, starting with https://",
     "invalidFile": "Upload a PNG, JPG or WebP image of at most 2 MB.",
-    "required": "This field is required."
+    "required": "This field is required.",
+    "currency": "Currency",
+    "currencyHint": "For quotes, invoices and payments. New bookings get this currency; existing bookings keep theirs."
   },
   "agencies": {
     "title": "Agencies",
@@ -1826,7 +1828,9 @@
       "role_artist": "an artist",
       "role_other": "something else"
     },
-    "languageCurrent": "Language: {language}. Choose another language"
+    "languageCurrent": "Language: {language}. Choose another language",
+    "currencyCurrent": "Prices in {currency}. Choose another currency",
+    "currencyHint": "Show prices in"
   },
   "landing": {
     "metaTitle": "Booking software for DJ and band agencies",
@@ -2082,7 +2086,9 @@
     "saveUpTo": "Up to {percent}% less per year",
     "feeExampleBooking": "Booking, paid online",
     "feeExampleFee": "Platform fee",
-    "feeExampleRest": "For you and your artist"
+    "feeExampleRest": "For you and your artist",
+    "billedInEuro": "Billed as {amount} a month",
+    "convertedNote": "Prices in {currency} are an estimate at the ECB rate of {date}. You pay in euros."
   },
   "forAgencies": {
     "eyebrow": "For DJ and band agencies",

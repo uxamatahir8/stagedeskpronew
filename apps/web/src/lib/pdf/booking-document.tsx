@@ -12,6 +12,8 @@ export interface PdfLine {
 export interface PdfData {
   kind: "quote" | "invoice";
   locale: "nl" | "en";
+  /** The booking's currency; euros when left out. */
+  currency?: string;
   labels: Record<
     | "title"
     | "number"
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
 });
 
 export function BookingDocument({ data }: { data: PdfData }) {
-  const nf = new Intl.NumberFormat(data.locale === "en" ? "en-NL" : "nl-NL", { style: "currency", currency: "EUR" });
+  const nf = new Intl.NumberFormat(data.locale === "en" ? "en-NL" : "nl-NL", { style: "currency", currency: data.currency ?? "EUR" });
   const pf = new Intl.NumberFormat(data.locale === "en" ? "en-NL" : "nl-NL", { style: "percent", maximumFractionDigits: 2 });
   const qf = new Intl.NumberFormat(data.locale === "en" ? "en-NL" : "nl-NL", { maximumFractionDigits: 2 });
   const df = new Intl.DateTimeFormat(data.locale === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" });

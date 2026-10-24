@@ -105,8 +105,8 @@ async function Agency({ params }: Pick<PageProps<"/[locale]/app/agencies/[id]">,
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard index={0} label={t("bookings")} value={bookingCount} hint={t("bookedValue", { amount: euro(format, stats.bookedCents) })} icon={CalendarCheckIcon} />
-        <StatCard index={1} label={t("received")} value={euro(format, stats.receivedCents)} hint={t("thisMonth", { amount: euro(format, stats.receivedMonthCents) })} icon={EuroIcon} />
+        <StatCard index={0} label={t("bookings")} value={bookingCount} hint={t("bookedValue", { amount: euro(format, stats.bookedCents, org.currency) })} icon={CalendarCheckIcon} />
+        <StatCard index={1} label={t("received")} value={euro(format, stats.receivedCents, org.currency)} hint={t("thisMonth", { amount: euro(format, stats.receivedMonthCents, org.currency) })} icon={EuroIcon} />
         <StatCard index={2} label={t("artists")} value={stats.artists} icon={Music2Icon} />
         <StatCard index={3} label={t("customers")} value={stats.customers} icon={UsersIcon} />
       </div>
@@ -224,7 +224,7 @@ async function Agency({ params }: Pick<PageProps<"/[locale]/app/agencies/[id]">,
                       </span>
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="tabular-nums">{b.totalCents ? euro(format, b.totalCents) : ""}</span>
+                      <span className="tabular-nums">{b.totalCents ? euro(format, b.totalCents, b.currency) : ""}</span>
                       <BookingStatusBadge status={b.status as BookingStatus} />
                     </span>
                   </li>

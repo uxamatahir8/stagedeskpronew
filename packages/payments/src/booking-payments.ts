@@ -39,7 +39,7 @@ export async function bookingCheckout(
       {
         quantity: 1,
         price_data: {
-          currency: "eur",
+          currency: booking.currency.toLowerCase(),
           unit_amount: due.amountCents,
           product_data: { name: `${label} · ${booking.organization.name} · ${booking.trackingCode}` },
         },

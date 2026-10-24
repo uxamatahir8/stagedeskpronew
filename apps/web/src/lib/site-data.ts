@@ -15,7 +15,7 @@ export async function loadSiteData(organizationId: string) {
   const [agency, artists, packages, reviews, fullyBooked] = await Promise.all([
     prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { name: true, slug: true, logo: true, city: true, contactEmail: true, phone: true, addressLine: true, postalCode: true, website: true },
+      select: { name: true, slug: true, logo: true, currency: true, city: true, contactEmail: true, phone: true, addressLine: true, postalCode: true, website: true },
     }),
     publicArtists(organizationId),
     prisma.serviceItem.findMany({ where: { organizationId, active: true }, orderBy: [{ position: "asc" }, { name: "asc" }], select: { id: true, name: true, description: true, unit: true, unitPriceCents: true, vatBps: true } }),

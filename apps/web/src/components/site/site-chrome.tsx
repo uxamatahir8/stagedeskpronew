@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { displayCurrency } from "@/lib/display-currency";
+import { CurrencySwitch } from "./currency-switch";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { sitePages, siteSettings } from "@/lib/site";
@@ -58,12 +60,13 @@ async function navEntries(): Promise<NavEntry[]> {
 
 async function HeaderActions() {
   await connection();
-  const [t, entries, cta] = await Promise.all([getTranslations("site"), navEntries(), primaryCta()]);
+  const [t, entries, cta, currency] = await Promise.all([getTranslations("site"), navEntries(), primaryCta(), displayCurrency()]);
   return (
     <>
       <NavLinks entries={entries} />
       <div className="ml-auto flex items-center gap-1">
         <LocaleSwitch />
+        <CurrencySwitch current={currency} />
         <ThemeToggle />
         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
           <Link href="/sign-in">{t("signIn")}</Link>

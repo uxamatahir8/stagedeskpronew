@@ -140,7 +140,7 @@ export async function sendQuoteAction(bookingId: string, input: z.input<typeof q
 async function emailQuote(quoteId: string, agencyName: string) {
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
-    select: { token: true, totalCents: true, expiresAt: true, booking: { select: { customer: { select: { name: true, email: true, locale: true } } } } },
+    select: { token: true, totalCents: true, expiresAt: true, booking: { select: { currency: true, customer: { select: { name: true, email: true, locale: true } } } } },
   });
   const customer = quote?.booking.customer;
   if (!quote || !customer) return;
@@ -153,7 +153,7 @@ async function emailQuote(quoteId: string, agencyName: string) {
       locale,
       name: customer.name.split(/\s+/)[0] ?? customer.name,
       agency: agencyName,
-      total: new Intl.NumberFormat(intl, { style: "currency", currency: "EUR" }).format(quote.totalCents / 100),
+      total: new Intl.NumberFormat(intl, { style: "currency", currency: quote.booking.currency }).format(quote.totalCents / 100),
       until: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(quote.expiresAt),
       url: absoluteUrl(locale, `/q/${quote.token}`),
     },

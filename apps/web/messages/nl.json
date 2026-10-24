@@ -338,7 +338,9 @@
     "invalidEmail": "Vul een geldig e-mailadres in.",
     "invalidUrl": "Vul een volledig adres in, beginnend met https://",
     "invalidFile": "Upload een PNG-, JPG- of WebP-afbeelding van maximaal 2 MB.",
-    "required": "Dit veld is verplicht."
+    "required": "Dit veld is verplicht.",
+    "currency": "Valuta",
+    "currencyHint": "Voor offertes, facturen en betalingen. Nieuwe boekingen krijgen deze valuta; bestaande boekingen houden hun valuta."
   },
   "agencies": {
     "title": "Bureaus",
@@ -1826,7 +1828,9 @@
       "role_artist": "een artiest",
       "role_other": "iets anders"
     },
-    "languageCurrent": "Taal: {language}. Kies een andere taal"
+    "languageCurrent": "Taal: {language}. Kies een andere taal",
+    "currencyCurrent": "Prijzen in {currency}. Kies een andere valuta",
+    "currencyHint": "Prijzen tonen in"
   },
   "landing": {
     "metaTitle": "Boekingssoftware voor DJ- en bandbureaus",
@@ -2082,7 +2086,9 @@
     "saveUpTo": "Tot {percent}% voordeliger per jaar",
     "feeExampleBooking": "Boeking, online betaald",
     "feeExampleFee": "Platformkosten",
-    "feeExampleRest": "Voor jou en je artiest"
+    "feeExampleRest": "Voor jou en je artiest",
+    "billedInEuro": "Gefactureerd als {amount} per maand",
+    "convertedNote": "Prijzen in {currency} zijn een schatting tegen de ECB-koers van {date}. Je betaalt in euro."
   },
   "forAgencies": {
     "eyebrow": "Voor DJ- en bandbureaus",

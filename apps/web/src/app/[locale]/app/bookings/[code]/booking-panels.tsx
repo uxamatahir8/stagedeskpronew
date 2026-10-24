@@ -191,6 +191,7 @@ export function QuoteControls({
   initialLines,
   defaultDepositBps,
   defaultExpiryDays,
+  currency,
 }: {
   bookingId: string;
   canQuote: boolean;
@@ -205,6 +206,7 @@ export function QuoteControls({
   initialLines: Omit<BuilderLine, "key">[];
   defaultDepositBps: number;
   defaultExpiryDays: number;
+  currency: string;
 }) {
   const t = useTranslations();
   const [building, setBuilding] = useState(false);
@@ -221,6 +223,7 @@ export function QuoteControls({
         initialLines={initialLines}
         defaultDepositBps={defaultDepositBps}
         defaultExpiryDays={defaultExpiryDays}
+        currency={currency}
         onDone={() => setBuilding(false)}
       />
     );

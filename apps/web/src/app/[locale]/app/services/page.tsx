@@ -28,7 +28,7 @@ export default async function ServicesPage({ params }: PageProps<"/[locale]/app/
 }
 
 async function Services() {
-  const { db } = await requireAgency("agency.quotes");
+  const { db, organization } = await requireAgency("agency.quotes");
   const [t, tu, format, locale, items, defaults] = await Promise.all([
     getTranslations("services"),
     getTranslations("units"),
@@ -64,7 +64,7 @@ async function Services() {
                       {s.description && <div className="text-sm text-muted-foreground">{s.description}</div>}
                     </TableCell>
                     <TableCell>{tu(s.unit as "hour")}</TableCell>
-                    <TableCell className="text-right tabular-nums">{euro(format, s.unitPriceCents)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{euro(format, s.unitPriceCents, organization.currency)}</TableCell>
                     <TableCell className="text-right tabular-nums">{percent(format, s.vatBps)}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">

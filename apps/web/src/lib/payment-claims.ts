@@ -35,7 +35,7 @@ export async function paymentOptions(organizationId: string): Promise<PaymentOpt
   };
 }
 
-const money = (locale: "nl" | "en", cents: number) => new Intl.NumberFormat(locale === "en" ? "en-GB" : "nl-NL", { style: "currency", currency: "EUR" }).format(cents / 100);
+const money = (locale: "nl" | "en", cents: number, currency = "EUR") => new Intl.NumberFormat(locale === "en" ? "en-GB" : "nl-NL", { style: "currency", currency }).format(cents / 100);
 const day = (locale: "nl" | "en", date: Date) => new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
 
 async function methodName(locale: "nl" | "en", method: string) {
@@ -45,7 +45,7 @@ async function methodName(locale: "nl" | "en", method: string) {
 
 /** The customer reported a payment: everyone on the desk is told to check it. */
 export async function announceClaim(claim: { organizationId: string; bookingId: string; amountCents: number; method: string }, customerName: string) {
-  const booking = await prisma.booking.findUniqueOrThrow({ where: { id: claim.bookingId }, select: { trackingCode: true } });
+  const booking = await prisma.booking.findUniqueOrThrow({ where: { id: claim.bookingId }, select: { trackingCode: true, currency: true } });
   const staff = await prisma.member.findMany({
     where: { organizationId: claim.organizationId, role: { in: ["agency_owner", "agency_admin", "agency_staff"] } },
     include: { user: { select: { email: true, locale: true } } },
@@ -55,7 +55,7 @@ export async function announceClaim(claim: { organizationId: string; bookingId: 
     deliver({
       kind: "paymentReported",
       to: m.user.email,
-      params: { locale, customer: customerName, amount: money(locale, claim.amountCents), method: await methodName(locale, claim.method), code: booking.trackingCode, url: absoluteUrl(locale, `/app/bookings/${booking.trackingCode}`) },
+      params: { locale, customer: customerName, amount: money(locale, claim.amountCents, booking.currency), method: await methodName(locale, claim.method), code: booking.trackingCode, url: absoluteUrl(locale, `/app/bookings/${booking.trackingCode}`) },
     });
   }
   await notify(
@@ -73,7 +73,7 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
     getSetting("payments.methods"),
     prisma.booking.findUniqueOrThrow({
       where: { id: payment.bookingId },
-      select: { trackingCode: true, totalCents: true, paidCents: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
+      select: { trackingCode: true, currency: true, totalCents: true, paidCents: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
     }),
   ]);
   if (!booking.customer || !booking.customerId) return;
@@ -87,11 +87,11 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
         name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,
         agency: booking.organization.name,
         code: booking.trackingCode,
-        amount: money(locale, payment.amountCents),
+        amount: money(locale, payment.amountCents, booking.currency),
         method: await methodName(locale, payment.method),
         date: day(locale, payment.receivedAt),
-        paid: money(locale, booking.paidCents),
-        remaining: money(locale, Math.max(0, booking.totalCents - booking.paidCents)),
+        paid: money(locale, booking.paidCents, booking.currency),
+        remaining: money(locale, Math.max(0, booking.totalCents - booking.paidCents), booking.currency),
         url: absoluteUrl(locale, "/app/my-payments"),
       },
     });
@@ -103,7 +103,7 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
 export async function announceRejected(claim: { bookingId: string; amountCents: number; rejectReason: string | null }) {
   const booking = await prisma.booking.findUniqueOrThrow({
     where: { id: claim.bookingId },
-    select: { trackingCode: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
+    select: { trackingCode: true, currency: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
   });
   if (!booking.customer || !booking.customerId) return;
   const locale = userLocale(booking.customer.locale);
@@ -115,7 +115,7 @@ export async function announceRejected(claim: { bookingId: string; amountCents: 
       name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,
       agency: booking.organization.name,
       code: booking.trackingCode,
-      amount: money(locale, claim.amountCents),
+      amount: money(locale, claim.amountCents, booking.currency),
       reason: claim.rejectReason ?? "",
       url: absoluteUrl(locale, "/app/my-payments"),
     },

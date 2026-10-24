@@ -179,7 +179,7 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
                     <TableCell>
                       <BookingStatusBadge status={b.status as BookingStatus} />
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{b.totalCents ? euro(format, b.totalCents) : "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{b.totalCents ? euro(format, b.totalCents, b.currency) : "—"}</TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">{format.dateTime(b.createdAt, { day: "numeric", month: "short", year: "numeric" })}</TableCell>
                     <TableCell className="text-right">
                       {/* Opens the booking inside its agency, in support mode. */}

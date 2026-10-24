@@ -40,7 +40,7 @@ async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-pay
     orderBy: { eventDate: { sort: "asc", nulls: "last" } },
     include: { payments: { orderBy: { receivedAt: "desc" } } },
   });
-  const payments = bookings.flatMap((b) => b.payments.map((p) => ({ ...p, trackingCode: b.trackingCode })));
+  const payments = bookings.flatMap((b) => b.payments.map((p) => ({ ...p, trackingCode: b.trackingCode, currency: b.currency })));
   payments.sort((a, b) => b.receivedAt.getTime() - a.receivedAt.getTime());
   const open = bookings.filter((b) => b.paidCents < b.totalCents);
 
@@ -72,7 +72,7 @@ async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-pay
                 </CardTitle>
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
-                <p>{t("customerEvent.paidOf", { paid: euro(format, b.paidCents), total: euro(format, b.totalCents) })}</p>
+                <p>{t("customerEvent.paidOf", { paid: euro(format, b.paidCents, b.currency), total: euro(format, b.totalCents, b.currency) })}</p>
                 <PayPanel booking={b} pay={payBookingAction.bind(null, b.id, "payments")} report={reportPaymentAction.bind(null, b.id)} />
               </CardContent>
             </Card>
@@ -105,7 +105,7 @@ async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-pay
                     <TableCell>
                       {t(`paymentKinds.${p.kind as "deposit"}`)} · {t(`paymentMethods.${p.method as "cash"}`)}
                     </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{euro(format, p.amountCents)}</TableCell>
+                    <TableCell className="text-right font-medium tabular-nums">{euro(format, p.amountCents, p.currency)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

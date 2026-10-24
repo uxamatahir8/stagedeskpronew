@@ -3,6 +3,7 @@ export * from "./affiliates";
 export * from "./bookings";
 export * from "./inquiries";
 export * from "./money";
+export * from "./currency";
 export * from "./pages";
 export * from "./plans";
 export * from "./quotes";

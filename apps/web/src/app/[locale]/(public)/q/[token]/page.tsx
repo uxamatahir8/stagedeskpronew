@@ -41,7 +41,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
     include: {
       items: { orderBy: { position: "asc" } },
       organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true } },
-      booking: { select: { id: true, customerId: true, trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true, customer: { select: { name: true } } } },
+      booking: { select: { id: true, customerId: true, currency: true, trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true, customer: { select: { name: true } } } },
     },
   });
   if (!quote) return <FormMessage>{t("quotePage.notFound")}</FormMessage>;
@@ -86,7 +86,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
 
       <Card>
         <CardContent>
-          <QuoteTable quote={quote} />
+          <QuoteTable quote={quote} currency={quote.booking.currency} />
         </CardContent>
       </Card>
 
@@ -104,7 +104,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
       ) : (
         <Card>
           <CardContent className="grid gap-4">
-            {quote.depositCents > 0 && <p className="text-sm">{t("quotePage.depositDue", { amount: euro(format, quote.depositCents) })}</p>}
+            {quote.depositCents > 0 && <p className="text-sm">{t("quotePage.depositDue", { amount: euro(format, quote.depositCents, quote.booking.currency) })}</p>}
             <AcceptQuoteForm token={token} defaultName={quote.booking.customer?.name ?? ""} />
           </CardContent>
         </Card>
