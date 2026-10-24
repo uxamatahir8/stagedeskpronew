@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { getSetting } from "@stagedesk/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PartnersNav } from "@/components/site/partners-nav";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { euro, percent } from "@/lib/format";
@@ -36,6 +37,7 @@ async function Partners() {
 
   return (
     <>
+      <PartnersNav current="overview" />
       <header className="grid max-w-2xl gap-4">
         <p className="text-sm font-medium text-primary">{t("eyebrow")}</p>
         <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
