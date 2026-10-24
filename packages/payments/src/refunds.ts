@@ -79,3 +79,27 @@ export async function refundPayment(
   ]);
   return { refunded: amount };
 }
+
+/**
+ * A refund made outside StageDesk (in the Stripe dashboard) still has to show
+ * on the booking. Records whatever Stripe refunded beyond what we already
+ * know; refunds made here were counted already, so this is then a no-op.
+ * Transfers are not reversed automatically; that stays with the platform admin.
+ */
+export async function syncChargeRefund(charge: Pick<Stripe.Charge, "id" | "amount_refunded">) {
+  const payment = await prisma.payment.findFirst({ where: { stripeChargeId: charge.id, kind: { not: "refund" } } });
+  if (!payment) return 0;
+  const extra = Math.min(charge.amount_refunded, payment.amountCents) - payment.refundedCents;
+  if (extra <= 0) return 0;
+  await prisma.$transaction([
+    prisma.payment.update({ where: { id: payment.id }, data: { refundedCents: { increment: extra } } }),
+    prisma.booking.update({ where: { id: payment.bookingId }, data: { paidCents: { decrement: extra } } }),
+    prisma.ledgerEntry.create({
+      data: { organizationId: payment.organizationId, bookingId: payment.bookingId, paymentId: payment.id, type: "refund", party: "customer", amountCents: extra, stripeObjectId: charge.id },
+    }),
+    prisma.bookingEvent.create({
+      data: { organizationId: payment.organizationId, bookingId: payment.bookingId, type: "refund", data: { amountCents: extra, source: "stripe" } },
+    }),
+  ]);
+  return extra;
+}

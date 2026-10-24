@@ -304,6 +304,11 @@
     "actions": "Actions"
   },
   "customers": {
+    "searchPlaceholder": "Search by name, email or phone",
+    "account": "Account",
+    "accountYes": "Has account",
+    "accountNo": "No account",
+    "bookings": "Bookings",
     "title": "Customers",
     "description": "People who book events with your agency.",
     "add": "Add customer",
@@ -316,7 +321,9 @@
     "emptyBody": "Customers appear here when you add them, or when they send an inquiry from your booking page.",
     "since": "Customer since",
     "already": "This person is already a customer of your agency.",
-    "notCustomer": "This person already works for your agency and can't be added as a customer."
+    "notCustomer": "This person already works for your agency and can't be added as a customer.",
+    "name": "Name",
+    "email": "Email"
   },
   "agencySettings": {
     "title": "Agency settings",
@@ -486,7 +493,14 @@
     "emptyBody": "New inquiries and bookings show up here.",
     "noDate": "No date yet",
     "noCustomer": "No customer",
-    "source": "Came in"
+    "source": "Came in",
+    "searchPlaceholder": "Search by customer, email, code, venue or city",
+    "payment": "Payment",
+    "paid_unpaid": "Nothing paid yet",
+    "paid_partly": "Partly paid",
+    "paid_paid": "Fully paid",
+    "paidSoFar": "{amount} paid",
+    "received": "Received"
   },
   "newBooking": {
     "title": "New booking",
@@ -620,7 +634,9 @@
     "version": "Version",
     "expires": "Valid until",
     "emptyTitle": "No quotes yet",
-    "emptyBody": "Quotes appear here once you send one from a booking."
+    "emptyBody": "Quotes appear here once you send one from a booking.",
+    "searchPlaceholder": "Search by customer, email, code or venue",
+    "sentOn": "Sent"
   },
   "calendar": {
     "title": "Calendar",
@@ -703,7 +719,8 @@
     "archive": "Archive",
     "archived": "Service archived.",
     "emptyTitle": "No services yet",
-    "emptyBody": "Add the things you usually quote for, like an hourly DJ rate or a light show."
+    "emptyBody": "Add the things you usually quote for, like an hourly DJ rate or a light show.",
+    "searchPlaceholder": "Search by name or description"
   },
   "gigs": {
     "title": "My gigs",
@@ -3092,7 +3109,15 @@
     "pagination": "Pages",
     "pageOf": "Page {page} of {pages} · {total} in total",
     "previous": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "search": "Search",
+    "allOf": "{label}: all",
+    "clear": "Clear",
+    "sortBy": "Sort by {column}",
+    "perPage": "Rows per page",
+    "perPageOption": "{count} per page",
+    "results": "{count, plural, one {# result} other {# results}}",
+    "noMatches": "Nothing found. Try another search or filter."
   },
   "notificationsPage": {
     "title": "Notifications",

@@ -18,7 +18,7 @@ export {
   PaymentsError,
   subscriptionCheckout,
 } from "./subscriptions";
-export { applyStripeAccount, connectDashboardLink, connectOnboardingLink } from "./connect";
+export { applyStripeAccount, connectDashboardLink, connectOnboardingLink, syncStripeAccount } from "./connect";
 export { amountDue, bookingCheckout, recordStripePayment } from "./booking-payments";
 export { payoutBooking, runDuePayouts } from "./payouts";
 export { refundPayment } from "./refunds";

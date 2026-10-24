@@ -6,6 +6,7 @@ import { getSetting, pendingPaymentClaims, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { ConnectCard } from "@/components/connect-card";
+import { refreshIncompleteAccount } from "@/lib/connect";
 import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -40,7 +41,7 @@ const sum = (rows: { amountCents: number }[]) => rows.reduce((total, r) => total
 async function Payments() {
   const { organization, db } = await requireAgency("agency.payments");
   const since = startOfMonth();
-  const [t, tm, format, account, payments, monthLedger, claims, tc, methods] = await Promise.all([
+  const [t, tm, format, storedAccount, payments, monthLedger, claims, tc, methods] = await Promise.all([
     getTranslations("payments"),
     getTranslations("paymentMethods"),
     getFormatter(),
@@ -59,6 +60,7 @@ async function Payments() {
     getTranslations("paymentClaims"),
     getSetting("payments.methods"),
   ]);
+  const account = (await refreshIncompleteAccount(storedAccount)) ? await db.connectedAccount.findFirst({ where: { artistId: null } }) : storedAccount;
   // A report older than the platform's confirmation window is flagged.
   const overdueBefore = daysAgo(methods.confirmWithinDays);
   const received = sum(payments.filter((p) => p.receivedAt >= since));

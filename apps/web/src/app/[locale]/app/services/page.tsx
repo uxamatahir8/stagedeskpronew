@@ -5,9 +5,8 @@ import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next
 import { getSetting } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent } from "@/components/ui/card";
+import { DataTable } from "@/components/list/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/i18n/routing";
 import { centsToInput, euro, percent } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
@@ -27,6 +26,8 @@ export default async function ServicesPage({ params }: PageProps<"/[locale]/app/
     </Suspense>
   );
 }
+
+const spec = { sorts: ["name", "unit", "price", "vat"], defaultDir: "asc" as const, filters: { unit: ["hour", "piece", "flat"] } };
 
 async function Services() {
   const { db, organization } = await requireAgency("agency.services");
@@ -49,50 +50,34 @@ async function Services() {
       {items.length === 0 ? (
         <EmptyState icon={TagIcon} title={t("emptyTitle")} description={t("emptyBody")} />
       ) : (
-        <Card>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("name")}</TableHead>
-                  <TableHead>{t("unit")}</TableHead>
-                  <TableHead className="text-right">{t("price")}</TableHead>
-                  <TableHead className="text-right">{t("vat")}</TableHead>
-                  <TableHead className="w-0" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell>
-                      <div className="font-medium">{s.name}</div>
-                      {s.description && <div className="text-sm text-muted-foreground">{s.description}</div>}
-                    </TableCell>
-                    <TableCell>{tu(s.unit as "hour")}</TableCell>
-                    <TableCell className="text-right tabular-nums">{euro(format, s.unitPriceCents, organization.currency)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{percent(format, s.vatBps)}</TableCell>
-                    <TableCell>
-                      <div className="flex justify-end gap-1">
-                        <ServiceDialog
-                          vatRates={defaults.vatRatesBps}
-                          service={{
-                            id: s.id,
-                            name: s.name,
-                            description: s.description ?? "",
-                            unit: s.unit as "hour",
-                            price: centsToInput(s.unitPriceCents, locale),
-                            vatBps: s.vatBps,
-                          }}
-                        />
-                        <ArchiveService id={s.id} />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <DataTable
+          spec={spec}
+          placeholder={t("searchPlaceholder")}
+          filters={[{ key: "unit", label: t("unit"), options: [...new Set(items.map((s) => s.unit))].map((u) => ({ value: u, label: tu(u as "hour") })) }]}
+          columns={[{ label: t("name"), sort: "name" }, { label: t("unit"), sort: "unit" }, { label: t("price"), sort: "price", align: "right" }, { label: t("vat"), sort: "vat", align: "right" }, { label: "", className: "w-0" }]}
+          rows={items.map((s) => ({
+            id: s.id,
+            text: `${s.name} ${s.description ?? ""}`,
+            values: { name: s.name, unit: tu(s.unit as "hour"), price: s.unitPriceCents, vat: s.vatBps },
+            facets: { unit: s.unit },
+            cells: [
+              <div key="n">
+                <div className="font-medium">{s.name}</div>
+                {s.description && <div className="max-w-md truncate text-sm text-muted-foreground">{s.description}</div>}
+              </div>,
+              tu(s.unit as "hour"),
+              euro(format, s.unitPriceCents, organization.currency),
+              percent(format, s.vatBps),
+              <div key="a" className="flex justify-end gap-1">
+                <ServiceDialog
+                  vatRates={defaults.vatRatesBps}
+                  service={{ id: s.id, name: s.name, description: s.description ?? "", unit: s.unit as "hour", price: centsToInput(s.unitPriceCents, locale), vatBps: s.vatBps }}
+                />
+                <ArchiveService id={s.id} />
+              </div>,
+            ],
+          }))}
+        />
       )}
     </div>
   );

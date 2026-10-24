@@ -1,17 +1,17 @@
-import { CalendarCheckIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { CalendarCheckIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import type { BookingStatus, EventType } from "@stagedesk/core";
+import { type BookingStatus, bookingStatuses, type EventType, eventTypes, listHref, pageWindow, parseListQuery } from "@stagedesk/core";
+import type { Prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { ServerTable } from "@/components/list/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
@@ -65,107 +65,113 @@ export default async function BookingsPage({ params, searchParams }: PageProps<"
   );
 }
 
+const spec = {
+  sorts: ["date", "created", "customer", "status", "total"],
+  // Newest first, so a fresh inquiry without a date is never buried at the end.
+  defaultSort: "created",
+  defaultDir: "desc" as const,
+  filters: { tab: ["open", "upcoming", "done", "closed"], status: [...bookingStatuses], type: [...eventTypes], paid: ["unpaid", "partly", "paid"] },
+};
+
 async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/bookings">, "searchParams">) {
   const { db } = await requireAgency("agency.bookings");
-  const sp = await searchParams;
-  const tab: Tab = typeof sp["tab"] === "string" && sp["tab"] in tabs ? (sp["tab"] as Tab) : "all";
-  const q = typeof sp["q"] === "string" ? sp["q"].trim().slice(0, 100) : "";
+  const query = parseListQuery(await searchParams, spec);
+  const tab = (query.filters.tab ?? "all") as Tab;
   const statuses = tabs[tab];
+  const and: Prisma.BookingWhereInput[] = [];
+  if (statuses) and.push({ status: { in: [...statuses] } });
+  if (query.filters.status) and.push({ status: query.filters.status });
+  if (query.filters.type) and.push({ eventType: query.filters.type });
+  if (query.filters.paid === "unpaid") and.push({ paidCents: { lte: 0 }, totalCents: { gt: 0 } });
+  if (query.filters.paid === "partly") and.push({ paidCents: { gt: 0 }, totalCents: { gt: db.booking.fields.paidCents } });
+  if (query.filters.paid === "paid") and.push({ totalCents: { gt: 0, lte: db.booking.fields.paidCents } });
+  if (query.q) {
+    and.push({
+      OR: [
+        { trackingCode: { contains: query.q.toUpperCase() } },
+        { customer: { OR: [{ name: { contains: query.q } }, { email: { contains: query.q } }] } },
+        { venueName: { contains: query.q } },
+        { venueCity: { contains: query.q } },
+      ],
+    });
+  }
+  const where: Prisma.BookingWhereInput = and.length ? { AND: and } : {};
+  const orderBy: Prisma.BookingOrderByWithRelationInput[] =
+    query.sort === "customer" ? [{ customer: { name: query.dir } }]
+    : query.sort === "status" ? [{ status: query.dir }, { eventDate: "asc" }]
+    : query.sort === "total" ? [{ totalCents: query.dir }]
+    : query.sort === "created" ? [{ createdAt: query.dir }]
+    : [{ eventDate: { sort: query.dir, nulls: "last" } }, { createdAt: "desc" }];
 
-  const [t, te, format, bookings] = await Promise.all([
+  const [t, te, tbs, format, total, any] = await Promise.all([
     getTranslations("bookings"),
     getTranslations("eventTypes"),
+    getTranslations("bookingStatus"),
     getFormatter(),
-    db.booking.findMany({
-      where: {
-        ...(statuses ? { status: { in: [...statuses] } } : {}),
-        ...(q
-          ? { OR: [{ trackingCode: { contains: q.toUpperCase() } }, { customer: { name: { contains: q } } }, { venueCity: { contains: q } }] }
-          : {}),
-      },
-      include: { customer: { select: { name: true } } },
-      orderBy: [{ eventDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
-      take: 200,
-    }),
+    db.booking.count({ where }),
+    db.booking.count(),
   ]);
+  const win = pageWindow(query, total);
+  const bookings = await db.booking.findMany({ where, orderBy, skip: win.skip, take: win.take, include: { customer: { select: { name: true } } } });
 
-  const href = (next: Partial<{ tab: Tab; q: string }>) => {
-    const params = new URLSearchParams();
-    const nextTab = next.tab ?? tab;
-    const nextQ = next.q ?? q;
-    if (nextTab !== "all") params.set("tab", nextTab);
-    if (nextQ) params.set("q", nextQ);
-    const s = params.toString();
-    return `/app/bookings${s ? `?${s}` : ""}`;
-  };
-
+  if (any === 0) return <EmptyState icon={CalendarCheckIcon} title={t("emptyTitle")} description={t("emptyBody")} />;
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav className="flex flex-wrap gap-1 rounded-lg bg-muted p-1" aria-label={t("status")}>
-          {(Object.keys(tabs) as Tab[]).map((key) => (
-            <Link
-              key={key}
-              href={href({ tab: key })}
-              aria-current={key === tab ? "page" : undefined}
-              className={cn(
-                "rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
-                key === tab && "bg-background text-foreground shadow-sm",
-              )}
-            >
-              {t(tabLabels[key])}
-            </Link>
-          ))}
-        </nav>
-        <form className="relative w-full sm:w-72" action="">
-          {tab !== "all" && <input type="hidden" name="tab" value={tab} />}
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input name="q" defaultValue={q} placeholder={t("search")} className="pl-8" aria-label={t("search")} />
-        </form>
-      </div>
-
-      {bookings.length === 0 ? (
-        <EmptyState icon={CalendarCheckIcon} title={t("emptyTitle")} description={t("emptyBody")} />
-      ) : (
-        <Card>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("customer")}</TableHead>
-                  <TableHead>{t("event")}</TableHead>
-                  <TableHead>{t("date")}</TableHead>
-                  <TableHead>{t("status")}</TableHead>
-                  <TableHead className="text-right">{t("total")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map((b) => (
-                  <TableRow key={b.id} className="relative">
-                    <TableCell>
-                      <Link href={`/app/bookings/${b.trackingCode}`} className="font-medium after:absolute after:inset-0 hover:underline">
-                        {b.customer?.name ?? t("noCustomer")}
-                      </Link>
-                      <div className="font-mono text-xs text-muted-foreground">{b.trackingCode}</div>
-                    </TableCell>
-                    <TableCell>
-                      <div>{te(b.eventType as EventType)}</div>
-                      {b.venueCity && <div className="text-sm text-muted-foreground">{b.venueCity}</div>}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">
-                      {eventDate(format, b.eventDate, "short") ?? <span className="text-muted-foreground">{t("noDate")}</span>}
-                    </TableCell>
-                    <TableCell>
-                      <BookingStatusBadge status={b.status as BookingStatus} />
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{b.totalCents ? euro(format, b.totalCents, b.currency) : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+      <nav className="flex w-fit flex-wrap gap-1 rounded-lg bg-muted p-1" aria-label={t("status")}>
+        {(Object.keys(tabs) as Tab[]).map((key) => (
+          <Link
+            key={key}
+            href={listHref("/app/bookings", query, { tab: key === "all" ? null : key, status: null }, spec)}
+            aria-current={key === tab ? "page" : undefined}
+            className={cn("rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground", key === tab && "bg-background text-foreground shadow-sm")}
+          >
+            {t(tabLabels[key])}
+          </Link>
+        ))}
+      </nav>
+      <ServerTable
+        spec={spec}
+        total={total}
+        count={bookings.length}
+        placeholder={t("searchPlaceholder")}
+        filters={[
+          { key: "status", label: t("status"), options: (statuses ?? bookingStatuses).map((s) => ({ value: s, label: tbs(s) })) },
+          { key: "type", label: t("event"), options: eventTypes.map((e) => ({ value: e, label: te(e) })) },
+          { key: "paid", label: t("payment"), options: (["unpaid", "partly", "paid"] as const).map((p) => ({ value: p, label: t(`paid_${p}`) })) },
+        ]}
+        columns={[
+          { label: t("customer"), sort: "customer" },
+          { label: t("event") },
+          { label: t("date"), sort: "date" },
+          { label: t("status"), sort: "status" },
+          { label: t("total"), sort: "total", align: "right" },
+          { label: t("received"), sort: "created" },
+        ]}
+      >
+        {bookings.map((b) => (
+          <TableRow key={b.id} className="relative">
+            <TableCell>
+              <Link href={`/app/bookings/${b.trackingCode}`} className="font-medium after:absolute after:inset-0 hover:underline">
+                {b.customer?.name ?? t("noCustomer")}
+              </Link>
+              <div className="font-mono text-xs text-muted-foreground">{b.trackingCode}</div>
+            </TableCell>
+            <TableCell>
+              <div>{te(b.eventType as EventType)}</div>
+              {(b.venueName || b.venueCity) && <div className="text-sm text-muted-foreground">{[b.venueName, b.venueCity].filter(Boolean).join(", ")}</div>}
+            </TableCell>
+            <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, b.eventDate, "short") ?? <span className="text-muted-foreground">{t("noDate")}</span>}</TableCell>
+            <TableCell>
+              <BookingStatusBadge status={b.status as BookingStatus} />
+            </TableCell>
+            <TableCell className="text-right tabular-nums">
+              {b.totalCents ? euro(format, b.totalCents, b.currency) : "—"}
+              {b.totalCents > 0 && b.paidCents > 0 && b.paidCents < b.totalCents && <div className="text-xs text-muted-foreground">{t("paidSoFar", { amount: euro(format, b.paidCents, b.currency) })}</div>}
+            </TableCell>
+            <TableCell className="whitespace-nowrap text-sm text-muted-foreground tabular-nums">{format.dateTime(b.createdAt, { day: "numeric", month: "short", year: "numeric" })}</TableCell>
+          </TableRow>
+        ))}
+      </ServerTable>
     </div>
   );
 }

@@ -3,6 +3,8 @@ import { signIn } from "./helpers";
 
 /** The platform admin manages agencies, partners and accounts by hand. */
 test("platform admin creates, finds, suspends and deletes an agency; adds and removes a partner and an admin", async ({ page }) => {
+  // A long walk through many admin pages; on a dev server each first visit compiles.
+  test.setTimeout(300_000);
   const run = Date.now().toString(36);
   const agency = `E2E Beheer ${run}`;
   const partner = `Piet Partner ${run}`;

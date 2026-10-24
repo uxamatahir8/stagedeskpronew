@@ -25,7 +25,7 @@ test("a bot that fills the hidden honeypot field gets a thank-you but creates no
   const owner = await (await browser.newContext()).newPage();
   await signIn(owner, "eigenaar@feestband.local");
   await owner.goto(`/app/bookings?q=${encodeURIComponent(name)}`);
-  await expect(owner.getByText("Geen boekingen")).toBeVisible();
+  await expect(owner.getByText("Niets gevonden", { exact: false })).toBeVisible();
 });
 
 /**

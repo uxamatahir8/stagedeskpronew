@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { getSetting, prisma, updateSetting } from "@stagedesk/db";
 import { recordStripePayment } from "./booking-payments";
 import { payoutBooking } from "./payouts";
-import { refundPayment } from "./refunds";
+import { refundPayment, syncChargeRefund } from "./refunds";
 import { agencyWithAccounts, cleanup, complete, confirmedBooking, fakeStripe, paidSession } from "./test/fixtures";
 import { processStoredEvent, receiveWebhook } from "./webhooks";
 
@@ -99,6 +99,21 @@ describe("booking money flow", () => {
     expect((transfers[0]!.params["metadata"] as { party: string }).party).toBe("agency");
     const owed = await prisma.ledgerEntry.findFirstOrThrow({ where: { bookingId: booking.id, type: "owed_by_agency" } });
     expect(owed).toMatchObject({ artistId: a.artistId, amountCents: 60_002 });
+  });
+
+  it("books a refund made in the Stripe dashboard once, and ignores refunds already made here", async () => {
+    const a = await agencyWithAccounts(`${run}e`, { artistConnected: true });
+    const { booking } = await confirmedBooking(a, "2027-06-12", may);
+    const { stripe } = fakeStripe();
+    await recordStripePayment(stripe, paidSession(a.organizationId, booking.id, 150_004, "balance"));
+    const payment = await prisma.payment.findFirstOrThrow({ where: { bookingId: booking.id } });
+    // Refunded here first: the webhook that follows adds nothing.
+    await refundPayment(stripe, { organizationId: a.organizationId, paymentId: payment.id, amountCents: 10_000, actorId: a.owner });
+    expect(await syncChargeRefund({ id: payment.stripeChargeId!, amount_refunded: 10_000 })).toBe(0);
+    // Another 5,000 refunded in the dashboard; repeating the event changes nothing.
+    expect(await syncChargeRefund({ id: payment.stripeChargeId!, amount_refunded: 15_000 })).toBe(5_000);
+    expect(await syncChargeRefund({ id: payment.stripeChargeId!, amount_refunded: 15_000 })).toBe(0);
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).paidCents).toBe(150_004 - 15_000);
   });
 
   it("holds the payout while a dispute is open", async () => {

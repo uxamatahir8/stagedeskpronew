@@ -9,7 +9,7 @@ async function fillPage(page: Page, slug: string, title: string, text: string) {
     await page.getByRole("tab", { name: tab }).click();
     await page.getByLabel("Titel", { exact: true }).fill(`${title}${suffix}`);
     await page.getByRole("button", { name: "Blok toevoegen" }).click();
-    await page.getByRole("menuitem", { name: "Tekst" }).click();
+    await page.getByRole("menuitem", { name: "Tekst", exact: true }).click();
     await page.getByLabel("Tekst", { exact: true }).last().fill(`${text}${suffix}`);
   }
 }

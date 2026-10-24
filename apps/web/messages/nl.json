@@ -304,6 +304,11 @@
     "actions": "Acties"
   },
   "customers": {
+    "searchPlaceholder": "Zoek op naam, e-mail of telefoon",
+    "account": "Account",
+    "accountYes": "Heeft account",
+    "accountNo": "Geen account",
+    "bookings": "Boekingen",
     "title": "Klanten",
     "description": "Mensen die evenementen boeken bij je bureau.",
     "add": "Klant toevoegen",
@@ -316,7 +321,9 @@
     "emptyBody": "Klanten verschijnen hier als je ze toevoegt, of als ze een aanvraag doen via je boekingspagina.",
     "since": "Klant sinds",
     "already": "Deze persoon is al klant van je bureau.",
-    "notCustomer": "Deze persoon werkt al voor je bureau en kan niet als klant worden toegevoegd."
+    "notCustomer": "Deze persoon werkt al voor je bureau en kan niet als klant worden toegevoegd.",
+    "name": "Naam",
+    "email": "E-mailadres"
   },
   "agencySettings": {
     "title": "Bureau-instellingen",
@@ -486,7 +493,14 @@
     "emptyBody": "Nieuwe aanvragen en boekingen verschijnen hier.",
     "noDate": "Nog geen datum",
     "noCustomer": "Geen klant",
-    "source": "Binnengekomen"
+    "source": "Binnengekomen",
+    "searchPlaceholder": "Zoek op klant, e-mail, code, locatie of plaats",
+    "payment": "Betaling",
+    "paid_unpaid": "Nog niets betaald",
+    "paid_partly": "Deels betaald",
+    "paid_paid": "Volledig betaald",
+    "paidSoFar": "{amount} betaald",
+    "received": "Ontvangen"
   },
   "newBooking": {
     "title": "Nieuwe boeking",
@@ -620,7 +634,9 @@
     "version": "Versie",
     "expires": "Geldig tot",
     "emptyTitle": "Nog geen offertes",
-    "emptyBody": "Offertes verschijnen hier zodra je er een verstuurt vanuit een boeking."
+    "emptyBody": "Offertes verschijnen hier zodra je er een verstuurt vanuit een boeking.",
+    "searchPlaceholder": "Zoek op klant, e-mail, code of locatie",
+    "sentOn": "Verstuurd"
   },
   "calendar": {
     "title": "Agenda",
@@ -703,7 +719,8 @@
     "archive": "Archiveren",
     "archived": "Dienst gearchiveerd.",
     "emptyTitle": "Nog geen diensten",
-    "emptyBody": "Voeg toe waar je meestal een offerte voor maakt, zoals een uurtarief voor een dj of een lichtshow."
+    "emptyBody": "Voeg toe waar je meestal een offerte voor maakt, zoals een uurtarief voor een dj of een lichtshow.",
+    "searchPlaceholder": "Zoek op naam of omschrijving"
   },
   "gigs": {
     "title": "Mijn optredens",
@@ -3092,7 +3109,15 @@
     "pagination": "Pagina's",
     "pageOf": "Pagina {page} van {pages} · {total} in totaal",
     "previous": "Vorige",
-    "next": "Volgende"
+    "next": "Volgende",
+    "search": "Zoeken",
+    "allOf": "{label}: alle",
+    "clear": "Wissen",
+    "sortBy": "Sorteren op {column}",
+    "perPage": "Rijen per pagina",
+    "perPageOption": "{count} per pagina",
+    "results": "{count, plural, one {# resultaat} other {# resultaten}}",
+    "noMatches": "Niets gevonden. Pas je zoekopdracht of filters aan."
   },
   "notificationsPage": {
     "title": "Meldingen",

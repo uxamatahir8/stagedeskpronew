@@ -3,6 +3,7 @@ import { Prisma, prisma } from "@stagedesk/db";
 import { adjustCommissionsForCharge, attributeSubscriptionPromo, recordInvoiceCommission } from "./affiliates";
 import { recordStripePayment } from "./booking-payments";
 import { applyStripeAccount } from "./connect";
+import { syncChargeRefund } from "./refunds";
 import { applyStripeSubscription } from "./subscriptions";
 
 /**
@@ -75,8 +76,12 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
     case "account.updated":
       await applyStripeAccount(event.data.object);
       return true;
-    case "charge.refunded":
-      return (await adjustCommissionsForCharge(event.data.object, "refund")) > 0;
+    case "charge.refunded": {
+      // A booking payment refunded in the Stripe dashboard, or a subscription invoice (commissions).
+      const booked = await syncChargeRefund(event.data.object);
+      const adjusted = await adjustCommissionsForCharge(event.data.object, "refund");
+      return booked > 0 || adjusted > 0;
+    }
     case "charge.dispute.created":
     case "charge.dispute.closed": {
       const dispute = event.data.object;

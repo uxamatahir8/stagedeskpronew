@@ -17,6 +17,7 @@ import type { Locale } from "@/i18n/routing";
 import { euro, eventDate, percent } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { artistDashboardAction, connectArtistAction } from "./actions";
+import { refreshIncompleteAccount } from "@/lib/connect";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/earnings">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "earnings" });
@@ -44,6 +45,9 @@ async function Earnings() {
     prisma.artist.findFirst({ where: { organizationId: organization.id, userId: viewer.user.id }, include: { connectedAccount: true } }),
   ]);
   if (!artist) return <EmptyState icon={HandCoinsIcon} title={t("title")} description={t("noProfile")} />;
+  if (await refreshIncompleteAccount(artist.connectedAccount)) {
+    artist.connectedAccount = await prisma.connectedAccount.findUnique({ where: { id: artist.connectedAccount!.id } });
+  }
 
   // The artist's own bookings at this agency; shares are a fixed percentage of the booking total.
   const [assignments, ledger] = await Promise.all([

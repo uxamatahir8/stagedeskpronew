@@ -61,3 +61,8 @@ export async function applyStripeAccount(account: Stripe.Account) {
 export async function connectDashboardLink(stripe: Stripe, stripeAccountId: string) {
   return (await stripe.accounts.createLoginLink(stripeAccountId)).url;
 }
+
+/** Reads an account straight from Stripe, for when someone returns from onboarding before the webhook arrives. */
+export async function syncStripeAccount(stripe: Stripe, stripeAccountId: string) {
+  await applyStripeAccount(await stripe.accounts.retrieve(stripeAccountId));
+}
