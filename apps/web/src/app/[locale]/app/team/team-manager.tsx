@@ -22,11 +22,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import { cancelInvitationAction, inviteMemberAction, removeMemberAction, updateMemberRoleAction } from "./actions";
 import { useRouter } from "@/i18n/navigation";
 
 const invitable = ["agency_admin", "agency_staff", "artist"] as const;
 const assignable = ["agency_owner", "agency_admin", "agency_staff", "artist"] as const;
+
+const memberSpec = { sorts: ["name", "role", "joined"], defaultSort: "joined", defaultDir: "asc" as const, filters: { role: ["agency_owner", "agency_admin", "agency_staff", "artist", "customer"] } };
 
 interface MemberRow {
   id: string;
@@ -35,6 +38,8 @@ interface MemberRow {
   email: string;
   role: string;
   joined: string;
+  /** For sorting. */
+  joinedAt: number;
 }
 
 interface InvitationRow {
@@ -171,55 +176,47 @@ export function TeamTables({
           <CardTitle>{t("team.members")}</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("team.name")}</TableHead>
-                <TableHead>{t("team.role")}</TableHead>
-                <TableHead>{t("team.joined")}</TableHead>
-                <TableHead className="w-0 text-right">
-                  <span className="sr-only">{t("team.actions")}</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {members.map((m) => (
-                <TableRow key={m.id}>
-                  <TableCell>
-                    <div className="font-medium">
-                      {m.name}
-                      {m.userId === viewerUserId && <span className="ml-1.5 text-muted-foreground">({t("team.you")})</span>}
-                    </div>
-                    <div className="text-sm text-muted-foreground">{m.email}</div>
-                  </TableCell>
-                  <TableCell>
-                    {canManage(m) ? (
-                      <Select value={m.role} onValueChange={(role) => changeRole(m, role)}>
-                        <SelectTrigger size="sm" className="w-44" aria-label={t("team.role")}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {assignable
-                            .filter((r) => isOwner || r !== "agency_owner")
-                            .map((r) => (
-                              <SelectItem key={r} value={r}>
-                                {t(`roles.${r}`)}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Pill tone={m.role === "agency_owner" ? "brand" : "neutral"}>{t(`roles.${m.role as Role}`)}</Pill>
-                    )}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">{m.joined}</TableCell>
-                  <TableCell className="text-right">
-                    {canManage(m) && <RemoveButton name={m.name} onConfirm={() => remove(m)} />}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable
+            spec={memberSpec}
+            placeholder={t("team.search")}
+            filters={[{ key: "role", label: t("team.role"), options: [...new Set(members.map((m) => m.role))].map((r) => ({ value: r, label: t(`roles.${r as Role}`) })) }]}
+            columns={[{ label: t("team.name"), sort: "name" }, { label: t("team.role"), sort: "role" }, { label: t("team.joined"), sort: "joined" }, { label: <span className="sr-only">{t("team.actions")}</span>, align: "right", className: "w-0" }]}
+            rows={members.map((m) => ({
+              id: m.id,
+              text: `${m.name} ${m.email}`,
+              values: { name: m.name, role: t(`roles.${m.role as Role}`), joined: m.joinedAt },
+              facets: { role: m.role },
+              cells: [
+                <div key="n">
+                  <div className="font-medium">
+                    {m.name}
+                    {m.userId === viewerUserId && <span className="ml-1.5 text-muted-foreground">({t("team.you")})</span>}
+                  </div>
+                  <div className="text-sm text-muted-foreground">{m.email}</div>
+                </div>,
+                canManage(m) ? (
+                  <Select key="r" value={m.role} onValueChange={(role) => changeRole(m, role)}>
+                    <SelectTrigger size="sm" className="w-44" aria-label={t("team.role")}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assignable
+                        .filter((r) => isOwner || r !== "agency_owner")
+                        .map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {t(`roles.${r}`)}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Pill key="r" tone={m.role === "agency_owner" ? "brand" : "neutral"}>{t(`roles.${m.role as Role}`)}</Pill>
+                ),
+                m.joined,
+                canManage(m) ? <RemoveButton key="x" name={m.name} onConfirm={() => remove(m)} /> : null,
+              ],
+            }))}
+          />
         </CardContent>
       </Card>
 

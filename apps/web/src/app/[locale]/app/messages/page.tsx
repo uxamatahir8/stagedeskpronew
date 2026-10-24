@@ -7,7 +7,6 @@ import { conversations } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Pill } from "@/components/status-badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -15,6 +14,7 @@ import { eventDate } from "@/lib/format";
 import { conversationScope } from "@/lib/messages";
 import { cn } from "@/lib/utils";
 import { requirePermission } from "@/lib/viewer";
+import { CardList } from "@/components/list/data-table";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/messages">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "messages" });
@@ -30,6 +30,8 @@ export default async function MessagesPage({ params }: PageProps<"/[locale]/app/
   );
 }
 
+const spec = { sorts: ["latest", "event"], defaultSort: "latest", defaultDir: "desc" as const, filters: { unread: ["yes"], channel: ["customer", "artist"] } };
+
 async function Conversations() {
   const viewer = await requirePermission("messages");
   const scope = conversationScope(viewer);
@@ -42,13 +44,23 @@ async function Conversations() {
       {list.length === 0 ? (
         <EmptyState icon={MessagesSquareIcon} title={t("noConversations")} description={t(desk ? "noConversationsDesk" : "noConversationsHint")} />
       ) : (
-        <Card>
-          <CardContent className="px-0">
-            <ul className="divide-y">
-              {list.map((c) => {
-                const title = desk ? (c.channel === "customer" ? (c.booking.customer?.name ?? c.booking.trackingCode) : t("withArtist")) : c.booking.organization.name;
-                return (
-                  <li key={`${c.booking.id}-${c.channel}`}>
+        <CardList
+          spec={spec}
+          placeholder={t("searchPlaceholder")}
+          className="divide-y overflow-hidden rounded-xl border bg-card"
+          sorts={[{ key: "latest", label: t("sortLatest") }, { key: "event", label: t("sortEvent") }]}
+          filters={[
+            { key: "unread", label: t("filterUnread"), options: [{ value: "yes", label: t("onlyUnread") }] },
+            ...(desk ? [{ key: "channel", label: t("filterChannel"), options: ["customer", "artist"].map((ch) => ({ value: ch, label: t(`channel_${ch as "customer"}`) })) }] : []),
+          ]}
+          items={list.map((c) => {
+            const title = desk ? (c.channel === "customer" ? (c.booking.customer?.name ?? c.booking.trackingCode) : t("withArtist")) : c.booking.organization.name;
+            return {
+              id: `${c.booking.id}-${c.channel}`,
+              text: `${title} ${c.booking.trackingCode} ${c.last.body}`,
+              values: { latest: c.last.createdAt.getTime(), event: c.booking.eventDate?.getTime() ?? null },
+              facets: { unread: c.unread > 0 ? "yes" : "no", channel: c.channel },
+              node: (
                     <Link
                       href={`/app/messages/${c.booking.trackingCode}?channel=${c.channel}`}
                       className="grid gap-1 px-6 py-3 hover:bg-accent/40 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-4"
@@ -76,12 +88,10 @@ async function Conversations() {
                         )}
                       </span>
                     </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </CardContent>
-        </Card>
+              ),
+            };
+          })}
+        />
       )}
     </div>
   );

@@ -2,10 +2,11 @@ import { ArrowRightIcon, CalendarCheckIcon, CircleCheckIcon, SearchIcon } from "
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { bookingStatuses, type BookingStatus } from "@stagedesk/core";
+import { bookingStatuses, type BookingStatus, parseListQuery } from "@stagedesk/core";
 import { bookingSources, type BookingSource, listAllBookings, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
-import { FilterChips, Pager } from "@/components/list-controls";
+import { FilterChips } from "@/components/list-controls";
+import { ListPager, SortHead } from "@/components/list/list-controls";
 import { PageHeader } from "@/components/page-header";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export default async function AdminBookingsPage({ params, searchParams }: PagePr
   );
 }
 
+const spec = { sorts: ["created", "date", "total", "status"], defaultSort: "created", defaultDir: "desc" as const };
+
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bookings">, "searchParams">) {
@@ -48,13 +51,14 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
   // Set after a platform admin created a booking, to confirm it and offer to open it.
   const created = one(sp["created"]);
   const page = Math.max(1, Number.parseInt(one(sp["page"]) ?? "1", 10) || 1);
+  const lq = parseListQuery(sp, spec);
   // Platform-wide view: deliberately not tenant-scoped.
   const [t, ts, te, format, list, agencies] = await Promise.all([
     getTranslations("adminBookings"),
     getTranslations("bookingStatus"),
     getTranslations("eventTypes"),
     getFormatter(),
-    listAllBookings({ q, status, organizationId: agencyId, source, page }),
+    listAllBookings({ q, status, organizationId: agencyId, source, page, pageSize: lq.size, sort: lq.sort as "date", dir: lq.dir }),
     prisma.organization.findMany({ where: { suspendedAt: null }, select: { id: true, name: true, city: true }, orderBy: { name: "asc" } }),
   ]);
   const createdBooking = created
@@ -138,12 +142,12 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("booking")}</TableHead>
+                  <SortHead spec={spec} column="date">{t("booking")}</SortHead>
                   <TableHead>{t("agency")}</TableHead>
                   <TableHead>{t("customer")}</TableHead>
-                  <TableHead>{t("status")}</TableHead>
-                  <TableHead className="text-right">{t("total")}</TableHead>
-                  <TableHead>{t("created")}</TableHead>
+                  <SortHead spec={spec} column="status">{t("status")}</SortHead>
+                  <SortHead spec={spec} column="total" align="right">{t("total")}</SortHead>
+                  <SortHead spec={spec} column="created">{t("created")}</SortHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -197,7 +201,7 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
           </CardContent>
         </Card>
       )}
-      <Pager page={page} pages={list.pages} total={list.total} href={(p) => href({ page: p })} />
+      <ListPager spec={spec} total={list.total} />
     </div>
   );
 }

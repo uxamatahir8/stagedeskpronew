@@ -9,7 +9,7 @@ import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
@@ -85,6 +85,9 @@ async function Pages({ searchParams }: Pick<PageProps<"/[locale]/app/pages">, "s
   );
 }
 
+const pageSpec = { sorts: ["order", "title", "placement", "live"], defaultSort: "order", defaultDir: "asc" as const, filters: { status: ["published", "draft"], kind: ["legal", "page"], placement: [] as string[] } };
+const waitSpec = { sorts: ["joined", "email", "source"], defaultSort: "joined", defaultDir: "desc" as const, filters: { role: ["agency", "artist", "other"] } };
+
 async function PageList() {
   const [t, format, locale, pages, columns] = await Promise.all([
     getTranslations("pageBuilder"),
@@ -101,51 +104,49 @@ async function PageList() {
     return c ? (locale === "en" ? c.titleEn : c.titleNl) : id;
   };
   if (pages.length === 0) return <EmptyState icon={FileTextIcon} title={t("empty")} />;
+  // Footer columns are the admin’s own, so the placements to filter on come from the pages.
+  const spec = { ...pageSpec, filters: { ...pageSpec.filters, placement: [...new Set(pages.map((p) => p.placement))] } };
+  const placementLabel = (placement: string) => (placement.startsWith("footer_") ? t("placement_footer", { column: columnTitle(placement.slice(7)) }) : t(`placement_${placement as "none"}`));
   return (
-    <Card>
-      <CardContent className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("page")}</TableHead>
-              <TableHead>{t("placement")}</TableHead>
-              <TableHead>{t("status")}</TableHead>
-              <TableHead>{t("live")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {pages.map((p) => {
-              const latest = p.versions[0];
-              const content = parsePageContent(latest?.content);
-              const ahead = latest && p.publishedVersion && latest.number > p.publishedVersion.number;
-              return (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <Link href={`/app/pages/${p.id}`} className="font-medium underline-offset-4 hover:underline">
-                      {content?.[locale as Locale].title ?? p.slugEn}
-                    </Link>
-                    <div className="font-mono text-xs text-muted-foreground">
-                      /{p.slugNl} · /en/{p.slugEn}
-                    </div>
-                  </TableCell>
-                  <TableCell>{p.placement.startsWith("footer_") ? t("placement_footer", { column: columnTitle(p.placement.slice(7)) }) : t(`placement_${p.placement as "none"}`)}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      <Pill tone={p.status === "published" ? "success" : "neutral"}>{t(`status_${p.status as "draft"}`)}</Pill>
-                      {p.kind === "legal" && <Pill tone="brand">{t("legal")}</Pill>}
-                      {ahead && <Pill tone="warning">{t("unpublishedChanges")}</Pill>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap tabular-nums">
-                    {p.publishedVersion?.publishedAt ? `v${p.publishedVersion.number} · ${format.dateTime(p.publishedVersion.publishedAt, { day: "numeric", month: "short", year: "numeric" })}` : "—"}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <DataTable
+      spec={spec}
+      placeholder={t("searchPlaceholder")}
+      filters={[
+        { key: "status", label: t("status"), options: ["published", "draft"].map((v) => ({ value: v, label: t(`status_${v as "draft"}`) })) },
+        { key: "kind", label: t("kind"), options: [{ value: "legal", label: t("legal") }, { value: "page", label: t("kindPage") }] },
+        { key: "placement", label: t("placement"), options: [...new Set(pages.map((p) => p.placement))].map((v) => ({ value: v, label: placementLabel(v) })) },
+      ]}
+      columns={[{ label: t("page"), sort: "title" }, { label: t("placement"), sort: "placement" }, { label: t("status") }, { label: t("live"), sort: "live" }]}
+      rows={pages.map((p) => {
+        const latest = p.versions[0];
+        const content = parsePageContent(latest?.content);
+        const ahead = latest && p.publishedVersion && latest.number > p.publishedVersion.number;
+        const title = content?.[locale as Locale].title ?? p.slugEn;
+        return {
+          id: p.id,
+          text: `${title} ${p.slugNl} ${p.slugEn}`,
+          values: { title, placement: placementLabel(p.placement), live: p.publishedVersion?.publishedAt?.getTime() ?? null, order: `${p.placement}-${String(p.position).padStart(4, "0")}` },
+          facets: { status: p.status, kind: p.kind === "legal" ? "legal" : "page", placement: p.placement },
+          cells: [
+            <div key="t">
+              <Link href={`/app/pages/${p.id}`} className="font-medium underline-offset-4 hover:underline">
+                {title}
+              </Link>
+              <div className="font-mono text-xs text-muted-foreground">
+                /{p.slugNl} · /en/{p.slugEn}
+              </div>
+            </div>,
+            placementLabel(p.placement),
+            <div key="s" className="flex flex-wrap gap-1">
+              <Pill tone={p.status === "published" ? "success" : "neutral"}>{t(`status_${p.status as "draft"}`)}</Pill>
+              {p.kind === "legal" && <Pill tone="brand">{t("legal")}</Pill>}
+              {ahead && <Pill tone="warning">{t("unpublishedChanges")}</Pill>}
+            </div>,
+            p.publishedVersion?.publishedAt ? `v${p.publishedVersion.number} · ${format.dateTime(p.publishedVersion.publishedAt, { day: "numeric", month: "short", year: "numeric" })}` : "—",
+          ],
+        };
+      })}
+    />
   );
 }
 
@@ -182,36 +183,30 @@ async function Comments() {
 }
 
 async function Waitlist() {
-  const [t, format, entries] = await Promise.all([getTranslations("pageBuilder"), getFormatter(), prisma.waitlistEntry.findMany({ orderBy: { createdAt: "desc" }, take: 200 })]);
+  const [t, format, entries] = await Promise.all([getTranslations("pageBuilder"), getFormatter(), prisma.waitlistEntry.findMany({ orderBy: { createdAt: "desc" }, take: 5000 })]);
   if (entries.length === 0) return <EmptyState icon={FileTextIcon} title={t("noWaitlist")} />;
   return (
-    <Card>
-      <CardContent className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("email")}</TableHead>
-              <TableHead>{t("role")}</TableHead>
-              <TableHead>{t("source")}</TableHead>
-              <TableHead>{t("joined")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.map((e) => (
-              <TableRow key={e.id}>
-                <TableCell>
-                  {e.email}
-                  {e.name && <div className="text-xs text-muted-foreground">{e.name}</div>}
-                </TableCell>
-                <TableCell>{t(`role_${e.role as "agency"}`)}</TableCell>
-                <TableCell className="font-mono text-xs">{e.source ?? "—"}</TableCell>
-                <TableCell className="whitespace-nowrap tabular-nums">{format.dateTime(e.createdAt, { day: "numeric", month: "short", year: "numeric" })}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <DataTable
+      spec={waitSpec}
+      placeholder={t("waitlistSearch")}
+      filters={[{ key: "role", label: t("role"), options: [...new Set(entries.map((e) => e.role))].map((r) => ({ value: r, label: t(`role_${r as "agency"}`) })) }]}
+      columns={[{ label: t("email"), sort: "email" }, { label: t("role") }, { label: t("source"), sort: "source" }, { label: t("joined"), sort: "joined" }]}
+      rows={entries.map((e) => ({
+        id: e.id,
+        text: `${e.email} ${e.name ?? ""} ${e.source ?? ""}`,
+        values: { email: e.email, source: e.source, joined: e.createdAt.getTime() },
+        facets: { role: e.role },
+        cells: [
+          <div key="e">
+            {e.email}
+            {e.name && <div className="text-xs text-muted-foreground">{e.name}</div>}
+          </div>,
+          t(`role_${e.role as "agency"}`),
+          <span key="s" className="font-mono text-xs">{e.source ?? "—"}</span>,
+          format.dateTime(e.createdAt, { day: "numeric", month: "short", year: "numeric" }),
+        ],
+      }))}
+    />
   );
 }
 

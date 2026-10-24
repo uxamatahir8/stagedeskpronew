@@ -1,10 +1,12 @@
 import { CheckCircle2Icon, InboxIcon, SearchIcon, SendIcon, XCircleIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { parseListQuery } from "@stagedesk/core";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { leadStatuses, listLeads, type LeadStatus } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
-import { FilterChips, Pager } from "@/components/list-controls";
+import { FilterChips } from "@/components/list-controls";
+import { ListPager, SortHead } from "@/components/list/list-controls";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
@@ -33,6 +35,8 @@ export default async function LeadsPage({ params, searchParams }: PageProps<"/[l
   );
 }
 
+const spec = { sorts: ["created", "date", "name"], defaultSort: "created", defaultDir: "desc" as const };
+
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 async function Leads({ searchParams }: Pick<PageProps<"/[locale]/app/leads">, "searchParams">) {
@@ -42,7 +46,8 @@ async function Leads({ searchParams }: Pick<PageProps<"/[locale]/app/leads">, "s
   const requested = one(sp["status"]) as LeadStatus | undefined;
   const status = requested && leadStatuses.includes(requested) ? requested : null;
   const page = Math.max(1, Number.parseInt(one(sp["page"]) ?? "1", 10) || 1);
-  const [t, te, format, list] = await Promise.all([getTranslations("leads"), getTranslations("eventTypes"), getFormatter(), listLeads({ q, status, page })]);
+  const lq = parseListQuery(sp, spec);
+  const [t, te, format, list] = await Promise.all([getTranslations("leads"), getTranslations("eventTypes"), getFormatter(), listLeads({ q, status, page, pageSize: lq.size, sort: lq.sort as "date", dir: lq.dir })]);
   const href = (patch: { status?: LeadStatus | null; page?: number }) => {
     const next = new URLSearchParams();
     const s = patch.status === undefined ? status : patch.status;
@@ -101,11 +106,11 @@ async function Leads({ searchParams }: Pick<PageProps<"/[locale]/app/leads">, "s
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("request")}</TableHead>
-                  <TableHead>{t("customer")}</TableHead>
+                  <SortHead spec={spec} column="date">{t("request")}</SortHead>
+                  <SortHead spec={spec} column="name">{t("customer")}</SortHead>
                   <TableHead>{t("statusLabel")}</TableHead>
                   <TableHead>{t("agencies")}</TableHead>
-                  <TableHead>{t("received")}</TableHead>
+                  <SortHead spec={spec} column="created">{t("received")}</SortHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,7 +154,7 @@ async function Leads({ searchParams }: Pick<PageProps<"/[locale]/app/leads">, "s
           </CardContent>
         </Card>
       )}
-      <Pager page={page} pages={list.pages} total={list.total} href={(p) => href({ page: p })} />
+      <ListPager spec={spec} total={list.total} />
     </div>
   );
 }

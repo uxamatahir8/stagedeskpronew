@@ -79,7 +79,7 @@ async function Team({ searchParams }: Pick<PageProps<"/[locale]/app/team">, "sea
           viewerUserId={viewer.user.id}
           members={members
             .filter((m) => isRole(m.role))
-            .map((m) => ({ id: m.id, userId: m.userId, name: m.user.name, email: m.user.email, role: m.role, joined: date(m.createdAt) }))}
+            .map((m) => ({ id: m.id, userId: m.userId, name: m.user.name, email: m.user.email, role: m.role, joined: date(m.createdAt), joinedAt: m.createdAt.getTime() }))}
           invitations={invitations.map((i) => ({ id: i.id, email: i.email, role: i.role ?? "", expires: date(i.expiresAt) }))}
         />
       )}

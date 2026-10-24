@@ -2,7 +2,8 @@ import { ArrowDownLeftIcon, ArrowUpRightIcon, Undo2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { getSetting, pendingPaymentClaims, prisma } from "@stagedesk/db";
+import { pageWindow, parseListQuery } from "@stagedesk/core";
+import { getSetting, pendingPaymentClaims, type Prisma, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { ConnectCard } from "@/components/connect-card";
@@ -13,7 +14,8 @@ import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { ServerTable } from "@/components/list/data-table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { daysAgo, euro, eventDate, startOfMonth } from "@/lib/format";
@@ -27,30 +29,52 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app/paym
   return { title: t("title") };
 }
 
-export default async function PaymentsPage({ params }: PageProps<"/[locale]/app/payments">) {
+export default async function PaymentsPage({ params, searchParams }: PageProps<"/[locale]/app/payments">) {
   setRequestLocale((await params).locale as Locale);
   return (
     <Suspense fallback={<Skeleton className="h-[40rem] w-full" />}>
-      <Payments />
+      <Payments searchParams={searchParams} />
     </Suspense>
   );
 }
 
 const sum = (rows: { amountCents: number }[]) => rows.reduce((total, r) => total + r.amountCents, 0);
 
-async function Payments() {
+const methodKeys = ["stripe", "bank_transfer", "cash", "card", "other"];
+const statusKeys = ["waiting", "paidOut", "paid", "partly", "refunded"];
+const spec = { sorts: ["date", "amount", "booking", "method"], defaultSort: "date", defaultDir: "desc" as const, filters: { method: methodKeys, status: statusKeys } };
+
+async function Payments({ searchParams }: Pick<PageProps<"/[locale]/app/payments">, "searchParams">) {
   const { organization, db } = await requireAgency("agency.payments");
   const since = startOfMonth();
+  const query = parseListQuery(await searchParams, spec);
+  const and: Prisma.PaymentWhereInput[] = [{ kind: { not: "refund" } }];
+  if (query.filters.method) and.push({ method: query.filters.method });
+  const paymentAmount = db.payment.fields.amountCents;
+  if (query.filters.status === "refunded") and.push({ refundedCents: { gte: paymentAmount, gt: 0 } });
+  if (query.filters.status === "partly") and.push({ refundedCents: { gt: 0, lt: paymentAmount } });
+  if (query.filters.status === "paid") and.push({ method: { not: "stripe" }, refundedCents: 0 });
+  if (query.filters.status === "paidOut") and.push({ method: "stripe", refundedCents: 0, transferredAt: { not: null } });
+  if (query.filters.status === "waiting") and.push({ method: "stripe", refundedCents: 0, transferredAt: null });
+  if (query.q) {
+    and.push({ OR: [{ reference: { contains: query.q } }, { booking: { OR: [{ trackingCode: { contains: query.q.toUpperCase() } }, { customer: { name: { contains: query.q } } }] } }] });
+  }
+  const where: Prisma.PaymentWhereInput = { AND: and };
+  const orderBy: Prisma.PaymentOrderByWithRelationInput[] =
+    query.sort === "amount" ? [{ amountCents: query.dir }] : query.sort === "booking" ? [{ booking: { trackingCode: query.dir } }] : query.sort === "method" ? [{ method: query.dir }, { receivedAt: "desc" }] : [{ receivedAt: query.dir }];
+  const total = await db.payment.count({ where });
+  const win = pageWindow(query, total);
   const [t, tm, format, storedAccount, payments, monthLedger, claims, tc, methods] = await Promise.all([
     getTranslations("payments"),
     getTranslations("paymentMethods"),
     getFormatter(),
     db.connectedAccount.findFirst({ where: { artistId: null } }),
     db.payment.findMany({
-      where: { kind: { not: "refund" } },
-      orderBy: { receivedAt: "desc" },
-      take: 100,
-      include: { booking: { select: { trackingCode: true, completedAt: true, eventDate: true } } },
+      where,
+      orderBy,
+      skip: win.skip,
+      take: win.take,
+      include: { booking: { select: { trackingCode: true, completedAt: true, eventDate: true, customer: { select: { name: true } } } } },
     }),
     prisma.ledgerEntry.findMany({
       where: { organizationId: organization.id, createdAt: { gte: since }, type: { in: ["transfer", "transfer_reversal", "refund"] } },
@@ -60,10 +84,11 @@ async function Payments() {
     getTranslations("paymentClaims"),
     getSetting("payments.methods"),
   ]);
+  const monthIn = await db.payment.aggregate({ where: { kind: { not: "refund" }, receivedAt: { gte: since } }, _sum: { amountCents: true } });
   const account = (await refreshIncompleteAccount(storedAccount)) ? await db.connectedAccount.findFirst({ where: { artistId: null } }) : storedAccount;
   // A report older than the platform's confirmation window is flagged.
   const overdueBefore = daysAgo(methods.confirmWithinDays);
-  const received = sum(payments.filter((p) => p.receivedAt >= since));
+  const received = monthIn._sum.amountCents ?? 0;
   const paidOut = sum(monthLedger.filter((l) => l.party === "agency"));
   const refunded = sum(monthLedger.filter((l) => l.type === "refund"));
 
@@ -122,58 +147,61 @@ async function Payments() {
         <StatCard index={2} label={t("refunded")} value={euro(format, refunded, organization.currency)} icon={Undo2Icon} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("list")}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("empty")}</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("booking")}</TableHead>
-                  <TableHead>{t("date")}</TableHead>
-                  <TableHead>{t("method")}</TableHead>
-                  <TableHead className="text-right">{t("amount")}</TableHead>
-                  <TableHead>{t("status")}</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((p) => {
-                  const s = status(p);
-                  const refundable = p.amountCents - p.refundedCents;
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell>
-                        <Link href={`/app/bookings/${p.booking.trackingCode}`} className="font-mono text-sm underline-offset-4 hover:underline">
-                          {p.booking.trackingCode}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, p.receivedAt, "short")}</TableCell>
-                      <TableCell>{tm(p.method as "cash")}</TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {euro(format, p.amountCents, organization.currency)}
-                        {p.refundedCents > 0 && <div className="text-xs font-normal text-muted-foreground">−{euro(format, p.refundedCents, organization.currency)}</div>}
-                      </TableCell>
-                      <TableCell>
-                        <Pill tone={s.tone}>{t(`status_${s.key}`)}</Pill>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {refundable > 0 && (
-                          <IfCan permission="agency.payments.refund"><RefundDialog paymentId={p.id} refundableCents={refundable} refundableLabel={euro(format, refundable, organization.currency)} online={p.method === "stripe"} /></IfCan>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <section className="grid gap-3">
+        <h2 className="text-lg font-semibold">{t("list")}</h2>
+        <ServerTable
+          spec={spec}
+          total={total}
+          count={payments.length}
+          placeholder={t("searchPlaceholder")}
+          filters={[
+            { key: "method", label: t("method"), options: methodKeys.map((m) => ({ value: m, label: tm(m as "cash") })) },
+            { key: "status", label: t("status"), options: statusKeys.map((k) => ({ value: k, label: t(`status_${k}` as "status_paid") })) },
+          ]}
+          columns={[
+            { label: t("booking"), sort: "booking" },
+            { label: t("date"), sort: "date" },
+            { label: t("method"), sort: "method" },
+            { label: t("amount"), sort: "amount", align: "right" },
+            { label: t("status") },
+            { label: "" },
+          ]}
+        >
+          {payments.map((p) => {
+            const s = status(p);
+            const refundable = p.amountCents - p.refundedCents;
+            return (
+              <TableRow key={p.id}>
+                <TableCell>
+                  <Link href={`/app/bookings/${p.booking.trackingCode}`} className="font-mono text-sm underline-offset-4 hover:underline">
+                    {p.booking.trackingCode}
+                  </Link>
+                  {p.booking.customer && <div className="text-xs text-muted-foreground">{p.booking.customer.name}</div>}
+                </TableCell>
+                <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, p.receivedAt, "short")}</TableCell>
+                <TableCell>
+                  {tm(p.method as "cash")}
+                  {p.reference && <div className="max-w-40 truncate text-xs text-muted-foreground">{p.reference}</div>}
+                </TableCell>
+                <TableCell className="text-right font-medium tabular-nums">
+                  {euro(format, p.amountCents, organization.currency)}
+                  {p.refundedCents > 0 && <div className="text-xs font-normal text-muted-foreground">−{euro(format, p.refundedCents, organization.currency)}</div>}
+                </TableCell>
+                <TableCell>
+                  <Pill tone={s.tone}>{t(`status_${s.key}`)}</Pill>
+                </TableCell>
+                <TableCell className="text-right">
+                  {refundable > 0 && (
+                    <IfCan permission="agency.payments.refund">
+                      <RefundDialog paymentId={p.id} refundableCents={refundable} refundableLabel={euro(format, refundable, organization.currency)} online={p.method === "stripe"} />
+                    </IfCan>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </ServerTable>
+      </section>
     </div>
   );
 }

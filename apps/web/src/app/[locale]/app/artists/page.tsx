@@ -14,6 +14,9 @@ import type { Locale } from "@/i18n/routing";
 import { requireAgency } from "@/lib/viewer";
 import { ArtistDialog, ShareResponse } from "./artist-forms";
 import { IfCan } from "@/components/if-can";
+import { CardList } from "@/components/list/data-table";
+
+const spec = { sorts: ["name", "added"], defaultSort: "name", defaultDir: "asc" as const, filters: { active: ["yes", "no"] } };
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/artists">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "artists" });
@@ -77,9 +80,18 @@ async function Artists() {
       {artists.length === 0 ? (
         <EmptyState icon={Music2Icon} title={t("emptyTitle")} description={t("emptyBody")} />
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {artists.map((a) => (
-            <li key={a.id}>
+        <CardList
+          spec={spec}
+          placeholder={t("searchPlaceholder")}
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+          sorts={[{ key: "name", label: t("sortName") }, { key: "added", label: t("sortAdded") }]}
+          filters={[{ key: "active", label: t("statusLabel"), options: [{ value: "yes", label: t("active") }, { value: "no", label: t("inactive") }] }]}
+          items={artists.map((a) => ({
+            id: a.id,
+            text: `${a.stageName} ${genres(a.genres)}`,
+            values: { name: a.stageName, added: a.createdAt.getTime() },
+            facets: { active: a.active ? "yes" : "no" },
+            node: (
               <Link href={`/app/artists/${a.id}`} className="flex h-full gap-3 rounded-xl border bg-card p-4 transition-colors hover:bg-accent/40">
                 <ArtistAvatar name={a.stageName} photoUrl={a.photoUrl} />
                 <div className="grid min-w-0 content-start gap-1">
@@ -90,9 +102,9 @@ async function Artists() {
                   <span className="truncate text-sm text-muted-foreground">{genres(a.genres)}</span>
                 </div>
               </Link>
-            </li>
-          ))}
-        </ul>
+            ),
+          }))}
+        />
       )}
 
       {sharedWithUs.length > 0 && (

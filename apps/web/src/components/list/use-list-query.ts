@@ -13,7 +13,7 @@ export function useListQuery(spec: ListSpec) {
   const [pending, start] = useTransition();
   const query = parseListQuery(params, spec) as ListQuery;
   // Parameters the list doesn't own (a tab, a dialog) stay in the URL.
-  const owned = new Set(["q", "sort", "dir", "page", "size", ...Object.keys(spec.filters ?? {})]);
+  const owned = new Set(["q", "sort", "dir", "page", "size", ...Object.keys(spec.filters ?? {})].map((k) => (spec.prefix ?? "") + k));
   const href = (patch: Record<string, string | number | null>) => {
     const base = listHref(pathname, query, patch, spec);
     const extra = new URLSearchParams([...params.entries()].filter(([k]) => !owned.has(k)));

@@ -11,7 +11,8 @@ import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate, percent } from "@/lib/format";
@@ -74,6 +75,8 @@ async function AffiliatesTabs({ searchParams }: Pick<PageProps<"/[locale]/app/af
 
 const statusTone = { pending: "info", approved: "success", rejected: "neutral", suspended: "danger" } as const;
 const loc = (value: unknown, locale: string) => ((value ?? {}) as Record<string, string>)[locale] ?? "";
+
+const partnerSpec = { sorts: ["joined", "name", "rate", "agencies", "earned", "unpaid"], defaultSort: "joined", defaultDir: "desc" as const, filters: { status: ["pending", "approved", "rejected", "suspended"] } };
 
 async function Affiliates() {
   // Platform-wide view: affiliates aren't tenant data.
@@ -155,67 +158,68 @@ async function Affiliates() {
           {members.length === 0 ? (
             <EmptyState icon={HandshakeIcon} title={t("empty")} description={t("emptyHint")} />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("partner")}</TableHead>
-                  <TableHead>{t("codes")}</TableHead>
-                  <TableHead>{t("status")}</TableHead>
-                  <TableHead className="text-right">{t("rate")}</TableHead>
-                  <TableHead className="text-right">{t("agencies")}</TableHead>
-                  <TableHead className="text-right">{t("earned")}</TableHead>
-                  <TableHead className="text-right">{t("unpaid")}</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((a) => {
-                  const payingCount = count(paying, a.id);
-                  const rate = a.commissionBps ?? tierFor(program.tiers, payingCount)?.commissionBps ?? program.commissionBps;
-                  const unpaid = sum(a.id, ["approved"]);
-                  return (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <div className="font-medium">{a.user.name}</div>
-                        <div className="text-sm text-muted-foreground">{a.user.email}</div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        <div>?via={a.code}</div>
-                        <div className="text-muted-foreground">{a.promoCode}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Pill tone={statusTone[a.status as keyof typeof statusTone] ?? "neutral"}>{t(`status_${a.status as "approved"}`)}</Pill>
-                        {a.status === "approved" && !a.payoutsEnabled && <div className="mt-1 text-xs text-muted-foreground">{t("noPayoutAccount")}</div>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {percent(format, rate)}
-                        {a.commissionBps !== null && <div className="text-xs text-muted-foreground">{t("custom")}</div>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {payingCount} / {count(referrals, a.id)}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{euro(format, sum(a.id, ["pending", "review", "approved", "paid"]))}</TableCell>
-                      <TableCell className="text-right tabular-nums">{euro(format, unpaid)}</TableCell>
-                      <TableCell className="text-right">
-                        <AffiliateMenu
-                          affiliateId={a.id}
-                          name={a.user.name}
-                          status={a.status}
-                          canPay={a.status === "approved" && a.payoutsEnabled && unpaid > 0}
-                          values={{
-                            code: a.code,
-                            promoCode: a.promoCode,
-                            website: a.website ?? "",
-                            pitch: a.pitch ?? "",
-                            ratePercent: a.commissionBps === null ? "" : String(a.commissionBps / 100).replace(".", locale === "en" ? "." : ","),
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <DataTable
+              spec={partnerSpec}
+              placeholder={t("searchPartners")}
+              filters={[{ key: "status", label: t("status"), options: [...new Set(members.map((m) => m.status))].map((st) => ({ value: st, label: t(`status_${st as "approved"}`) })) }]}
+              columns={[
+                { label: t("partner"), sort: "name" },
+                { label: t("codes") },
+                { label: t("status") },
+                { label: t("rate"), sort: "rate", align: "right" },
+                { label: t("agencies"), sort: "agencies", align: "right" },
+                { label: t("earned"), sort: "earned", align: "right" },
+                { label: t("unpaid"), sort: "unpaid", align: "right" },
+                { label: "" },
+              ]}
+              rows={members.map((a) => {
+                const payingCount = count(paying, a.id);
+                const rate = a.commissionBps ?? tierFor(program.tiers, payingCount)?.commissionBps ?? program.commissionBps;
+                const unpaid = sum(a.id, ["approved"]);
+                const earned = sum(a.id, ["pending", "review", "approved", "paid"]);
+                return {
+                  id: a.id,
+                  text: `${a.user.name} ${a.user.email} ${a.code} ${a.promoCode ?? ""}`,
+                  values: { joined: a.createdAt.getTime(), name: a.user.name, rate, agencies: payingCount, earned, unpaid },
+                  facets: { status: a.status },
+                  cells: [
+                    <div key="n">
+                      <div className="font-medium">{a.user.name}</div>
+                      <div className="text-sm text-muted-foreground">{a.user.email}</div>
+                    </div>,
+                    <div key="c" className="font-mono text-xs">
+                      <div>?via={a.code}</div>
+                      <div className="text-muted-foreground">{a.promoCode}</div>
+                    </div>,
+                    <div key="s">
+                      <Pill tone={statusTone[a.status as keyof typeof statusTone] ?? "neutral"}>{t(`status_${a.status as "approved"}`)}</Pill>
+                      {a.status === "approved" && !a.payoutsEnabled && <div className="mt-1 text-xs text-muted-foreground">{t("noPayoutAccount")}</div>}
+                    </div>,
+                    <div key="r">
+                      {percent(format, rate)}
+                      {a.commissionBps !== null && <div className="text-xs text-muted-foreground">{t("custom")}</div>}
+                    </div>,
+                    `${payingCount} / ${count(referrals, a.id)}`,
+                    euro(format, earned),
+                    euro(format, unpaid),
+                    <AffiliateMenu
+                      key="m"
+                      affiliateId={a.id}
+                      name={a.user.name}
+                      status={a.status}
+                      canPay={a.status === "approved" && a.payoutsEnabled && unpaid > 0}
+                      values={{
+                        code: a.code,
+                        promoCode: a.promoCode,
+                        website: a.website ?? "",
+                        pitch: a.pitch ?? "",
+                        ratePercent: a.commissionBps === null ? "" : String(a.commissionBps / 100).replace(".", locale === "en" ? "." : ","),
+                      }}
+                    />,
+                  ],
+                };
+              })}
+            />
           )}
         </CardContent>
       </Card>

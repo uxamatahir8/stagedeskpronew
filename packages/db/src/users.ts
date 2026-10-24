@@ -33,7 +33,21 @@ function filterWhere(filter: UserFilter): Prisma.UserWhereInput {
 }
 
 /** Platform-wide user list: deliberately not tenant-scoped. */
-export async function listUsers({ q = "", filter = "all", page = 1, pageSize = 25 }: { q?: string; filter?: UserFilter; page?: number; pageSize?: number }) {
+export async function listUsers({
+  q = "",
+  filter = "all",
+  page = 1,
+  pageSize = 25,
+  sort = "created",
+  dir = "desc",
+}: {
+  q?: string;
+  filter?: UserFilter;
+  page?: number;
+  pageSize?: number;
+  sort?: "created" | "name" | "email";
+  dir?: "asc" | "desc";
+}) {
   const search = q.trim();
   const where: Prisma.UserWhereInput = {
     AND: [search ? { OR: [{ email: { contains: search } }, { name: { contains: search } }, { phone: { contains: search } }] } : {}, filterWhere(filter)],
@@ -41,7 +55,7 @@ export async function listUsers({ q = "", filter = "all", page = 1, pageSize = 2
   const [rows, total] = await Promise.all([
     prisma.user.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: sort === "name" ? { name: dir } : sort === "email" ? { email: dir } : { createdAt: dir },
       skip: (Math.max(1, page) - 1) * pageSize,
       take: pageSize,
       include: {

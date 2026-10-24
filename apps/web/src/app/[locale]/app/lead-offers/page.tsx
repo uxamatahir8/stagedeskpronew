@@ -11,6 +11,9 @@ import type { Locale } from "@/i18n/routing";
 import { eventDate } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { OfferButtons } from "./offer-buttons";
+import { CardList } from "@/components/list/data-table";
+
+const spec = { sorts: ["offered", "date"], defaultSort: "offered", defaultDir: "desc" as const, filters: { type: ["wedding", "corporate", "birthday", "party", "festival", "other"] } };
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/lead-offers">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "leadOffers" });
@@ -43,9 +46,19 @@ async function Offers() {
       {offers.length === 0 ? (
         <EmptyState icon={SparklesIcon} title={t("empty")} description={t("emptyHint")} />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {offers.map((o) => (
-            <Card key={o.id}>
+        <CardList
+          spec={spec}
+          placeholder={t("searchPlaceholder")}
+          className="grid gap-4 md:grid-cols-2"
+          sorts={[{ key: "offered", label: t("sortOffered") }, { key: "date", label: t("sortEventDate") }]}
+          filters={[{ key: "type", label: t("eventType"), options: [...new Set(offers.map((o) => o.eventType))].map((e) => ({ value: e, label: te(e as "wedding") })) }]}
+          items={offers.map((o) => ({
+            id: o.id,
+            text: `${o.reference} ${o.venueCity ?? ""} ${o.preferredGenre ?? ""} ${o.message ?? ""}`,
+            values: { offered: o.offeredAt.getTime(), date: o.eventDate?.getTime() ?? null },
+            facets: { type: o.eventType },
+            node: (
+            <Card>
               <CardHeader>
                 <CardTitle>
                   {te(o.eventType as "wedding")} · {eventDate(format, o.eventDate, "short")}
@@ -77,8 +90,9 @@ async function Offers() {
                 <OfferButtons leadId={o.id} />
               </CardContent>
             </Card>
-          ))}
-        </div>
+            ),
+          }))}
+        />
       )}
     </div>
   );

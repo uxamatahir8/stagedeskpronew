@@ -55,7 +55,21 @@ export async function submitLead(input: LeadInput) {
 }
 
 /** The admin's lead queue: deliberately platform-wide. */
-export async function listLeads({ q = "", status = null, page = 1, pageSize = 25 }: { q?: string; status?: LeadStatus | null; page?: number; pageSize?: number }) {
+export async function listLeads({
+  q = "",
+  status = null,
+  page = 1,
+  pageSize = 25,
+  sort = "created",
+  dir = "desc",
+}: {
+  q?: string;
+  status?: LeadStatus | null;
+  page?: number;
+  pageSize?: number;
+  sort?: "created" | "date" | "name";
+  dir?: "asc" | "desc";
+}) {
   const search = q.trim();
   const where: Prisma.LeadWhereInput = {
     ...(status ? { status } : {}),
@@ -66,7 +80,7 @@ export async function listLeads({ q = "", status = null, page = 1, pageSize = 25
   const [rows, total, counts] = await Promise.all([
     prisma.lead.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy: sort === "date" ? [{ eventDate: { sort: dir, nulls: "last" } }, { createdAt: "desc" }] : sort === "name" ? [{ name: dir }] : [{ createdAt: dir }],
       skip: (Math.max(1, page) - 1) * pageSize,
       take: pageSize,
       include: {

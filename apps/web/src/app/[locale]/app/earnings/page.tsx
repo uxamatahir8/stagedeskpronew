@@ -10,14 +10,15 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { BookingStatusBadge } from "@/components/status-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate, percent } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { artistDashboardAction, connectArtistAction } from "./actions";
 import { refreshIncompleteAccount } from "@/lib/connect";
+
+const spec = { sorts: ["date", "booking", "status", "share", "paidOut", "owed"], defaultSort: "date", defaultDir: "desc" as const, filters: { status: ["booked", "confirmed", "completed", "settled", "cancelled"], payout: ["paid", "owed", "open"] } };
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/earnings">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "earnings" });
@@ -38,9 +39,10 @@ const upcoming = ["booked", "confirmed"];
 
 async function Earnings() {
   const { viewer, organization } = await requireAgency("artist.earnings");
-  const [t, tp, format, artist] = await Promise.all([
+  const [t, tp, tbs, format, artist] = await Promise.all([
     getTranslations("earnings"),
     getTranslations("payments"),
+    getTranslations("bookingStatus"),
     getFormatter(),
     prisma.artist.findFirst({ where: { organizationId: organization.id, userId: viewer.user.id }, include: { connectedAccount: true } }),
   ]);
@@ -96,46 +98,46 @@ async function Earnings() {
         <StatCard index={3} label={t("upcoming")} value={euro(format, total((r) => r.share, upcoming), currency)} icon={CalendarClockIcon} />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("list")}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("empty")}</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{tp("booking")}</TableHead>
-                  <TableHead>{tp("date")}</TableHead>
-                  <TableHead>{tp("status")}</TableHead>
-                  <TableHead className="text-right">{t("share")}</TableHead>
-                  <TableHead className="text-right">{t("paidOut")}</TableHead>
-                  <TableHead className="text-right">{t("owed")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-sm">{r.trackingCode}</TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, r.eventDate, "short") ?? "—"}</TableCell>
-                    <TableCell>
-                      <BookingStatusBadge status={r.status as BookingStatus} />
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {euro(format, r.share, r.currency)}
-                      <div className="text-xs text-muted-foreground">{percent(format, r.shareBps)}</div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{r.paidOut ? euro(format, r.paidOut, r.currency) : "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{r.owed ? euro(format, r.owed, r.currency) : "—"}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <section className="grid gap-3">
+        <h2 className="text-lg font-semibold">{t("list")}</h2>
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("empty")}</p>
+        ) : (
+          <DataTable
+            spec={spec}
+            placeholder={t("searchPlaceholder")}
+            filters={[
+              { key: "status", label: tp("status"), options: [...new Set(rows.map((r) => r.status))].map((st) => ({ value: st, label: tbs(st as BookingStatus) })) },
+              { key: "payout", label: t("paidOut"), options: [{ value: "paid", label: t("filterPaid") }, { value: "owed", label: t("filterOwed") }, { value: "open", label: t("filterOpen") }] },
+            ]}
+            columns={[
+              { label: tp("booking"), sort: "booking" },
+              { label: tp("date"), sort: "date" },
+              { label: tp("status"), sort: "status" },
+              { label: t("share"), sort: "share", align: "right" },
+              { label: t("paidOut"), sort: "paidOut", align: "right" },
+              { label: t("owed"), sort: "owed", align: "right" },
+            ]}
+            rows={rows.map((r) => ({
+              id: r.id,
+              text: r.trackingCode,
+              values: { booking: r.trackingCode, date: r.eventDate?.getTime() ?? null, status: tbs(r.status as BookingStatus), share: r.share, paidOut: r.paidOut, owed: r.owed },
+              facets: { status: r.status, payout: r.owed ? "owed" : r.paidOut ? "paid" : "open" },
+              cells: [
+                <span key="c" className="font-mono text-sm">{r.trackingCode}</span>,
+                eventDate(format, r.eventDate, "short") ?? "—",
+                <BookingStatusBadge key="s" status={r.status as BookingStatus} />,
+                <div key="sh">
+                  {euro(format, r.share, r.currency)}
+                  <div className="text-xs text-muted-foreground">{percent(format, r.shareBps)}</div>
+                </div>,
+                r.paidOut ? euro(format, r.paidOut, r.currency) : "—",
+                r.owed ? euro(format, r.owed, r.currency) : "—",
+              ],
+            }))}
+          />
+        )}
+      </section>
     </div>
   );
 }

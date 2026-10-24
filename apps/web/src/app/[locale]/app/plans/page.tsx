@@ -5,9 +5,8 @@ import { feeRuleSchema, parseLimits } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Pill } from "@/components/status-badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { DataTable } from "@/components/list/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { Locale } from "@/i18n/routing";
 import { centsToInput, euro } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
@@ -29,6 +28,9 @@ export default async function PlansPage({ params }: PageProps<"/[locale]/app/pla
 }
 
 const text = (v: unknown, l: "nl" | "en") => ((v ?? {}) as Record<string, unknown>)[l];
+
+// Plans keep the admin's own order unless a column is clicked.
+const spec = { sorts: ["position", "name", "monthly", "yearly", "agencies"], defaultSort: "position", defaultDir: "asc" as const, filters: { state: ["active", "hidden", "inactive"], stripe: ["synced", "unsynced"] } };
 
 async function Plans() {
   await requirePermission("platform.plans");
@@ -67,60 +69,61 @@ async function Plans() {
   return (
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} actions={<PlanDialog nextPosition={plans.length} />} />
-      <Card>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("nameNl")}</TableHead>
-                <TableHead className="text-right">{t("monthly")}</TableHead>
-                <TableHead className="text-right">{t("yearly")}</TableHead>
-                <TableHead>{t("limits")}</TableHead>
-                <TableHead>Stripe</TableHead>
-                <TableHead className="w-0" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {plans.map((p) => {
-                const limits = parseLimits(p.limits);
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <div className="flex flex-wrap items-center gap-2 font-medium">
-                        {String(text(p.name, locale === "en" ? "en" : "nl") ?? p.key)}
-                        {p.recommended && <Pill tone="brand">{t("recommended")}</Pill>}
-                        {!p.visible && <Pill>{t("hidden")}</Pill>}
-                        {!p.active && <Pill tone="danger">{t("inactive")}</Pill>}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        <span className="font-mono">{p.key}</span> · {t("agencies", { count: p._count.subscriptions })} · {p.trialEnabled ? t("trialOn", { days: p.trialDays }) : t("trialOff")}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{euro(format, p.monthlyPriceCents)}</TableCell>
-                    <TableCell className="text-right tabular-nums">{euro(format, p.yearlyPriceCents)}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {limits.maxArtists ?? "∞"} / {limits.maxStaff ?? "∞"} / {limits.maxBookingsPerMonth ?? "∞"}
-                    </TableCell>
-                    <TableCell>
-                      {p.stripeMonthlyPriceId ? (
-                        <Pill tone="success">{t("synced")}</Pill>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Pill tone="warning">{t("notSynced")}</Pill>
-                          <SyncPlanButton planId={p.id} />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <PlanDialog plan={toValues(p)} nextPosition={plans.length} />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        spec={spec}
+        placeholder={t("searchPlaceholder")}
+        filters={[
+          { key: "state", label: t("state"), options: [{ value: "active", label: t("stateActive") }, { value: "hidden", label: t("hidden") }, { value: "inactive", label: t("inactive") }] },
+          { key: "stripe", label: "Stripe", options: [{ value: "synced", label: t("synced") }, { value: "unsynced", label: t("notSynced") }] },
+        ]}
+        columns={[
+          { label: t("nameNl"), sort: "name" },
+          { label: t("monthly"), sort: "monthly", align: "right" },
+          { label: t("yearly"), sort: "yearly", align: "right" },
+          { label: t("limits") },
+          { label: t("agenciesCol"), sort: "agencies", align: "right" },
+          { label: "Stripe" },
+          { label: "", className: "w-0" },
+        ]}
+        rows={plans.map((p) => {
+          const limits = parseLimits(p.limits);
+          const name = String(text(p.name, locale === "en" ? "en" : "nl") ?? p.key);
+          return {
+            id: p.id,
+            text: `${name} ${p.key}`,
+            values: { position: p.position, name, monthly: p.monthlyPriceCents, yearly: p.yearlyPriceCents, agencies: p._count.subscriptions },
+            facets: { state: !p.active ? "inactive" : !p.visible ? "hidden" : "active", stripe: p.stripeMonthlyPriceId ? "synced" : "unsynced" },
+            cells: [
+              <div key="n">
+                <div className="flex flex-wrap items-center gap-2 font-medium">
+                  {name}
+                  {p.recommended && <Pill tone="brand">{t("recommended")}</Pill>}
+                  {!p.visible && <Pill>{t("hidden")}</Pill>}
+                  {!p.active && <Pill tone="danger">{t("inactive")}</Pill>}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-mono">{p.key}</span> · {p.trialEnabled ? t("trialOn", { days: p.trialDays }) : t("trialOff")}
+                </div>
+              </div>,
+              euro(format, p.monthlyPriceCents),
+              euro(format, p.yearlyPriceCents),
+              <span key="l" className="text-sm text-muted-foreground">
+                {limits.maxArtists ?? "∞"} / {limits.maxStaff ?? "∞"} / {limits.maxBookingsPerMonth ?? "∞"}
+              </span>,
+              p._count.subscriptions,
+              p.stripeMonthlyPriceId ? (
+                <Pill key="s" tone="success">{t("synced")}</Pill>
+              ) : (
+                <div key="s" className="flex flex-wrap items-center gap-2">
+                  <Pill tone="warning">{t("notSynced")}</Pill>
+                  <SyncPlanButton planId={p.id} />
+                </div>
+              ),
+              <PlanDialog key="e" plan={toValues(p)} nextPosition={plans.length} />,
+            ],
+          };
+        })}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import { StatCard } from "@/components/stat-card";
 import { CommissionStatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { requireAffiliate } from "@/lib/affiliate";
@@ -39,6 +39,10 @@ export default async function PayoutsPage({ params }: PageProps<"/[locale]/app/p
  * The affiliate's money: what's withdrawable, what's still in its waiting
  * period, where it goes, every withdrawal and every commission.
  */
+const payoutSpec = { sorts: ["date", "amount"], defaultSort: "date", defaultDir: "desc" as const, filters: { status: ["requested", "approved", "paid", "rejected", "failed", "cancelled"], method: ["stripe", "bank_transfer", "paypal"] } };
+// Commissions sit on the same page, so their list parameters carry a prefix.
+const commissionSpec = { sorts: ["date", "agency", "invoice", "commission"], defaultSort: "date", defaultDir: "desc" as const, prefix: "c.", filters: { status: ["pending", "review", "approved", "requested", "paid", "cancelled"], agency: [] as string[] } };
+
 async function Payouts() {
   await connection();
   const { affiliate } = await requireAffiliate("affiliate.payouts");
@@ -52,10 +56,10 @@ async function Payouts() {
     prisma.commission.findMany({
       where: { affiliateId: affiliate.id },
       orderBy: { createdAt: "desc" },
-      take: 200,
+      take: 5000,
       include: { referral: { select: { agency: { select: { name: true } } } }, payout: { select: { id: true, reference: true } } },
     }),
-    prisma.affiliatePayout.findMany({ where: { affiliateId: affiliate.id }, orderBy: { createdAt: "desc" }, take: 50 }),
+    prisma.affiliatePayout.findMany({ where: { affiliateId: affiliate.id }, orderBy: { createdAt: "desc" } }),
     isStripeConfigured(),
   ]);
   const paidTotal = commissions.filter((c) => c.status === "paid").reduce((s, c) => s + c.amountCents, 0);
@@ -163,34 +167,30 @@ async function Payouts() {
           {payouts.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noPayouts")}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{tw("reference")}</TableHead>
-                  <TableHead>{tw("requestedOn")}</TableHead>
-                  <TableHead>{tw("method")}</TableHead>
-                  <TableHead>{tw("status")}</TableHead>
-                  <TableHead className="text-right">{tw("amount")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payouts.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      <Link href={`/app/payouts/${p.id}`} className="font-mono text-sm font-medium underline-offset-4 hover:underline">
-                        {p.reference ?? p.id.slice(0, 8)}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, p.createdAt, "short")}</TableCell>
-                    <TableCell>{tw(`method_${p.method as "stripe"}`)}</TableCell>
-                    <TableCell>
-                      <WithdrawalStatus status={p.status} />
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{euro(format, p.amountCents)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              spec={payoutSpec}
+              placeholder={tw("searchReference")}
+              filters={[
+                { key: "status", label: tw("status"), options: [...new Set(payouts.map((p) => p.status))].map((st) => ({ value: st, label: tw(`status_${st as "paid"}`) })) },
+                { key: "method", label: tw("method"), options: [...new Set(payouts.map((p) => p.method))].map((m) => ({ value: m, label: tw(`method_${m as "stripe"}`) })) },
+              ]}
+              columns={[{ label: tw("reference") }, { label: tw("requestedOn"), sort: "date" }, { label: tw("method") }, { label: tw("status") }, { label: tw("amount"), sort: "amount", align: "right" }]}
+              rows={payouts.map((p) => ({
+                id: p.id,
+                text: `${p.reference ?? p.id}`,
+                values: { date: p.createdAt.getTime(), amount: p.amountCents },
+                facets: { status: p.status, method: p.method },
+                cells: [
+                  <Link key="r" href={`/app/payouts/${p.id}`} className="font-mono text-sm font-medium underline-offset-4 hover:underline">
+                    {p.reference ?? p.id.slice(0, 8)}
+                  </Link>,
+                  eventDate(format, p.createdAt, "short"),
+                  tw(`method_${p.method as "stripe"}`),
+                  <WithdrawalStatus key="s" status={p.status} />,
+                  <span key="a" className="font-medium">{euro(format, p.amountCents)}</span>,
+                ],
+              }))}
+            />
           )}
         </CardContent>
       </Card>
@@ -204,46 +204,48 @@ async function Payouts() {
           {commissions.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("noCommissions")}</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("date")}</TableHead>
-                  <TableHead>{t("agency")}</TableHead>
-                  <TableHead className="text-right">{t("invoice")}</TableHead>
-                  <TableHead className="text-right">{t("commission")}</TableHead>
-                  <TableHead>{t("status")}</TableHead>
-                  <TableHead>{tw("withdrawal")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {commissions.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, c.createdAt, "short")}</TableCell>
-                    <TableCell>{c.referral.agency.name}</TableCell>
-                    <TableCell className="text-right tabular-nums">{euro(format, c.baseCents)}</TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {euro(format, c.amountCents)}
-                      <div className="text-xs font-normal text-muted-foreground">{percent(format, c.commissionBps)}</div>
-                    </TableCell>
-                    <TableCell>
-                      <CommissionStatusBadge status={c.status} />
-                      {["pending", "review"].includes(c.status) && (
-                        <div className="mt-1 text-xs text-muted-foreground">{t("availableOn", { date: eventDate(format, c.availableAt, "short") ?? "" })}</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {c.payout ? (
-                        <Link href={`/app/payouts/${c.payout.id}`} className="font-mono text-xs underline-offset-4 hover:underline">
-                          {c.payout.reference ?? c.payout.id.slice(0, 8)}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              spec={{ ...commissionSpec, filters: { ...commissionSpec.filters, agency: [...new Set(commissions.map((c) => c.referral.agency.name))] } }}
+              placeholder={t("searchAgency")}
+              filters={[
+                { key: "status", label: t("status"), options: [...new Set(commissions.map((c) => c.status))].map((st) => ({ value: st, label: t(`commission_${st as "pending"}`) })) },
+                { key: "agency", label: t("agency"), options: [...new Set(commissions.map((c) => c.referral.agency.name))].map((n) => ({ value: n, label: n })) },
+              ]}
+              columns={[
+                { label: t("date"), sort: "date" },
+                { label: t("agency"), sort: "agency" },
+                { label: t("invoice"), sort: "invoice", align: "right" },
+                { label: t("commission"), sort: "commission", align: "right" },
+                { label: t("status") },
+                { label: tw("withdrawal") },
+              ]}
+              rows={commissions.map((c) => ({
+                id: c.id,
+                text: `${c.referral.agency.name} ${c.payout?.reference ?? ""}`,
+                values: { date: c.createdAt.getTime(), agency: c.referral.agency.name, invoice: c.baseCents, commission: c.amountCents },
+                facets: { status: c.status, agency: c.referral.agency.name },
+                cells: [
+                  eventDate(format, c.createdAt, "short"),
+                  c.referral.agency.name,
+                  euro(format, c.baseCents),
+                  <div key="c" className="font-medium">
+                    {euro(format, c.amountCents)}
+                    <div className="text-xs font-normal text-muted-foreground">{percent(format, c.commissionBps)}</div>
+                  </div>,
+                  <div key="s">
+                    <CommissionStatusBadge status={c.status} />
+                    {["pending", "review"].includes(c.status) && <div className="mt-1 text-xs text-muted-foreground">{t("availableOn", { date: eventDate(format, c.availableAt, "short") ?? "" })}</div>}
+                  </div>,
+                  c.payout ? (
+                    <Link key="p" href={`/app/payouts/${c.payout.id}`} className="font-mono text-xs underline-offset-4 hover:underline">
+                      {c.payout.reference ?? c.payout.id.slice(0, 8)}
+                    </Link>
+                  ) : (
+                    "—"
+                  ),
+                ],
+              }))}
+            />
           )}
         </CardContent>
       </Card>

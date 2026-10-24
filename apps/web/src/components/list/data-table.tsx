@@ -110,6 +110,74 @@ export function DataTable({
   );
 }
 
+export interface CardItem {
+  id: string;
+  node: React.ReactNode;
+  values: Record<string, string | number | null>;
+  text: string;
+  facets?: Record<string, string>;
+}
+
+/** Cards (artists, reviews, gigs) with the same search, filters, sorting and paging as the tables. */
+export function CardList({
+  spec,
+  items,
+  sorts,
+  filters,
+  placeholder,
+  className,
+}: {
+  spec: ListSpec;
+  items: CardItem[];
+  /** Sort key → label, offered in a menu since cards have no column headers. */
+  sorts: { key: string; label: string }[];
+  filters?: ListFilter[];
+  placeholder?: string;
+  className?: string;
+}) {
+  const t = useTranslations("list");
+  const locale = useLocale();
+  const { query, set } = useListQuery(spec);
+  const facets = query.filters as Record<string, string>;
+  const matching = items.filter((r) => matchesSearch(r.text, query.q) && Object.entries(facets).every(([k, v]) => r.facets?.[k] === v));
+  const sorted = sortRows(matching, (r) => r.values[query.sort], query.dir, locale);
+  const pages = Math.max(1, Math.ceil(sorted.length / query.size));
+  const page = Math.min(query.page, pages);
+  const visible = sorted.slice((page - 1) * query.size, page * query.size);
+  return (
+    <div className="grid gap-4">
+      <ListToolbar spec={spec} placeholder={placeholder} filters={filters}>
+        {sorts.length > 1 && (
+          <select
+            aria-label={t("sortLabel")}
+            value={`${query.sort}:${query.dir}`}
+            onChange={(e) => {
+              const [sort, dir] = e.target.value.split(":");
+              set({ sort: sort!, dir: dir! });
+            }}
+            className="h-9 rounded-md border bg-background px-2.5 text-sm"
+          >
+            {sorts.flatMap((s) => [
+              <option key={`${s.key}:asc`} value={`${s.key}:asc`}>
+                {t("sortAsc", { column: s.label })}
+              </option>,
+              <option key={`${s.key}:desc`} value={`${s.key}:desc`}>
+                {t("sortDesc", { column: s.label })}
+              </option>,
+            ])}
+          </select>
+        )}
+      </ListToolbar>
+      {visible.length === 0 ? (
+        <p className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">{t("noMatches")}</p>
+      ) : (
+        <div className={className}>{visible.map((r) => <div key={r.id} className="contents">{r.node}</div>)}</div>
+      )}
+      <ListPager spec={spec} total={sorted.length} />
+    </div>
+  );
+}
+
 /** The same table frame for lists the server pages: headers sort, the body is the server's rows. */
 export function ServerTable({ spec, columns, children, total, filters, placeholder, toolbar, count }: {
   spec: ListSpec;

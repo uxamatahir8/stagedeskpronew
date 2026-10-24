@@ -10,11 +10,13 @@ import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import type { Locale } from "@/i18n/routing";
 import { referralLink } from "@/lib/affiliate";
 import { eventDate } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
+
+const spec = { sorts: ["joined", "agency", "paid"], defaultSort: "joined", defaultDir: "desc" as const, filters: { state: ["joined", "trial", "paying", "rewarded", "rejected"] } };
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/referrals">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "nav" });
@@ -95,28 +97,24 @@ async function Referrals() {
           {referred.length === 0 ? (
             <EmptyState icon={UsersIcon} title={t("noneYet")} description={t("noneYetHint")} />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("agency")}</TableHead>
-                  <TableHead>{t("joinedOn")}</TableHead>
-                  <TableHead>{t("firstPaid")}</TableHead>
-                  <TableHead>{t("status_")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {referred.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.agency.name}</TableCell>
-                    <TableCell className="tabular-nums">{eventDate(format, r.createdAt, "short")}</TableCell>
-                    <TableCell className="tabular-nums">{r.firstPaidAt ? eventDate(format, r.firstPaidAt, "short") : "—"}</TableCell>
-                    <TableCell>
-                      <Pill tone={tone[state(r)]}>{t(`state_${state(r)}`, { count: months })}</Pill>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <DataTable
+              spec={spec}
+              placeholder={t("searchPlaceholder")}
+              filters={[{ key: "state", label: t("status_"), options: [...new Set(referred.map(state))].map((k) => ({ value: k, label: t(`state_${k}`, { count: months }) })) }]}
+              columns={[{ label: t("agency"), sort: "agency" }, { label: t("joinedOn"), sort: "joined" }, { label: t("firstPaid"), sort: "paid" }, { label: t("status_") }]}
+              rows={referred.map((r) => ({
+                id: r.id,
+                text: r.agency.name,
+                values: { agency: r.agency.name, joined: r.createdAt.getTime(), paid: r.firstPaidAt?.getTime() ?? null },
+                facets: { state: state(r) },
+                cells: [
+                  <span key="n" className="font-medium">{r.agency.name}</span>,
+                  eventDate(format, r.createdAt, "short"),
+                  r.firstPaidAt ? eventDate(format, r.firstPaidAt, "short") : "—",
+                  <Pill key="s" tone={tone[state(r)]}>{t(`state_${state(r)}`, { count: months })}</Pill>,
+                ],
+              }))}
+            />
           )}
         </CardContent>
       </Card>

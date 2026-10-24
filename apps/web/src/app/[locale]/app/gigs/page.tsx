@@ -12,6 +12,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { eventDate } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
+import { CardList } from "@/components/list/data-table";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/gigs">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "gigs" });
@@ -51,6 +52,8 @@ async function myAssignments(userId: string) {
   });
 }
 
+const spec = { sorts: ["date"], defaultSort: "date", defaultDir: "asc" as const, filters: { when: ["upcoming", "past"], agency: [] as string[], type: ["wedding", "corporate", "birthday", "party", "festival", "other"] } };
+
 async function Gigs() {
   const viewer = await requirePermission("artist.gigs");
   const [t, te, format, assignments] = await Promise.all([
@@ -65,10 +68,7 @@ async function Gigs() {
   const upcoming = live.filter((a) => a.status === "accepted" && (a.booking.eventDate?.toISOString().slice(0, 10) ?? "") >= today);
   const past = live.filter((a) => a.status === "accepted" && (a.booking.eventDate?.toISOString().slice(0, 10) ?? "") < today);
 
-  const list = (items: typeof live) => (
-    <ul className="grid gap-3">
-      {items.map((a) => (
-        <li key={a.id}>
+  const card = (a: (typeof live)[number]) => (
           <Link href={`/app/gigs/${a.booking.trackingCode}`} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4 hover:bg-accent/40">
             <div className="grid gap-0.5">
               <span className="font-medium">
@@ -83,10 +83,8 @@ async function Gigs() {
             </div>
             <AssignmentStatusBadge status={a.status as "pending"} />
           </Link>
-        </li>
-      ))}
-    </ul>
   );
+  const accepted = [...upcoming, ...past];
 
   return (
     <div className="grid gap-8">
@@ -98,19 +96,34 @@ async function Gigs() {
           {requests.length > 0 && (
             <section className="grid gap-3">
               <h2 className="font-semibold">{t("requests")}</h2>
-              {list(requests)}
+              <ul className="grid gap-3">
+                {requests.map((a) => (
+                  <li key={a.id}>{card(a)}</li>
+                ))}
+              </ul>
             </section>
           )}
-          {upcoming.length > 0 && (
+          {accepted.length > 0 && (
             <section className="grid gap-3">
-              <h2 className="font-semibold">{t("upcoming")}</h2>
-              {list(upcoming)}
-            </section>
-          )}
-          {past.length > 0 && (
-            <section className="grid gap-3">
-              <h2 className="font-semibold text-muted-foreground">{t("past")}</h2>
-              {list(past)}
+              <h2 className="font-semibold">{t("myGigs")}</h2>
+              <CardList
+                spec={{ ...spec, filters: { ...spec.filters, agency: [...new Set(accepted.map((g) => g.booking.organization.name))] } }}
+                placeholder={t("searchPlaceholder")}
+                className="grid gap-3"
+                sorts={[{ key: "date", label: t("sortDate") }]}
+                filters={[
+                  { key: "when", label: t("when"), options: [{ value: "upcoming", label: t("upcoming") }, { value: "past", label: t("past") }] },
+                  { key: "agency", label: t("agency"), options: [...new Set(accepted.map((g) => g.booking.organization.name))].map((n) => ({ value: n, label: n })) },
+                  { key: "type", label: t("eventType"), options: [...new Set(accepted.map((g) => g.booking.eventType))].map((e) => ({ value: e, label: te(e as EventType) })) },
+                ]}
+                items={accepted.map((g) => ({
+                  id: g.id,
+                  text: `${te(g.booking.eventType as EventType)} ${g.booking.venueName ?? ""} ${g.booking.venueCity ?? ""} ${g.booking.organization.name} ${g.booking.trackingCode}`,
+                  values: { date: g.booking.eventDate?.getTime() ?? null },
+                  facets: { when: upcoming.includes(g) ? "upcoming" : "past", agency: g.booking.organization.name, type: g.booking.eventType },
+                  node: card(g),
+                }))}
+              />
             </section>
           )}
         </>

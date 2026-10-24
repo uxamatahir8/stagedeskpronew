@@ -2,11 +2,12 @@ import { BadgeCheckIcon, BuildingIcon, HourglassIcon, PauseCircleIcon, SearchIco
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
-import { feeRuleSchema } from "@stagedesk/core";
+import { feeRuleSchema, parseListQuery } from "@stagedesk/core";
 import { activePlans, type AgencyStatusFilter, agencyStatusFilters, listAgencies, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { FilterChips, Pager } from "@/components/list-controls";
+import { FilterChips } from "@/components/list-controls";
+import { ListPager, SortHead } from "@/components/list/list-controls";
 import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,8 @@ const statusTone = {
   incomplete: "warning",
 } as const;
 
+const spec = { sorts: ["created", "name", "bookings", "members"], defaultSort: "created", defaultDir: "desc" as const };
+
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies">, "searchParams">) {
@@ -52,6 +55,7 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
   const status = agencyStatusFilters.includes(one(query["status"]) as AgencyStatusFilter) ? (one(query["status"]) as AgencyStatusFilter) : null;
   const planKey = one(query["plan"]) || null;
   const page = Math.max(1, Number(one(query["page"])) || 1);
+  const lq = parseListQuery(query, spec);
 
   // Platform-wide view: deliberately not tenant-scoped.
   const [t, ta, tf, ts, format, locale, list, plans, totals] = await Promise.all([
@@ -61,7 +65,7 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
     getTranslations("subStatus"),
     getFormatter(),
     getLocale(),
-    listAgencies({ q, status, planKey, page }),
+    listAgencies({ q, status, planKey, page, pageSize: lq.size, sort: lq.sort as "name", dir: lq.dir }),
     activePlans(),
     Promise.all([
       prisma.organization.count(),
@@ -135,13 +139,13 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("name")}</TableHead>
+                  <SortHead spec={spec} column="name">{t("name")}</SortHead>
                   <TableHead>{t("owner")}</TableHead>
                   <TableHead>{tf("plan")}</TableHead>
                   <TableHead>{tf("status")}</TableHead>
-                  <TableHead className="text-right">{ta("bookings")}</TableHead>
-                  <TableHead className="text-right">{t("members")}</TableHead>
-                  <TableHead>{t("created")}</TableHead>
+                  <SortHead spec={spec} column="bookings" align="right">{ta("bookings")}</SortHead>
+                  <SortHead spec={spec} column="members" align="right">{t("members")}</SortHead>
+                  <SortHead spec={spec} column="created">{t("created")}</SortHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -196,7 +200,7 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
         </Card>
       )}
 
-      <Pager page={list.page} pages={list.pages} total={list.total} href={(p) => href({ page: String(p) })} />
+      <ListPager spec={spec} total={list.total} />
     </div>
   );
 }

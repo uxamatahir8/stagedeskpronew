@@ -17,7 +17,15 @@ export const agencyStatusFilters = ["suspended", "trialing", "active", "past_due
 export type AgencyStatusFilter = (typeof agencyStatusFilters)[number];
 
 /** The platform admin's agency list: search, filter by status and plan, page by page. */
-export async function listAgencies(input: { q?: string; status?: AgencyStatusFilter | null; planKey?: string | null; page?: number; pageSize?: number }) {
+export async function listAgencies(input: {
+  q?: string;
+  status?: AgencyStatusFilter | null;
+  planKey?: string | null;
+  page?: number;
+  pageSize?: number;
+  sort?: "created" | "name" | "bookings" | "members";
+  dir?: "asc" | "desc";
+}) {
   const pageSize = input.pageSize ?? 25;
   const page = Math.max(1, input.page ?? 1);
   const q = input.q?.trim();
@@ -42,7 +50,14 @@ export async function listAgencies(input: { q?: string; status?: AgencyStatusFil
   const [rows, total] = await Promise.all([
     prisma.organization.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy:
+        input.sort === "name"
+          ? { name: input.dir ?? "asc" }
+          : input.sort === "bookings"
+            ? { bookings: { _count: input.dir ?? "desc" } }
+            : input.sort === "members"
+              ? { members: { _count: input.dir ?? "desc" } }
+              : { createdAt: input.dir ?? "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: {
@@ -217,7 +232,18 @@ export async function listAllBookings({
   source = null,
   page = 1,
   pageSize = 25,
-}: { q?: string; status?: string | null; organizationId?: string | null; source?: string | null; page?: number; pageSize?: number }) {
+  sort = "created",
+  dir = "desc",
+}: {
+  q?: string;
+  status?: string | null;
+  organizationId?: string | null;
+  source?: string | null;
+  page?: number;
+  pageSize?: number;
+  sort?: "created" | "date" | "total" | "status";
+  dir?: "asc" | "desc";
+}) {
   const search = q.trim();
   const where: Prisma.BookingWhereInput = {
     ...(status ? { status } : {}),
@@ -236,7 +262,14 @@ export async function listAllBookings({
   const [rows, total] = await Promise.all([
     prisma.booking.findMany({
       where,
-      orderBy: { createdAt: "desc" },
+      orderBy:
+        sort === "date"
+          ? [{ eventDate: { sort: dir, nulls: "last" } }, { createdAt: "desc" }]
+          : sort === "total"
+            ? [{ totalCents: dir }]
+            : sort === "status"
+              ? [{ status: dir }, { createdAt: "desc" }]
+              : [{ createdAt: dir }],
       skip: (Math.max(1, page) - 1) * pageSize,
       take: pageSize,
       select: {

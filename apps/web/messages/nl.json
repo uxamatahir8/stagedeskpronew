@@ -301,7 +301,8 @@
     "cancelInvite": "Intrekken",
     "canceled": "Uitnodiging ingetrokken.",
     "roleChanged": "Rol bijgewerkt.",
-    "actions": "Acties"
+    "actions": "Acties",
+    "search": "Zoek op naam of e-mail"
   },
   "customers": {
     "searchPlaceholder": "Zoek op naam, e-mail of telefoon",
@@ -704,7 +705,11 @@
     "showOnPage": "Tonen op boekingspagina",
     "media": "Medialinks",
     "mediaHint": "YouTube, Vimeo, SoundCloud of Mixcloud, één per regel (max. 3).",
-    "invalidMedia": "Alleen YouTube-, Vimeo-, SoundCloud- en Mixcloud-links werken: {link}"
+    "invalidMedia": "Alleen YouTube-, Vimeo-, SoundCloud- en Mixcloud-links werken: {link}",
+    "searchPlaceholder": "Zoek op naam of genre",
+    "sortName": "Naam",
+    "sortAdded": "Toegevoegd",
+    "statusLabel": "Status"
   },
   "services": {
     "title": "Diensten",
@@ -723,6 +728,12 @@
     "searchPlaceholder": "Zoek op naam of omschrijving"
   },
   "gigs": {
+    "myGigs": "Mijn optredens",
+    "searchPlaceholder": "Zoek op locatie, plaats, bureau of code",
+    "sortDate": "Datum",
+    "when": "Wanneer",
+    "agency": "Bureau",
+    "eventType": "Soort evenement",
     "title": "Mijn optredens",
     "description": "Verzoeken om te beantwoorden en komende optredens.",
     "requests": "Verzoeken",
@@ -736,7 +747,6 @@
     "accepted": "Optreden geaccepteerd.",
     "declined": "Verzoek afgewezen.",
     "brief": "Evenementbriefing",
-    "agency": "Bureau",
     "contact": "Contactpersoon",
     "markDone": "Markeren als afgerond",
     "noProfile": "Je bureau heeft nog geen artiestenprofiel aan je account gekoppeld.",
@@ -818,7 +828,12 @@
     "status_rejected": "Afgewezen",
     "emptyTitle": "Nog geen reviews",
     "emptyBody": "Klanten kunnen hun boeking na het evenement beoordelen.",
-    "updated": "Review bijgewerkt."
+    "updated": "Review bijgewerkt.",
+    "searchPlaceholder": "Zoek op klant, artiest, tekst of code",
+    "sortQueue": "Eerst te beoordelen",
+    "sortDate": "Datum",
+    "sortRating": "Sterren",
+    "statusLabel": "Status"
   },
   "pdf": {
     "quote": "Offerte",
@@ -1028,7 +1043,11 @@
     "trialOn": "{days} dagen proefperiode",
     "sync": "Synchroniseren met Stripe",
     "syncDone": "Abonnement staat in Stripe; bureaus kunnen nu afrekenen.",
-    "stripeMissing": "Stripe is nog niet gekoppeld. Voeg eerst de Stripe-sleutels toe."
+    "stripeMissing": "Stripe is nog niet gekoppeld. Voeg eerst de Stripe-sleutels toe.",
+    "searchPlaceholder": "Zoek op naam of code",
+    "state": "Zichtbaarheid",
+    "stateActive": "Actief en zichtbaar",
+    "agenciesCol": "Bureaus"
   },
   "fees": {
     "type": "Soort kosten",
@@ -1128,7 +1147,8 @@
     "errors_agency_not_connected": "Online betalen is voor dit bureau nog niet beschikbaar.",
     "errors_nothing_due": "Er hoeft niets meer betaald te worden.",
     "errors_plan_not_synced": "Dit abonnement is nog niet online af te sluiten.",
-    "errors_no_customer": "Er is nog geen betaalaccount."
+    "errors_no_customer": "Er is nog geen betaalaccount.",
+    "searchPlaceholder": "Zoek op klant, code of kenmerk"
   },
   "pay": {
     "payDeposit": "Aanbetaling betalen: {amount}",
@@ -1176,14 +1196,20 @@
     "list": "Per boeking",
     "share": "Jouw aandeel",
     "empty": "Nog geen inkomsten. Ze verschijnen na je eerste optreden.",
-    "noProfile": "Nog geen artiestenprofiel."
+    "noProfile": "Nog geen artiestenprofiel.",
+    "searchPlaceholder": "Zoek op boekingscode",
+    "filterPaid": "Uitbetaald",
+    "filterOwed": "Nog te ontvangen van bureau",
+    "filterOpen": "Nog niet uitbetaald"
   },
   "myPayments": {
     "title": "Betalingen",
     "description": "Wat je hebt betaald en wat nog openstaat.",
     "due": "Nog te betalen",
     "history": "Betaalgeschiedenis",
-    "empty": "Nog geen betalingen."
+    "empty": "Nog geen betalingen.",
+    "searchPlaceholder": "Zoek op boekingscode of kenmerk",
+    "kind": "Soort"
   },
   "platformPayments": {
     "title": "Betalingen & uitbetalingen",
@@ -1205,7 +1231,9 @@
     "status_processed": "Verwerkt",
     "status_failed": "Mislukt",
     "status_ignored": "Niet nodig",
-    "subscriptions": "Abonnementen"
+    "subscriptions": "Abonnementen",
+    "searchPlaceholder": "Zoek op type, event-ID of fout",
+    "eventStatus": "Status"
   },
   "partners": {
     "metaTitle": "Partnerprogramma",
@@ -1327,7 +1355,8 @@
     "payout_paid": "Betaald",
     "payout_failed": "Mislukt",
     "linkOpensSignUp": "De link opent de registratie voor bureaus. Alleen een bureau dat zich via jouw link aanmeldt telt als aanbreng; commissie krijg je pas als de betaling van dat bureau is bevestigd.",
-    "commission_requested": "In opname"
+    "commission_requested": "In opname",
+    "searchAgency": "Zoek op bureau of uitbetaling"
   },
   "affiliatesAdmin": {
     "title": "Affiliates",
@@ -1462,7 +1491,9 @@
     "monthlyHint": "Verdiend en uitbetaald over de laatste twaalf maanden.",
     "topPartners": "Beste partners",
     "noCommissionsYet": "Nog geen commissies.",
-    "allPartners": "Alle partners"
+    "allPartners": "Alle partners",
+    "searchCommissions": "Zoek op partner, bureau, factuur of uitbetaling",
+    "searchPartners": "Zoek op naam, e-mail of code"
   },
   "programSettings": {
     "title": "Partnerprogramma",
@@ -1530,7 +1561,8 @@
     "state_rewarded": "{count, plural, one {Gratis maand gegeven} other {Gratis maanden gegeven}}",
     "state_rejected": "Niet geteld",
     "youJoinedViaPartner": "Jouw bureau kwam via partner {name}.",
-    "youJoinedViaAgency": "Jouw bureau kwam via {name}."
+    "youJoinedViaAgency": "Jouw bureau kwam via {name}.",
+    "searchPlaceholder": "Zoek op bureau"
   },
   "notifications": {
     "readAll": "Alles gelezen",
@@ -1586,7 +1618,13 @@
     "tooFast": "Je verstuurt heel snel berichten. Wacht even en probeer het opnieuw.",
     "bookingHint": "Klanten en artiesten krijgen ook een e-mail als je schrijft.",
     "messageAgency": "Bericht aan het bureau",
-    "withAgency": "Berichten met {agency}"
+    "withAgency": "Berichten met {agency}",
+    "searchPlaceholder": "Zoek op naam, code of bericht",
+    "sortLatest": "Laatste bericht",
+    "sortEvent": "Datum evenement",
+    "filterUnread": "Gelezen",
+    "onlyUnread": "Alleen ongelezen",
+    "filterChannel": "Gesprek met"
   },
   "support": {
     "title": "Support",
@@ -1634,7 +1672,9 @@
     "messageCount": "{count, plural, one {# bericht} other {# berichten}}",
     "back": "Alle tickets",
     "supportTeam": "StageDesk-support",
-    "removedUser": "Verwijderde gebruiker"
+    "removedUser": "Verwijderde gebruiker",
+    "searchPlaceholder": "Zoek op onderwerp of nummer",
+    "searchPlaceholderStaff": "Zoek op onderwerp, nummer, naam of e-mail"
   },
   "users": {
     "title": "Gebruikers",
@@ -1811,7 +1851,8 @@
     "group_booking": "Boekingen",
     "group_support": "Supportmodus",
     "group_lead": "Leads",
-    "group_site": "Websites"
+    "group_site": "Websites",
+    "searchPlaceholder": "Zoek op persoon, bureau, actie, doel of IP"
   },
   "charts": {
     "showChart": "Grafiek",
@@ -2590,7 +2631,11 @@
     "tab_footer": "Footer",
     "placement_footer": "Footer: {column}",
     "block_richtext": "Tekst (editor)",
-    "uploadImage": "Afbeelding uploaden"
+    "uploadImage": "Afbeelding uploaden",
+    "searchPlaceholder": "Zoek op titel of adres",
+    "kind": "Soort",
+    "kindPage": "Gewone pagina",
+    "waitlistSearch": "Zoek op e-mail, naam of bron"
   },
   "agencySuspended": {
     "title": "Dit bureau is opgeschort",
@@ -3117,7 +3162,10 @@
     "perPage": "Rijen per pagina",
     "perPageOption": "{count} per pagina",
     "results": "{count, plural, one {# resultaat} other {# resultaten}}",
-    "noMatches": "Niets gevonden. Pas je zoekopdracht of filters aan."
+    "noMatches": "Niets gevonden. Pas je zoekopdracht of filters aan.",
+    "sortLabel": "Sorteren",
+    "sortAsc": "{column} (oplopend)",
+    "sortDesc": "{column} (aflopend)"
   },
   "notificationsPage": {
     "title": "Meldingen",
@@ -3326,7 +3374,11 @@
     "error_closed": "Deze lead is gesloten.",
     "error_agency_suspended": "Je bureau is opgeschort.",
     "error_not_offered": "Deze lead wordt je niet meer aangeboden.",
-    "error_customer_on_team": "Deze klant zit in je team en kan geen boeking bij je hebben."
+    "error_customer_on_team": "Deze klant zit in je team en kan geen boeking bij je hebben.",
+    "searchPlaceholder": "Zoek op kenmerk, plaats, genre of bericht",
+    "sortOffered": "Aangeboden",
+    "sortEventDate": "Datum evenement",
+    "eventType": "Soort evenement"
   },
   "paymentSetup": {
     "title": "Betaalinstellingen",
@@ -4079,7 +4131,9 @@
     "markPaid": "Markeren als betaald",
     "markPaidTitle": "Uitbetaling vastleggen",
     "markPaidHint": "Voor een bankoverschrijving of PayPal-betaling die je zelf hebt gedaan.",
-    "retry": "Opnieuw proberen"
+    "retry": "Opnieuw proberen",
+    "searchReference": "Zoek op kenmerk",
+    "searchPartner": "Zoek op kenmerk, partner of e-mail"
   },
   "footerAdmin": {
     "intro": "De kolommen en links onderaan elke pagina van de website. Pagina's uit de paginabouwer zet je in een kolom via de instelling ‘Getoond in’ op de pagina zelf.",

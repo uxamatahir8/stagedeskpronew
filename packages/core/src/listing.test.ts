@@ -31,6 +31,13 @@ describe("list parameters", () => {
     expect(listHref("/app/x", q, { status: null, q: null }, spec)).toBe("/app/x");
   });
 
+  it("keeps a second list's parameters apart with a prefix", () => {
+    const second = { ...spec, prefix: "c." };
+    const q = parseListQuery({ q: "first", "c.q": "second", "c.sort": "name" }, second);
+    expect(q).toMatchObject({ q: "second", sort: "name" });
+    expect(listHref("/app/x", q, { page: 2 }, second)).toBe("/app/x?c.q=second&c.sort=name&c.dir=desc&c.page=2");
+  });
+
   it("clamps the page to what exists", () => {
     expect(pageWindow({ page: 9, size: 25 }, 60)).toEqual({ skip: 50, take: 25, page: 3, pages: 3, total: 60 });
     expect(pageWindow({ page: 1, size: 25 }, 0)).toMatchObject({ skip: 0, pages: 1 });

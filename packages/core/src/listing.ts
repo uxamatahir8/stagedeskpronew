@@ -14,6 +14,8 @@ export interface ListSpec<S extends string = string, F extends string = string> 
   /** Filter name → allowed values. Anything else in the URL is ignored. */
   filters?: Readonly<Record<F, readonly string[]>>;
   pageSize?: number;
+  /** For a second list on the same page: its parameters get this prefix ("c." → c.q, c.sort…). */
+  prefix?: string;
 }
 
 export interface ListQuery<S extends string = string, F extends string = string> {
@@ -35,7 +37,9 @@ const read = (raw: Raw, key: string) => {
 };
 
 /** Reads and validates list parameters; unknown or malformed values fall back to the defaults. */
-export function parseListQuery<S extends string, F extends string = never>(raw: Raw, spec: ListSpec<S, F>): ListQuery<S, F> {
+export function parseListQuery<S extends string, F extends string = never>(input: Raw, spec: ListSpec<S, F>): ListQuery<S, F> {
+  const p = spec.prefix ?? "";
+  const raw: Raw = p ? Object.fromEntries([...(input instanceof URLSearchParams ? input.entries() : Object.entries(input))].flatMap(([k, v]) => (k.startsWith(p) ? [[k.slice(p.length), v]] : []))) : input;
   const fallback = spec.defaultSort ?? spec.sorts[0]!;
   const sortRaw = read(raw, "sort");
   const sort = sortRaw && (spec.sorts as readonly string[]).includes(sortRaw) ? (sortRaw as S) : fallback;
@@ -65,13 +69,14 @@ export function listHref(path: string, query: ListQuery, patch: Partial<Record<s
     ...patch,
   };
   const params = new URLSearchParams();
+  const p = spec?.prefix ?? "";
   for (const [k, v] of Object.entries(values)) {
     if (v === null || v === undefined || v === "") continue;
     if (k === "page" && Number(v) <= 1) continue;
     if (spec && k === "sort" && v === (spec.defaultSort ?? spec.sorts[0]) && values["dir"] === (spec.defaultDir ?? "desc")) continue;
     if (spec && k === "dir" && values["sort"] === (spec.defaultSort ?? spec.sorts[0]) && v === (spec.defaultDir ?? "desc")) continue;
     if (k === "size" && Number(v) === (spec?.pageSize ?? 25)) continue;
-    params.set(k, String(v));
+    params.set(p + k, String(v));
   }
   const s = params.toString();
   return s ? `${path}?${s}` : path;

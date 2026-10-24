@@ -301,7 +301,8 @@
     "cancelInvite": "Cancel",
     "canceled": "Invitation canceled.",
     "roleChanged": "Role updated.",
-    "actions": "Actions"
+    "actions": "Actions",
+    "search": "Search by name or email"
   },
   "customers": {
     "searchPlaceholder": "Search by name, email or phone",
@@ -704,7 +705,11 @@
     "showOnPage": "Show on booking page",
     "media": "Media links",
     "mediaHint": "YouTube, Vimeo, SoundCloud or Mixcloud, one per line (max 3).",
-    "invalidMedia": "Only YouTube, Vimeo, SoundCloud and Mixcloud links work: {link}"
+    "invalidMedia": "Only YouTube, Vimeo, SoundCloud and Mixcloud links work: {link}",
+    "searchPlaceholder": "Search by name or genre",
+    "sortName": "Name",
+    "sortAdded": "Added",
+    "statusLabel": "Status"
   },
   "services": {
     "title": "Services",
@@ -723,6 +728,12 @@
     "searchPlaceholder": "Search by name or description"
   },
   "gigs": {
+    "myGigs": "My gigs",
+    "searchPlaceholder": "Search by venue, city, agency or code",
+    "sortDate": "Date",
+    "when": "When",
+    "agency": "Agency",
+    "eventType": "Event type",
     "title": "My gigs",
     "description": "Requests to answer and upcoming performances.",
     "requests": "Requests",
@@ -736,7 +747,6 @@
     "accepted": "Gig accepted.",
     "declined": "Request declined.",
     "brief": "Event brief",
-    "agency": "Agency",
     "contact": "Contact",
     "markDone": "Mark as completed",
     "noProfile": "Your agency hasn't linked an artist profile to your account yet.",
@@ -818,7 +828,12 @@
     "status_rejected": "Rejected",
     "emptyTitle": "No reviews yet",
     "emptyBody": "Customers can review their booking after the event.",
-    "updated": "Review updated."
+    "updated": "Review updated.",
+    "searchPlaceholder": "Search by customer, artist, text or code",
+    "sortQueue": "Needs review first",
+    "sortDate": "Date",
+    "sortRating": "Stars",
+    "statusLabel": "Status"
   },
   "pdf": {
     "quote": "Quote",
@@ -1028,7 +1043,11 @@
     "trialOn": "{days}-day trial",
     "sync": "Sync with Stripe",
     "syncDone": "Plan is in Stripe; agencies can now check out.",
-    "stripeMissing": "Stripe isn’t connected yet. Add the Stripe keys first."
+    "stripeMissing": "Stripe isn’t connected yet. Add the Stripe keys first.",
+    "searchPlaceholder": "Search by name or code",
+    "state": "Visibility",
+    "stateActive": "Active and visible",
+    "agenciesCol": "Agencies"
   },
   "fees": {
     "type": "Fee type",
@@ -1128,7 +1147,8 @@
     "errors_agency_not_connected": "Online payments aren't available for this agency yet.",
     "errors_nothing_due": "Nothing left to pay.",
     "errors_plan_not_synced": "This plan isn't available online yet.",
-    "errors_no_customer": "There's no payment account yet."
+    "errors_no_customer": "There's no payment account yet.",
+    "searchPlaceholder": "Search by customer, code or reference"
   },
   "pay": {
     "payDeposit": "Pay deposit {amount}",
@@ -1176,14 +1196,20 @@
     "list": "Per booking",
     "share": "Your share",
     "empty": "No earnings yet. They appear after your first event.",
-    "noProfile": "No artist profile yet."
+    "noProfile": "No artist profile yet.",
+    "searchPlaceholder": "Search by booking code",
+    "filterPaid": "Paid out",
+    "filterOwed": "Owed by the agency",
+    "filterOpen": "Not paid out yet"
   },
   "myPayments": {
     "title": "Payments",
     "description": "What you've paid and what's still due.",
     "due": "Still to pay",
     "history": "Payment history",
-    "empty": "No payments yet."
+    "empty": "No payments yet.",
+    "searchPlaceholder": "Search by booking code or reference",
+    "kind": "Type"
   },
   "platformPayments": {
     "title": "Payments & payouts",
@@ -1205,7 +1231,9 @@
     "status_processed": "Processed",
     "status_failed": "Failed",
     "status_ignored": "Not needed",
-    "subscriptions": "Subscriptions"
+    "subscriptions": "Subscriptions",
+    "searchPlaceholder": "Search by type, event ID or error",
+    "eventStatus": "Status"
   },
   "partners": {
     "metaTitle": "Partner program",
@@ -1327,7 +1355,8 @@
     "payout_paid": "Paid",
     "payout_failed": "Failed",
     "linkOpensSignUp": "The link opens agency registration. Only an agency that signs up through your link counts as a referral; you earn commission once that agency's payment is confirmed.",
-    "commission_requested": "In a withdrawal"
+    "commission_requested": "In a withdrawal",
+    "searchAgency": "Search by agency or withdrawal"
   },
   "affiliatesAdmin": {
     "title": "Affiliates",
@@ -1462,7 +1491,9 @@
     "monthlyHint": "Earned and paid out over the last twelve months.",
     "topPartners": "Top partners",
     "noCommissionsYet": "No commissions yet.",
-    "allPartners": "All partners"
+    "allPartners": "All partners",
+    "searchCommissions": "Search by partner, agency, invoice or withdrawal",
+    "searchPartners": "Search by name, email or code"
   },
   "programSettings": {
     "title": "Affiliate program",
@@ -1530,7 +1561,8 @@
     "state_rewarded": "{count, plural, one {Free month given} other {Free months given}}",
     "state_rejected": "Not counted",
     "youJoinedViaPartner": "Your agency came through partner {name}.",
-    "youJoinedViaAgency": "Your agency came through {name}."
+    "youJoinedViaAgency": "Your agency came through {name}.",
+    "searchPlaceholder": "Search by agency"
   },
   "notifications": {
     "readAll": "Mark all read",
@@ -1586,7 +1618,13 @@
     "tooFast": "You're sending messages very quickly. Wait a moment and try again.",
     "bookingHint": "Customers and artists also get an email when you write.",
     "messageAgency": "Message the agency",
-    "withAgency": "Messages with {agency}"
+    "withAgency": "Messages with {agency}",
+    "searchPlaceholder": "Search by name, code or message",
+    "sortLatest": "Latest message",
+    "sortEvent": "Event date",
+    "filterUnread": "Read",
+    "onlyUnread": "Unread only",
+    "filterChannel": "Conversation with"
   },
   "support": {
     "title": "Support",
@@ -1634,7 +1672,9 @@
     "messageCount": "{count, plural, one {# message} other {# messages}}",
     "back": "All tickets",
     "supportTeam": "StageDesk support",
-    "removedUser": "Removed user"
+    "removedUser": "Removed user",
+    "searchPlaceholder": "Search by subject or number",
+    "searchPlaceholderStaff": "Search by subject, number, name or email"
   },
   "users": {
     "title": "Users",
@@ -1811,7 +1851,8 @@
     "group_booking": "Bookings",
     "group_support": "Support mode",
     "group_lead": "Leads",
-    "group_site": "Websites"
+    "group_site": "Websites",
+    "searchPlaceholder": "Search by person, agency, action, target or IP"
   },
   "charts": {
     "showChart": "Chart",
@@ -2590,7 +2631,11 @@
     "tab_footer": "Footer",
     "placement_footer": "Footer: {column}",
     "block_richtext": "Text (editor)",
-    "uploadImage": "Upload image"
+    "uploadImage": "Upload image",
+    "searchPlaceholder": "Search by title or address",
+    "kind": "Type",
+    "kindPage": "Regular page",
+    "waitlistSearch": "Search by email, name or source"
   },
   "agencySuspended": {
     "title": "This agency is suspended",
@@ -3117,7 +3162,10 @@
     "perPage": "Rows per page",
     "perPageOption": "{count} per page",
     "results": "{count, plural, one {# result} other {# results}}",
-    "noMatches": "Nothing found. Try another search or filter."
+    "noMatches": "Nothing found. Try another search or filter.",
+    "sortLabel": "Sort",
+    "sortAsc": "{column} (ascending)",
+    "sortDesc": "{column} (descending)"
   },
   "notificationsPage": {
     "title": "Notifications",
@@ -3326,7 +3374,11 @@
     "error_closed": "This lead has been closed.",
     "error_agency_suspended": "Your agency is suspended.",
     "error_not_offered": "This lead is no longer offered to you.",
-    "error_customer_on_team": "This customer is on your team, so it can't be your booking."
+    "error_customer_on_team": "This customer is on your team, so it can't be your booking.",
+    "searchPlaceholder": "Search by reference, city, genre or message",
+    "sortOffered": "Offered",
+    "sortEventDate": "Event date",
+    "eventType": "Event type"
   },
   "paymentSetup": {
     "title": "Payment setup",
@@ -4079,7 +4131,9 @@
     "markPaid": "Mark as paid",
     "markPaidTitle": "Record the payout",
     "markPaidHint": "For a bank transfer or PayPal payment you made yourself.",
-    "retry": "Try again"
+    "retry": "Try again",
+    "searchReference": "Search by reference",
+    "searchPartner": "Search by reference, partner or email"
   },
   "footerAdmin": {
     "intro": "The columns and links at the bottom of every page of the website. Put pages from the page builder in a column with the ‘Shown in’ setting on the page itself.",

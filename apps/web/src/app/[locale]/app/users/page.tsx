@@ -1,10 +1,12 @@
 import { MailWarningIcon, SearchIcon, ShieldCheckIcon, UsersRoundIcon, UserXIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { parseListQuery } from "@stagedesk/core";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { listUsers, prisma, userFilters, type UserFilter } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
-import { FilterChips, Pager } from "@/components/list-controls";
+import { FilterChips } from "@/components/list-controls";
+import { ListPager, SortHead } from "@/components/list/list-controls";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
@@ -32,6 +34,8 @@ export default async function UsersPage({ params, searchParams }: PageProps<"/[l
   );
 }
 
+const spec = { sorts: ["created", "name", "email"], defaultSort: "created", defaultDir: "desc" as const };
+
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "searchParams">) {
@@ -41,12 +45,13 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
   const requested = one(sp["filter"]) as UserFilter | undefined;
   const filter: UserFilter = requested && userFilters.includes(requested) ? requested : "all";
   const page = Math.max(1, Number.parseInt(one(sp["page"]) ?? "1", 10) || 1);
+  const lq = parseListQuery(sp, spec);
   // Platform-wide view: deliberately not tenant-scoped.
   const [t, tr, format, list, totals] = await Promise.all([
     getTranslations("users"),
     getTranslations("roles"),
     getFormatter(),
-    listUsers({ q, filter, page }),
+    listUsers({ q, filter, page, pageSize: lq.size, sort: lq.sort as "name", dir: lq.dir }),
     Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { platformRole: "platform_admin" } }),
@@ -102,11 +107,11 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t("user")}</TableHead>
+                  <SortHead spec={spec} column="name">{t("user")}</SortHead>
                   <TableHead>{t("roles")}</TableHead>
                   <TableHead>{t("status")}</TableHead>
                   <TableHead>{t("lastActive")}</TableHead>
-                  <TableHead>{t("joined")}</TableHead>
+                  <SortHead spec={spec} column="created">{t("joined")}</SortHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -155,7 +160,7 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
         </Card>
       )}
 
-      <Pager page={page} pages={list.pages} total={list.total} href={(p) => href({ page: p })} />
+      <ListPager spec={spec} total={list.total} />
     </div>
   );
 }

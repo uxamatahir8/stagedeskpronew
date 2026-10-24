@@ -10,11 +10,13 @@ import { PageHeader } from "@/components/page-header";
 import { PaymentStatusBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DataTable } from "@/components/list/data-table";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
 import { payBookingAction, reportPaymentAction } from "@/lib/pay-actions";
 import { requireAgency } from "@/lib/viewer";
+
+const spec = { sorts: ["date", "booking", "amount"], defaultSort: "date", defaultDir: "desc" as const, filters: { kind: ["deposit", "balance", "refund", "other"] } };
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/my-payments">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "myPayments" });
@@ -80,39 +82,36 @@ async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-pay
         </section>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("myPayments.history")}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          {payments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("myPayments.empty")}</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("payments.date")}</TableHead>
-                  <TableHead>{t("payments.booking")}</TableHead>
-                  <TableHead>{t("payments.method")}</TableHead>
-                  <TableHead className="text-right">{t("payments.amount")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, p.receivedAt, "short")}</TableCell>
-                    <TableCell className="font-mono text-sm">{p.trackingCode}</TableCell>
-                    <TableCell>
-                      {t(`paymentKinds.${p.kind as "deposit"}`)} · {t(`paymentMethods.${p.method as "cash"}`)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">{euro(format, p.amountCents, p.currency)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <section className="grid gap-3">
+        <h2 className="font-medium">{t("myPayments.history")}</h2>
+        {payments.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{t("myPayments.empty")}</p>
+        ) : (
+          <DataTable
+            spec={spec}
+            placeholder={t("myPayments.searchPlaceholder")}
+            filters={[{ key: "kind", label: t("myPayments.kind"), options: [...new Set(payments.map((p) => p.kind))].map((k) => ({ value: k, label: t(`paymentKinds.${k as "deposit"}`) })) }]}
+            columns={[
+              { label: t("payments.date"), sort: "date" },
+              { label: t("payments.booking"), sort: "booking" },
+              { label: t("payments.method") },
+              { label: t("payments.amount"), sort: "amount", align: "right" },
+            ]}
+            rows={payments.map((p) => ({
+              id: p.id,
+              text: `${p.trackingCode} ${p.reference ?? ""}`,
+              values: { date: p.receivedAt.getTime(), booking: p.trackingCode, amount: p.amountCents },
+              facets: { kind: p.kind },
+              cells: [
+                eventDate(format, p.receivedAt, "short"),
+                <span key="c" className="font-mono text-sm">{p.trackingCode}</span>,
+                `${t(`paymentKinds.${p.kind as "deposit"}`)} · ${t(`paymentMethods.${p.method as "cash"}`)}`,
+                <span key="a" className="font-medium">{euro(format, p.amountCents, p.currency)}</span>,
+              ],
+            }))}
+          />
+        )}
+      </section>
     </div>
   );
 }
