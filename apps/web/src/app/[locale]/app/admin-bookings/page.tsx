@@ -85,7 +85,7 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
         <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3">
           <p className="flex items-center gap-2 text-sm">
             <CircleCheckIcon className="size-4 shrink-0 text-success" aria-hidden />
-            {t("created", { code: createdBooking.trackingCode, agency: createdBooking.organization.name })}
+            {t("createdNotice", { code: createdBooking.trackingCode, agency: createdBooking.organization.name })}
           </p>
           <form action={startSupportAction.bind(null, createdBooking.organizationId, `/app/bookings/${createdBooking.trackingCode}`)}>
             <Button type="submit" size="sm" variant="outline">

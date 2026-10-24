@@ -3131,7 +3131,7 @@
     "customer": "Customer",
     "status": "Status",
     "total": "Total",
-    "created": "Platform admin booking {code} created for {agency}. Their team has been notified.",
+    "created": "Created",
     "empty": "No bookings found",
     "emptyHint": "Try another search or clear the filters.",
     "source_booking_page": "booking page",
@@ -3142,7 +3142,8 @@
     "allSources": "All sources",
     "source_manual": "by the agency",
     "source_platform_admin": "platform admin",
-    "openCreated": "Open the booking"
+    "openCreated": "Open the booking",
+    "createdNotice": "Platform admin booking {code} created for {agency}. Their team has been notified."
   },
   "websiteEditor": {
     "title": "Website",

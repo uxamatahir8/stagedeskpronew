@@ -3131,7 +3131,7 @@
     "customer": "Klant",
     "status": "Status",
     "total": "Totaal",
-    "created": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht.",
+    "created": "Aangemaakt",
     "empty": "Geen boekingen gevonden",
     "emptyHint": "Probeer een andere zoekterm of wis de filters.",
     "source_booking_page": "boekingspagina",
@@ -3142,7 +3142,8 @@
     "allSources": "Alle herkomsten",
     "source_manual": "door het bureau",
     "source_platform_admin": "platformbeheerder",
-    "openCreated": "Boeking openen"
+    "openCreated": "Boeking openen",
+    "createdNotice": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht."
   },
   "websiteEditor": {
     "title": "Website",
