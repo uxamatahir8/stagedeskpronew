@@ -17,7 +17,7 @@ import { notify } from "./notifications";
 import { getSetting } from "./settings";
 
 /** Commissions that count as earned (not cancelled). */
-const earned = ["pending", "review", "approved", "paid"];
+const earned = ["pending", "review", "approved", "requested", "paid"];
 
 async function freeCode(base: string) {
   const clean = base.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 20) || "partner";

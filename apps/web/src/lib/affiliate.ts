@@ -13,8 +13,8 @@ export async function requireAffiliate(permission: Permission) {
   return { viewer, affiliate };
 }
 
-/** A shareable referral link, optionally for a campaign and a specific page. */
-export function referralLink(code: string, campaign?: string | null, path = "/") {
+/** A shareable referral link. It opens agency registration: only a new agency counts as a referral. */
+export function referralLink(code: string, campaign?: string | null, path = "/sign-up") {
   const url = new URL(path, appUrl);
   url.searchParams.set("via", code);
   if (campaign) url.searchParams.set("c", campaign);

@@ -31,6 +31,8 @@ export function AffiliateProgramForm({ program }: { program: Program }) {
   const [pending, startTransition] = useTransition();
   const [enabled, setEnabled] = useState(program.enabled);
   const [manual, setManual] = useState(program.manualApproval);
+  const [payoutMode, setPayoutMode] = useState(program.payoutMode);
+  const [methods, setMethods] = useState(program.payoutMethods);
   const [f, setF] = useState({
     rate: pct(program.commissionBps, locale),
     months: program.commissionMonths === null ? "" : String(program.commissionMonths),
@@ -66,6 +68,8 @@ export function AffiliateProgramForm({ program }: { program: Program }) {
       promoDiscountMonths: int(f.discountMonths),
       agencyReferralFreeMonths: int(f.freeMonths),
       reviewThresholdCents: parseEuros(f.review || "0"),
+      payoutMode,
+      payoutMethods: methods,
       tiers: parsedTiers,
     };
     const invalid =
@@ -114,6 +118,35 @@ export function AffiliateProgramForm({ program }: { program: Program }) {
           {field("freeMonths", t("freeMonths"), t("freeMonthsHint"))}
           {field("review", t("review"), t("reviewHint"))}
         </div>
+
+        <fieldset className="grid gap-3">
+          <legend className="mb-1 font-medium">{t("payouts")}</legend>
+          <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t("payoutMode")}>
+            {(["request", "automatic"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={payoutMode === mode}
+                onClick={() => setPayoutMode(mode)}
+                className={`grid gap-0.5 rounded-xl border p-3 text-left text-sm ${payoutMode === mode ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:border-primary/40"}`}
+              >
+                <span className="font-medium">{t(`payoutMode_${mode}`)}</span>
+                <span className="text-xs text-muted-foreground">{t(`payoutMode_${mode}Hint`)}</span>
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(["stripe", "bank_transfer", "paypal"] as const).map((m) => (
+              <div key={m} className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                <label htmlFor={`prog-method-${m}`} className="text-sm">
+                  {t(`method_${m}`)}
+                </label>
+                <Switch id={`prog-method-${m}`} checked={methods[m]} onCheckedChange={(on) => setMethods({ ...methods, [m]: on })} />
+              </div>
+            ))}
+          </div>
+        </fieldset>
 
         <fieldset className="grid gap-3">
           <legend className="mb-1 font-medium">{t("tiers")}</legend>

@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { affiliateCodePattern, promoCodePattern } from "@stagedesk/core";
-import { AffiliateAdminError, audit, createAffiliateByAdmin, deleteAffiliateByAdmin, prisma, reviewCommission, setAffiliateStatus, updateAffiliateByAdmin } from "@stagedesk/db";
-import { getStripe, payAffiliate, syncAffiliatePromo } from "@stagedesk/payments";
+import { AffiliateAdminError, approveWithdrawal, audit, createAffiliateByAdmin, deleteAffiliateByAdmin, markWithdrawalPaid, prisma, rejectWithdrawal, requestWithdrawal, reviewCommission, setAffiliateStatus, updateAffiliateByAdmin, WithdrawalError } from "@stagedesk/db";
+import { getStripe, payWithdrawalByStripe, syncAffiliatePromo } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { referralLink } from "@/lib/affiliate";
 import { paymentsErrorMessage } from "@/lib/billing";
@@ -60,20 +60,83 @@ export async function reviewCommissionAction(commissionId: string, approve: bool
   return { ok: true, message: approve ? t("commissionApproved") : t("commissionCancelled") };
 }
 
-/** Pays approved commissions now instead of waiting for the payout day. */
+/**
+ * Pays an affiliate now: a withdrawal of everything approved is made for them
+ * and approved; with Stripe it is transferred straight away, otherwise it waits
+ * in Withdrawals to be marked paid.
+ */
 export async function payNowAction(affiliateId: string): Promise<ActionResult> {
   const viewer = await requirePermission("platform.affiliates");
   const t = await getTranslations("affiliatesAdmin");
-  const stripe = await getStripe();
-  if (!stripe) return { ok: false, message: (await getTranslations("platformPayments"))("notConfigured") };
   try {
-    const paid = await payAffiliate(stripe, affiliateId);
-    if (paid) await audit({ actorId: viewer.user.id, action: "affiliate.pay_now", targetType: "affiliate", targetId: affiliateId, data: { cents: paid.amountCents } });
+    const payout = await requestWithdrawal(affiliateId, viewer.user.id);
+    await approveWithdrawal(payout.id, viewer.user.id, t("payNowNote"));
+    if (payout.method === "stripe") {
+      const stripe = await getStripe();
+      if (!stripe) return { ok: false, message: (await getTranslations("platformPayments"))("notConfigured") };
+      await payWithdrawalByStripe(stripe, payout.id, viewer.user.id);
+    }
+    await audit({ actorId: viewer.user.id, action: "affiliate.pay_now", targetType: "affiliate", targetId: affiliateId, data: { cents: payout.amountCents, method: payout.method } });
     done();
-    return paid ? { ok: true, message: t("paid", { amount: euro(await getFormatter(), paid.amountCents) }) } : { ok: false, message: t("nothingToPay") };
+    return { ok: true, message: t("paid", { amount: euro(await getFormatter(), payout.amountCents) }) };
   } catch (error) {
+    if (error instanceof WithdrawalError) return { ok: false, message: (await getTranslations("withdrawals"))(`error_${error.code}`) };
     return { ok: false, message: await paymentsErrorMessage(error) };
   }
+}
+
+async function withdrawalResult(task: () => Promise<unknown>, success: string): Promise<ActionResult> {
+  try {
+    await task();
+    done();
+    return { ok: true, message: success };
+  } catch (error) {
+    if (error instanceof WithdrawalError) return { ok: false, message: (await getTranslations("withdrawals"))(`error_${error.code}`) };
+    return { ok: false, message: await paymentsErrorMessage(error) };
+  }
+}
+
+/** Approves a requested withdrawal; Stripe withdrawals are transferred right away. */
+export async function approveWithdrawalAction(payoutId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("withdrawals");
+  return withdrawalResult(async () => {
+    const payout = await approveWithdrawal(payoutId, viewer.user.id);
+    await audit({ actorId: viewer.user.id, action: "withdrawal.approve", targetType: "affiliate_payout", targetId: payoutId, data: { cents: payout.amountCents } });
+    if (payout.method === "stripe") {
+      const stripe = await getStripe();
+      if (stripe) await payWithdrawalByStripe(stripe, payoutId, viewer.user.id);
+    }
+  }, t("approvedDone"));
+}
+
+export async function rejectWithdrawalAction(payoutId: string, reason: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("withdrawals");
+  return withdrawalResult(async () => {
+    await rejectWithdrawal(payoutId, viewer.user.id, reason);
+    await audit({ actorId: viewer.user.id, action: "withdrawal.reject", targetType: "affiliate_payout", targetId: payoutId, data: { reason } });
+  }, t("rejectedDone"));
+}
+
+/** Bank transfer or PayPal done by hand: record the reference so it can be traced. */
+export async function markWithdrawalPaidAction(payoutId: string, transactionRef: string, paidOn: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("withdrawals");
+  const paidAt = /^\d{4}-\d{2}-\d{2}$/.test(paidOn) ? new Date(`${paidOn}T12:00:00Z`) : new Date();
+  return withdrawalResult(async () => {
+    await markWithdrawalPaid(payoutId, viewer.user.id, { transactionRef, paidAt });
+    await audit({ actorId: viewer.user.id, action: "withdrawal.paid", targetType: "affiliate_payout", targetId: payoutId, data: { transactionRef } });
+  }, t("paidDone"));
+}
+
+/** Tries a failed Stripe transfer again. */
+export async function retryWithdrawalAction(payoutId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.affiliates");
+  const t = await getTranslations("withdrawals");
+  const stripe = await getStripe();
+  if (!stripe) return { ok: false, message: (await getTranslations("platformPayments"))("notConfigured") };
+  return withdrawalResult(() => payWithdrawalByStripe(stripe, payoutId, viewer.user.id), t("paidDone"));
 }
 
 const assetSchema = z.object({

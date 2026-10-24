@@ -87,6 +87,14 @@ rule frozen when the quote was accepted and transfers the artist's and agency's 
 unconnected artist's share goes to the agency and is recorded as owed. Refunds reverse transfers
 proportionally; the platform absorbs Stripe's unreturned fee. Every movement is in `ledger_entries`.
 
+## Agency roles and permissions
+
+Owners have every permission. What admins and staff may do is set per agency under Team → Roles and
+permissions (26 permissions in six groups; stored in `organizations.rolePermissions`, defaults in
+`packages/core/src/access.ts`). Billing and the permissions themselves stay with the owner; team
+management, agency settings and refunds can't be given to staff. The viewer's permissions drive the
+sidebar, pages, buttons (`<IfCan>`) and every server action (`requireAgency(permission)`).
+
 ## Affiliate program
 
 Partners apply at `/partners`; the platform admin approves them under Affiliates, or adds them there
@@ -95,17 +103,27 @@ referrals or commission can be deleted. Program rules
 (rate, period, cookie window, approval period, payout minimum and day, promo discount, give-a-month
 reward, review threshold, tiers) are in Settings and apply to new referrals only.
 
-- **Tracking:** `?via=<code>&c=<campaign>` on any page sets a first-party cookie and logs the click.
+- **Tracking:** partner links open agency registration (`/sign-up?via=<code>&c=<campaign>`); `?via=` on any
+  page also works. It sets a first-party cookie and logs the click; only a new agency counts as a referral.
   When someone creates an agency, a partner code typed at onboarding wins; otherwise the last link
   within the cookie window counts. The referral, with its commission rate, is stored on the agency.
 - **Commission:** from Stripe's `invoice.paid`, on the amount excluding VAT, for the referral's period.
-  Pending for the approval period, then approved by the worker; months above the review threshold
+  Pending for the approval period (default 7 days after the payment is confirmed), then approved by the
+  worker; months above the review threshold
   wait for the admin. Refunds and disputes reduce or cancel unpaid commission.
-- **Payouts:** on the payout day the worker transfers approved commission above the minimum to the
-  partner's Stripe Express account and emails a statement.
+- **Withdrawals** (default, `payoutMode: request`): the partner chooses how to be paid (Stripe, bank transfer
+  or PayPal, as allowed in Settings) and requests a withdrawal of all approved commission above the minimum.
+  The admin approves (Stripe withdrawals are transferred at once) or rejects with a reason; bank and PayPal
+  withdrawals are marked paid with the transaction reference. Every step is an `affiliate_payout_events`
+  row; each commission links to its withdrawal (`WD-XXXXXX`). In `automatic` mode the worker makes and
+  pays a Stripe withdrawal on the payout day instead.
+- **Reports:** Affiliates in the admin panel has Overview (money per stage, funnel, top partners, twelve
+  months), Partners, Withdrawals (queue, actions, CSV) and Commissions (filterable, CSV). Partners see
+  their balance, withdrawals with a timeline and every commission under Payouts.
 - **Fraud rules:** no credit for the partner's own account or company email domain (public mailbox
   providers excepted); clicks are rate limited per visitor; blocked referrals are listed for the admin.
-- **Give a month, get a month:** each agency has an invite link on its Billing page (`?via=r-xxxxxx`).
+- **Give a month, get a month:** each agency has an invite link under Invite agencies (`?via=r-xxxxxx`),
+  with the agencies that joined and the rewards.
   When the invited agency first pays, both get a Stripe balance credit.
 
 ## Dashboards, messages and notifications

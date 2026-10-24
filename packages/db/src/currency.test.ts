@@ -19,11 +19,11 @@ afterAll(async () => {
 
 describe("agency currency", () => {
   it("is copied onto new bookings, and later changes leave them alone", async () => {
-    const first = await createBooking(org, { eventType: "wedding", eventDate: "2027-06-12" }, null);
+    const first = await createBooking(org, { customerId: null, eventType: "wedding", eventDate: "2027-06-12" }, null);
     expect(first.currency).toBe("GBP");
     await prisma.organization.update({ where: { id: org }, data: { currency: "EUR" } });
     expect((await prisma.booking.findUniqueOrThrow({ where: { id: first.id } })).currency).toBe("GBP");
-    const second = await createBooking(org, { eventType: "party", eventDate: "2027-07-01" }, null);
+    const second = await createBooking(org, { customerId: null, eventType: "party", eventDate: "2027-07-01" }, null);
     expect(second.currency).toBe("EUR");
     await prisma.organization.update({ where: { id: org }, data: { currency: "GBP" } });
   });

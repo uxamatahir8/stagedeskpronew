@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { afterAll, describe, expect, it } from "vitest";
-import { applyForAffiliate, approveDueCommissions, attachReferral, prisma, setAffiliateStatus } from "@stagedesk/db";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { applyForAffiliate, approveDueCommissions, attachReferral, getSetting, prisma, setAffiliateStatus } from "@stagedesk/db";
 import { adjustCommissionsForCharge, recordInvoiceCommission, runAffiliatePayouts } from "./affiliates";
 import { fakeStripe } from "./test/fixtures";
 
@@ -50,7 +50,19 @@ const invoice = (customer: string, paidAt: Date, n: number) =>
     status_transitions: { paid_at: Math.floor(paidAt.getTime() / 1000) },
   }) as unknown as Stripe.Invoice;
 
+// The scenario assumes a 30-day approval window and automatic monthly payouts;
+// the shared database may be set differently, so pin it here and restore it after.
+let savedProgram: unknown = null;
+beforeAll(async () => {
+  const row = await prisma.platformSetting.findUnique({ where: { key: "affiliates.program" } });
+  savedProgram = row?.value ?? null;
+  const value = { ...(await getSetting("affiliates.program")), approvalDays: 30, payoutMode: "automatic" };
+  await prisma.platformSetting.upsert({ where: { key: "affiliates.program" }, create: { key: "affiliates.program", value }, update: { value } });
+});
+
 afterAll(async () => {
+  if (savedProgram) await prisma.platformSetting.update({ where: { key: "affiliates.program" }, data: { value: savedProgram as object } });
+  else await prisma.platformSetting.deleteMany({ where: { key: "affiliates.program" } });
   const affiliates = await prisma.affiliate.findMany({ where: { userId: { in: created.users } }, select: { id: true } });
   const ids = affiliates.map((a) => a.id);
   await prisma.commission.deleteMany({ where: { affiliateId: { in: ids } } });

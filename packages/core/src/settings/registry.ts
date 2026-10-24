@@ -23,6 +23,12 @@ export const affiliateProgramSchema = z.object({
   manualApproval: z.boolean(),
   /** An affiliate earning more than this in one month waits for manual review. */
   reviewThresholdCents: z.int().min(0).default(100_000),
+  /** request: affiliates ask for a withdrawal and an admin pays it. automatic: Stripe transfer on the payout day. */
+  payoutMode: z.enum(["request", "automatic"]).default("request"),
+  /** How affiliates can be paid. */
+  payoutMethods: z
+    .object({ stripe: z.boolean(), bank_transfer: z.boolean(), paypal: z.boolean() })
+    .default({ stripe: true, bank_transfer: true, paypal: false }),
   tiers: z.array(tierSchema),
 });
 
@@ -92,7 +98,7 @@ export const settingsRegistry = {
       commissionBps: 2_500,
       commissionMonths: 12,
       cookieDays: 60,
-      approvalDays: 30,
+      approvalDays: 7,
       minPayoutCents: 5_000,
       payoutDayOfMonth: 1,
       promoDiscountBps: 2_000,
@@ -100,6 +106,8 @@ export const settingsRegistry = {
       agencyReferralFreeMonths: 1,
       manualApproval: true,
       reviewThresholdCents: 100_000,
+      payoutMode: "request",
+      payoutMethods: { stripe: true, bank_transfer: true, paypal: false },
       tiers: [
         { name: "Partner", minPayingAgencies: 0, commissionBps: 2_500, perks: "" },
         { name: "Pro", minPayingAgencies: 5, commissionBps: 3_000, perks: "" },

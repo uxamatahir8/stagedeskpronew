@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import Stripe from "stripe";
-import { applyForAffiliate, prisma, setAffiliateStatus } from "@stagedesk/db";
-import { affiliateOnboardingLink, payAffiliate, recordInvoiceCommission, syncAffiliatePromo } from "./affiliates";
+import { applyForAffiliate, approveWithdrawal, prisma, requestWithdrawal, setAffiliateStatus } from "@stagedesk/db";
+import { affiliateOnboardingLink, payWithdrawalByStripe, recordInvoiceCommission, syncAffiliatePromo } from "./affiliates";
 import { bookingCheckout, recordStripePayment } from "./booking-payments";
 import { connectOnboardingLink } from "./connect";
 import { syncPlanToStripe } from "./plans";
@@ -122,7 +122,11 @@ describe.skipIf(!mockUp)("Stripe API contract (stripe-mock)", () => {
     expect(commission?.amountCents).toBe(5_000);
     await prisma.commission.update({ where: { id: commission!.id }, data: { status: "approved" } });
     await prisma.affiliate.update({ where: { id: affiliate.id }, data: { payoutsEnabled: true } });
-    expect((await payAffiliate(stripe, affiliate.id))?.amountCents).toBe(5_000);
+    const withdrawal = await requestWithdrawal(affiliate.id, userId);
+    expect(withdrawal.amountCents).toBe(5_000);
+    await approveWithdrawal(withdrawal.id, userId);
+    expect(await payWithdrawalByStripe(stripe, withdrawal.id, userId)).toMatch(/^tr_/);
+    await prisma.affiliatePayoutEvent.deleteMany({ where: { payoutId: withdrawal.id } });
 
     await prisma.commission.deleteMany({ where: { affiliateId: affiliate.id } });
     await prisma.affiliatePayout.deleteMany({ where: { affiliateId: affiliate.id } });

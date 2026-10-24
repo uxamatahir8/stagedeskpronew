@@ -9,6 +9,7 @@ import {
   ContactIcon,
   CreditCardIcon,
   FileTextIcon,
+  GiftIcon,
   GlobeIcon,
   HandCoinsIcon,
   HouseIcon,
@@ -124,6 +125,7 @@ export const navigation: NavGroup[] = [
     items: [
       { key: "messages", href: "/app/messages", icon: MessagesSquareIcon, permission: "messages" },
       { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team" },
+      { key: "referrals", href: "/app/referrals", icon: GiftIcon, permission: "agency.referrals" },
       { key: "agencySettings", href: "/app/agency-settings", icon: SettingsIcon, permission: "agency.settings" },
       { key: "bookingPage", href: "/app/booking-page", icon: GlobeIcon, permission: "agency.website" },
       { key: "website", href: "/app/website", icon: PanelsTopLeftIcon, permission: "agency.website" },

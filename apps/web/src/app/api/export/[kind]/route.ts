@@ -7,6 +7,8 @@ const kinds: Record<string, Permission> = {
   customers: "agency.customers",
   payments: "agency.reports",
   waitlist: "platform.pages",
+  withdrawals: "platform.affiliates",
+  commissions: "platform.affiliates",
 };
 
 /** RFC 4180 field: quoted when needed; a leading =, +, - or @ is defused so spreadsheets don't run it as a formula. */
@@ -40,6 +42,28 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
     // Platform-level list, not agency data.
     const entries = await prisma.waitlistEntry.findMany({ orderBy: { createdAt: "asc" } });
     return csvResponse(kind, [["email", "name", "role", "company", "language", "source", "joined"], ...entries.map((e) => [e.email, e.name, e.role, e.company, e.locale, e.source, e.createdAt])]);
+  }
+
+  if (kind === "withdrawals") {
+    // Every affiliate withdrawal with where it went and how it was paid.
+    const payouts = await prisma.affiliatePayout.findMany({ orderBy: { createdAt: "desc" }, include: { affiliate: { include: { user: { select: { name: true, email: true } } } }, _count: { select: { commissions: true } } } });
+    return csvResponse(kind, [
+      ["reference", "partner", "email", "method", "status", "amount_eur", "commissions", "destination", "transaction_ref", "requested_at", "paid_at", "reject_reason"],
+      ...payouts.map((p) => {
+        const d = (p.details ?? {}) as { iban?: string; accountName?: string; paypalEmail?: string; stripeAccountId?: string };
+        return [p.reference, p.affiliate.user.name, p.affiliate.user.email, p.method, p.status, euros(p.amountCents), p._count.commissions, d.iban ? `${d.accountName ?? ""} ${d.iban}` : (d.paypalEmail ?? d.stripeAccountId ?? ""), p.transactionRef ?? p.stripeTransferId, p.createdAt, p.paidAt, p.rejectReason];
+      }),
+    ]);
+  }
+  if (kind === "commissions") {
+    const commissions = await prisma.commission.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { affiliate: { include: { user: { select: { name: true } } } }, referral: { select: { agency: { select: { name: true } } } }, payout: { select: { reference: true } } },
+    });
+    return csvResponse(kind, [
+      ["created_at", "partner", "agency", "stripe_invoice", "invoice_eur", "rate_pct", "commission_eur", "status", "available_at", "withdrawal", "cancel_reason"],
+      ...commissions.map((c) => [c.createdAt, c.affiliate.user.name, c.referral.agency.name, c.stripeInvoiceId, euros(c.baseCents), (c.commissionBps / 100).toFixed(2), euros(c.amountCents), c.status, c.availableAt, c.payout?.reference, c.cancelReason]),
+    ]);
   }
 
   if (!viewer.organization) return new Response(null, { status: 403 });

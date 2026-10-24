@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { commissionFor, commissionWindowOpen } from "@stagedesk/core";
-import { getSetting, overrideReferralWithPromo, prisma } from "@stagedesk/db";
+import { approveWithdrawal, failWithdrawal, getSetting, markWithdrawalPaid, overrideReferralWithPromo, prisma, requestWithdrawal, WithdrawalError } from "@stagedesk/db";
 
 const id = (value: string | { id: string } | null | undefined) => (typeof value === "string" ? value : (value?.id ?? null));
 
@@ -180,49 +180,56 @@ export async function adjustCommissionsForCharge(charge: { payment_intent: strin
 }
 
 /**
- * Pays an affiliate their approved commissions as one Stripe transfer, if
- * they're above the minimum and can receive payouts.
+ * Pays an approved withdrawal by Stripe transfer to the affiliate's connected
+ * account. On failure the withdrawal is marked failed and its commissions stay
+ * with it, so an admin can retry or pay by hand.
  */
-export async function payAffiliate(stripe: Stripe, affiliateId: string, now = new Date()) {
-  const program = await getSetting("affiliates.program");
-  const affiliate = await prisma.affiliate.findUniqueOrThrow({ where: { id: affiliateId } });
-  if (affiliate.status !== "approved" || !affiliate.payoutsEnabled || !affiliate.stripeAccountId) return null;
-  const due = await prisma.commission.findMany({ where: { affiliateId, status: "approved", payoutId: null }, orderBy: { createdAt: "asc" } });
-  const total = due.reduce((sum, c) => sum + c.amountCents, 0);
-  if (total <= 0 || total < program.minPayoutCents) return null;
-
-  const payoutId = randomUUID();
-  const ids = due.map((c) => c.id);
+export async function payWithdrawalByStripe(stripe: Stripe, payoutId: string, actorId: string | null) {
+  const payout = await prisma.affiliatePayout.findUniqueOrThrow({ where: { id: payoutId }, include: { affiliate: true } });
+  if (payout.method !== "stripe" || !["approved", "failed"].includes(payout.status)) throw new WithdrawalError("wrong_status");
+  if (!payout.affiliate.stripeAccountId || !payout.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
   try {
     const transfer = await stripe.transfers.create(
-      { amount: total, currency: "eur", destination: affiliate.stripeAccountId, description: "StageDesk partner commission", metadata: { affiliateId, payoutId } },
-      { idempotencyKey: `affiliate-payout-${affiliateId}-${ids.sort().join("").slice(0, 200)}` },
+      {
+        amount: payout.amountCents,
+        currency: "eur",
+        destination: payout.affiliate.stripeAccountId,
+        description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
+        metadata: { affiliateId: payout.affiliateId, payoutId },
+      },
+      { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
     );
-    await prisma.$transaction([
-      prisma.affiliatePayout.create({ data: { id: payoutId, affiliateId, amountCents: total, status: "paid", stripeTransferId: transfer.id, createdAt: now } }),
-      prisma.commission.updateMany({ where: { id: { in: ids } }, data: { status: "paid", payoutId } }),
-    ]);
-    return { payoutId, amountCents: total, commissions: due };
+    await markWithdrawalPaid(payoutId, actorId ?? "system", { transactionRef: transfer.id, stripeTransferId: transfer.id });
+    return transfer.id;
   } catch (error) {
-    await prisma.affiliatePayout.create({ data: { id: payoutId, affiliateId, amountCents: total, status: "failed", error: String(error).slice(0, 2000), createdAt: now } });
+    if (error instanceof WithdrawalError) throw error;
+    await failWithdrawal(payoutId, String(error), actorId);
     throw error;
   }
 }
 
-/** Monthly payout run: only on the program's payout day. */
+/**
+ * Automatic mode: on the payout day, every affiliate with enough approved
+ * commission and a connected Stripe account gets a withdrawal that is
+ * approved and paid straight away, with the same tracking as a request.
+ */
 export async function runAffiliatePayouts(stripe: Stripe, now = new Date()) {
   const program = await getSetting("affiliates.program");
-  if (now.getUTCDate() !== program.payoutDayOfMonth) return [];
+  if (program.payoutMode !== "automatic" || now.getUTCDate() !== program.payoutDayOfMonth) return [];
   const affiliates = await prisma.affiliate.findMany({
-    where: { status: "approved", payoutsEnabled: true, commissions: { some: { status: "approved", payoutId: null } } },
-    select: { id: true },
+    where: { status: "approved", payoutsEnabled: true, stripeAccountId: { not: null }, commissions: { some: { status: "approved", payoutId: null } } },
+    select: { id: true, userId: true, payoutMethod: true },
   });
   const results = [];
   for (const a of affiliates) {
+    if (a.payoutMethod && a.payoutMethod !== "stripe") continue;
     try {
-      const paid = await payAffiliate(stripe, a.id, now);
-      if (paid) results.push({ affiliateId: a.id, payoutId: paid.payoutId, amountCents: paid.amountCents });
+      const payout = await requestWithdrawal(a.id, a.userId);
+      await approveWithdrawal(payout.id, "system", "automatic");
+      await payWithdrawalByStripe(stripe, payout.id, null);
+      results.push({ affiliateId: a.id, payoutId: payout.id, amountCents: payout.amountCents });
     } catch (error) {
+      if (error instanceof WithdrawalError && ["below_minimum", "nothing_available", "open_request"].includes(error.code)) continue;
       console.error(`[affiliates] payout for ${a.id} failed`, error);
     }
   }

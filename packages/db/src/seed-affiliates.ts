@@ -61,14 +61,37 @@ export async function seedAffiliates(prisma: PrismaClient, now = new Date()) {
     },
   });
 
-  // Three monthly Pro invoices of €69: one paid out, one approved, one still pending.
+  // Monthly Pro invoices of €69: one paid out by bank transfer, three ready to withdraw, one still waiting.
   const payoutId = randomUUID();
-  await prisma.affiliatePayout.create({ data: { id: payoutId, affiliateId: affiliate.id, amountCents: 1_725, status: "paid", createdAt: new Date(now.getTime() - 40 * day) } });
+  const paidAt = new Date(now.getTime() - 40 * day);
+  await prisma.affiliate.update({ where: { id: affiliate.id }, data: { payoutMethod: "bank_transfer", payoutIban: "NL91ABNA0417164300", payoutAccountName: "Pim de Vries" } });
+  await prisma.affiliatePayout.create({
+    data: {
+      id: payoutId,
+      reference: "WD-DEMO01",
+      affiliateId: affiliate.id,
+      amountCents: 1_725,
+      method: "bank_transfer",
+      status: "paid",
+      details: { iban: "NL91ABNA0417164300", accountName: "Pim de Vries" },
+      transactionRef: "NOTPROVIDED-2026-001",
+      paidAt,
+      createdAt: new Date(paidAt.getTime() - 2 * day),
+      events: {
+        create: [
+          { id: randomUUID(), status: "requested", createdAt: new Date(paidAt.getTime() - 2 * day) },
+          { id: randomUUID(), status: "approved", createdAt: new Date(paidAt.getTime() - day) },
+          { id: randomUUID(), status: "paid", note: "NOTPROVIDED-2026-001", createdAt: paidAt },
+        ],
+      },
+    },
+  });
   const invoices = [
-    { ago: 95, status: "paid", payoutId },
+    { ago: 125, status: "paid", payoutId },
+    { ago: 95, status: "approved", payoutId: null },
     { ago: 65, status: "approved", payoutId: null },
     { ago: 35, status: "approved", payoutId: null },
-    { ago: 5, status: "pending", payoutId: null },
+    { ago: 3, status: "pending", payoutId: null },
   ];
   await prisma.commission.createMany({
     data: invoices.map((inv, i) => ({
@@ -82,7 +105,8 @@ export async function seedAffiliates(prisma: PrismaClient, now = new Date()) {
       amountCents: 1_725,
       status: inv.status,
       payoutId: inv.payoutId,
-      availableAt: new Date(now.getTime() - (inv.ago - 30) * day),
+      // Released seven days after the agency's payment.
+      availableAt: new Date(now.getTime() - (inv.ago - 7) * day),
       createdAt: new Date(now.getTime() - inv.ago * day),
     })),
   });

@@ -12,9 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro, eventDate, percent } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { requirePermission } from "@/lib/viewer";
+import { CommissionsTab, ReportTab, WithdrawalsTab } from "./admin-tabs";
 import { AffiliateMenu, ApplicationButtons, CreatePartnerDialog, AssetDialog, type AssetValues, DeleteAssetButton, ReviewButtons } from "./controls";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/affiliates">): Promise<Metadata> {
@@ -22,12 +25,50 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app/affi
   return { title: t("title") };
 }
 
-export default async function AffiliatesPage({ params }: PageProps<"/[locale]/app/affiliates">) {
+export default async function AffiliatesPage({ params, searchParams }: PageProps<"/[locale]/app/affiliates">) {
   setRequestLocale((await params).locale as Locale);
   return (
     <Suspense fallback={<Skeleton className="h-[40rem] w-full" />}>
-      <Affiliates />
+      <AffiliatesTabs searchParams={searchParams} />
     </Suspense>
+  );
+}
+
+const tabs = ["overview", "partners", "withdrawals", "commissions"] as const;
+const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? null;
+
+/** The affiliate program for platform admins: report, partners, withdrawals and every commission. */
+async function AffiliatesTabs({ searchParams }: Pick<PageProps<"/[locale]/app/affiliates">, "searchParams">) {
+  await requirePermission("platform.affiliates");
+  const sp = await searchParams;
+  const tab = tabs.find((x) => x === one(sp["tab"])) ?? "overview";
+  const [t, open] = await Promise.all([getTranslations("affiliatesAdmin"), prisma.affiliatePayout.count({ where: { status: "requested" } })]);
+  return (
+    <div className="grid gap-6">
+      <PageHeader title={t("title")} description={t("description")} actions={<CreatePartnerDialog />} />
+      <nav className="flex w-fit flex-wrap gap-1 rounded-lg bg-muted p-1 text-sm" aria-label={t("title")}>
+        {tabs.map((x) => (
+          <Link
+            key={x}
+            href={x === "overview" ? "/app/affiliates" : `/app/affiliates?tab=${x}`}
+            aria-current={x === tab ? "page" : undefined}
+            className={cn("rounded-md px-3 py-1.5", x === tab ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground")}
+          >
+            {t(`tab_${x}`)}
+            {x === "withdrawals" && open > 0 && <span className="ml-1.5 rounded-full bg-primary px-1.5 text-xs text-primary-foreground tabular-nums">{open}</span>}
+          </Link>
+        ))}
+      </nav>
+      {tab === "overview" ? (
+        <ReportTab range={one(sp["range"]) ?? ""} />
+      ) : tab === "withdrawals" ? (
+        <WithdrawalsTab status={one(sp["status"])} />
+      ) : tab === "commissions" ? (
+        <CommissionsTab status={one(sp["status"])} affiliateId={one(sp["affiliate"])} />
+      ) : (
+        <Affiliates />
+      )}
+    </div>
   );
 }
 
@@ -35,7 +76,6 @@ const statusTone = { pending: "info", approved: "success", rejected: "neutral", 
 const loc = (value: unknown, locale: string) => ((value ?? {}) as Record<string, string>)[locale] ?? "";
 
 async function Affiliates() {
-  await requirePermission("platform.affiliates");
   // Platform-wide view: affiliates aren't tenant data.
   const [t, ta, format, locale, program, affiliates, sums, referrals, review, rejected, assets] = await Promise.all([
     getTranslations("affiliatesAdmin"),
@@ -69,7 +109,6 @@ async function Affiliates() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} actions={<CreatePartnerDialog />} />
       <HowPartnersJoin />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

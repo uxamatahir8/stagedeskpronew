@@ -20,7 +20,11 @@ export type NotificationType =
   | "lead_accepted"
   | "payment_reported"
   | "payment_confirmed"
-  | "payment_rejected";
+  | "payment_rejected"
+  | "withdrawal_requested"
+  | "withdrawal_approved"
+  | "withdrawal_paid"
+  | "withdrawal_rejected";
 
 export interface NotificationInput {
   type: NotificationType;

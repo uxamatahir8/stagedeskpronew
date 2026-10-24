@@ -4,7 +4,7 @@ export {
   adjustCommissionsForCharge,
   affiliateOnboardingLink,
   attributeSubscriptionPromo,
-  payAffiliate,
+  payWithdrawalByStripe,
   recordInvoiceCommission,
   runAffiliatePayouts,
   syncAffiliatePromo,

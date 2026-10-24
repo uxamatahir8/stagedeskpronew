@@ -66,7 +66,7 @@ export function AssignmentStatusBadge({ status }: { status: "pending" | "accepte
 
 export type { Tone };
 
-const commissionTone: Record<string, Tone> = { pending: "info", review: "warning", approved: "success", paid: "neutral", cancelled: "danger" };
+const commissionTone: Record<string, Tone> = { pending: "info", review: "warning", approved: "success", requested: "brand", paid: "neutral", cancelled: "danger" };
 
 export function CommissionStatusBadge({ status }: { status: string }) {
   const t = useTranslations("affiliate");
