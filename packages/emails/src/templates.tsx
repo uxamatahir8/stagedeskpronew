@@ -81,6 +81,7 @@ export function QuoteSent({
   total,
   until,
   url,
+  accountUrl,
 }: {
   locale: EmailLocale;
   name: string;
@@ -88,12 +89,22 @@ export function QuoteSent({
   total: string;
   until: string;
   url: string;
+  /** Set when the customer has no password yet: where they create their account. */
+  accountUrl?: string;
 }) {
   const c = copy[locale].quoteSent;
   return (
     <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
       <Paragraph>{c.body(name, agency, total, until)}</Paragraph>
       <ActionButton href={url}>{c.button}</ActionButton>
+      {accountUrl && (
+        <Paragraph>
+          {c.account}{" "}
+          <a href={accountUrl} style={{ color: "#6d2a7a", fontWeight: 600 }}>
+            {c.accountLink}
+          </a>
+        </Paragraph>
+      )}
       <LinkFallback locale={locale} href={url} />
     </EmailLayout>
   );

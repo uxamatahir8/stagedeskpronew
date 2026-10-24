@@ -88,7 +88,7 @@ export function sendNewInquiry(to: string, p: { locale: EmailLocale; customer: s
 
 export function sendQuote(
   to: string,
-  p: { locale: EmailLocale; name: string; agency: string; total: string; until: string; url: string },
+  p: { locale: EmailLocale; name: string; agency: string; total: string; until: string; url: string; accountUrl?: string },
 ) {
   return send(to, copy[p.locale].quoteSent.subject(p.agency), createElement(QuoteSent, p));
 }

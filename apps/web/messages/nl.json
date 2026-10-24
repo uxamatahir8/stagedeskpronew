@@ -186,7 +186,7 @@
       "submit": "Inloggen",
       "codeIntro": "We mailen je een code van 6 cijfers. Geen wachtwoord nodig.",
       "sendCode": "Mail me een code",
-      "codeSent": "We hebben een code naar {email} gestuurd. Hij is 10 minuten geldig.",
+      "codeSent": "Als er een account bestaat voor {email}, hebben we een code gestuurd. Hij is 10 minuten geldig.",
       "verifyCode": "Inloggen met code",
       "otherEmail": "Ander e-mailadres gebruiken",
       "noAccount": "Nieuw bureau?",
@@ -254,7 +254,16 @@
     "signOut": "Uitloggen",
     "partnerCode": "Partnercode (optioneel)",
     "partnerCodeHint": "Een code gekregen van een StageDesk-partner? Vul hem hier in voor je korting.",
-    "partnerCodeUnknown": "We kennen deze partnercode niet. Controleer hem, of laat het veld leeg."
+    "partnerCodeUnknown": "We kennen deze partnercode niet. Controleer hem, of laat het veld leeg.",
+    "chooseTitle": "Welkom bij StageDesk",
+    "chooseBody": "Je bent ingelogd, maar je account hoort nog niet bij een bureau. Wat wil je doen?",
+    "invitationTitle": "Uitnodiging van {agency}",
+    "invitationBody": "Accepteer de uitnodiging om verder te gaan.",
+    "agencyTitle": "Een bureau starten",
+    "agencyBody": "Je beheert aanvragen, offertes, artiesten en betalingen voor je eigen bureau.",
+    "agencyButton": "Bureau instellen",
+    "otherTitle": "Klant of artiest?",
+    "otherBody": "Dan krijg je toegang via je bureau: open de link in de offerte- of uitnodigingsmail. Geen mail ontvangen? Vraag je bureau om je opnieuw uit te nodigen."
   },
   "invite": {
     "title": "Word lid van {agency}",
@@ -768,7 +777,19 @@
     "depositDue": "Na acceptatie is een aanbetaling van {amount} verschuldigd.",
     "downloadPdf": "PDF downloaden",
     "event": "Evenement",
-    "notFound": "Deze offerte bestaat niet."
+    "notFound": "Deze offerte bestaat niet.",
+    "accountTitle": "Maak je eigen account",
+    "accountBody": "Volg je boeking, betaal en stuur berichten vanuit je eigen omgeving. Kies een wachtwoord om te beginnen.",
+    "accountEmail": "E-mailadres",
+    "accountPassword": "Wachtwoord",
+    "accountPasswordHint": "Minstens 10 tekens.",
+    "accountRepeat": "Herhaal wachtwoord",
+    "accountSubmit": "Account aanmaken",
+    "accountPasswordShort": "Kies een wachtwoord van minstens 10 tekens.",
+    "accountPasswordMismatch": "De wachtwoorden zijn niet gelijk.",
+    "accountExists": "Je hebt al een account. Log in met je e-mailadres.",
+    "haveAccount": "Heb je al een account?",
+    "signIn": "Log in om je boeking te volgen"
   },
   "reviews": {
     "title": "Reviews",

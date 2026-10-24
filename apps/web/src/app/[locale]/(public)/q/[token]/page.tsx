@@ -15,6 +15,8 @@ import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, eventDate } from "@/lib/format";
 import { payByQuoteTokenAction, reportPaymentByTokenAction } from "@/lib/pay-actions";
 import { AcceptQuoteForm } from "./accept-form";
+import { Link } from "@/i18n/navigation";
+import { AccountSetup } from "./account-setup";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -41,7 +43,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
     include: {
       items: { orderBy: { position: "asc" } },
       organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true } },
-      booking: { select: { id: true, customerId: true, currency: true, trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true, customer: { select: { name: true } } } },
+      booking: { select: { id: true, customerId: true, currency: true, customer: { select: { name: true, email: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } }, trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true } },
     },
   });
   if (!quote) return <FormMessage>{t("quotePage.notFound")}</FormMessage>;
@@ -109,6 +111,18 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
           </CardContent>
         </Card>
       )}
+
+      {/* The customer can make their own account from here; with one, they sign in instead. */}
+      {quote.booking.customer && quote.booking.customer.accounts.length === 0 ? (
+        <AccountSetup token={token} email={quote.booking.customer.email} />
+      ) : quote.booking.customer ? (
+        <p className="text-sm text-muted-foreground">
+          {t("quotePage.haveAccount")}{" "}
+          <Link href={`/sign-in?next=${encodeURIComponent(`/app/event?booking=${quote.booking.trackingCode}`)}`} className="font-medium text-primary underline-offset-4 hover:underline">
+            {t("quotePage.signIn")}
+          </Link>
+        </p>
+      ) : null}
     </>
   );
 }

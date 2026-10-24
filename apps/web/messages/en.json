@@ -186,7 +186,7 @@
       "submit": "Sign in",
       "codeIntro": "We'll email you a 6-digit code. No password needed.",
       "sendCode": "Email me a code",
-      "codeSent": "We sent a code to {email}. It's valid for 10 minutes.",
+      "codeSent": "If an account exists for {email}, we sent a code. It is valid for 10 minutes.",
       "verifyCode": "Sign in with code",
       "otherEmail": "Use another email address",
       "noAccount": "New agency?",
@@ -254,7 +254,16 @@
     "signOut": "Sign out",
     "partnerCode": "Partner code (optional)",
     "partnerCodeHint": "Got a code from a StageDesk partner? Enter it here for your discount.",
-    "partnerCodeUnknown": "We don't recognise this partner code. Check it, or leave the field empty."
+    "partnerCodeUnknown": "We don't recognise this partner code. Check it, or leave the field empty.",
+    "chooseTitle": "Welcome to StageDesk",
+    "chooseBody": "You're signed in, but your account isn't part of an agency yet. What would you like to do?",
+    "invitationTitle": "Invitation from {agency}",
+    "invitationBody": "Accept the invitation to continue.",
+    "agencyTitle": "Start an agency",
+    "agencyBody": "You manage inquiries, quotes, artists and payments for your own agency.",
+    "agencyButton": "Set up agency",
+    "otherTitle": "Customer or artist?",
+    "otherBody": "Then you get access through your agency: open the link in the quote or invitation email. No email? Ask your agency to invite you again."
   },
   "invite": {
     "title": "Join {agency}",
@@ -768,7 +777,19 @@
     "depositDue": "A deposit of {amount} is due after accepting.",
     "downloadPdf": "Download PDF",
     "event": "Event",
-    "notFound": "This quote doesn't exist."
+    "notFound": "This quote doesn't exist.",
+    "accountTitle": "Create your own account",
+    "accountBody": "Follow your booking, pay and send messages from your own account. Choose a password to get started.",
+    "accountEmail": "Email",
+    "accountPassword": "Password",
+    "accountPasswordHint": "At least 10 characters.",
+    "accountRepeat": "Repeat password",
+    "accountSubmit": "Create account",
+    "accountPasswordShort": "Choose a password of at least 10 characters.",
+    "accountPasswordMismatch": "The passwords don't match.",
+    "accountExists": "You already have an account. Sign in with your email.",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in to follow your booking"
   },
   "reviews": {
     "title": "Reviews",

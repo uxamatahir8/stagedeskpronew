@@ -16,7 +16,8 @@ export function SignUpForm() {
   const t = useTranslations();
   const locale = useLocale();
   const params = useSearchParams();
-  const next = safeNext(params.get("next"));
+  // A plain sign-up is someone starting an agency; invitations bring their own next step.
+  const next = safeNext(params.get("next"), "/onboarding?start=agency");
   const invitedEmail = params.get("email") ?? "";
   const invitedAgency = params.get("agency");
 

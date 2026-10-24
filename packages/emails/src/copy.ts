@@ -175,6 +175,8 @@ export const copy = {
       body: (name: string, agency: string, total: string, until: string) =>
         `Hoi ${name}, ${agency} heeft een offerte voor je gemaakt van ${total}. Accepteer hem vóór ${until} om je datum vast te leggen.`,
       button: "Offerte bekijken",
+      account: "Wil je je boeking volgen, betalen en berichten sturen vanuit je eigen omgeving?",
+      accountLink: "Maak je account aan en kies een wachtwoord.",
     },
   },
   en: {
@@ -350,6 +352,8 @@ export const copy = {
       body: (name: string, agency: string, total: string, until: string) =>
         `Hi ${name}, ${agency} has prepared a quote for ${total}. Accept it before ${until} to book your date.`,
       button: "View quote",
+      account: "Want to follow your booking, pay and send messages from your own account?",
+      accountLink: "Create your account and choose a password.",
     },
   },
 } as const;
