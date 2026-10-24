@@ -158,6 +158,10 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   article; without it English readers see the Dutch text with a notice. Starter content is Markdown in
   `packages/db/content` and is added by `pnpm db:seed` (or only that: `pnpm db:seed-content`); it never
   overwrites what was edited in the admin panel. Blog comments wait for approval under Pages → Blog comments.
+- **Website texts** (`/app/texts`, platform admin): every text of the website and the app, in both languages,
+  grouped per page, with search. Changes are stored in `site_texts` and merged over `apps/web/messages/*.json`
+  in `i18n/request.ts` (cached, tag `site-texts`). A change may only use the placeholders and tags of the original
+  (e.g. `{count}`, `<hl>`), so a page can never fail on it; resetting brings back the file text.
 - **Page builder** (`/app/pages`, platform admin): Terms, Privacy and any other page, built from
   blocks (headings, text, lists, tables, images, callouts) in both languages, placed in the header or a footer
   column. Every save is a version; compare any version with the live one, restore it, or publish it.

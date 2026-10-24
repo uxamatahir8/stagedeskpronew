@@ -1322,3 +1322,16 @@ model ContentArticle {
   @@index([kind, status, publishedAt])
   @@map("content_articles")
 }
+
+/// A website or app text changed in the admin panel, merged over the
+/// translation files (apps/web/messages) per language.
+model SiteText {
+  locale    String   @db.VarChar(2)
+  key       String   @db.VarChar(191)
+  value     String   @db.Text
+  updatedBy String?  @db.VarChar(64)
+  updatedAt DateTime @updatedAt
+
+  @@id([locale, key])
+  @@map("site_texts")
+}
