@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/solution
 
 export default function SolutionPage({ params }: PageProps<"/[locale]/solutions/[slug]">) {
   return (
-    <Suspense fallback={<Skeleton className="mx-auto my-16 h-[40rem] w-full max-w-6xl" />}>
+    <Suspense fallback={<Skeleton className="mx-auto my-16 h-[40rem] w-full max-w-[88rem]" />}>
       <Solution params={params} />
     </Suspense>
   );

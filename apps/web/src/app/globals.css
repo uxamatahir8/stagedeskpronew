@@ -207,3 +207,62 @@
     animation: none;
   }
 }
+
+/*
+ * Marketing site motion. Kept small and calm: a short rise with an ease that
+ * settles slowly, like paper landing, rather than a bounce.
+ * ScrollReveal (components/site/scroll-reveal.tsx) marks the items and adds
+ * .is-visible to sections in view; without JavaScript nothing is hidden.
+ */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@utility animate-page-in {
+  animation: page-in 0.45s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+}
+
+.reveal-ready [data-reveal-item] {
+  opacity: 0;
+  transform: translateY(18px);
+  /* Leaving: quick and all at once. */
+  transition:
+    opacity 0.35s ease,
+    transform 0.45s ease;
+}
+.reveal-ready .is-visible [data-reveal-item] {
+  opacity: 1;
+  transform: none;
+  /* Arriving: slower, one after another. */
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.65, 0.3, 1),
+    transform 0.9s cubic-bezier(0.2, 0.65, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* The header lifts off the page once you scroll. */
+.site-header {
+  transition:
+    box-shadow 0.3s ease,
+    background-color 0.3s ease;
+}
+html[data-scrolled] .site-header {
+  box-shadow: 0 10px 30px -22px rgb(20 8 24 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in {
+    animation: none;
+  }
+  .reveal-ready [data-reveal-item] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

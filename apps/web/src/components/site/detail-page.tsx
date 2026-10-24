@@ -41,10 +41,9 @@ export async function DetailPage({
   return (
     <main>
       <section className="relative overflow-hidden border-b">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(50rem_26rem_at_80%_-10%,color-mix(in_oklch,var(--magenta)_14%,transparent),transparent),radial-gradient(40rem_24rem_at_0%_110%,color-mix(in_oklch,var(--primary)_12%,transparent),transparent)]" />
-        <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:py-20">
+        <div className="relative mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-16 sm:px-8 lg:px-12 lg:grid-cols-[1.1fr_1fr] lg:items-center lg:py-20">
           <div className="grid gap-5">
-            <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("eyebrow")}</p>
+            <p className="text-sm font-medium text-magenta">{t("eyebrow")}</p>
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
             <p className="max-w-xl text-lg text-muted-foreground">{t("intro")}</p>
             <Suspense fallback={<Skeleton className="h-10 w-56" />}>
@@ -55,7 +54,7 @@ export async function DetailPage({
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-20 sm:px-6 md:grid-cols-3">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-8 px-5 py-20 sm:px-8 lg:px-12 md:grid-cols-3">
         {benefits.map((b, i) => (
           <article key={b} className="grid content-start gap-3 rounded-2xl border bg-card p-6">
             <span className="flex size-10 items-center justify-center rounded-xl bg-brand-gradient text-sm font-bold text-white tabular-nums">{i + 1}</span>
@@ -66,9 +65,9 @@ export async function DetailPage({
       </section>
 
       {screenshot && (
-        <section className="mx-auto grid w-full max-w-6xl justify-items-center gap-6 px-4 pb-20 sm:px-6">
+        <section className="mx-auto grid w-full max-w-[88rem] justify-items-center gap-6 px-5 pb-20 sm:px-8 lg:px-12">
           <div className="grid max-w-2xl gap-2 text-center">
-            <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{tc("inAppEyebrow")}</p>
+            <p className="text-sm font-medium text-magenta">{tc("inAppEyebrow")}</p>
             <h2 className="text-3xl font-bold tracking-tight text-balance">{tc("inAppTitle")}</h2>
             <p className="text-sm text-muted-foreground">{tc("demoData")}</p>
           </div>
@@ -77,7 +76,7 @@ export async function DetailPage({
       )}
 
       <section className="border-y bg-muted/30">
-        <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+        <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
           <h2 className="max-w-2xl text-3xl font-bold tracking-tight text-balance">{t("stepsTitle")}</h2>
           <ol className="relative grid gap-8 md:grid-cols-4">
             <div aria-hidden className="absolute top-5 right-[12.5%] left-[12.5%] hidden h-0.5 bg-brand-gradient opacity-40 md:block" />
@@ -92,7 +91,7 @@ export async function DetailPage({
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.2fr]">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12 lg:grid-cols-[1fr_1.2fr]">
         <div className="grid content-start gap-3">
           <h2 className="text-3xl font-bold tracking-tight text-balance">{t("pointsTitle")}</h2>
           <p className="text-muted-foreground">{t("pointsIntro")}</p>
@@ -130,7 +129,7 @@ export async function DetailPage({
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 py-20 sm:px-6">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-8 px-5 py-20 sm:px-8 lg:px-12">
         <div className="grid gap-3">
           <h2 className="text-xl font-semibold">{tc("related")}</h2>
           <div className="flex flex-wrap gap-2">

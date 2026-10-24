@@ -76,8 +76,8 @@ async function HeaderActions() {
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-4 px-4 sm:px-6">
+    <header className="site-header sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-[88rem] items-center gap-4 px-5 sm:px-8 lg:px-12">
         <Link href="/" className="shrink-0" aria-label="StageDesk Pro">
           <Logo className="h-9" priority />
         </Link>
@@ -149,7 +149,7 @@ export async function SiteFooter() {
   const t = await getTranslations("site");
   return (
     <footer className="border-t bg-muted/30">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1fr_2fr]">
+      <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-12 sm:px-8 lg:px-12 md:grid-cols-[1fr_2fr]">
         <div className="grid content-start gap-3">
           <Link href="/" className="w-fit" aria-label="StageDesk Pro">
             <Logo className="h-11" />
@@ -160,7 +160,7 @@ export async function SiteFooter() {
           <FooterColumns />
         </Suspense>
       </div>
-      <div className="mx-auto w-full max-w-6xl border-t px-4 py-6 text-xs text-muted-foreground sm:px-6">{t("footer.madeIn")}</div>
+      <div className="mx-auto w-full max-w-[88rem] border-t px-5 py-6 text-xs text-muted-foreground sm:px-8 lg:px-12">{t("footer.madeIn")}</div>
     </footer>
   );
 }

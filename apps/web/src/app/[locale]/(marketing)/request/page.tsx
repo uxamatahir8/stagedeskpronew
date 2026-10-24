@@ -27,10 +27,10 @@ export default async function RequestPage({ params }: PageProps<"/[locale]/reque
   setRequestLocale((await params).locale as Locale);
   const t = await getTranslations("leadForm");
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1fr_1.4fr] lg:items-start">
+    <main className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-16 sm:px-8 lg:px-12 sm:py-20 lg:grid-cols-[1fr_1.4fr] lg:items-start">
       <div className="grid content-start gap-8 lg:sticky lg:top-24">
         <div className="grid gap-4">
-          <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("eyebrow")}</p>
+          <p className="text-sm font-medium text-magenta">{t("eyebrow")}</p>
           <h1 className="text-4xl font-bold tracking-tight text-balance">{t.rich("title", { hl: (c) => <span className="text-brand-gradient">{c}</span> })}</h1>
           <p className="text-lg text-muted-foreground">{t("intro")}</p>
         </div>

@@ -37,7 +37,7 @@ async function Partners() {
   return (
     <>
       <header className="grid max-w-2xl gap-4">
-        <p className="text-sm font-semibold tracking-wider text-primary uppercase">{t("eyebrow")}</p>
+        <p className="text-sm font-medium text-primary">{t("eyebrow")}</p>
         <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
         <p className="text-lg text-muted-foreground">{t("intro")}</p>
       </header>

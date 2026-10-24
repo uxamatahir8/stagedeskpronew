@@ -22,7 +22,7 @@ export default async function PricingPage({ params }: PageProps<"/[locale]/prici
   setRequestLocale((await params).locale as Locale);
   const t = await getTranslations("pricingPage");
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-20">
+    <main className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-16 sm:px-8 lg:px-12 sm:py-20">
       <PageIntro eyebrow={t("eyebrow")} title={t("title")} intro={t("intro")} />
       <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
         <Plans />

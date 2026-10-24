@@ -40,10 +40,9 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
   return (
     <main>
       <section className="relative overflow-hidden border-b">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(60rem_30rem_at_70%_-10%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent)]" />
-        <div className="relative mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:py-24">
+        <div className="relative mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.15fr)] lg:items-center lg:py-24 lg:pr-0 lg:pl-12">
           <div className="grid gap-6">
-            <p className="text-sm font-semibold tracking-wider text-primary uppercase">{t("eyebrow")}</p>
+            <p className="text-sm font-medium text-primary">{t("eyebrow")}</p>
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-[3.4rem] lg:leading-[1.05]">
               {t.rich("title", { hl: (chunks) => <span className="text-brand-gradient">{chunks}</span> })}
             </h1>
@@ -60,16 +59,19 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
               ))}
             </ul>
           </div>
-          <PipelinePreview />
+          {/* The real dashboard (demo data), running off the right edge on wide screens. */}
+          <div className="relative lg:-mr-24 xl:-mr-40">
+            <Screenshot name="dashboard" priority className="rounded-xl shadow-[0_30px_80px_-40px_rgb(40_10_50/0.55)] lg:rounded-r-none" />
+          </div>
         </div>
         <div className="relative border-t bg-background/60 py-5">
-          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto w-full max-w-[88rem] px-5 sm:px-8 lg:px-12">
             <TrustStrip />
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
         <div className="grid max-w-2xl gap-3">
           <h2 className="text-3xl font-bold tracking-tight text-balance">{t("featuresTitle")}</h2>
           <p className="text-lg text-muted-foreground">{t("featuresIntro")}</p>
@@ -94,7 +96,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       </section>
 
       <section className="border-y bg-muted/30">
-        <div className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+        <div className="mx-auto w-full max-w-[88rem] px-5 py-20 sm:px-8 lg:px-12">
           <JourneyFlow />
         </div>
       </section>
@@ -104,7 +106,7 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       <Showcase />
 
       <section className="border-y bg-muted/30">
-        <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-2 lg:items-center">
+        <div className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-20 sm:px-8 lg:px-12 lg:grid-cols-2 lg:items-center">
           <div className="grid gap-4">
             <h2 className="text-3xl font-bold tracking-tight text-balance">{t("moneyTitle")}</h2>
             <p className="text-lg text-muted-foreground">{t("moneyIntro")}</p>
@@ -123,19 +125,19 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+      <section className="mx-auto w-full max-w-[88rem] px-5 py-20 sm:px-8 lg:px-12">
         <HubDiagram />
       </section>
 
       <section className="border-y bg-muted/30">
-        <div className="mx-auto grid w-full max-w-6xl gap-16 px-4 py-20 sm:px-6">
+        <div className="mx-auto grid w-full max-w-[88rem] gap-16 px-5 py-20 sm:px-8 lg:px-12">
           <BeforeAfter />
           <CapabilityFigures />
           <EventTypes />
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <PricingTeaser />
         </Suspense>
@@ -171,39 +173,6 @@ async function HeroActions() {
         <Link href="/pricing">{t("seePricing")}</Link>
       </Button>
     </div>
-  );
-}
-
-/** A stylised view of the booking pipeline, labelled as an example. */
-async function PipelinePreview() {
-  const t = await getTranslations("landing");
-  const columns = [
-    { key: "inquiry", rows: [["wedding", "14/6"], ["corporate", "22/6"]] },
-    { key: "quoted", rows: [["birthday", "5/7"]] },
-    { key: "booked", rows: [["festival", "19/7"], ["wedding", "2/8"]] },
-    { key: "paid", rows: [["wedding", "31/5"]] },
-  ] as const;
-  const te = await getTranslations("eventTypes");
-  return (
-    <figure className="relative rounded-2xl border bg-card p-4 shadow-xl shadow-primary/5" aria-label={t("previewLabel")}>
-      <figcaption className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">{t("previewTitle")}</span>
-        <span className="rounded-full bg-muted px-2 py-0.5">{t("example")}</span>
-      </figcaption>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {columns.map((c) => (
-          <div key={c.key} className="grid content-start gap-2 rounded-xl bg-muted/50 p-2">
-            <span className="px-1 text-xs font-medium text-muted-foreground">{t(`stage_${c.key}`)}</span>
-            {c.rows.map(([event, date]) => (
-              <div key={event + date} className="grid gap-0.5 rounded-lg border bg-background p-2 text-xs">
-                <span className="font-medium">{te(event)}</span>
-                <span className="text-muted-foreground tabular-nums">{date}</span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </figure>
   );
 }
 
@@ -299,7 +268,7 @@ async function ClosingCta() {
   await connection();
   const [t, cta, { site }] = await Promise.all([getTranslations("landing"), primaryCta(), siteSettings()]);
   return (
-    <section id="waitlist" className="mx-auto w-full max-w-6xl px-4 py-20 sm:px-6">
+    <section id="waitlist" className="mx-auto w-full max-w-[88rem] px-5 py-20 sm:px-8 lg:px-12">
       <div className="grid gap-6 rounded-3xl bg-brand-gradient px-8 py-12 text-white sm:px-12 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="grid gap-2">
           <h2 className="text-3xl font-bold tracking-tight text-balance">{site.waitlistMode ? t("waitlistTitle") : t("closingTitle")}</h2>
@@ -329,12 +298,12 @@ async function Showcase() {
     { key: "showPayouts", href: "/features/payments-payouts", Mock: MockPayout },
   ] as const;
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-20 px-4 py-20 sm:px-6">
+    <section className="mx-auto grid w-full max-w-[88rem] gap-20 px-5 py-20 sm:px-8 lg:px-12">
       {rows.map(({ key, href, Mock }, i) => (
         <div key={key} className="grid gap-10 lg:grid-cols-2 lg:items-center">
           <div className={i % 2 ? "lg:order-2" : undefined}>
             <div className="grid max-w-lg gap-4">
-              <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t(`${key}Eyebrow`)}</p>
+              <p className="text-sm font-medium text-magenta">{t(`${key}Eyebrow`)}</p>
               <h2 className="text-3xl font-bold tracking-tight text-balance">{t(`${key}Title`)}</h2>
               <p className="text-lg text-muted-foreground">{t(`${key}Body`)}</p>
               <ul className="grid gap-2">
@@ -365,9 +334,9 @@ async function LookInside() {
   const t = await getTranslations("tour");
   const gallery = ["bookings", "booking", "payments"] as const;
   return (
-    <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+    <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
       <div className="mx-auto grid max-w-2xl gap-3 text-center">
-        <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("lookEyebrow")}</p>
+        <p className="text-sm font-medium text-magenta">{t("lookEyebrow")}</p>
         <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">{t("lookTitle")}</h2>
         <p className="text-lg text-muted-foreground">{t("lookIntro")}</p>
       </div>

@@ -31,10 +31,9 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
   return (
     <main>
       <section className="relative overflow-hidden border-b">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(50rem_28rem_at_15%_-10%,color-mix(in_oklch,var(--primary)_16%,transparent),transparent),radial-gradient(40rem_26rem_at_100%_100%,color-mix(in_oklch,var(--magenta)_14%,transparent),transparent)]" />
-        <div className="relative mx-auto grid w-full max-w-6xl gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[1.3fr_1fr] lg:items-center lg:py-24">
+        <div className="relative mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-16 sm:px-8 lg:px-12 lg:grid-cols-[1.3fr_1fr] lg:items-center lg:py-24">
           <div className="grid gap-5">
-            <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("eyebrow")}</p>
+            <p className="text-sm font-medium text-magenta">{t("eyebrow")}</p>
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t.rich("title", { hl: (c) => <span className="text-brand-gradient">{c}</span> })}</h1>
             <p className="max-w-xl text-lg text-muted-foreground">{t("intro")}</p>
           </div>
@@ -46,7 +45,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_1.3fr]">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-20 sm:px-8 lg:px-12 lg:grid-cols-[1fr_1.3fr]">
         <h2 className="text-3xl font-bold tracking-tight text-balance">{t("storyTitle")}</h2>
         <div className="grid gap-4 text-lg text-muted-foreground">
           <p>{t("story1")}</p>
@@ -55,7 +54,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl px-4 sm:px-6">
+      <section className="mx-auto w-full max-w-[88rem] px-5 sm:px-8 lg:px-12">
         <blockquote className="relative overflow-hidden rounded-3xl bg-brand-gradient px-8 py-12 text-white sm:px-14">
           <div aria-hidden className="absolute -top-20 -right-16 size-72 rounded-full bg-white/10 blur-2xl" />
           <p className="relative text-sm font-semibold tracking-wider text-white/80 uppercase">{t("missionLabel")}</p>
@@ -63,7 +62,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
         </blockquote>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
         <div className="grid max-w-2xl gap-3">
           <h2 className="text-3xl font-bold tracking-tight">{t("valuesTitle")}</h2>
           <p className="text-lg text-muted-foreground">{t("valuesIntro")}</p>
@@ -82,7 +81,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
       </section>
 
       <section className="border-y bg-muted/30">
-        <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-20 sm:px-6">
+        <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
           <div className="grid max-w-2xl gap-3">
             <h2 className="text-3xl font-bold tracking-tight">{t("howTitle")}</h2>
             <p className="text-lg text-muted-foreground">{t("howIntro")}</p>
@@ -99,7 +98,7 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-20 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-center">
+      <section className="mx-auto grid w-full max-w-[88rem] gap-6 px-5 py-20 sm:px-8 lg:px-12 lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="grid gap-2">
           <h2 className="text-3xl font-bold tracking-tight text-balance">{t("ctaTitle")}</h2>
           <p className="text-lg text-muted-foreground">{t("ctaBody")}</p>

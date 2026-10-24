@@ -43,7 +43,7 @@ export default async function FeaturesPage({ params }: PageProps<"/[locale]/feat
   setRequestLocale((await params).locale as Locale);
   const t = await getTranslations("featuresPage");
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-16 px-4 py-16 sm:px-6 sm:py-20">
+    <main className="mx-auto grid w-full max-w-[88rem] gap-16 px-5 py-16 sm:px-8 lg:px-12 sm:py-20">
       <PageIntro eyebrow={t("eyebrow")} title={t("title")} intro={t("intro")} />
       <div className="grid gap-x-12 gap-y-14 md:grid-cols-2">
         {sections.map(({ key, icon: Icon, points }) => (

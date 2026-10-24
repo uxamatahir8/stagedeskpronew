@@ -23,7 +23,7 @@ export default async function ContactPage({ params }: PageProps<"/[locale]/conta
   setRequestLocale((await params).locale as Locale);
   const t = await getTranslations("contactPage");
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-12 px-4 py-16 sm:px-6 sm:py-20">
+    <main className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-16 sm:px-8 lg:px-12 sm:py-20">
       <PageIntro title={t("title")} intro={t("intro")} />
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card>

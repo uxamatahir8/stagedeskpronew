@@ -12,7 +12,7 @@ export async function AudiencePage({ namespace, cta }: { namespace: "forAgencies
   const t = await getTranslations(namespace);
   const items = ["1", "2", "3", "4"] as const;
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-16 px-4 py-16 sm:px-6 sm:py-20">
+    <main className="mx-auto grid w-full max-w-[88rem] gap-16 px-5 py-16 sm:px-8 lg:px-12 sm:py-20">
       <PageIntro eyebrow={t("eyebrow")} title={t("title")} intro={t("intro")}>
         <Button asChild size="lg" className="w-fit">
           <Link href={cta.href}>

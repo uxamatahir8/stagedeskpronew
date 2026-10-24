@@ -21,9 +21,8 @@ export default async function TourPage({ params }: PageProps<"/[locale]/tour">) 
   return (
     <main>
       <section className="relative overflow-hidden border-b">
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(50rem_26rem_at_50%_-10%,color-mix(in_oklch,var(--magenta)_14%,transparent),transparent)]" />
-        <div className="relative mx-auto grid w-full max-w-6xl justify-items-center gap-6 px-4 pt-16 pb-12 text-center sm:px-6 sm:pt-20">
-          <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("eyebrow")}</p>
+        <div className="relative mx-auto grid w-full max-w-[88rem] justify-items-center gap-6 px-5 pt-16 pb-12 text-center sm:px-8 lg:px-12 sm:pt-20">
+          <p className="text-sm font-medium text-magenta">{t("eyebrow")}</p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t.rich("title", { hl: (c) => <span className="text-brand-gradient">{c}</span> })}</h1>
           <p className="max-w-2xl text-lg text-muted-foreground">{t("intro")}</p>
           <Screenshot name="hero-collage" priority className="mt-6 rounded-3xl shadow-2xl shadow-primary/20" />
@@ -36,9 +35,9 @@ export default async function TourPage({ params }: PageProps<"/[locale]/tour">) 
         const id = key.replace("-", "_") as "dashboard";
         return (
           <section key={key} id={key} className={cn("scroll-mt-20", i % 2 === 1 && "border-y bg-muted/30")}>
-            <div className={cn("mx-auto grid w-full max-w-6xl items-center gap-10 px-4 py-20 sm:px-6", phone ? "lg:grid-cols-[1.4fr_1fr]" : "lg:grid-cols-[1fr_1.6fr]")}>
+            <div className={cn("mx-auto grid w-full max-w-[88rem] items-center gap-10 px-5 py-20 sm:px-8 lg:px-12", phone ? "lg:grid-cols-[1.4fr_1fr]" : "lg:grid-cols-[1fr_1.6fr]")}>
               <div className={cn("grid content-start gap-4", i % 2 === 1 && "lg:order-2")}>
-                <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t(`${id}_eyebrow`)}</p>
+                <p className="text-sm font-medium text-magenta">{t(`${id}_eyebrow`)}</p>
                 <h2 className="text-3xl font-bold tracking-tight text-balance">{t(`${id}_title`)}</h2>
                 <p className="text-lg text-muted-foreground">{t(`${id}_body`)}</p>
                 <ul className="grid gap-2">

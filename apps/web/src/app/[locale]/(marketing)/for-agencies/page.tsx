@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/for-agen
 export default async function ForAgenciesPage({ params }: PageProps<"/[locale]/for-agencies">) {
   setRequestLocale((await params).locale as Locale);
   return (
-    <Suspense fallback={<Skeleton className="mx-auto my-16 h-96 w-full max-w-6xl" />}>
+    <Suspense fallback={<Skeleton className="mx-auto my-16 h-96 w-full max-w-[88rem]" />}>
       <Content />
     </Suspense>
   );

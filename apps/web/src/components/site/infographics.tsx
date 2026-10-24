@@ -58,7 +58,7 @@ export async function JourneyFlow() {
   return (
     <figure className="grid gap-8" aria-labelledby="journey-title">
       <figcaption className="grid max-w-2xl gap-3">
-        <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("journeyEyebrow")}</p>
+        <p className="text-sm font-medium text-magenta">{t("journeyEyebrow")}</p>
         <h2 id="journey-title" className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
           {t("journeyTitle")}
         </h2>
@@ -95,7 +95,7 @@ export async function HubDiagram() {
   return (
     <figure className="grid gap-10" aria-labelledby="hub-title">
       <figcaption className="mx-auto grid max-w-2xl gap-3 text-center">
-        <p className="text-sm font-semibold tracking-wider text-magenta uppercase">{t("hubEyebrow")}</p>
+        <p className="text-sm font-medium text-magenta">{t("hubEyebrow")}</p>
         <h2 id="hub-title" className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">
           {t("hubTitle")}
         </h2>

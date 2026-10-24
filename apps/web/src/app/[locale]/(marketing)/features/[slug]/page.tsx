@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/features
 
 export default function FeaturePage({ params }: PageProps<"/[locale]/features/[slug]">) {
   return (
-    <Suspense fallback={<Skeleton className="mx-auto my-16 h-[40rem] w-full max-w-6xl" />}>
+    <Suspense fallback={<Skeleton className="mx-auto my-16 h-[40rem] w-full max-w-[88rem]" />}>
       <Feature params={params} />
     </Suspense>
   );

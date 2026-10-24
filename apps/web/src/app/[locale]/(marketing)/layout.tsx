@@ -1,4 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
+import { ScrollReveal } from "@/components/site/scroll-reveal";
 import { SiteFooter, SiteHeader } from "@/components/site/site-chrome";
 import type { Locale } from "@/i18n/routing";
 
@@ -10,6 +12,9 @@ export default async function MarketingLayout({ children, params }: LayoutProps<
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />
+      <Suspense fallback={null}>
+        <ScrollReveal />
+      </Suspense>
     </div>
   );
 }
