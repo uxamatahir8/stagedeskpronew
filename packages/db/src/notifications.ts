@@ -24,7 +24,8 @@ export type NotificationType =
   | "withdrawal_requested"
   | "withdrawal_approved"
   | "withdrawal_paid"
-  | "withdrawal_rejected";
+  | "withdrawal_rejected"
+  | "artist_joined";
 
 export interface NotificationInput {
   type: NotificationType;

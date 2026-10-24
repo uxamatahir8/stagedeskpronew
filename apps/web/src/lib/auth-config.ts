@@ -6,7 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { withinLimit } from "@stagedesk/core";
-import { agencyBilling, agencyUsage, prisma } from "@stagedesk/db";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, notify, prisma } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
@@ -128,6 +128,12 @@ export const auth = betterAuth({
             throw new APIError("FORBIDDEN", { message: t("limitReached", { max: String(limits.maxStaff), limit: t("limit_maxStaff") }) });
           }
         },
+        // An artist's account is linked to their profile by the agency; tell it someone is waiting.
+        afterAcceptInvitation: async ({ member, user, organization }) => {
+          if (member.role !== "artist") return;
+          if (await prisma.artist.findFirst({ where: { organizationId: organization.id, userId: user.id }, select: { id: true } })) return;
+          await notify(await agencyDeskUserIds(organization.id, ["agency_owner", "agency_admin"]), { type: "artist_joined", data: { name: user.name }, url: "/app/artists" });
+        },
         beforeUpdateMemberRole: async ({ member, newRole }) => {
           if (member.role === "customer" || !assignableRoles.has(newRole)) {
             throw new APIError("BAD_REQUEST", { message: "This role change isn't allowed." });
@@ -172,6 +178,9 @@ export const auth = betterAuth({
       storeOTP: "hashed",
       sendVerificationOTP: async ({ email, otp }) => {
         const user = await prisma.user.findUnique({ where: { email }, select: { locale: true } });
+        // No account, no mail: a code for an unknown address could never be used,
+        // and the sign-in form answers the same either way.
+        if (!user) return;
         deliver({ kind: "loginCode", to: email, params: { locale: localeOf(user), code: otp } });
       },
     }),

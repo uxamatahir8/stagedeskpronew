@@ -17,6 +17,7 @@ import {
   setAgencySuspended,
   updateAgencyDetails,
 } from "@stagedesk/db";
+import { applyStripeSubscription, getStripe } from "@stagedesk/payments";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import type { ActionResult } from "@/lib/actions";
@@ -116,7 +117,15 @@ export async function extendTrialAction(organizationId: string, days: number): P
   const t = await getTranslations("agencyAdmin");
   if (!Number.isInteger(days) || days < 1 || days > 365) return { ok: false, message: t("invalidDays") };
   try {
-    await extendTrial(organizationId, days);
+    const sub = await extendTrial(organizationId, days);
+    // A Stripe subscription keeps its own trial end; move it too, or Stripe charges
+    // on the old date and its next webhook undoes the extension.
+    const stripe = sub.stripeSubscriptionId && sub.trialEndsAt ? await getStripe() : null;
+    if (stripe && sub.stripeSubscriptionId && sub.trialEndsAt) {
+      await applyStripeSubscription(
+        await stripe.subscriptions.update(sub.stripeSubscriptionId, { trial_end: Math.floor(sub.trialEndsAt.getTime() / 1000), proration_behavior: "none" }),
+      );
+    }
   } catch (error) {
     return { ok: false, message: await errorMessage(error) };
   }

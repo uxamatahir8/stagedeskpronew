@@ -1587,7 +1587,8 @@
     "withdrawal_requested": "Opname {reference} van {amount, number, ::currency/EUR} aangevraagd",
     "withdrawal_approved": "Je opname {reference} van {amount, number, ::currency/EUR} is goedgekeurd",
     "withdrawal_paid": "Je opname {reference} van {amount, number, ::currency/EUR} is uitbetaald",
-    "withdrawal_rejected": "Je opname {reference} is afgewezen: {reason}"
+    "withdrawal_rejected": "Je opname {reference} is afgewezen: {reason}",
+    "artist_joined": "{name} doet mee als artiest. Koppel het account aan een artiestenprofiel."
   },
   "messages": {
     "title": "Berichten",
@@ -2753,7 +2754,8 @@
     "notifyCustomer": "Klant e-mailen",
     "notifyCustomerHint": "Verstuurt de e-mail 'aanvraag ontvangen' met het kenmerk van de boeking en hoe de klant inlogt.",
     "bookingSuspended": "Dit bureau is opgeschort. Heractiveer het voordat je boekingen toevoegt.",
-    "openAsSupport": "Werken als support"
+    "openAsSupport": "Werken als support",
+    "error_pays_through_stripe": "Dit bureau betaalt via Stripe. Zeg dat abonnement eerst op in Stripe; daarna kun je een abonnement toekennen."
   },
   "infographics": {
     "trustStripe": "Betalingen via Stripe",

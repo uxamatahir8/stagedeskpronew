@@ -69,7 +69,7 @@ test("customer and agency message each other, and support answers a question", a
     await dialog.getByLabel("Je vraag").fill("Kan het factuuradres worden aangepast naar ons bedrijf?");
     await dialog.getByRole("button", { name: "Versturen" }).click();
     await expect(customer).toHaveURL(/\/app\/support\/T-[A-Z2-9]{6}$/);
-    await expect(customer.getByText("Wacht op support")).toBeVisible();
+    await expect(customer.locator("span").filter({ hasText: "Wacht op support" }).first()).toBeVisible();
   });
 
   await test.step("the platform admin answers it", async () => {

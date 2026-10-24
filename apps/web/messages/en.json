@@ -1587,7 +1587,8 @@
     "withdrawal_requested": "Withdrawal {reference} of {amount, number, ::currency/EUR} requested",
     "withdrawal_approved": "Your withdrawal {reference} of {amount, number, ::currency/EUR} was approved",
     "withdrawal_paid": "Your withdrawal {reference} of {amount, number, ::currency/EUR} was paid",
-    "withdrawal_rejected": "Your withdrawal {reference} was rejected: {reason}"
+    "withdrawal_rejected": "Your withdrawal {reference} was rejected: {reason}",
+    "artist_joined": "{name} joined as an artist. Link their account to an artist profile."
   },
   "messages": {
     "title": "Messages",
@@ -2753,7 +2754,8 @@
     "notifyCustomer": "Email the customer",
     "notifyCustomerHint": "Sends the 'inquiry received' email with the booking reference and how to sign in.",
     "bookingSuspended": "This agency is suspended. Reactivate it before adding bookings.",
-    "openAsSupport": "Work as support"
+    "openAsSupport": "Work as support",
+    "error_pays_through_stripe": "This agency pays through Stripe. Cancel that subscription in Stripe first, then grant a plan."
   },
   "infographics": {
     "trustStripe": "Payments through Stripe",

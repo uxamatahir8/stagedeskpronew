@@ -6,7 +6,7 @@ import type { Prisma } from "./generated/prisma/client";
 import { getSetting } from "./settings";
 
 export class AgencyAdminError extends Error {
-  constructor(readonly code: "slug_taken" | "not_found" | "has_bookings" | "owner_is_admin" | "plan_not_found") {
+  constructor(readonly code: "slug_taken" | "not_found" | "has_bookings" | "owner_is_admin" | "plan_not_found" | "pays_through_stripe") {
     super(`Agency: ${code}`);
     this.name = "AgencyAdminError";
   }
@@ -153,6 +153,9 @@ export async function extendTrial(organizationId: string, days: number, now = ne
 export async function grantPlan(organizationId: string, planKey: string) {
   const plan = await prisma.plan.findUnique({ where: { key: planKey } });
   if (!plan) throw new AgencyAdminError("plan_not_found");
+  // A free plan on top of a running Stripe subscription would leave Stripe charging; cancel that first.
+  const current = await prisma.subscription.findUnique({ where: { organizationId }, select: { stripeSubscriptionId: true, status: true } });
+  if (current?.stripeSubscriptionId && ["active", "trialing", "past_due", "unpaid"].includes(current.status)) throw new AgencyAdminError("pays_through_stripe");
   return prisma.subscription.upsert({
     where: { organizationId },
     update: { planId: plan.id, status: "active", complimentary: true, pastDueSince: null, cancelAtPeriodEnd: false },
