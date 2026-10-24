@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { splitBookingPayment } from "@stagedesk/core";
 import { BeforeAfter, CapabilityFigures, EventTypes, HubDiagram, JourneyFlow, TrustStrip } from "@/components/site/infographics";
+import { PricingSection } from "@/components/site/pricing-section";
 import { Screenshot } from "@/components/site/screenshot";
 import { MockArtistRequest, MockPayout, MockQuote } from "@/components/site/mockups";
 import { primaryCta } from "@/components/site/site-chrome";
@@ -13,10 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { displayCurrency, fromEuros } from "@/lib/display-currency";
 import { euro, percent } from "@/lib/format";
 import { jsonLd, pageMetadata } from "@/lib/seo";
-import { sitePlans, siteSettings } from "@/lib/site";
+import { siteSettings } from "@/lib/site";
 import { turnstileSiteKey } from "@/lib/turnstile";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]">): Promise<Metadata> {
@@ -141,8 +141,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
       <RequestQuoteBand />
 
       <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
-        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-          <PricingTeaser />
+        <Suspense fallback={<Skeleton className="h-[36rem] w-full" />}>
+          <PricingSection title={t("pricingTitle")} intro={t("pricingCardsIntro")} />
         </Suspense>
       </section>
 
@@ -219,33 +219,6 @@ async function MoneySplit() {
         ))}
       </dl>
       <p className="text-xs text-muted-foreground">{t("splitNote")}</p>
-    </div>
-  );
-}
-
-async function PricingTeaser() {
-  await connection();
-  const [t, format, plans, shown] = await Promise.all([getTranslations("landing"), getFormatter(), sitePlans(), displayCurrency()]);
-  const inShown = async (cents: number) => {
-    const c = await fromEuros(cents, shown);
-    return c === null ? euro(format, cents) : euro(format, c, shown);
-  };
-  const cheapest = plans.reduce<number | null>((min, p) => (min === null || p.monthlyPriceCents < min ? p.monthlyPriceCents : min), null);
-  const trial = Math.max(0, ...plans.map((p) => p.trialDays));
-  return (
-    <div className="grid gap-6 rounded-3xl border bg-card p-8 sm:p-12 lg:grid-cols-[1fr_auto] lg:items-center">
-      <div className="grid gap-3">
-        <h2 className="text-3xl font-bold tracking-tight text-balance">{t("pricingTitle")}</h2>
-        <p className="text-lg text-muted-foreground">
-          {cheapest !== null ? t("pricingIntro", { price: await inShown(cheapest), days: trial }) : t("pricingIntroNoPlans")}
-        </p>
-      </div>
-      <Button asChild size="lg" className="w-fit">
-        <Link href="/pricing">
-          {t("seePricing")}
-          <ArrowRightIcon />
-        </Link>
-      </Button>
     </div>
   );
 }

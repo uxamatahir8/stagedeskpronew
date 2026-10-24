@@ -101,7 +101,7 @@ export default async function FeaturesPage({ params }: PageProps<"/[locale]/feat
 
       {/* Jump links that stay in view under the header while reading. */}
       <nav aria-label={t("jumpTo")} className="sticky top-16 z-20 border-b bg-background/90 backdrop-blur">
-        <ul className={`${container} flex gap-1 overflow-x-auto py-2.5 text-sm`}>
+        <ul className={`${container} flex gap-1 overflow-x-auto py-2.5 text-sm [mask-image:linear-gradient(to_right,transparent,black_1rem,black_calc(100%-1rem),transparent)] [scrollbar-width:none] lg:flex-wrap lg:justify-center lg:[mask-image:none] [&::-webkit-scrollbar]:hidden`}>
           {[...main, ...minor].map(({ key, icon: Icon }) => (
             <li key={key} className="shrink-0">
               <a href={`#${key}`} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">

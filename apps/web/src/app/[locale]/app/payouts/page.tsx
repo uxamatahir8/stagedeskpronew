@@ -1,5 +1,6 @@
 import { ArrowRightIcon, BadgeCheckIcon, HourglassIcon, Loader2Icon, WalletIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { formatIban } from "@stagedesk/core";
@@ -39,6 +40,7 @@ export default async function PayoutsPage({ params }: PageProps<"/[locale]/app/p
  * period, where it goes, every withdrawal and every commission.
  */
 async function Payouts() {
+  await connection();
   const { affiliate } = await requireAffiliate("affiliate.payouts");
   const [t, tw, tn, format, program, balance, commissions, payouts, stripeReady] = await Promise.all([
     getTranslations("affiliate"),

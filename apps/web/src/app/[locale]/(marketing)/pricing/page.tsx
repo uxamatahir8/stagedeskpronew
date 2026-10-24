@@ -2,19 +2,19 @@ import { CheckIcon, MinusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { convertCents, countLimits, featureFlags, feeRuleSchema, type FeeRule } from "@stagedesk/core";
 import { container, CtaBand, FaqList, Proofs, SectionHeading } from "@/components/site/marketing-blocks";
-import { primaryCta } from "@/components/site/site-chrome";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { displayCurrency, siteRates } from "@/lib/display-currency";
-import { euro, percent } from "@/lib/format";
+import { euro } from "@/lib/format";
 import { jsonLd, pageMetadata } from "@/lib/seo";
 import { sitePlans, siteSettings } from "@/lib/site";
 import { cn } from "@/lib/utils";
-import { type PricingCard, PricingCards } from "./pricing-cards";
+import { buildPricing } from "@/components/site/pricing-section";
+import { PricingCards } from "./pricing-cards";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/pricing">): Promise<Metadata> {
   const locale = (await params).locale as Locale;
@@ -92,69 +92,15 @@ function feeCents(rule: FeeRule, amount: number) {
 }
 
 async function Plans() {
-  await connection();
-  const [t, tb, format, locale, plans, cta, { fees }, shown, { rates, date }] = await Promise.all([
-    getTranslations("pricingPage"),
-    getTranslations("billing"),
-    getFormatter(),
-    getLocale(),
-    sitePlans(),
-    primaryCta(),
-    siteSettings(),
-    displayCurrency(),
-    siteRates(),
-  ]);
-  // Prices are euros; a visitor who picked another currency sees an estimate at the ECB rate.
-  const converted = shown !== "EUR" && convertCents(100, "EUR", shown, rates) !== null;
-  const money = (cents: number) => (converted ? euro(format, convertCents(cents, "EUR", shown, rates)!, shown) : euro(format, cents));
+  const { t, plans, cards, cta, trialDays, convertedNote, money, describeFee, ruleOf, loc } = await buildPricing();
+  const tb = await getTranslations("billing");
   if (plans.length === 0) return <p className="text-muted-foreground">{t("noPlans")}</p>;
-
-  const ruleOf = (p: (typeof plans)[number]) => {
-    const planFee = feeRuleSchema.safeParse(p.feeRule);
-    return p.feeRule && planFee.success ? planFee.data : fees.defaultRule;
-  };
-  const describeFee = (rule: FeeRule, short = false) => {
-    if (rule.type === "none") return short ? "—" : t("feeNone");
-    const parts = [];
-    if (rule.type === "percentage" || rule.type === "percentage_plus_fixed") parts.push(percent(format, rule.percentageBps));
-    if (rule.type === "fixed" || rule.type === "percentage_plus_fixed") parts.push(money(rule.fixedCents));
-    return short ? parts.join(" + ") : t("feeLine", { fee: parts.join(" + ") });
-  };
-  const loc = (v: Record<string, string>) => v[locale] ?? v["nl"] ?? "";
-  // Limit names are capitalised labels; mid-sentence they read lowercase ("Up to 3 active artists").
-  const what = (k: (typeof countLimits)[number]) => tb(`limit_${k}`).toLocaleLowerCase(locale);
-
-  const cards: PricingCard[] = plans.map((p) => {
-    const yearlyPerMonth = Math.round(p.yearlyPriceCents / 12);
-    const savings = p.monthlyPriceCents * 12 - p.yearlyPriceCents;
-    const features = (p.features[locale] ?? p.features["nl"] ?? []).filter(Boolean);
-    const generated = [
-      ...countLimits.filter((k) => k !== "storageGb").map((k) => (p.limits[k] === null ? t("unlimited", { what: what(k) }) : t("upTo", { count: p.limits[k]!, what: what(k) }))),
-      ...featureFlags.filter((f) => p.limits[f]).map((f) => tb(`flag_${f}`)),
-    ];
-    return {
-      key: p.key,
-      name: loc(p.name),
-      description: loc(p.description),
-      monthly: money(p.monthlyPriceCents),
-      yearly: money(p.yearlyPriceCents),
-      yearlyPerMonth: money(yearlyPerMonth),
-      savings: savings > 0 ? money(savings) : null,
-      billedInEuro: converted ? t("billedInEuro", { amount: euro(format, p.monthlyPriceCents) }) : null,
-      savingsPercent: p.monthlyPriceCents > 0 && savings > 0 ? Math.round((savings / (p.monthlyPriceCents * 12)) * 100) : 0,
-      // The admin's own feature list wins; without one, the list comes from the plan's limits.
-      features: [...new Set(features)],
-      limits: features.length > 0 ? [] : generated,
-      fee: describeFee(ruleOf(p)),
-      recommended: p.recommended,
-    };
-  });
 
   const cell = "px-4 py-3 text-center tabular-nums";
   return (
     <div className="grid gap-20">
-      <PricingCards plans={cards} cta={cta} trialDays={Math.max(0, ...plans.map((p) => p.trialDays))} />
-      {converted && <p className="-mt-14 text-center text-sm text-muted-foreground">{t("convertedNote", { currency: shown, date: date ? format.dateTime(new Date(`${date}T12:00:00Z`), { day: "numeric", month: "long", year: "numeric" }) : "" })}</p>}
+      <PricingCards plans={cards} cta={cta} trialDays={trialDays} />
+      {convertedNote && <p className="-mt-14 text-center text-sm text-muted-foreground">{convertedNote}</p>}
 
       <div className="grid gap-8">
         <SectionHeading title={t("compareTitle")} intro={t("compareIntro")} />

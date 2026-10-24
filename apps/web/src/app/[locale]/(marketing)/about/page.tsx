@@ -6,6 +6,7 @@ import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
 import { ArticleCard } from "@/components/content/article-parts";
 import { editorialFont } from "@/components/content/editorial-font";
+import { PricingSection } from "@/components/site/pricing-section";
 import { Screenshot } from "@/components/site/screenshot";
 import { CapabilityFigures } from "@/components/site/infographics";
 import { primaryCta } from "@/components/site/site-chrome";
@@ -138,6 +139,14 @@ export default async function AboutPage({ params }: PageProps<"/[locale]/about">
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      <section className="border-y bg-muted/30">
+        <div className="mx-auto w-full max-w-[88rem] px-5 py-20 sm:px-8 lg:px-12">
+          <Suspense fallback={<Skeleton className="h-[36rem] w-full" />}>
+            <PricingSection title={t("pricingTitle")} intro={t("pricingIntro")} />
+          </Suspense>
         </div>
       </section>
 

@@ -1992,7 +1992,8 @@
     "requestStep2": "Wij zetten je aanvraag door naar bureaus die passen",
     "requestStep3": "Je ontvangt een offerte en beslist zelf",
     "requestButton": "Offerte aanvragen",
-    "requestFree": "Gratis en vrijblijvend"
+    "requestFree": "Gratis en vrijblijvend",
+    "pricingCardsIntro": "Alle functies in elk abonnement; je kiest op basis van het aantal artiesten en boekingen. Probeer gratis, zonder creditcard."
   },
   "featuresPage": {
     "eyebrow": "Functies",
@@ -2155,7 +2156,8 @@
     "feeExampleFee": "Platformkosten",
     "feeExampleRest": "Voor jou en je artiest",
     "billedInEuro": "Gefactureerd als {amount} per maand",
-    "convertedNote": "Prijzen in {currency} zijn een schatting tegen de ECB-koers van {date}. Je betaalt in euro."
+    "convertedNote": "Prijzen in {currency} zijn een schatting tegen de ECB-koers van {date}. Je betaalt in euro.",
+    "compareLink": "Alle abonnementen vergelijken"
   },
   "forAgencies": {
     "eyebrow": "Voor DJ- en bandbureaus",
@@ -3032,7 +3034,9 @@
     "productBody": "Gemaakt met bureaus die elk weekend feesten draaien. Elk scherm is een vraag die we van hen kregen.",
     "productLink": "Bekijk de producttour",
     "blogTitle": "Uit onze blog",
-    "blogLink": "Naar de blog"
+    "blogLink": "Naar de blog",
+    "pricingTitle": "Wat het kost",
+    "pricingIntro": "Eerlijke abonnementen zonder verrassingen. Elke functie zit in elk abonnement."
   },
   "list": {
     "pagination": "Pagina's",

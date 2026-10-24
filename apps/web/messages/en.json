@@ -1992,7 +1992,8 @@
     "requestStep2": "We pass your request to agencies that fit",
     "requestStep3": "You receive a quote and decide",
     "requestButton": "Request a quote",
-    "requestFree": "Free and without obligation"
+    "requestFree": "Free and without obligation",
+    "pricingCardsIntro": "Every feature in every plan; you choose by the number of artists and bookings. Try it free, no credit card."
   },
   "featuresPage": {
     "eyebrow": "Features",
@@ -2155,7 +2156,8 @@
     "feeExampleFee": "Platform fee",
     "feeExampleRest": "For you and your artist",
     "billedInEuro": "Billed as {amount} a month",
-    "convertedNote": "Prices in {currency} are an estimate at the ECB rate of {date}. You pay in euros."
+    "convertedNote": "Prices in {currency} are an estimate at the ECB rate of {date}. You pay in euros.",
+    "compareLink": "Compare all plans"
   },
   "forAgencies": {
     "eyebrow": "For DJ and band agencies",
@@ -3032,7 +3034,9 @@
     "productBody": "Made with agencies that play events every weekend. Every screen is a question they asked us.",
     "productLink": "Take the product tour",
     "blogTitle": "From our blog",
-    "blogLink": "Go to the blog"
+    "blogLink": "Go to the blog",
+    "pricingTitle": "What it costs",
+    "pricingIntro": "Fair plans without surprises. Every feature is in every plan."
   },
   "list": {
     "pagination": "Pages",
