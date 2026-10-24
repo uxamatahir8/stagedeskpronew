@@ -87,6 +87,13 @@ rule frozen when the quote was accepted and transfers the artist's and agency's 
 unconnected artist's share goes to the agency and is recorded as owed. Refunds reverse transfers
 proportionally; the platform absorbs Stripe's unreturned fee. Every movement is in `ledger_entries`.
 
+## Guided tour
+
+The first time someone opens the app they get a short tour of their own panel: a welcome, every menu item
+they can use (texts under `guides.nav_<key>`), search, notifications and the account menu. Steps they have
+seen are stored in `user_guides`; when a menu item is added later, people get a short "New in StageDesk" tour
+of just that. The account menu has "Take the tour" to see it again. E2E tests skip it in `settleOnDashboard`.
+
 ## Agency roles and permissions
 
 Owners have every permission. What admins and staff may do is set per agency under Team → Roles and

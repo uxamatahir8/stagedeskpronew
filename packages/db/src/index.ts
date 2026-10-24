@@ -21,6 +21,7 @@ export * from "./site-texts";
 export * from "./rates";
 export * from "./withdrawals";
 export * from "./footer";
+export * from "./guides";
 export * from "./bookings";
 export * from "./inquiries";
 export * from "./generated/prisma/client";

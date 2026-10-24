@@ -56,8 +56,12 @@ export function TopBar({ permissions }: { permissions: readonly Permission[] }) 
       </Breadcrumb>
 
       <div className="ml-auto flex items-center gap-2">
-        <CommandMenu permissions={permissions} />
-        <NotificationBell />
+        <div data-tour="search">
+          <CommandMenu permissions={permissions} />
+        </div>
+        <div data-tour="notifications">
+          <NotificationBell />
+        </div>
       </div>
     </header>
   );

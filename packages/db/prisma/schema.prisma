@@ -1418,3 +1418,14 @@ model FooterLink {
   @@index([columnId, position])
   @@map("footer_links")
 }
+
+/// Guide steps a person has seen (the first tour, and short tours for new
+/// features), so each is shown once.
+model UserGuide {
+  userId String   @db.VarChar(64)
+  stepId String   @db.VarChar(64)
+  seenAt DateTime @default(now())
+
+  @@id([userId, stepId])
+  @@map("user_guides")
+}

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getLocale, setRequestLocale } from "next-intl/server";
+import { Guide } from "@/components/shell/guide";
 
 import { pendingLegal, prisma } from "@stagedesk/db";
 import { AppSidebar } from "@/components/shell/app-sidebar";
@@ -35,6 +36,9 @@ async function Shell({ children }: { children: React.ReactNode }) {
       <AppSidebar viewer={{ user, role, organization, memberships, permissions }} />
       <SidebarInset>
         <TopBar permissions={permissions} />
+        <Suspense fallback={null}>
+          <Guide userId={user.id} permissions={permissions} />
+        </Suspense>
         {support && <SupportBanner agency={support.name} />}
         {organization && permissions.includes("agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} canBill={permissions.includes("agency.billing")} />}
         <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">

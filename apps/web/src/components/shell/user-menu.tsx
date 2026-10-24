@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  ChevronsUpDownIcon,
-  LanguagesIcon,
-  LogOutIcon,
-  MonitorIcon,
-  MoonIcon,
-  SunIcon,
-  UserRoundIcon,
-} from "lucide-react";
+import { ChevronsUpDownIcon, CompassIcon, LanguagesIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserRoundIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
@@ -94,6 +86,10 @@ export function UserMenu({ viewer }: { viewer: ShellViewer }) {
                 <UserRoundIcon />
                 {t("shell.profile")}
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => window.dispatchEvent(new CustomEvent("stagedesk:tour"))}>
+              <CompassIcon />
+              {t("guides.takeTour")}
             </DropdownMenuItem>
 
             <DropdownMenuSub>

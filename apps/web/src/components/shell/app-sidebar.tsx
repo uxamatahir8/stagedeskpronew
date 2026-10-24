@@ -61,7 +61,9 @@ export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
 
       <SidebarFooter>
         <NavMenu items={footer} />
-        <UserMenu viewer={viewer} />
+        <div data-tour="account">
+          <UserMenu viewer={viewer} />
+        </div>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
@@ -155,7 +157,7 @@ function NavMenu({ items }: { items: NavItem[] }) {
         return (
           <SidebarMenuItem key={item.key}>
             <SidebarMenuButton asChild isActive={active} tooltip={t(item.key)}>
-              <Link href={item.href}>
+              <Link href={item.href} data-tour={`nav-${item.key}`}>
                 <item.icon />
                 <span>{t(item.key)}</span>
               </Link>

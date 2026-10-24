@@ -40,6 +40,19 @@ export async function settleOnDashboard(page: Page) {
     await expect(shell).toBeVisible({ timeout: 30_000 });
   }
   await expect(page).toHaveURL(/\/app$/);
+  await skipTour(page);
+}
+
+/**
+ * The guided tour opens once per account shortly after the first sign-in.
+ * Tests skip it (which marks it as seen) so it never covers what they click.
+ */
+export async function skipTour(page: Page) {
+  const skip = page.getByRole("dialog").getByRole("button", { name: /^(Overslaan|Skip)$/ }).first();
+  await skip.waitFor({ state: "visible", timeout: 2_500 }).then(
+    () => skip.click(),
+    () => undefined,
+  );
 }
 
 export async function acceptTerms(page: Page) {
