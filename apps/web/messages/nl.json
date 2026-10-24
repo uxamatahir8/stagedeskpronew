@@ -1165,7 +1165,7 @@
     "factDiscount": "Korting voor bureaus",
     "factDiscountHint": "met jouw code, {months, plural, one {# maand} other {# maanden}} lang",
     "factPayout": "Minimale uitbetaling",
-    "factPayoutHint": "Maandelijks op dag {day}, na {days} dagen goedkeuring",
+    "factPayoutHint": "Op aanvraag, {days} dagen na de bevestigde betaling van het bureau",
     "howTitle": "Zo werkt het",
     "step1Title": "Meld je aan",
     "step1Body": "Vertel wie je bereikt. We bekijken elke aanmelding, meestal binnen twee werkdagen.",
@@ -1899,7 +1899,11 @@
     },
     "languageCurrent": "Taal: {language}. Kies een andere taal",
     "currencyCurrent": "Prijzen in {currency}. Kies een andere valuta",
-    "currencyHint": "Prijzen tonen in"
+    "currencyHint": "Prijzen tonen in",
+    "dashboard": "Naar je dashboard",
+    "profile": "Profiel",
+    "signOut": "Uitloggen",
+    "accountMenu": "Accountmenu van {name}"
   },
   "landing": {
     "metaTitle": "Boekingssoftware voor DJ- en bandbureaus",

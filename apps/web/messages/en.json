@@ -1165,7 +1165,7 @@
     "factDiscount": "Discount for agencies",
     "factDiscountHint": "with your code, for {months, plural, one {# month} other {# months}}",
     "factPayout": "Minimum payout",
-    "factPayoutHint": "Paid monthly on day {day}, after a {days}-day approval period",
+    "factPayoutHint": "On request, {days} days after the agency's payment is confirmed",
     "howTitle": "How it works",
     "step1Title": "Apply",
     "step1Body": "Tell us who you reach. We review every application, usually within two working days.",
@@ -1899,7 +1899,11 @@
     },
     "languageCurrent": "Language: {language}. Choose another language",
     "currencyCurrent": "Prices in {currency}. Choose another currency",
-    "currencyHint": "Show prices in"
+    "currencyHint": "Show prices in",
+    "dashboard": "Go to dashboard",
+    "profile": "Profile",
+    "signOut": "Sign out",
+    "accountMenu": "Account menu for {name}"
   },
   "landing": {
     "metaTitle": "Booking software for DJ and band agencies",

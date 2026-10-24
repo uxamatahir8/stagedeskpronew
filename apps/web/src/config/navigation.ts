@@ -23,7 +23,6 @@ import {
   NewspaperIcon,
   MessagesSquareIcon,
   Music2Icon,
-  PaletteIcon,
   PanelsTopLeftIcon,
   PartyPopperIcon,
   ReceiptIcon,
@@ -137,7 +136,6 @@ export const navigation: NavGroup[] = [
 /** Shown at the bottom of the sidebar for everyone. */
 export const footerNavigation: NavItem[] = [
   { key: "support", href: "/app/support", icon: LifeBuoyIcon, permission: "support" },
-  { key: "designSystem", href: "/app/ui", icon: PaletteIcon, devOnly: true },
 ];
 
 const isDev = process.env.NODE_ENV !== "production";

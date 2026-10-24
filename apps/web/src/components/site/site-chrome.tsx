@@ -4,8 +4,11 @@ import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { navigationFor } from "@/config/navigation";
 import { displayCurrency } from "@/lib/display-currency";
+import { getViewer } from "@/lib/viewer";
 import { CurrencySwitch } from "./currency-switch";
+import { SiteAccountMenu } from "./site-account-menu";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { siteFooter, sitePages, siteSettings } from "@/lib/site";
@@ -61,7 +64,25 @@ async function navEntries(): Promise<NavEntry[]> {
 
 async function HeaderActions() {
   await connection();
-  const [t, entries, cta, currency] = await Promise.all([getTranslations("site"), navEntries(), primaryCta(), displayCurrency()]);
+  const [t, tn, tr, entries, cta, currency, viewer] = await Promise.all([
+    getTranslations("site"),
+    getTranslations("nav"),
+    getTranslations("roles"),
+    navEntries(),
+    primaryCta(),
+    displayCurrency(),
+    getViewer(),
+  ]);
+  // Signed in: the person's name with their most used pages instead of "Sign in" and the trial button.
+  const signedIn = viewer?.role ? viewer : null;
+  const shortcuts = signedIn
+    ? navigationFor(signedIn.permissions)
+        .flatMap((g) => g.items)
+        .filter((i) => i.href !== "/app")
+        .slice(0, 6)
+        .map((i) => ({ href: i.href, label: tn(i.key as "home") }))
+    : [];
+  const dashboard = { href: "/app", label: t("dashboard") };
   return (
     <>
       <NavLinks entries={entries} />
@@ -69,13 +90,24 @@ async function HeaderActions() {
         <LocaleSwitch />
         <CurrencySwitch current={currency} />
         <ThemeToggle />
-        <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
-          <Link href="/sign-in">{t("signIn")}</Link>
-        </Button>
-        <Button asChild size="sm" className="hidden sm:inline-flex">
-          <Link href={cta.href}>{cta.label}</Link>
-        </Button>
-        <MobileNav entries={entries} signIn={t("signIn")} cta={cta} />
+        {signedIn ? (
+          <>
+            <Button asChild size="sm" className="hidden md:inline-flex">
+              <Link href="/app">{t("dashboard")}</Link>
+            </Button>
+            <SiteAccountMenu name={signedIn.user.name} email={signedIn.user.email} role={signedIn.role ? tr(signedIn.role) : null} links={shortcuts} />
+          </>
+        ) : (
+          <>
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link href="/sign-in">{t("signIn")}</Link>
+            </Button>
+            <Button asChild size="sm" className="hidden sm:inline-flex">
+              <Link href={cta.href}>{cta.label}</Link>
+            </Button>
+          </>
+        )}
+        <MobileNav entries={entries} signIn={signedIn ? null : t("signIn")} cta={signedIn ? dashboard : cta} />
       </div>
     </>
   );

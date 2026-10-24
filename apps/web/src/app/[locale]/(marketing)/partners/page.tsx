@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getSetting } from "@stagedesk/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PartnersNav } from "@/components/site/partners-nav";
@@ -12,6 +12,8 @@ import { appUrl } from "@/lib/mail";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { getViewer } from "@/lib/viewer";
 import { ApplyForm } from "./apply-form";
+import { sitePlans } from "@/lib/site";
+import { EarningsCalculator } from "./earnings/calculator";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/partners">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "partners" });
@@ -31,7 +33,7 @@ export default async function PartnersPage({ params }: PageProps<"/[locale]/part
 
 async function Partners() {
   await connection();
-  const [t, format, program, viewer] = await Promise.all([getTranslations("partners"), getFormatter(), getSetting("affiliates.program"), getViewer()]);
+  const [t, format, program, viewer, plans, locale] = await Promise.all([getTranslations("partners"), getFormatter(), getSetting("affiliates.program"), getViewer(), sitePlans(), getLocale()]);
   const months = program.commissionMonths === null ? t("lifetime") : t("months", { count: program.commissionMonths });
   const steps = ["step1", "step2", "step3", "step4"] as const;
 
@@ -53,6 +55,12 @@ async function Partners() {
         />
         <Fact label={t("factPayout")} value={euro(format, program.minPayoutCents)} hint={t("factPayoutHint", { day: program.payoutDayOfMonth, days: program.approvalDays })} />
       </dl>
+
+      <EarningsCalculator
+        plans={plans.filter((p) => p.monthlyPriceCents > 0).map((p) => ({ key: p.key, name: p.name[locale] ?? p.name["nl"] ?? p.key, monthlyCents: p.monthlyPriceCents }))}
+        rateBps={program.commissionBps}
+        months={program.commissionMonths}
+      />
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <div className="grid content-start gap-8">
@@ -107,7 +115,7 @@ async function Partners() {
           </CardHeader>
           <CardContent>
             {program.enabled ? (
-              <ApplyForm signedInAs={viewer?.user.email ?? null} turnstileKey={turnstileSiteKey()} linkBase={`${appUrl}/`} />
+              <ApplyForm signedInAs={viewer?.user.email ?? null} turnstileKey={turnstileSiteKey()} linkBase={`${appUrl}/sign-up`} />
             ) : (
               <p className="text-sm text-muted-foreground">{t("closed")}</p>
             )}

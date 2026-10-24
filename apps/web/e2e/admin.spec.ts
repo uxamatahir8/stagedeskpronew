@@ -46,7 +46,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   });
 
   await test.step("a partner is added, edited and deleted", async () => {
-    await page.goto("/app/affiliates");
+    await page.goto("/app/affiliates?tab=partners");
     await page.getByRole("button", { name: "Partner toevoegen" }).click();
     let dialog = page.getByRole("dialog");
     await dialog.getByLabel("Naam", { exact: true }).fill(partner);

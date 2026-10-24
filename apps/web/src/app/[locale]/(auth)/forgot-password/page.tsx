@@ -4,6 +4,7 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { ForgotPasswordForm } from "./forgot-password-form";
+import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/forgot-password">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "auth.forgot" });
@@ -15,7 +16,9 @@ export default async function ForgotPasswordPage({ params }: PageProps<"/[locale
   const t = await getTranslations("auth.forgot");
 
   return (
-    <AuthCard
+    <>
+      <SignedInRedirect />
+      <AuthCard
       title={t("title")}
       description={t("body")}
       footer={
@@ -25,6 +28,7 @@ export default async function ForgotPasswordPage({ params }: PageProps<"/[locale
       }
     >
       <ForgotPasswordForm />
-    </AuthCard>
+      </AuthCard>
+    </>
   );
 }

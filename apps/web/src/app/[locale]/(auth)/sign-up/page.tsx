@@ -7,6 +7,7 @@ import { AuthCard } from "@/components/auth/auth-card";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { SignUpForm } from "./sign-up-form";
+import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/sign-up">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "auth.signUp" });
@@ -18,7 +19,9 @@ export default async function SignUpPage({ params }: PageProps<"/[locale]/sign-u
   const t = await getTranslations("auth.signUp");
 
   return (
-    <AuthCard
+    <>
+      <SignedInRedirect />
+      <AuthCard
       title={t("title")}
       description={t("subtitle")}
       footer={
@@ -36,7 +39,8 @@ export default async function SignUpPage({ params }: PageProps<"/[locale]/sign-u
       <Suspense fallback={null}>
         <TermsNotice />
       </Suspense>
-    </AuthCard>
+      </AuthCard>
+    </>
   );
 }
 

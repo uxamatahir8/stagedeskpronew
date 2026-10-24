@@ -52,7 +52,7 @@ test("a partner applies, is approved, and gets credit for an agency from their l
 
   await test.step("the platform admin approves the application", async () => {
     await signIn(admin, "admin@stagedesk.local");
-    await admin.goto("/app/affiliates");
+    await admin.goto("/app/affiliates?tab=partners");
     const application = admin.locator("div").filter({ hasText: partnerEmail }).filter({ has: admin.getByRole("button", { name: "Goedkeuren" }) }).last();
     await application.getByRole("button", { name: "Goedkeuren" }).click();
     await expect(admin.getByText("Partner goedgekeurd.")).toBeVisible();

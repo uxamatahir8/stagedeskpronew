@@ -174,7 +174,7 @@ export function LocaleSwitch() {
 }
 
 /** The menu on phones and small tablets: groups become headed sections. */
-export function MobileNav({ entries, signIn, cta }: { entries: NavEntry[]; signIn: string; cta: NavLink }) {
+export function MobileNav({ entries, signIn, cta }: { entries: NavEntry[]; signIn: string | null; cta: NavLink }) {
   const t = useTranslations("site");
   const [open, setOpen] = useState(false);
   const linkClass = "rounded-md px-3 py-2 hover:bg-accent";
@@ -209,11 +209,13 @@ export function MobileNav({ entries, signIn, cta }: { entries: NavEntry[]; signI
             ),
           )}
           <div className="mt-4 grid gap-2 border-t pt-4">
-            <Button asChild variant="outline">
-              <Link href="/sign-in" onClick={() => setOpen(false)}>
-                {signIn}
-              </Link>
-            </Button>
+            {signIn && (
+              <Button asChild variant="outline">
+                <Link href="/sign-in" onClick={() => setOpen(false)}>
+                  {signIn}
+                </Link>
+              </Button>
+            )}
             <Button asChild>
               <Link href={cta.href} onClick={() => setOpen(false)}>
                 {cta.label}
