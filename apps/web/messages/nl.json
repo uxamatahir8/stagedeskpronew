@@ -229,7 +229,14 @@
       "useApp": "Gebruik je authenticator-app",
       "trust": "Vertrouw dit apparaat 30 dagen",
       "invalid": "Die code klopt niet. Probeer het opnieuw."
-    }
+    },
+    "brandPoint1": "Aanvragen, offertes en betalingen op één plek",
+    "brandPoint2": "Artiesten nemen optredens aan vanaf hun telefoon",
+    "brandPoint3": "iDEAL-betalingen en automatische uitbetalingen",
+    "backToSite": "Terug naar de website",
+    "terms": "Voorwaarden",
+    "privacy": "Privacy",
+    "help": "Hulp"
   },
   "onboarding": {
     "title": "Zet je bureau op",
@@ -1816,7 +1823,8 @@
       "role_agency": "een bureau",
       "role_artist": "een artiest",
       "role_other": "iets anders"
-    }
+    },
+    "languageCurrent": "Taal: {language}. Kies een andere taal"
   },
   "landing": {
     "metaTitle": "Boekingssoftware voor DJ- en bandbureaus",
@@ -1902,7 +1910,16 @@
     "faq7Q": "Kan ik het boekingsformulier op mijn eigen website zetten?",
     "faq7A": "Ja. Plak één regel code en het formulier verschijnt op je site. Het past zich aan de breedte van de pagina aan en stuurt aanvragen direct naar je wachtrij.",
     "faq8Q": "Hoe snel kan ik aan de slag?",
-    "faq8A": "De meeste bureaus zijn in een middag ingericht: vul je gegevens, diensten en artiesten in, zet je boekingspagina aan en je bent klaar voor je eerste aanvraag."
+    "faq8A": "De meeste bureaus zijn in een middag ingericht: vul je gegevens, diensten en artiesten in, zet je boekingspagina aan en je bent klaar voor je eerste aanvraag.",
+    "heroRequest": "Organiseer je een feest? Vraag een offerte aan",
+    "requestEyebrow": "Een bruiloft, feest of bedrijfsevent gepland?",
+    "requestTitle": "Vertel over je event, en wij vinden de juiste DJ of band",
+    "requestBody": "Eén kort formulier en StageDesk koppelt je aanvraag aan een bureau dat past bij je datum, plaats en stijl. Je ontvangt vrijblijvend een offerte.",
+    "requestStep1": "Vertel de datum, plaats en wat je zoekt",
+    "requestStep2": "Wij zetten je aanvraag door naar bureaus die passen",
+    "requestStep3": "Je ontvangt een offerte en beslist zelf",
+    "requestButton": "Offerte aanvragen",
+    "requestFree": "Gratis en vrijblijvend"
   },
   "featuresPage": {
     "eyebrow": "Functies",
@@ -3321,5 +3338,11 @@
     "videoUnsupported": "Voeg een link van YouTube, Vimeo, SoundCloud of Mixcloud toe.",
     "formPreview": "Hier staat het aanvraagformulier",
     "formPreviewHint": "Bezoekers vullen het in op je live site; aanvragen komen bij je boekingen."
+  },
+  "theme": {
+    "label": "Weergave",
+    "light": "Licht",
+    "dark": "Donker",
+    "system": "Zoals het apparaat"
   }
 }

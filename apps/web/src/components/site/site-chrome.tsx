@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { sitePages, siteSettings } from "@/lib/site";
@@ -50,6 +51,7 @@ async function navEntries(): Promise<NavEntry[]> {
       ],
     },
     { href: "/about", label: t("nav.about") },
+    { href: "/contact", label: t("nav.contact") },
     ...pages.filter((p) => p.placement === "header").map((p) => ({ href: `/${locale === "en" ? p.slugEn : p.slugNl}`, label: locale === "en" ? p.titleEn : p.titleNl })),
   ];
 }
@@ -62,6 +64,7 @@ async function HeaderActions() {
       <NavLinks entries={entries} />
       <div className="ml-auto flex items-center gap-1">
         <LocaleSwitch />
+        <ThemeToggle />
         <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
           <Link href="/sign-in">{t("signIn")}</Link>
         </Button>

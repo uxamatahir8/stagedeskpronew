@@ -137,6 +137,8 @@ export default async function HomePage({ params }: PageProps<"/[locale]">) {
         </div>
       </section>
 
+      <RequestQuoteBand />
+
       <section className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-20 sm:px-8 lg:px-12">
         <Suspense fallback={<Skeleton className="h-64 w-full" />}>
           <PricingTeaser />
@@ -172,6 +174,11 @@ async function HeroActions() {
       <Button asChild size="lg" variant="outline">
         <Link href="/pricing">{t("seePricing")}</Link>
       </Button>
+      {/* For people planning an event rather than running an agency. */}
+      <Link href="/request" className="flex w-full items-center gap-1 text-sm font-medium text-magenta underline-offset-4 hover:underline">
+        {t("heroRequest")}
+        <ArrowRightIcon className="size-4" aria-hidden />
+      </Link>
     </div>
   );
 }
@@ -357,6 +364,42 @@ async function LookInside() {
           </Link>
         </Button>
         <p className="text-sm text-muted-foreground">{t("demoData")}</p>
+      </div>
+    </section>
+  );
+}
+
+/** For visitors who are planning an event: StageDesk finds them an agency. */
+async function RequestQuoteBand() {
+  const t = await getTranslations("landing");
+  return (
+    <section className="relative overflow-hidden bg-[oklch(0.24_0.08_322)] text-white">
+      <div className="mx-auto grid w-full max-w-[88rem] items-center gap-10 px-5 py-20 sm:px-8 lg:grid-cols-[1.2fr_1fr] lg:px-12">
+        <div className="grid max-w-xl gap-5">
+          <p className="text-sm font-medium text-[oklch(0.8_0.14_352)]">{t("requestEyebrow")}</p>
+          <h2 className="text-3xl font-bold tracking-tight text-balance sm:text-4xl">{t("requestTitle")}</h2>
+          <p className="text-lg text-white/75">{t("requestBody")}</p>
+          <ol className="grid gap-2 text-white/85">
+            {(["requestStep1", "requestStep2", "requestStep3"] as const).map((k, i) => (
+              <li key={k} className="flex gap-3">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-xs font-semibold tabular-nums">{i + 1}</span>
+                {t(k)}
+              </li>
+            ))}
+          </ol>
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <Button asChild size="lg" className="bg-magenta text-white hover:bg-magenta/90">
+              <Link href="/request">
+                {t("requestButton")}
+                <ArrowRightIcon />
+              </Link>
+            </Button>
+            <span className="text-sm text-white/60">{t("requestFree")}</span>
+          </div>
+        </div>
+        <div aria-hidden className="relative mx-auto hidden w-64 rotate-3 lg:block xl:w-72">
+          <Screenshot name="customer" />
+        </div>
       </div>
     </section>
   );

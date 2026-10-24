@@ -16,6 +16,7 @@ export * from "./sites";
 export * from "./support";
 export * from "./users";
 export * from "./billing";
+export * from "./content";
 export * from "./bookings";
 export * from "./inquiries";
 export * from "./generated/prisma/client";

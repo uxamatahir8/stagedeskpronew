@@ -209,10 +209,12 @@
 }
 
 /*
- * Marketing site motion. Kept small and calm: a short rise with an ease that
- * settles slowly, like paper landing, rather than a bounce.
- * ScrollReveal (components/site/scroll-reveal.tsx) marks the items and adds
- * .is-visible to sections in view; without JavaScript nothing is hidden.
+ * Marketing site motion, in CSS only: scroll-driven animations tie each
+ * element's fade to where it is on screen, so it rises in as it enters from
+ * below and fades away as it leaves at the top, in both scroll directions.
+ * Nothing is changed in the page, nothing on screen at load is hidden, and
+ * browsers without support (or visitors who prefer less motion) simply see
+ * everything. The ease is long and soft, like paper settling, never a bounce.
  */
 @keyframes page-in {
   from {
@@ -227,42 +229,59 @@
 @utility animate-page-in {
   animation: page-in 0.45s cubic-bezier(0.2, 0.65, 0.3, 1) both;
 }
-
-.reveal-ready [data-reveal-item] {
-  opacity: 0;
-  transform: translateY(18px);
-  /* Leaving: quick and all at once. */
-  transition:
-    opacity 0.35s ease,
-    transform 0.45s ease;
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
-.reveal-ready .is-visible [data-reveal-item] {
-  opacity: 1;
-  transform: none;
-  /* Arriving: slower, one after another. */
-  transition:
-    opacity 0.7s cubic-bezier(0.2, 0.65, 0.3, 1),
-    transform 0.9s cubic-bezier(0.2, 0.65, 0.3, 1);
-  transition-delay: var(--reveal-delay, 0ms);
+@keyframes reveal-out {
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
 }
-
-/* The header lifts off the page once you scroll. */
-.site-header {
-  transition:
-    box-shadow 0.3s ease,
-    background-color 0.3s ease;
-}
-html[data-scrolled] .site-header {
-  box-shadow: 0 10px 30px -22px rgb(20 8 24 / 0.45);
+@keyframes header-lift {
+  to {
+    box-shadow: 0 10px 30px -22px rgb(20 8 24 / 0.45);
+  }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    /* Blocks inside the page's sections; a block inside another block moves with it. */
+    main
+      section
+      :is(h1, h2, h3, p, li, figure, img, details, form, blockquote, [data-slot="card"], [data-slot="button"], span:has(> svg)):not(
+        :is(h1, h2, h3, p, li, figure, details, form, blockquote, [data-slot="card"]) *
+      ) {
+      animation:
+        reveal-in cubic-bezier(0.2, 0.65, 0.3, 1) both,
+        reveal-out ease-in both;
+      animation-timeline: view(), view();
+      animation-range:
+        entry 0% entry 90%,
+        exit 40% exit 100%;
+    }
+  }
+  @supports (animation-timeline: scroll()) {
+    /* The header lifts off the page over the first few pixels of scrolling. */
+    .site-header {
+      animation: header-lift linear both;
+      animation-timeline: scroll();
+      animation-range: 0 48px;
+    }
+  }
+  .animate-page-in {
+    animation: page-in 0.45s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in {
     animation: none;
-  }
-  .reveal-ready [data-reveal-item] {
-    opacity: 1;
-    transform: none;
-    transition: none;
   }
 }

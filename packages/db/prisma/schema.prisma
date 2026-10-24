@@ -1277,3 +1277,48 @@ model AgencyDomain {
   @@index([organizationId])
   @@map("agency_domains")
 }
+
+/// Categories of website content (blog, help), managed by the platform admin.
+model ContentCategory {
+  id            String           @id @db.VarChar(64)
+  /// blog | help
+  kind          String           @db.VarChar(16)
+  slug          String           @db.VarChar(80)
+  nameNl        String           @db.VarChar(80)
+  nameEn        String           @db.VarChar(80)
+  descriptionNl String?          @db.VarChar(300)
+  descriptionEn String?          @db.VarChar(300)
+  position      Int              @default(0)
+  createdAt     DateTime         @default(now())
+  articles      ContentArticle[]
+
+  @@unique([kind, slug])
+  @@map("content_categories")
+}
+
+/// A blog post, help article or changelog entry. Bodies are Markdown, rendered without raw HTML.
+model ContentArticle {
+  id          String           @id @db.VarChar(64)
+  /// blog | help | changelog
+  kind        String           @db.VarChar(16)
+  slug        String           @db.VarChar(120)
+  categoryId  String?          @db.VarChar(64)
+  category    ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  /// draft | published
+  status      String           @default("draft") @db.VarChar(16)
+  /// Shown first (blog: the lead story).
+  featured    Boolean          @default(false)
+  publishedAt DateTime?
+  coverImage  String?          @db.VarChar(500)
+  authorName  String?          @db.VarChar(120)
+  /// ArticleLocale (packages/core/src/content.ts); English is optional.
+  nl          Json
+  en          Json?
+  position    Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([kind, slug])
+  @@index([kind, status, publishedAt])
+  @@map("content_articles")
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  CheckIcon,
   BookOpenIcon,
   CalendarCheckIcon,
   ChevronDownIcon,
@@ -135,24 +136,40 @@ export function NavLinks({ entries }: { entries: NavEntry[] }) {
 }
 
 /** Switches language on the same page. Builder pages redirect to their slug in the other language. */
+const languages = [
+  { code: "nl", label: "Nederlands" },
+  { code: "en", label: "English" },
+] as const;
+
+/** Shows the language the page is in; the menu switches to the other one on the same page. */
 export function LocaleSwitch() {
   const t = useTranslations("site");
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const next = locale === "nl" ? "en" : "nl";
+  const current = languages.find((l) => l.code === locale) ?? languages[0];
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={pending}
-      aria-label={t("switchLanguage")}
-      onClick={() => startTransition(() => router.replace(pathname, { locale: next as (typeof routing.locales)[number] }))}
-    >
-      <GlobeIcon />
-      {next.toUpperCase()}
-    </Button>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" disabled={pending} aria-label={t("languageCurrent", { language: current.label })}>
+          <GlobeIcon />
+          {current.code.toUpperCase()}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {languages.map((l) => (
+          <DropdownMenuItem
+            key={l.code}
+            lang={l.code}
+            onSelect={() => l.code !== locale && startTransition(() => router.replace(pathname, { locale: l.code as (typeof routing.locales)[number] }))}
+          >
+            {l.label}
+            {l.code === locale && <CheckIcon className="ml-auto" aria-hidden />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

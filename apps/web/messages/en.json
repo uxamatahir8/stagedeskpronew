@@ -229,7 +229,14 @@
       "useApp": "Use your authenticator app",
       "trust": "Trust this device for 30 days",
       "invalid": "That code isn't right. Try again."
-    }
+    },
+    "brandPoint1": "Inquiries, quotes and payments in one place",
+    "brandPoint2": "Artists accept gigs from their phone",
+    "brandPoint3": "iDEAL payments and automatic payouts",
+    "backToSite": "Back to the website",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "help": "Help"
   },
   "onboarding": {
     "title": "Set up your agency",
@@ -1816,7 +1823,8 @@
       "role_agency": "an agency",
       "role_artist": "an artist",
       "role_other": "something else"
-    }
+    },
+    "languageCurrent": "Language: {language}. Choose another language"
   },
   "landing": {
     "metaTitle": "Booking software for DJ and band agencies",
@@ -1902,7 +1910,16 @@
     "faq7Q": "Can I put the booking form on my own website?",
     "faq7A": "Yes. Paste one line of code and the form appears on your site. It adapts to the width of the page and sends inquiries straight to your queue.",
     "faq8Q": "How long does it take to get started?",
-    "faq8A": "Most agencies are set up in an afternoon: add your details, services and artists, switch on your booking page, and you're ready for your first inquiry."
+    "faq8A": "Most agencies are set up in an afternoon: add your details, services and artists, switch on your booking page, and you're ready for your first inquiry.",
+    "heroRequest": "Planning an event? Request a quote",
+    "requestEyebrow": "Planning a wedding, party or company event?",
+    "requestTitle": "Tell us about your event, and we'll find the right DJ or band",
+    "requestBody": "One short form and StageDesk matches your request with an agency that fits your date, place and style. You receive a quote, without obligation.",
+    "requestStep1": "Tell us the date, place and what you're looking for",
+    "requestStep2": "We pass your request to agencies that fit",
+    "requestStep3": "You receive a quote and decide",
+    "requestButton": "Request a quote",
+    "requestFree": "Free and without obligation"
   },
   "featuresPage": {
     "eyebrow": "Features",
@@ -3321,5 +3338,11 @@
     "videoUnsupported": "Add a YouTube, Vimeo, SoundCloud or Mixcloud link.",
     "formPreview": "The booking form appears here",
     "formPreviewHint": "Visitors fill it in on your live site; inquiries land in your bookings."
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "Same as device"
   }
 }

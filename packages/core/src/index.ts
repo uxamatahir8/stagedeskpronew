@@ -10,3 +10,4 @@ export * from "./fees";
 export * from "./settings/fees";
 export * from "./settings/registry";
 export * from "./sites";
+export * from "./content";
