@@ -924,7 +924,7 @@
     "status_trial_ended": "Je proefperiode is afgelopen",
     "status_payment_failed": "Je laatste betaling is mislukt",
     "status_canceled": "Je abonnement is beëindigd",
-    "status_none": "Geen abonnement",
+    "status_none": "Nog geen abonnement gekozen",
     "readOnlyBody": "Je kunt alles nog bekijken, maar wijzigen kan pas weer als je een abonnement kiest.",
     "usage": "Gebruik",
     "unlimited": "onbeperkt",
@@ -957,7 +957,17 @@
     "bannerTrial": "{count, plural, one {Nog # dag proefperiode} other {Nog # dagen proefperiode}}",
     "bannerGrace": "Betaal vóór {date} om volledige toegang te houden.",
     "bannerReadOnly": "Wijzigen staat stil: je abonnement is afgelopen.",
-    "bannerAction": "Kies een abonnement"
+    "bannerAction": "Kies een abonnement",
+    "bannerNone": "Kies een abonnement om StageDesk te gebruiken. Tot die tijd kun je alles bekijken maar niets wijzigen.",
+    "noneBody": "Kies hieronder een abonnement. Tot die tijd kun je alles bekijken maar niets wijzigen.",
+    "welcomeTitle": "Welkom! Kies je abonnement",
+    "welcomeBody": "Je bureau staat klaar. Kies een abonnement om aanvragen, offertes en betalingen te beheren.",
+    "trialBadge": "{days} dagen gratis",
+    "startTrial": "Start {days} dagen gratis",
+    "trialTerms": "Je betaalt pas na de proefperiode. Opzeggen kan altijd vóór die tijd.",
+    "switchTo": "Overstappen naar {plan}",
+    "switchTerms": "Je abonnement wordt direct aangepast; het verschil wordt naar rato verrekend op je volgende factuur.",
+    "switched": "Je abonnement is aangepast."
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -994,7 +1004,14 @@
     "synced": "In Stripe",
     "notSynced": "Nog niet in Stripe",
     "hidden": "Verborgen",
-    "inactive": "Niet beschikbaar"
+    "inactive": "Niet beschikbaar",
+    "trialEnabled": "Proefperiode beschikbaar",
+    "trialEnabledHint": "Nieuwe bureaus krijgen eenmalig gratis dagen voordat de eerste betaling volgt.",
+    "trialOff": "Geen proefperiode",
+    "trialOn": "{days} dagen proefperiode",
+    "sync": "Synchroniseren met Stripe",
+    "syncDone": "Abonnement staat in Stripe; bureaus kunnen nu afrekenen.",
+    "stripeMissing": "Stripe is nog niet gekoppeld. Voeg eerst de Stripe-sleutels toe."
   },
   "fees": {
     "type": "Soort kosten",
@@ -1027,7 +1044,7 @@
     "vatRatesHint": "Gescheiden door komma's, bijv. 21, 9, 0",
     "billingTitle": "Abonnementen",
     "graceDays": "Respijtdagen na mislukte betaling of verlopen proefperiode",
-    "trialPlan": "Proefabonnement voor nieuwe bureaus",
+    "trialPlan": "Abonnement bij een handmatig verlengde proefperiode",
     "siteTitle": "Site",
     "siteName": "Sitenaam",
     "defaultLocale": "Standaardtaal",
@@ -1695,7 +1712,8 @@
         "stripe_keys": "Stripe-sleutels gewijzigd"
       },
       "plan": {
-        "save": "Abonnement opgeslagen"
+        "save": "Abonnement opgeslagen",
+        "sync": "Abonnement naar Stripe gesynchroniseerd"
       },
       "agency": {
         "fee_deal": "Kostenafspraak bureau gewijzigd",
@@ -1766,6 +1784,9 @@
         "offline": "Bureauwebsite offline gehaald",
         "domain_add": "Websitedomein toegevoegd",
         "domain_remove": "Websitedomein verwijderd"
+      },
+      "billing": {
+        "switch_plan": "Abonnement van plan gewisseld"
       }
     },
     "group_page": "Pagina's",
@@ -1850,7 +1871,7 @@
     "switchLanguage": "English",
     "openMenu": "Menu openen",
     "joinWaitlist": "Op de wachtlijst",
-    "startTrial": "Probeer gratis",
+    "startTrial": "Aan de slag",
     "signIn": "Inloggen",
     "lastUpdated": "Laatst bijgewerkt op {date}",
     "nav": {
@@ -2128,7 +2149,7 @@
     "billedMonthly": "Maandelijks gefactureerd, excl. btw",
     "billedYearly": "{amount} per jaar gefactureerd, excl. btw",
     "save": "Bespaar {amount}",
-    "trialNote": "Elk abonnement begint met {days} dagen gratis. Geen creditcard nodig om te proberen.",
+    "trialNote": "Bij abonnementen met een proefperiode betaal je pas na de gratis dagen; je kunt op elk moment opzeggen.",
     "feeTitle": "Platformkosten op online betalingen",
     "feeBody": "Als klanten online via StageDesk betalen, gelden kleine platformkosten per boeking (per abonnement vermeld). Offline vastgelegde betalingen hebben geen kosten.",
     "noPlans": "De abonnementen worden voorbereid.",
@@ -2162,8 +2183,8 @@
     "feeExampleNone": "Op dit abonnement betaal je geen platformkosten op online betalingen.",
     "feeExampleOffline": "Betaalt de klant per overboeking of contant, dan betaal je geen platformkosten.",
     "faqTitle": "Vragen over prijzen",
-    "faq1Q": "Hoe werkt de gratis proefperiode?",
-    "faq1A": "Je gebruikt alle functies gratis, zonder creditcard. Aan het eind kies je een abonnement. Doe je dat niet, dan kun je alles nog bekijken maar niets meer wijzigen.",
+    "faq1Q": "Kan ik StageDesk eerst proberen?",
+    "faq1A": "Bij abonnementen met een proefperiode zie je het aantal gratis dagen op de kaart. Je kiest het abonnement bij het aanmelden; de eerste betaling volgt pas na de proefperiode en je kunt daarvoor kosteloos opzeggen. Zonder abonnement kun je alles bekijken maar niets wijzigen.",
     "faq2Q": "Kan ik later wisselen van abonnement?",
     "faq2A": "Ja. Een upgrade gaat direct in en je betaalt naar rato. Een downgrade gaat in bij de volgende verlenging.",
     "faq3Q": "Wat zijn platformkosten?",
@@ -2184,7 +2205,8 @@
     "feeExampleRest": "Voor jou en je artiest",
     "billedInEuro": "Gefactureerd als {amount} per maand",
     "convertedNote": "Prijzen in {currency} zijn een schatting tegen de ECB-koers van {date}. Je betaalt in euro.",
-    "compareLink": "Alle abonnementen vergelijken"
+    "compareLink": "Alle abonnementen vergelijken",
+    "trialCard": "{days} dagen gratis proberen"
   },
   "forAgencies": {
     "eyebrow": "Voor DJ- en bandbureaus",
@@ -2203,11 +2225,11 @@
     "fix4": "Uitbetalingen gaan vanzelf",
     "fix4Body": "Met online betalingen worden het aandeel van de artiest en het jouwe na het evenement automatisch uitbetaald.",
     "closingTitle": "Bekijk wat het kost",
-    "closingBody": "Abonnementen voor kleine en grote bureaus, allemaal met een gratis proefperiode.",
+    "closingBody": "Abonnementen voor kleine en grote bureaus, maandelijks opzegbaar.",
     "closingHref": "/pricing",
     "closingLink": "Prijzen",
     "tourLink": "Bekijk de producttour",
-    "proof1": "Gratis proberen, zonder creditcard",
+    "proof1": "Maandelijks opzegbaar",
     "proof2": "Nederlands en Engels",
     "proof3": "iDEAL, kaart en overboeking",
     "painTitle": "Herkenbaar?",
@@ -2293,7 +2315,7 @@
     "fix4": "Verdiensten in één oogopslag",
     "fix4Body": "Zie wat je verdiende, wat is uitbetaald en wat er nog komt, per boeking.",
     "closingTitle": "Hoe doe ik mee?",
-    "closingBody": "Artiesten doen mee via hun bureau: vraag of ze je uitnodigen. Heb je zelf een bureau? Probeer StageDesk gratis.",
+    "closingBody": "Artiesten doen mee via hun bureau: vraag of ze je uitnodigen. Heb je zelf een bureau? Begin met StageDesk.",
     "closingHref": "/for-agencies",
     "closingLink": "Voor bureaus",
     "tourLink": "Bekijk hoe het werkt",
@@ -2560,7 +2582,7 @@
   },
   "agencyAdmin": {
     "new": "Nieuw bureau",
-    "newHint": "Zet een bureau op voor iemand. Hun account wordt zo nodig aangemaakt; ze loggen in met een code per e-mail. De proefperiode start meteen.",
+    "newHint": "Zet een bureau op voor iemand. Hun account wordt zo nodig aangemaakt; ze loggen in met een code per e-mail en kiezen daarna een abonnement. Je kunt ook zelf een abonnement toekennen.",
     "agencyName": "Naam van het bureau",
     "city": "Plaats",
     "language": "Taal voor e-mails",
@@ -2972,7 +2994,7 @@
       "q4": "Moeten bruidsparen een account aanmaken?",
       "a4": "Nee. Hun account wordt aangemaakt vanuit de aanvraag; ze loggen in met een code per e-mail.",
       "ctaTitle": "Maak dit trouwseizoen je rustigste ooit",
-      "ctaBody": "Begin met een gratis proefperiode, in een middag ingericht."
+      "ctaBody": "Kies een abonnement en richt het in een middag in."
     },
     "band-agencies": {
       "eyebrow": "Voor band- & livemuziekbureaus",

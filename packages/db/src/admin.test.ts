@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AffiliateAdminError, createAffiliateByAdmin, deleteAffiliateByAdmin, updateAffiliateByAdmin } from "./affiliates";
+import { planTrialDays, trialEligible } from "./billing";
 import { AgencyAdminError, createAgencyForOwner, deleteAgency, extendTrial, grantPlan, listAgencies, setAgencySuspended } from "./agencies";
 import { prisma } from "./client";
 import { agencyLeadOffers, assignLead, closeLead, LeadError, offerLead, respondToLeadOffer, submitLead, type LeadInput } from "./leads";
@@ -27,12 +28,12 @@ afterAll(async () => {
 });
 
 describe("agency admin", () => {
-  it("creates an agency with its owner and a trial, and finds it by owner email", async () => {
+  it("creates an agency with its owner and no automatic trial, and finds it by owner email", async () => {
     const r = await createAgencyForOwner({ name: `${run} Feestbureau`, city: "Utrecht", ownerName: "Olga Owner", ownerEmail: email("owner"), locale: "nl" });
     orgs.push(r.organization.id);
     expect(r.newUser).toBe(true);
-    const sub = await prisma.subscription.findUnique({ where: { organizationId: r.organization.id } });
-    expect(sub?.status).toBe("trialing");
+    expect(await prisma.subscription.findUnique({ where: { organizationId: r.organization.id } })).toBeNull();
+    expect(await trialEligible(r.organization.id)).toBe(true);
     const found = await listAgencies({ q: email("owner") });
     expect(found.rows.map((a) => a.id)).toContain(r.organization.id);
   });
@@ -48,9 +49,14 @@ describe("agency admin", () => {
     await setAgencySuspended(id, false, null);
     expect((await prisma.organization.findUniqueOrThrow({ where: { id } })).suspendedAt).toBeNull();
 
-    const before = (await prisma.subscription.findUniqueOrThrow({ where: { organizationId: id } })).trialEndsAt!;
+    // The admin can still grant a trial by hand; it uses up the agency's one trial.
+    const before = (await extendTrial(id, 5)).trialEndsAt!;
+    expect(await trialEligible(id)).toBe(false);
     const after = (await extendTrial(id, 10)).trialEndsAt!;
     expect(after.getTime() - before.getTime()).toBe(10 * 86_400_000);
+    expect(planTrialDays({ trialEnabled: true, trialDays: 14 }, true)).toBe(14);
+    expect(planTrialDays({ trialEnabled: false, trialDays: 14 }, true)).toBe(0);
+    expect(planTrialDays({ trialEnabled: true, trialDays: 14 }, false)).toBe(0);
 
     const granted = await grantPlan(id, (await prisma.plan.findFirstOrThrow()).key);
     expect(granted).toMatchObject({ status: "active", complimentary: true });

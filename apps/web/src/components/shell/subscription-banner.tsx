@@ -26,6 +26,9 @@ export async function SubscriptionBanner({ organizationId, canBill }: { organiza
   } else if (access.reason === "grace" && access.until) {
     text = t("bannerGrace", { date: dateTime(format, access.until) });
     tone = "warning";
+  } else if (access.reason === "none") {
+    text = t("bannerNone");
+    tone = "warning";
   } else {
     text = t("bannerReadOnly");
     tone = "danger";

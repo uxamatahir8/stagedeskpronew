@@ -22,6 +22,8 @@ export interface PricingCard {
   limits: string[];
   fee: string;
   recommended: boolean;
+  /** Free days before the first payment; 0 when the plan has no trial. */
+  trialDays: number;
 }
 
 /** The plans side by side; the recommended one stands out in the brand's dark purple. */
@@ -77,6 +79,9 @@ export function PricingCards({ plans, cta, trialDays }: { plans: PricingCard[]; 
                   {interval === "year" && p.savings && <span className={cn("ml-1 font-medium", dark ? "text-[oklch(0.85_0.15_150)]" : "text-success")}>{t("save", { amount: p.savings })}</span>}
                 </p>
               </div>
+              {p.trialDays > 0 && (
+                <p className={cn("-mt-3 w-fit rounded-full px-2.5 py-0.5 text-xs font-medium", dark ? "bg-white/12 text-white" : "bg-success/12 text-success")}>{t("trialCard", { days: p.trialDays })}</p>
+              )}
               {p.billedInEuro && <p className={cn("-mt-4 text-xs", dark ? "text-white/60" : "text-muted-foreground")}>{p.billedInEuro}</p>}
               <Button asChild size="lg" variant={dark ? "default" : "outline"} className={cn("w-full", dark && "bg-[oklch(0.66_0.2_352)] text-white hover:bg-[oklch(0.6_0.2_352)]")}>
                 <Link href={cta.href}>

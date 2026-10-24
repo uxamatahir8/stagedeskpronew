@@ -129,6 +129,8 @@ model Organization {
   faq                Json?
   showReviews        Boolean                @default(true)
   stripeCustomerId   String?                @unique @db.VarChar(64)
+  /// Set once the agency has had a trial; a trial is offered only once.
+  trialUsedAt        DateTime?
   /// Platform fee deal for this agency (FeeRule); overrides the plan and platform default.
   feeRule            Json?
   /// Set by the platform admin: the agency team is locked out and the booking page is offline. Data is kept.
@@ -586,6 +588,8 @@ model Plan {
   description          Json?
   monthlyPriceCents    Int
   yearlyPriceCents     Int
+  /// Off by default: new agencies pay from the start unless the plan offers a trial.
+  trialEnabled         Boolean        @default(false)
   trialDays            Int            @default(14)
   /// { nl: string[]; en: string[] } shown on the pricing page
   features             Json

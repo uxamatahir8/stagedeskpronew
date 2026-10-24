@@ -18,14 +18,27 @@ interface PlanCard {
   yearly: string;
   features: string[];
   recommended: boolean;
+  /** Free days this agency gets on the plan; 0 for none. */
+  trialDays: number;
   synced: boolean;
   fee: string | null;
   artists: number | null;
 }
 
-export function PlanPicker({ plans, currentPlanId, stripeReady }: { plans: PlanCard[]; currentPlanId: string | null; stripeReady: boolean }) {
+export function PlanPicker({
+  plans,
+  current: currentSub,
+  switching,
+  stripeReady,
+}: {
+  plans: PlanCard[];
+  current: { planId: string; interval: "month" | "year" } | null;
+  /** The agency has a running Stripe subscription: choosing a plan switches it. */
+  switching: boolean;
+  stripeReady: boolean;
+}) {
   const t = useTranslations("billing");
-  const [interval, setInterval] = useState<"month" | "year">("month");
+  const [interval, setInterval] = useState<"month" | "year">(currentSub?.interval ?? "month");
   const [pending, go] = useRedirect();
 
   return (
@@ -42,12 +55,16 @@ export function PlanPicker({ plans, currentPlanId, stripeReady }: { plans: PlanC
       {!stripeReady && <p className="text-sm text-muted-foreground">{t("stripeMissing")}</p>}
       <ul className="grid gap-4 md:grid-cols-3">
         {plans.map((p) => {
-          const current = p.id === currentPlanId;
+          const current = p.id === currentSub?.planId && interval === currentSub.interval;
+          const trialDays = switching ? 0 : p.trialDays;
           return (
             <li key={p.id} className={cn("grid content-start gap-4 rounded-2xl border bg-card p-5", p.recommended && "border-primary ring-1 ring-primary")}>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-lg font-semibold">{p.name}</h3>
-                {p.recommended && <Pill tone="brand">{t("recommended")}</Pill>}
+                <span className="flex flex-wrap gap-1.5">
+                  {trialDays > 0 && !current && <Pill tone="success">{t("trialBadge", { days: trialDays })}</Pill>}
+                  {p.recommended && <Pill tone="brand">{t("recommended")}</Pill>}
+                </span>
               </div>
               <p className="text-sm text-muted-foreground">{p.description}</p>
               <p className="text-3xl font-semibold tracking-tight tabular-nums">
@@ -69,8 +86,10 @@ export function PlanPicker({ plans, currentPlanId, stripeReady }: { plans: PlanC
                 title={!p.synced ? t("planNotSynced") : undefined}
                 onClick={() => go(() => choosePlanAction(p.id, interval))}
               >
-                {current ? t("current") : t("choose", { plan: p.name })}
+                {current ? t("current") : switching ? t("switchTo", { plan: p.name }) : trialDays > 0 ? t("startTrial", { days: trialDays }) : t("choose", { plan: p.name })}
               </Button>
+              {trialDays > 0 && !current && <p className="text-xs text-muted-foreground">{t("trialTerms")}</p>}
+              {switching && !current && <p className="text-xs text-muted-foreground">{t("switchTerms")}</p>}
             </li>
           );
         })}

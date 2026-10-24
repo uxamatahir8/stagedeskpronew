@@ -59,22 +59,45 @@ export async function agencyUsage(organizationId: string, now = new Date()) {
   return { maxArtists, maxStaff: staff + invites, maxBookingsPerMonth, storageGb: 0 };
 }
 
-/** Starts the free trial for a new agency on the configured trial plan. Safe to call twice. */
+/**
+ * A trial the platform admin grants by hand, on the configured plan. New
+ * agencies don't get one automatically: they choose a plan, and only plans
+ * with a trial start with free days. Safe to call twice.
+ */
 export async function startTrial(organizationId: string, now = new Date()) {
   const existing = await prisma.subscription.findUnique({ where: { organizationId }, select: { id: true } });
   if (existing) return existing;
   const { trialPlanKey } = await getSetting("billing.defaults");
   const plan = (await prisma.plan.findUnique({ where: { key: trialPlanKey } })) ?? (await activePlans())[0];
   if (!plan) return null;
+  await markTrialUsed(organizationId, now);
   return prisma.subscription.create({
     data: {
       id: randomUUID(),
       organizationId,
       planId: plan.id,
       status: "trialing",
-      trialEndsAt: new Date(now.getTime() + plan.trialDays * 86_400_000),
+      trialEndsAt: new Date(now.getTime() + Math.max(1, plan.trialDays) * 86_400_000),
     },
   });
+}
+
+/** An agency gets one trial: none after a previous trial or a paid subscription. */
+export async function trialEligible(organizationId: string) {
+  const [org, sub] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: organizationId }, select: { trialUsedAt: true } }),
+    prisma.subscription.findUnique({ where: { organizationId }, select: { stripeSubscriptionId: true } }),
+  ]);
+  return Boolean(org && !org.trialUsedAt && !sub?.stripeSubscriptionId);
+}
+
+/** Free days a plan gives at checkout: 0 when the plan has no trial or the agency had one. */
+export function planTrialDays(plan: { trialEnabled: boolean; trialDays: number }, eligible: boolean) {
+  return eligible && plan.trialEnabled ? Math.max(0, plan.trialDays) : 0;
+}
+
+export async function markTrialUsed(organizationId: string, now = new Date()) {
+  await prisma.organization.updateMany({ where: { id: organizationId, trialUsedAt: null }, data: { trialUsedAt: now } });
 }
 
 /**

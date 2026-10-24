@@ -39,3 +39,11 @@ export async function paymentsErrorMessage(error: unknown): Promise<string> {
   console.error("[payments]", error);
   return (await getTranslations("auth"))("generic");
 }
+
+/** Where someone goes after a sign-in gate: a new agency owner without a plan chooses one first. */
+export async function homeHref(viewer: { organization: { id: string } | null; permissions: readonly string[] }) {
+  const org = viewer.organization;
+  if (!org || !viewer.permissions.includes("agency.billing")) return "/app";
+  const sub = await prisma.subscription.findUnique({ where: { organizationId: org.id }, select: { id: true } });
+  return sub ? "/app" : "/app/billing?welcome=1";
+}

@@ -39,9 +39,9 @@ await seedFooter(prisma);
 if (process.env["NODE_ENV"] !== "production") {
   const { seedDemo, DEMO_PASSWORD } = await import("./seed-demo");
   await seedDemo(prisma);
-  // Every demo agency starts on a trial, like a real sign-up.
-  const { startTrial } = await import("./billing");
-  for (const org of await prisma.organization.findMany({ select: { id: true } })) await startTrial(org.id);
+  // Demo agencies get a plan granted by the platform, so they never run into read-only.
+  const { grantPlan } = await import("./agencies");
+  for (const org of await prisma.organization.findMany({ where: { subscription: null }, select: { id: true } })) await grantPlan(org.id, "pro");
   const { seedAffiliates } = await import("./seed-affiliates");
   await seedAffiliates(prisma);
   console.log(`\n  Demo accounts use the password: ${DEMO_PASSWORD}`);

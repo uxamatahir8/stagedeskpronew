@@ -24,6 +24,7 @@ export interface PlanValues {
   descriptionEn: string;
   monthly: string;
   yearly: string;
+  trialEnabled: boolean;
   trialDays: number;
   featuresNl: string;
   featuresEn: string;
@@ -50,6 +51,7 @@ export function PlanDialog({ plan, nextPosition }: { plan?: PlanValues; nextPosi
     descriptionEn: "",
     monthly: "",
     yearly: "",
+    trialEnabled: false,
     trialDays: 14,
     featuresNl: "",
     featuresEn: "",
@@ -124,7 +126,16 @@ export function PlanDialog({ plan, nextPosition }: { plan?: PlanValues; nextPosi
             <FormField id="plan-key" label={t("plans.key")} hint={t("plans.keyHint")}>
               <Input id="plan-key" value={v.key} disabled={Boolean(plan)} onChange={(e) => set({ key: e.target.value.toLowerCase() })} />
             </FormField>
-            {text("trialDays", t("plans.trialDays"), { inputMode: "numeric", onChange: (e) => set({ trialDays: Number(e.target.value) || 0 }) })}
+            <div className="grid content-start gap-2 rounded-lg border p-3">
+              <div className="flex items-center justify-between gap-4">
+                <label htmlFor="plan-trialEnabled" className="text-sm font-medium">
+                  {t("plans.trialEnabled")}
+                </label>
+                <Switch id="plan-trialEnabled" checked={v.trialEnabled} onCheckedChange={(c) => set({ trialEnabled: c })} />
+              </div>
+              <p className="text-xs text-muted-foreground">{t("plans.trialEnabledHint")}</p>
+              {v.trialEnabled && text("trialDays", t("plans.trialDays"), { inputMode: "numeric", onChange: (e) => set({ trialDays: Number(e.target.value) || 0 }) })}
+            </div>
             {text("nameNl", t("plans.nameNl"))}
             {text("nameEn", t("plans.nameEn"))}
             {text("monthly", t("plans.monthly"), { inputMode: "decimal" })}

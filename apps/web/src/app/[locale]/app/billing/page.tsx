@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { countLimits, featureFlags, feeRuleSchema, parseLimits } from "@stagedesk/core";
-import { activePlans, agencyBilling, agencyUsage, effectiveFeeSnapshot, prisma } from "@stagedesk/db";
+import { activePlans, agencyBilling, agencyUsage, effectiveFeeSnapshot, planTrialDays, prisma, trialEligible } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { FormMessage } from "@/components/auth/auth-card";
 import { PageHeader } from "@/components/page-header";
@@ -38,7 +38,7 @@ const loc = (value: unknown, locale: string) => {
 
 async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">, "searchParams">) {
   const { organization } = await requireAgency("agency.billing");
-  const [t, format, locale, billing, usage, plans, fee, org] = await Promise.all([
+  const [t, format, locale, billing, usage, plans, fee, org, eligible] = await Promise.all([
     getTranslations("billing"),
     getFormatter(),
     getLocale(),
@@ -47,9 +47,13 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
     activePlans(),
     effectiveFeeSnapshot(organization.id),
     prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { stripeCustomerId: true } }),
+    trialEligible(organization.id),
   ]);
   const { subscription, plan, limits, access } = billing;
-  const done = (await searchParams)["checkout"] === "success";
+  const query = await searchParams;
+  const done = query["checkout"] === "success";
+  // Straight after creating the agency: choosing a plan is the next step.
+  const welcome = query["welcome"] === "1" && !subscription;
 
   const statusLine = (() => {
     if (!subscription) return t("status_none");
@@ -68,9 +72,16 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} />
       {done && <FormMessage tone="success">{t("checkoutDone")}</FormMessage>}
+      {query["checkout"] === "switched" && <FormMessage tone="success">{t("switched")}</FormMessage>}
+      {welcome && (
+        <div className="grid gap-1 rounded-xl border border-primary/40 bg-primary/5 p-4">
+          <p className="font-semibold">{t("welcomeTitle")}</p>
+          <p className="text-sm text-muted-foreground">{t("welcomeBody")}</p>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Card className={cn(access.level === "read_only" && "border-destructive/50")}>
+        <Card className={cn(access.level === "read_only" && subscription && "border-destructive/50")}>
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center gap-2">
               {t("currentPlan")}
@@ -79,7 +90,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
           </CardHeader>
           <CardContent className="grid gap-3 text-sm">
             <p className="font-medium">{statusLine}</p>
-            {access.level === "read_only" && <p className="text-destructive">{t("readOnlyBody")}</p>}
+            {access.level === "read_only" && <p className={subscription ? "text-destructive" : "text-muted-foreground"}>{t(subscription ? "readOnlyBody" : "noneBody")}</p>}
             <p className="text-muted-foreground">{feeText}</p>
             {org.stripeCustomerId && <ManageBillingButton />}
           </CardContent>
@@ -126,7 +137,9 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
 
       <PlanPicker
         stripeReady={await isStripeConfigured()}
-        currentPlanId={access.reason === "active" ? (plan?.id ?? null) : null}
+        // A plan you're on (paid, or on its Stripe trial) can't be bought again; others switch it.
+        current={subscription && (access.reason === "active" || subscription.stripeSubscriptionId) && access.level === "full" ? { planId: subscription.planId, interval: subscription.interval === "year" ? "year" : "month" } : null}
+        switching={Boolean(subscription?.stripeSubscriptionId && access.level === "full")}
         plans={plans
           .filter((p) => p.visible)
           .map((p) => {
@@ -139,6 +152,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
               yearly: euro(format, p.yearlyPriceCents),
               features: (loc(p.features, locale) as unknown as string[]) || [],
               recommended: p.recommended,
+              trialDays: planTrialDays(p, eligible),
               synced: Boolean(p.stripeMonthlyPriceId && p.stripeYearlyPriceId),
               fee: planFee.success && p.feeRule ? (planFee.data.type === "none" ? t("noFee") : t("platformFee", { fee: describeFee(planFee.data, format) })) : null,
               artists: parseLimits(p.limits).maxArtists,

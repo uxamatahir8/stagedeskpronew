@@ -5,6 +5,7 @@ import { getLocale } from "next-intl/server";
 import { acceptLegal, pendingLegal } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { homeHref } from "@/lib/billing";
 import { clientIp } from "@/lib/rate-limit";
 import { getViewer } from "@/lib/viewer";
 
@@ -19,5 +20,6 @@ export async function acceptTermsAction(versionIds: string[]) {
   const pending = new Set((await pendingLegal(viewer!.user.id)).map((p) => p.publishedVersionId));
   const ids = versionIds.filter((id) => pending.has(id));
   if (ids.length) await acceptLegal(viewer!.user.id, ids, clientIp(await headers()));
-  redirect({ href: "/app", locale });
+  // A new agency without a plan continues where onboarding sent it: choosing one.
+  redirect({ href: await homeHref(viewer!), locale });
 }

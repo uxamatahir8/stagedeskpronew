@@ -6,6 +6,7 @@ import { parsePageContent, pendingLegal } from "@stagedesk/db";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { redirect } from "@/i18n/navigation";
+import { homeHref } from "@/lib/billing";
 import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/viewer";
 import { AcceptForm } from "./accept-form";
@@ -32,7 +33,7 @@ async function Pending() {
   const locale = (await getLocale()) as Locale;
   if (!viewer) redirect({ href: "/sign-in", locale });
   const pending = await pendingLegal(viewer!.user.id);
-  if (pending.length === 0) redirect({ href: "/app", locale });
+  if (pending.length === 0) redirect({ href: await homeHref(viewer!), locale });
   const [t, format] = await Promise.all([getTranslations("acceptTerms"), getFormatter()]);
   const prefix = locale === "en" ? "/en" : "";
 

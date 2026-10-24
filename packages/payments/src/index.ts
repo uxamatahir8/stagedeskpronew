@@ -9,7 +9,15 @@ export {
   runAffiliatePayouts,
   syncAffiliatePromo,
 } from "./affiliates";
-export { applyStripeSubscription, billingPortal, ensureCustomer, PaymentsError, subscriptionCheckout } from "./subscriptions";
+export {
+  applyStripeSubscription,
+  billingPortal,
+  changeSubscriptionPlan,
+  ensureCustomer,
+  liveStripeSubscription,
+  PaymentsError,
+  subscriptionCheckout,
+} from "./subscriptions";
 export { applyStripeAccount, connectDashboardLink, connectOnboardingLink } from "./connect";
 export { amountDue, bookingCheckout, recordStripePayment } from "./booking-payments";
 export { payoutBooking, runDuePayouts } from "./payouts";

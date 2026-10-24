@@ -72,9 +72,9 @@ test("a partner applies, is approved, and gets credit for an agency from their l
     await agency.getByLabel("E-mailadres").fill(agencyEmail);
     await agency.getByLabel("Wachtwoord").fill(DEMO_PASSWORD);
     await agency.getByRole("button", { name: "Account aanmaken" }).click();
-    // Confirming signs them in; without an agency yet they land on onboarding.
+    // Confirming signs them in; without an agency yet they land on agency setup.
     await agency.goto(await verifyLink(agency.request, agencyEmail));
-    await expect(agency).toHaveURL(/\/onboarding$/);
+    await expect(agency).toHaveURL(/\/onboarding\?start=agency$/);
 
     // A wrong partner code is refused; empty is fine because the link already counts.
     await agency.getByLabel("Naam van het bureau").fill(`E2E Bureau ${run}`);
@@ -88,7 +88,8 @@ test("a partner applies, is approved, and gets credit for an agency from their l
     await expect(agency).toHaveURL(/\/accept-terms$/);
     await expect(agency.getByText("Verwerkersovereenkomst")).toBeVisible();
     await acceptTerms(agency);
-    await expect(agency).toHaveURL(/\/app$/);
+    // No automatic trial: a new agency chooses its plan first.
+    await expect(agency).toHaveURL(/\/app\/billing\?welcome=1$/);
   });
 
   await test.step("the partner's funnel shows the click and the signup for the campaign", async () => {

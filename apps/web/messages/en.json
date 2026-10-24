@@ -924,7 +924,7 @@
     "status_trial_ended": "Your trial has ended",
     "status_payment_failed": "Your last payment failed",
     "status_canceled": "Your subscription has ended",
-    "status_none": "No subscription",
+    "status_none": "No plan chosen yet",
     "readOnlyBody": "You can still view everything, but changes are paused until you choose a plan.",
     "usage": "Usage",
     "unlimited": "unlimited",
@@ -957,7 +957,17 @@
     "bannerTrial": "{count, plural, one {# day left in your trial} other {# days left in your trial}}",
     "bannerGrace": "Payment needed by {date} to keep full access.",
     "bannerReadOnly": "Changes are paused: your subscription has ended.",
-    "bannerAction": "Choose a plan"
+    "bannerAction": "Choose a plan",
+    "bannerNone": "Choose a plan to use StageDesk. Until then you can view everything but not change it.",
+    "noneBody": "Choose a plan below. Until then you can view everything but not change it.",
+    "welcomeTitle": "Welcome! Choose your plan",
+    "welcomeBody": "Your agency is ready. Choose a plan to manage inquiries, quotes and payments.",
+    "trialBadge": "{days} days free",
+    "startTrial": "Start {days} days free",
+    "trialTerms": "You pay only after the trial. Cancel any time before then.",
+    "switchTo": "Switch to {plan}",
+    "switchTerms": "Your subscription changes right away; the difference is prorated on your next invoice.",
+    "switched": "Your plan has been changed."
   },
   "plans": {
     "title": "Plans & limits",
@@ -994,7 +1004,14 @@
     "synced": "In Stripe",
     "notSynced": "Not in Stripe yet",
     "hidden": "Hidden",
-    "inactive": "Unavailable"
+    "inactive": "Unavailable",
+    "trialEnabled": "Trial available",
+    "trialEnabledHint": "New agencies get free days once, before the first payment.",
+    "trialOff": "No trial",
+    "trialOn": "{days}-day trial",
+    "sync": "Sync with Stripe",
+    "syncDone": "Plan is in Stripe; agencies can now check out.",
+    "stripeMissing": "Stripe isn’t connected yet. Add the Stripe keys first."
   },
   "fees": {
     "type": "Fee type",
@@ -1027,7 +1044,7 @@
     "vatRatesHint": "Comma separated, e.g. 21, 9, 0",
     "billingTitle": "Subscriptions",
     "graceDays": "Grace days after a failed payment or ended trial",
-    "trialPlan": "Trial plan for new agencies",
+    "trialPlan": "Plan used when you extend a trial by hand",
     "siteTitle": "Site",
     "siteName": "Site name",
     "defaultLocale": "Default language",
@@ -1695,7 +1712,8 @@
         "stripe_keys": "Changed the Stripe keys"
       },
       "plan": {
-        "save": "Saved a plan"
+        "save": "Saved a plan",
+        "sync": "Synced a plan to Stripe"
       },
       "agency": {
         "fee_deal": "Changed an agency's fee deal",
@@ -1766,6 +1784,9 @@
         "offline": "Took the agency website offline",
         "domain_add": "Added a website domain",
         "domain_remove": "Removed a website domain"
+      },
+      "billing": {
+        "switch_plan": "Switched the subscription plan"
       }
     },
     "group_page": "Pages",
@@ -1850,7 +1871,7 @@
     "switchLanguage": "Nederlands",
     "openMenu": "Open menu",
     "joinWaitlist": "Join the waitlist",
-    "startTrial": "Start free trial",
+    "startTrial": "Get started",
     "signIn": "Sign in",
     "lastUpdated": "Last updated {date}",
     "nav": {
@@ -2128,7 +2149,7 @@
     "billedMonthly": "Billed monthly, excl. VAT",
     "billedYearly": "{amount} billed yearly, excl. VAT",
     "save": "Save {amount}",
-    "trialNote": "Every plan starts with {days} days free. No card needed to try.",
+    "trialNote": "On plans with a trial you pay only after the free days, and you can cancel any time.",
     "feeTitle": "Platform fee on online payments",
     "feeBody": "When customers pay online through StageDesk, a small platform fee per booking applies (shown per plan). Payments you record offline have no fee.",
     "noPlans": "Plans are being prepared.",
@@ -2162,8 +2183,8 @@
     "feeExampleNone": "On this plan there's no platform fee on online payments.",
     "feeExampleOffline": "If the customer pays by bank transfer or cash, there's no platform fee.",
     "faqTitle": "Questions about pricing",
-    "faq1Q": "How does the free trial work?",
-    "faq1A": "You use every feature for free, without a credit card. At the end you choose a plan. If you don't, you can still view everything but not change it.",
+    "faq1Q": "Can I try StageDesk first?",
+    "faq1A": "Plans with a trial show the number of free days on the card. You choose the plan when you sign up; the first payment comes after the trial and you can cancel before then at no cost. Without a plan you can view everything but not change it.",
     "faq2Q": "Can I switch plans later?",
     "faq2A": "Yes. An upgrade starts immediately and you pay pro rata. A downgrade starts at the next renewal.",
     "faq3Q": "What is the platform fee?",
@@ -2184,7 +2205,8 @@
     "feeExampleRest": "For you and your artist",
     "billedInEuro": "Billed as {amount} a month",
     "convertedNote": "Prices in {currency} are an estimate at the ECB rate of {date}. You pay in euros.",
-    "compareLink": "Compare all plans"
+    "compareLink": "Compare all plans",
+    "trialCard": "Try {days} days free"
   },
   "forAgencies": {
     "eyebrow": "For DJ and band agencies",
@@ -2203,11 +2225,11 @@
     "fix4": "Payouts happen by themselves",
     "fix4Body": "With online payments, the artist's share and yours are paid out automatically after the event.",
     "closingTitle": "See what it costs",
-    "closingBody": "Plans for small and large agencies, all with a free trial.",
+    "closingBody": "Plans for small and large agencies, cancel any month.",
     "closingHref": "/pricing",
     "closingLink": "Pricing",
     "tourLink": "Take the product tour",
-    "proof1": "Free trial, no credit card",
+    "proof1": "Cancel any month",
     "proof2": "Dutch and English",
     "proof3": "iDEAL, card and bank transfer",
     "painTitle": "Sound familiar?",
@@ -2293,7 +2315,7 @@
     "fix4": "Earnings at a glance",
     "fix4Body": "See what you earned, what's paid out and what's coming, per booking.",
     "closingTitle": "How do I join?",
-    "closingBody": "Artists join through their agency: ask them to invite you. Run your own agency? Start a free trial.",
+    "closingBody": "Artists join through their agency: ask them to invite you. Run your own agency? Get started with StageDesk.",
     "closingHref": "/for-agencies",
     "closingLink": "For agencies",
     "tourLink": "See how it works",
@@ -2560,7 +2582,7 @@
   },
   "agencyAdmin": {
     "new": "New agency",
-    "newHint": "Set up an agency for someone. Their account is created if needed; they sign in with a code sent to their email. The trial starts straight away.",
+    "newHint": "Set up an agency for someone. Their account is created if needed; they sign in with a code sent to their email and then choose a plan. You can also grant a plan yourself.",
     "agencyName": "Agency name",
     "city": "City",
     "language": "Language for emails",
@@ -2972,7 +2994,7 @@
       "q4": "Do couples need to create an account?",
       "a4": "No. Their account is created from the inquiry; they sign in with a code sent by email.",
       "ctaTitle": "Make this wedding season your calmest yet",
-      "ctaBody": "Start with a free trial, set up in an afternoon."
+      "ctaBody": "Choose a plan and set it up in an afternoon."
     },
     "band-agencies": {
       "eyebrow": "For band & live music agencies",

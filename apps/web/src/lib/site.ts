@@ -38,7 +38,7 @@ export async function sitePlans() {
       features: (p.features ?? {}) as Record<string, string[]>,
       monthlyPriceCents: p.monthlyPriceCents,
       yearlyPriceCents: p.yearlyPriceCents,
-      trialDays: p.trialDays,
+      trialDays: p.trialEnabled ? p.trialDays : 0,
       recommended: p.recommended,
       limits: parseLimits(p.limits),
       feeRule: p.feeRule,

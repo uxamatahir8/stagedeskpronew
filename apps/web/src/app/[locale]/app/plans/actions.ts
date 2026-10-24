@@ -22,7 +22,8 @@ const schema = z.object({
   descriptionEn: z.string().max(500),
   monthly: z.string(),
   yearly: z.string(),
-  trialDays: z.number().int().min(0).max(90),
+  trialEnabled: z.boolean(),
+  trialDays: z.number().int().min(1).max(90),
   featuresNl: z.string().max(3000),
   featuresEn: z.string().max(3000),
   limits: planLimitsSchema,
@@ -47,6 +48,7 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
     description: { nl: d.descriptionNl.trim(), en: d.descriptionEn.trim() },
     monthlyPriceCents: monthly,
     yearlyPriceCents: yearly,
+    trialEnabled: d.trialEnabled,
     trialDays: d.trialDays,
     features: { nl: lines(d.featuresNl), en: lines(d.featuresEn) },
     limits: d.limits,
@@ -77,5 +79,21 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
     return { ok: true, message: t("savedSynced") };
   } catch (error) {
     return { ok: true, message: t("syncFailed", { error: error instanceof Error ? error.message.slice(0, 160) : "?" }) };
+  }
+}
+
+/** Pushes one plan to Stripe without changing it. */
+export async function syncPlanAction(planId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.plans");
+  const t = await getTranslations("plans");
+  const stripe = await getStripe();
+  if (!stripe) return { ok: false, message: t("stripeMissing") };
+  try {
+    await syncPlanToStripe(stripe, planId);
+    await audit({ actorId: viewer.user.id, action: "plan.sync", targetType: "plan", targetId: planId });
+    updateTag(SITE_TAGS.plans);
+    return { ok: true, message: t("syncDone") };
+  } catch (error) {
+    return { ok: false, message: t("syncFailed", { error: error instanceof Error ? error.message.slice(0, 160) : "?" }) };
   }
 }

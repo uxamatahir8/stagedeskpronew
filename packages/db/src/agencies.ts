@@ -80,7 +80,8 @@ async function freeSlug(name: string) {
 /**
  * Creates an agency for someone (the platform admin sets it up for them).
  * The owner gets an account if they don't have one; they sign in with an
- * emailed code and can set a password later. Starts the normal trial.
+ * emailed code and can set a password later. Like any new agency it starts
+ * without a plan; the owner chooses one, or the admin grants or extends one.
  */
 export async function createAgencyForOwner(input: { name: string; city: string | null; ownerName: string; ownerEmail: string; locale: "nl" | "en" }) {
   const email = input.ownerEmail.trim().toLowerCase();
@@ -93,7 +94,6 @@ export async function createAgencyForOwner(input: { name: string; city: string |
     await tx.organization.create({ data: { id: organizationId, name: input.name.trim(), slug: await freeSlug(input.name), city: input.city } });
     await tx.member.create({ data: { id: randomUUID(), organizationId, userId, role: "agency_owner" } });
   });
-  await startTrial(organizationId);
   const organization = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
   return { organization, ownerId: userId, newUser: !existing, email };
 }

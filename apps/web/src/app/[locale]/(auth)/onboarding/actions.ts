@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { normalizePromoCode, parseViaCookie, viaCookie } from "@stagedesk/core";
-import { attachReferral, prisma, startTrial } from "@stagedesk/db";
+import { attachReferral, prisma } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
@@ -52,14 +52,13 @@ export async function createAgency(_prev: FormState, form: FormData): Promise<Fo
     body: { name, slug: await uniqueSlug(name), city: city ?? undefined, kvkNumber: kvk ?? undefined },
   });
   if (organization) {
-    // Every new agency starts with a free trial of the configured plan.
-    await startTrial(organization.id);
     // Who sent them: a typed partner code, else the last referral link within the cookie window.
     const visit = parseViaCookie((await cookies()).get(viaCookie)?.value);
     await attachReferral({ agencyId: organization.id, ownerUserId: viewer.user.id, ownerEmail: viewer.user.email, visit, promoCode }).catch((error) =>
       console.error("[affiliates] referral not recorded", error),
     );
   }
-  redirect({ href: "/app", locale: (await getLocale()) as Locale });
+  // No automatic trial: the owner chooses a plan first (plans may offer free days).
+  redirect({ href: organization ? "/app/billing?welcome=1" : "/app", locale: (await getLocale()) as Locale });
   return { ok: true };
 }

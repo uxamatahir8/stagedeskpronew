@@ -67,6 +67,7 @@ export async function buildPricing() {
       limits: features.length > 0 ? [] : generated,
       fee: describeFee(ruleOf(p)),
       recommended: p.recommended,
+      trialDays: p.trialDays,
     };
   });
   const convertedNote = converted

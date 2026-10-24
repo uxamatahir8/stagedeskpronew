@@ -12,6 +12,7 @@ import type { Locale } from "@/i18n/routing";
 import { centsToInput, euro } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
 import { type PlanValues, PlanDialog } from "./plan-dialog";
+import { SyncPlanButton } from "./sync-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/plans">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "plans" });
@@ -50,6 +51,7 @@ async function Plans() {
       descriptionEn: String(text(p.description, "en") ?? ""),
       monthly: centsToInput(p.monthlyPriceCents, locale),
       yearly: centsToInput(p.yearlyPriceCents, locale),
+      trialEnabled: p.trialEnabled,
       trialDays: p.trialDays,
       featuresNl: features("nl"),
       featuresEn: features("en"),
@@ -91,7 +93,7 @@ async function Plans() {
                         {!p.active && <Pill tone="danger">{t("inactive")}</Pill>}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        <span className="font-mono">{p.key}</span> · {t("agencies", { count: p._count.subscriptions })}
+                        <span className="font-mono">{p.key}</span> · {t("agencies", { count: p._count.subscriptions })} · {p.trialEnabled ? t("trialOn", { days: p.trialDays }) : t("trialOff")}
                       </div>
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{euro(format, p.monthlyPriceCents)}</TableCell>
@@ -100,7 +102,14 @@ async function Plans() {
                       {limits.maxArtists ?? "∞"} / {limits.maxStaff ?? "∞"} / {limits.maxBookingsPerMonth ?? "∞"}
                     </TableCell>
                     <TableCell>
-                      {p.stripeMonthlyPriceId ? <Pill tone="success">{t("synced")}</Pill> : <Pill tone="warning">{t("notSynced")}</Pill>}
+                      {p.stripeMonthlyPriceId ? (
+                        <Pill tone="success">{t("synced")}</Pill>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Pill tone="warning">{t("notSynced")}</Pill>
+                          <SyncPlanButton planId={p.id} />
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <PlanDialog plan={toValues(p)} nextPosition={plans.length} />

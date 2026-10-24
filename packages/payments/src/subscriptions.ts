@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { prisma } from "@stagedesk/db";
+import { markTrialUsed, planTrialDays, prisma, trialEligible } from "@stagedesk/db";
 import { referralPromotionCode } from "./affiliates";
 
 export class PaymentsError extends Error {
@@ -22,11 +22,16 @@ export async function ensureCustomer(stripe: Stripe, organizationId: string, ema
   return customer.id;
 }
 
-/** Stripe Checkout for a plan. A trial that's still running carries over. */
+/**
+ * Stripe Checkout for a plan. A trial the admin granted that's still running
+ * carries over; otherwise a plan with a trial gives its free days, once per agency.
+ */
 export async function subscriptionCheckout(
   stripe: Stripe,
   input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
 ) {
+  // Never a second subscription: a running one is switched instead (changeSubscriptionPlan).
+  if (await liveStripeSubscription(input.organizationId)) return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
   const price = input.interval === "year" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
   if (!price) throw new PaymentsError("plan_not_synced");
@@ -36,6 +41,8 @@ export async function subscriptionCheckout(
   const trialEnd = current?.status === "trialing" && current.trialEndsAt && current.trialEndsAt.getTime() > Date.now() + 48 * 3600_000
     ? Math.floor(current.trialEndsAt.getTime() / 1000)
     : undefined;
+  const trialDays = trialEnd ? 0 : planTrialDays(plan, await trialEligible(input.organizationId));
+  const trial = trialEnd ? { trial_end: trialEnd } : trialDays > 0 ? { trial_period_days: trialDays } : {};
 
   // A referred agency gets its partner's discount automatically; others may type a code.
   const promotionCode = await referralPromotionCode(input.organizationId);
@@ -45,12 +52,41 @@ export async function subscriptionCheckout(
     line_items: [{ price, quantity: 1 }],
     locale: input.locale,
     ...(promotionCode ? { discounts: [{ promotion_code: promotionCode }] } : { allow_promotion_codes: true }),
-    subscription_data: { metadata: { organizationId: input.organizationId, planId: plan.id }, ...(trialEnd ? { trial_end: trialEnd } : {}) },
+    subscription_data: { metadata: { organizationId: input.organizationId, planId: plan.id }, ...trial },
     metadata: { organizationId: input.organizationId, planId: plan.id },
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
   });
   return session.url!;
+}
+
+/** A Stripe subscription that is still running; switching plans changes it instead of starting another. */
+export async function liveStripeSubscription(organizationId: string) {
+  const sub = await prisma.subscription.findUnique({ where: { organizationId } });
+  return sub?.stripeSubscriptionId && ["active", "trialing", "past_due", "unpaid"].includes(sub.status) ? sub : null;
+}
+
+/**
+ * Moves a running Stripe subscription to another plan or interval. Stripe
+ * prorates the difference on the next invoice; a running trial continues.
+ */
+export async function changeSubscriptionPlan(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year" }) {
+  const current = await liveStripeSubscription(input.organizationId);
+  if (!current?.stripeSubscriptionId) throw new PaymentsError("not_found");
+  const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
+  const price = input.interval === "year" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
+  if (!price) throw new PaymentsError("plan_not_synced");
+  const live = await stripe.subscriptions.retrieve(current.stripeSubscriptionId);
+  const item = live.items.data[0];
+  if (!item) throw new PaymentsError("not_found");
+  const updated = await stripe.subscriptions.update(live.id, {
+    items: [{ id: item.id, price }],
+    proration_behavior: "create_prorations",
+    cancel_at_period_end: false,
+    metadata: { ...live.metadata, organizationId: input.organizationId, planId: plan.id },
+  });
+  // The webhook says the same a moment later; showing it now avoids a stale page.
+  return applyStripeSubscription(updated);
 }
 
 /** Stripe's customer portal: card changes, invoices, cancellation. */
@@ -94,6 +130,8 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
     // A paid Stripe subscription replaces a plan the admin granted by hand.
     complimentary: false,
   };
+  // A Stripe trial counts as the agency's one trial.
+  if (sub.trial_end) await markTrialUsed(organizationId, now);
   return prisma.subscription.upsert({
     where: { organizationId },
     create: { id: randomUUID(), organizationId, ...data },

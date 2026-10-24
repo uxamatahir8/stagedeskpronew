@@ -1,7 +1,8 @@
 "use server";
 
 import { getLocale, getTranslations } from "next-intl/server";
-import { billingPortal, getStripe, subscriptionCheckout } from "@stagedesk/payments";
+import { audit } from "@stagedesk/db";
+import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, subscriptionCheckout } from "@stagedesk/payments";
 import type { RedirectResult } from "@/components/redirect-button";
 import { paymentsErrorMessage } from "@/lib/billing";
 import { absoluteUrl } from "@/lib/mail";
@@ -15,6 +16,12 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
   if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
   const locale = (await getLocale()) === "en" ? "en" : "nl";
   try {
+    // A running Stripe subscription is switched in place, never doubled.
+    if (await liveStripeSubscription(organization.id)) {
+      await audit({ actorId: viewer.user.id, action: "billing.switch_plan", targetType: "plan", targetId: planId });
+      await changeSubscriptionPlan(stripe, { organizationId: organization.id, planId, interval });
+      return { url: absoluteUrl(locale, "/app/billing?checkout=switched") };
+    }
     return {
       url: await subscriptionCheckout(stripe, {
         organizationId: organization.id,
