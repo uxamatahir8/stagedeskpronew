@@ -29,7 +29,7 @@ import { requireAgency } from "@/lib/viewer";
 import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
 
 export async function createBookingAction(_prev: FormState, form: FormData): Promise<FormState> {
-  const { viewer, organization } = await requireAgency("agency.bookings");
+  const { viewer, organization } = await requireAgency("agency.bookings.create");
   const blocked = await limitBlocked(organization.id, "maxBookingsPerMonth");
   if (blocked) return { message: blocked };
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
@@ -75,7 +75,7 @@ const detailsSchema = z.object({
 });
 
 export async function updateDetailsAction(bookingId: string, _prev: FormState, form: FormData): Promise<FormState> {
-  const { viewer, db } = await requireAgency("agency.bookings");
+  const { viewer, db } = await requireAgency("agency.bookings.edit");
   const parsed = detailsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const { eventDate, budget, ...rest } = parsed.data;
@@ -101,7 +101,7 @@ const quoteSchema = z.object({
 });
 
 export async function sendQuoteAction(bookingId: string, input: z.input<typeof quoteSchema>): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.quotes");
+  const { viewer, organization } = await requireAgency("agency.quotes.send");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
@@ -161,7 +161,7 @@ async function emailQuote(quoteId: string, agencyName: string) {
 }
 
 export async function acceptOnBehalfAction(quoteId: string, name: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.quotes");
+  const { viewer, organization } = await requireAgency("agency.quotes.accept");
   const t = await getTranslations("booking");
   return runAction(
     () => acceptQuote(organization.id, quoteId, { actor: "agency", actorId: viewer.user.id, name: name.trim().slice(0, 191) || viewer.user.name }),
@@ -170,7 +170,7 @@ export async function acceptOnBehalfAction(quoteId: string, name: string): Promi
 }
 
 export async function assignArtistAction(bookingId: string, artistId: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.bookings");
+  const { viewer, organization } = await requireAgency("agency.bookings.edit");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
@@ -186,7 +186,7 @@ export async function changeStatusAction(
   action: "decline" | "cancel" | "complete" | "settle",
   reason: string | null,
 ): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.bookings");
+  const { viewer, organization } = await requireAgency("agency.bookings.status");
   const t = await getTranslations("booking");
   return runAction(
     () => changeBookingStatus(organization.id, bookingId, action, { actor: "agency", actorId: viewer.user.id, reason: reason?.trim() || null }).then(() => {}),
@@ -203,7 +203,7 @@ const paymentSchema = z.object({
 });
 
 export async function recordPaymentAction(bookingId: string, input: z.input<typeof paymentSchema>): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.payments");
+  const { viewer, organization } = await requireAgency("agency.payments.record");
   const t = await getTranslations("booking");
   const parsed = paymentSchema.safeParse(input);
   const amountCents = parsed.success ? parseEuros(parsed.data.amount) : null;
@@ -232,7 +232,7 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
 }
 
 export async function issueInvoiceAction(bookingId: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.payments");
+  const { viewer, organization } = await requireAgency("agency.invoices");
   const t = await getTranslations("booking");
   return runAction(async () => {
     const invoice = await issueInvoice(organization.id, bookingId, viewer.user.id);

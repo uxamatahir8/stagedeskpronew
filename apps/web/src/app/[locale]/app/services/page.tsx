@@ -12,6 +12,7 @@ import type { Locale } from "@/i18n/routing";
 import { centsToInput, euro, percent } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { ArchiveService, ServiceDialog } from "./service-dialog";
+import { IfCan } from "@/components/if-can";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/services">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "services" });
@@ -28,7 +29,7 @@ export default async function ServicesPage({ params }: PageProps<"/[locale]/app/
 }
 
 async function Services() {
-  const { db, organization } = await requireAgency("agency.quotes");
+  const { db, organization } = await requireAgency("agency.services");
   const [t, tu, format, locale, items, defaults] = await Promise.all([
     getTranslations("services"),
     getTranslations("units"),
@@ -40,7 +41,11 @@ async function Services() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} actions={<ServiceDialog vatRates={defaults.vatRatesBps} />} />
+      <PageHeader title={t("title")} description={t("description")} actions={
+          <IfCan permission="agency.services">
+            <ServiceDialog vatRates={defaults.vatRatesBps} />
+          </IfCan>
+        } />
       {items.length === 0 ? (
         <EmptyState icon={TagIcon} title={t("emptyTitle")} description={t("emptyBody")} />
       ) : (

@@ -37,7 +37,7 @@ import {
   ScrollTextIcon,
   UsersRoundIcon,
 } from "lucide-react";
-import { can, type Permission, type Role } from "@stagedesk/core";
+import type { Permission } from "@stagedesk/core";
 import type { Messages } from "next-intl";
 
 export type NavKey = keyof Messages["nav"];
@@ -87,13 +87,13 @@ export const navigation: NavGroup[] = [
     key: "agency",
     items: [
       { key: "bookings", href: "/app/bookings", icon: CalendarCheckIcon, permission: "agency.bookings" },
-      { key: "leadOffers", href: "/app/lead-offers", icon: SparklesIcon, permission: "agency.bookings" },
+      { key: "leadOffers", href: "/app/lead-offers", icon: SparklesIcon, permission: "agency.leads" },
       { key: "quotes", href: "/app/quotes", icon: ReceiptIcon, permission: "agency.quotes" },
       { key: "calendar", href: "/app/calendar", icon: CalendarDaysIcon, permission: "agency.calendar" },
       { key: "artists", href: "/app/artists", icon: Music2Icon, permission: "agency.artists" },
       { key: "customers", href: "/app/customers", icon: ContactIcon, permission: "agency.customers" },
-      { key: "services", href: "/app/services", icon: TagIcon, permission: "agency.quotes" },
-      { key: "reviews", href: "/app/reviews", icon: StarIcon, permission: "agency.bookings" },
+      { key: "services", href: "/app/services", icon: TagIcon, permission: "agency.services" },
+      { key: "reviews", href: "/app/reviews", icon: StarIcon, permission: "agency.reviews" },
       { key: "agencyPayments", href: "/app/payments", icon: WalletIcon, permission: "agency.payments" },
     ],
   },
@@ -125,8 +125,8 @@ export const navigation: NavGroup[] = [
       { key: "messages", href: "/app/messages", icon: MessagesSquareIcon, permission: "messages" },
       { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team" },
       { key: "agencySettings", href: "/app/agency-settings", icon: SettingsIcon, permission: "agency.settings" },
-      { key: "bookingPage", href: "/app/booking-page", icon: GlobeIcon, permission: "agency.settings" },
-      { key: "website", href: "/app/website", icon: PanelsTopLeftIcon, permission: "agency.settings" },
+      { key: "bookingPage", href: "/app/booking-page", icon: GlobeIcon, permission: "agency.website" },
+      { key: "website", href: "/app/website", icon: PanelsTopLeftIcon, permission: "agency.website" },
       { key: "billing", href: "/app/billing", icon: CreditCardIcon, permission: "agency.billing" },
     ],
   },
@@ -140,19 +140,19 @@ export const footerNavigation: NavItem[] = [
 
 const isDev = process.env.NODE_ENV !== "production";
 
-function allowed(item: NavItem, role: Role) {
+function allowed(item: NavItem, permissions: readonly Permission[]) {
   if (item.devOnly && !isDev) return false;
-  return item.permission === undefined || can(role, item.permission);
+  return item.permission === undefined || permissions.includes(item.permission);
 }
 
-export function navigationFor(role: Role): NavGroup[] {
+export function navigationFor(permissions: readonly Permission[]): NavGroup[] {
   return navigation
-    .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item, role)) }))
+    .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item, permissions)) }))
     .filter((group) => group.items.length > 0);
 }
 
-export function footerNavigationFor(role: Role): NavItem[] {
-  return footerNavigation.filter((item) => allowed(item, role));
+export function footerNavigationFor(permissions: readonly Permission[]): NavItem[] {
+  return footerNavigation.filter((item) => allowed(item, permissions));
 }
 
 /** Pages reached from menus other than the sidebar; listed for breadcrumbs. */

@@ -27,7 +27,7 @@ export default async function LeadOffersPage({ params }: PageProps<"/[locale]/ap
 }
 
 async function Offers() {
-  const { organization } = await requireAgency("agency.bookings");
+  const { organization } = await requireAgency("agency.leads");
   const [t, te, tb, format, offers] = await Promise.all([
     getTranslations("leadOffers"),
     getTranslations("eventTypes"),

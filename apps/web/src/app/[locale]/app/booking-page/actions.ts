@@ -18,7 +18,7 @@ const schema = z.object({
 
 
 export async function saveBookingPageAction(input: z.input<typeof schema>): Promise<ActionResult> {
-  const { organization } = await requireAgency("agency.settings");
+  const { organization } = await requireAgency("agency.website");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const parsed = schema.safeParse(input);
@@ -37,7 +37,7 @@ export async function saveBookingPageAction(input: z.input<typeof schema>): Prom
 }
 
 export async function uploadCoverAction(form: FormData): Promise<ActionResult> {
-  const { organization } = await requireAgency("agency.settings");
+  const { organization } = await requireAgency("agency.website");
   const ts = await getTranslations("agencySettings");
   const file = form.get("cover");
   if (!(file instanceof File) || file.size === 0 || file.size > 4 * 1024 * 1024) return { ok: false, message: ts("invalidFile") };
@@ -53,7 +53,7 @@ export async function uploadCoverAction(form: FormData): Promise<ActionResult> {
 }
 
 export async function removeCoverAction(): Promise<ActionResult> {
-  const { organization } = await requireAgency("agency.settings");
+  const { organization } = await requireAgency("agency.website");
   const previous = await prisma.organization.findUnique({ where: { id: organization.id }, select: { coverUrl: true } });
   await prisma.organization.update({ where: { id: organization.id }, data: { coverUrl: null } });
   await deletePublicFile(previous?.coverUrl);

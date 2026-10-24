@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { forbidden } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { cache } from "react";
-import { can, isRole, type Permission, type Role } from "@stagedesk/core";
+import { isRole, type Permission, permissionsFor, type Role, sanitizeRolePermissions } from "@stagedesk/core";
 import { prisma, tenantDb } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "./auth";
@@ -15,6 +15,8 @@ export interface ViewerOrganization {
   logo: string | null;
   /** ISO 4217; what new bookings and the agency's totals are in. */
   currency: string;
+  /** The owner's choices for admins and staff (cleaned), or null for the defaults. */
+  rolePermissions: ReturnType<typeof sanitizeRolePermissions> | null;
   role: Role;
 }
 
@@ -25,6 +27,8 @@ export interface Viewer {
   /** The active agency; null for platform-level roles. */
   organization: ViewerOrganization | null;
   memberships: ViewerOrganization[];
+  /** Everything this person may do here: their role, adjusted by the agency's own settings. */
+  permissions: Permission[];
   /**
    * Set when a platform admin works inside an agency as support: they act as an
    * agency admin there (no billing), behind a banner, until they leave.
@@ -41,12 +45,12 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   const rows = await prisma.member.findMany({
     where: { userId: session.user.id },
-    include: { organization: { select: { id: true, name: true, slug: true, logo: true, currency: true } } },
+    include: { organization: { select: { id: true, name: true, slug: true, logo: true, currency: true, rolePermissions: true } } },
     orderBy: { createdAt: "asc" },
   });
   const memberships: ViewerOrganization[] = rows
     .filter((m) => isRole(m.role))
-    .map((m) => ({ ...m.organization, role: m.role as Role }));
+    .map((m) => ({ ...m.organization, rolePermissions: m.organization.rolePermissions ? sanitizeRolePermissions(m.organization.rolePermissions) : null, role: m.role as Role }));
 
   const user = {
     id: session.user.id,
@@ -60,18 +64,19 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (platformRole === "platform_admin") {
     const supportId = session.session.supportOrganizationId;
     const agency = supportId ? await prisma.organization.findUnique({ where: { id: supportId }, select: { id: true, name: true, slug: true, logo: true, currency: true } }) : null;
+    // Support works with the default admin rights, whatever the agency chose for its own admins.
     if (agency) {
-      return { user, role: "agency_admin", organization: { ...agency, role: "agency_admin" }, memberships, support: { organizationId: agency.id, name: agency.name } };
+      return { user, role: "agency_admin", organization: { ...agency, rolePermissions: null, role: "agency_admin" }, memberships, permissions: permissionsFor("agency_admin"), support: { organizationId: agency.id, name: agency.name } };
     }
-    return { user, role: "platform_admin", organization: null, memberships };
+    return { user, role: "platform_admin", organization: null, memberships, permissions: permissionsFor("platform_admin") };
   }
 
   const active =
     memberships.find((m) => m.id === session.session.activeOrganizationId) ?? memberships[0] ?? null;
-  if (active) return { user, role: active.role, organization: active, memberships };
+  if (active) return { user, role: active.role, organization: active, memberships, permissions: permissionsFor(active.role, active.rolePermissions) };
 
-  if (platformRole === "affiliate") return { user, role: "affiliate", organization: null, memberships };
-  return { user, role: null, organization: null, memberships };
+  if (platformRole === "affiliate") return { user, role: "affiliate", organization: null, memberships, permissions: permissionsFor("affiliate") };
+  return { user, role: null, organization: null, memberships, permissions: [] };
 });
 
 async function goTo(href: string): Promise<never> {
@@ -90,8 +95,13 @@ export async function requireViewer(): Promise<Viewer & { role: Role }> {
 /** Like requireViewer, and answers 403 when the role lacks the permission. */
 export async function requirePermission(permission: Permission) {
   const viewer = await requireViewer();
-  if (!can(viewer.role, permission)) forbidden();
+  if (!viewer.permissions.includes(permission)) forbidden();
   return viewer;
+}
+
+/** Whether the signed-in person may do something here (for showing or hiding controls). */
+export function viewerCan(viewer: Pick<Viewer, "permissions">, permission: Permission) {
+  return viewer.permissions.includes(permission);
 }
 
 /**

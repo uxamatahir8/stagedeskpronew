@@ -1,6 +1,6 @@
 import { ArrowRightIcon } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { can, type Role, todayInNetherlands } from "@stagedesk/core";
+import { type Permission, todayInNetherlands } from "@stagedesk/core";
 import { agencyBilling, agencyRevenueByMonth, agencyUsage, type TenantDb } from "@stagedesk/db";
 import { ColumnChart } from "@/components/charts/column-chart";
 import { monthDays } from "@/components/month-grid";
@@ -13,9 +13,9 @@ import { cn } from "@/lib/utils";
  * The second half of the agency home: revenue booked vs collected, this
  * month's events, artist workload and plan usage.
  */
-export async function AgencyInsights({ organizationId, db, role, currency }: { organizationId: string; db: TenantDb; role: Role; currency: string }) {
-  const showMoney = can(role, "agency.payments");
-  const showPlan = can(role, "agency.billing");
+export async function AgencyInsights({ organizationId, db, permissions, currency }: { organizationId: string; db: TenantDb; permissions: readonly Permission[]; currency: string }) {
+  const showMoney = permissions.includes("agency.reports") && permissions.includes("agency.payments");
+  const showPlan = permissions.includes("agency.billing");
   const today = todayInNetherlands();
   const month = today.slice(0, 7);
   const days = monthDays(month);

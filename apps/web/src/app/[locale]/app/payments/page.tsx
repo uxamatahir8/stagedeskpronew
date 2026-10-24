@@ -19,6 +19,7 @@ import { daysAgo, euro, eventDate, startOfMonth } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { agencyDashboardAction, connectAgencyAction } from "./actions";
 import { RefundDialog } from "./refund-dialog";
+import { IfCan } from "@/components/if-can";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/payments">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "payments" });
@@ -104,7 +105,9 @@ async function Payments() {
                     · {tc("reportedDetail", { date: format.dateTime(c.paidOn, { day: "numeric", month: "long", timeZone: "UTC" }), reference: c.reference ?? "—" })}
                   </span>
                 </div>
-                <ClaimReview claimId={c.id} paidOn={c.paidOn.toISOString().slice(0, 10)} />
+                <IfCan permission="agency.payments.confirm">
+                  <ClaimReview claimId={c.id} paidOn={c.paidOn.toISOString().slice(0, 10)} />
+                </IfCan>
               </div>
             ))}
           </CardContent>
@@ -158,7 +161,7 @@ async function Payments() {
                       </TableCell>
                       <TableCell className="text-right">
                         {refundable > 0 && (
-                          <RefundDialog paymentId={p.id} refundableCents={refundable} refundableLabel={euro(format, refundable, organization.currency)} online={p.method === "stripe"} />
+                          <IfCan permission="agency.payments.refund"><RefundDialog paymentId={p.id} refundableCents={refundable} refundableLabel={euro(format, refundable, organization.currency)} online={p.method === "stripe"} /></IfCan>
                         )}
                       </TableCell>
                     </TableRow>

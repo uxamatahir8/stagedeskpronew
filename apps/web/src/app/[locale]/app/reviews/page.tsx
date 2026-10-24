@@ -31,7 +31,7 @@ export default async function ReviewsPage({ params }: PageProps<"/[locale]/app/r
 }
 
 async function Reviews() {
-  const { db } = await requireAgency("agency.bookings");
+  const { db } = await requireAgency("agency.reviews");
   const [t, format, reviews] = await Promise.all([
     getTranslations("reviews"),
     getFormatter(),

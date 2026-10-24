@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { can } from "@stagedesk/core";
 import { audit, openTicket, prisma, replyToTicket, setTicketStatus, ticketCategories } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
@@ -34,7 +33,7 @@ export async function replyTicketAction(reference: string, body: string): Promis
   const viewer = await requirePermission("support");
   const t = await getTranslations("support");
   const ticket = await prisma.supportTicket.findUnique({ where: { reference }, select: { userId: true } });
-  const staff = can(viewer.role, "platform.support");
+  const staff = viewer.permissions.includes("platform.support");
   if (!ticket || (!staff && ticket.userId !== viewer.user.id)) return { ok: false, message: t("notFound") };
   const text = body.trim();
   if (text.length < 2 || text.length > 10_000) return { ok: false, message: t("invalidReply") };
@@ -57,7 +56,7 @@ export async function setTicketStatusAction(reference: string, status: "open" | 
   const viewer = await requirePermission("support");
   const t = await getTranslations("support");
   const ticket = await prisma.supportTicket.findUnique({ where: { reference }, select: { userId: true, id: true } });
-  const staff = can(viewer.role, "platform.support");
+  const staff = viewer.permissions.includes("platform.support");
   if (!ticket || (!staff && ticket.userId !== viewer.user.id)) return { ok: false, message: t("notFound") };
   await setTicketStatus(reference, status);
   if (staff) await audit({ actorId: viewer.user.id, action: `ticket.${status === "closed" ? "close" : "reopen"}`, targetType: "ticket", targetId: ticket.id });

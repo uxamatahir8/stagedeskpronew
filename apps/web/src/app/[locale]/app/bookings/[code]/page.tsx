@@ -6,7 +6,6 @@ import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next
 import {
   availableActions,
   type BookingStatus,
-  can,
   type EventType,
   isBudgetRange,
   paymentStatus,
@@ -23,7 +22,7 @@ import type { Locale } from "@/i18n/routing";
 import { RefundDialog } from "../../payments/refund-dialog";
 import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
 import { ClaimReview } from "@/components/booking/claim-review";
-import { requireAgency } from "@/lib/viewer";
+import { requireAgency, viewerCan } from "@/lib/viewer";
 import {
   AddNote,
   AssignArtist,
@@ -98,8 +97,8 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
   const actions = availableActions(status, "agency", ctx).filter(
     (a): a is "decline" | "cancel" | "complete" | "settle" => ["decline", "cancel", "complete", "settle"].includes(a),
   );
-  const canQuote = availableActions(status, "agency", ctx).includes("send_quote") && can(viewer.role, "agency.quotes");
-  const canPay = can(viewer.role, "agency.payments");
+  const canQuote = availableActions(status, "agency", ctx).includes("send_quote") && viewerCan(viewer, "agency.quotes.send");
+  const canPay = viewerCan(viewer, "agency.payments.record");
 
   const current = booking.quotes[0] ?? null;
   const openQuote = current?.status === "sent" ? current : null;
@@ -269,7 +268,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 quoteId={openQuote?.id ?? null}
                 quoteLink={openQuote ? `${locale === "en" ? "/en" : ""}/q/${openQuote.token}` : null}
                 pdfHref={shownQuote ? `/api/pdf/quote/${shownQuote.id}?lang=${locale}` : null}
-                canAcceptOnBehalf={Boolean(openQuote) && can(viewer.role, "agency.quotes")}
+                canAcceptOnBehalf={Boolean(openQuote) && viewerCan(viewer, "agency.quotes.accept")}
                 customerName={booking.customer?.name ?? ""}
                 catalog={catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, unitPriceCents: c.unitPriceCents, vatBps: c.vatBps }))}
                 vatRates={defaults.vatRatesBps}

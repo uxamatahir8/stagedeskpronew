@@ -31,12 +31,12 @@ import type { Viewer } from "@/lib/viewer";
 import { Logo } from "@/components/brand/logo";
 import { UserMenu } from "./user-menu";
 
-export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships"> & { role: Role };
+export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships" | "permissions"> & { role: Role };
 
 export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
   const t = useTranslations();
-  const groups = navigationFor(viewer.role);
-  const footer = footerNavigationFor(viewer.role);
+  const groups = navigationFor(viewer.permissions);
+  const footer = footerNavigationFor(viewer.permissions);
 
   return (
     <Sidebar collapsible="icon">

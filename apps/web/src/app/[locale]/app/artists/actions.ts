@@ -33,7 +33,7 @@ async function linkableUser(db: Awaited<ReturnType<typeof requireAgency>>["db"],
 }
 
 export async function saveArtistAction(input: z.input<typeof artistSchema>): Promise<ActionResult & { id?: string }> {
-  const { organization, db } = await requireAgency("agency.artists");
+  const { organization, db } = await requireAgency("agency.artists.manage");
   // New artists count against the plan; edits only need an active subscription.
   const blocked = await (input.id ? writeBlocked(organization.id) : limitBlocked(organization.id, "maxArtists"));
   if (blocked) return { ok: false, message: blocked };
@@ -67,7 +67,7 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
 }
 
 export async function uploadArtistPhotoAction(artistId: string, form: FormData): Promise<ActionResult> {
-  const { organization, db } = await requireAgency("agency.artists");
+  const { organization, db } = await requireAgency("agency.artists.manage");
   const [t, ts] = await Promise.all([getTranslations("artists"), getTranslations("agencySettings")]);
   const artist = await db.artist.findFirst({ where: { id: artistId }, select: { photoUrl: true } });
   if (!artist) return { ok: false };
@@ -85,13 +85,13 @@ export async function uploadArtistPhotoAction(artistId: string, form: FormData):
 }
 
 export async function setUnavailableAction(artistId: string, date: string, unavailable: boolean): Promise<ActionResult> {
-  const { organization, db } = await requireAgency("agency.artists");
+  const { organization, db } = await requireAgency("agency.artists.manage");
   return toggleUnavailable(db, organization.id, artistId, date, unavailable);
 }
 
 
 export async function shareArtistAction(artistId: string, partnerSlug: string): Promise<ActionResult> {
-  const { organization, db } = await requireAgency("agency.artists");
+  const { organization, db } = await requireAgency("agency.artists.manage");
   const blocked = (await writeBlocked(organization.id)) ?? (await featureBlocked(organization.id, "artistSharing"));
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("artists");
@@ -113,14 +113,14 @@ export async function shareArtistAction(artistId: string, partnerSlug: string): 
 }
 
 export async function revokeShareAction(shareId: string): Promise<ActionResult> {
-  const { db } = await requireAgency("agency.artists");
+  const { db } = await requireAgency("agency.artists.manage");
   await db.artistShare.updateMany({ where: { id: shareId }, data: { status: "revoked", respondedAt: new Date() } });
   return { ok: true, message: (await getTranslations("artists"))("shareUpdated") };
 }
 
 /** The partner agency answers a share request. Scoped to shares addressed to this agency. */
 export async function respondShareAction(shareId: string, accept: boolean): Promise<ActionResult> {
-  const { organization } = await requireAgency("agency.artists");
+  const { organization } = await requireAgency("agency.artists.manage");
   await prisma.artistShare.updateMany({
     where: { id: shareId, partnerOrganizationId: organization.id, status: "pending" },
     data: { status: accept ? "accepted" : "declined", respondedAt: new Date() },

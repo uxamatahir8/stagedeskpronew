@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import type { Locale } from "@/i18n/routing";
 import { requireAgency } from "@/lib/viewer";
 import { AddCustomerDialog } from "./add-customer-dialog";
+import { IfCan } from "@/components/if-can";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/customers">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "customers" });
@@ -44,7 +45,9 @@ async function Customers() {
       <PageHeader title={t("title")} description={t("description")} actions={
           <div className="flex flex-wrap gap-2">
             <ExportButton kind="customers" />
-            <AddCustomerDialog />
+            <IfCan permission="agency.customers.manage">
+              <AddCustomerDialog />
+            </IfCan>
           </div>
         }
       />

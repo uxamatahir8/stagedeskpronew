@@ -109,6 +109,8 @@ model Organization {
   logo               String?                @db.Text
   metadata           String?                @db.Text
   kvkNumber          String?                @db.VarChar(16)
+  /// What agency admins and staff may do, chosen by the owner: { agency_admin: [...], agency_staff: [...] }. null = defaults.
+  rolePermissions    Json?
   /// ISO 4217 code for quotes, invoices and payments; new bookings copy it.
   currency           String                 @default("EUR") @db.VarChar(3)
   vatNumber          String?                @db.VarChar(20)
@@ -769,6 +771,11 @@ model Affiliate {
   commissionBps         Int?
   stripeAccountId       String?           @unique @db.VarChar(64)
   payoutsEnabled        Boolean           @default(false)
+  /// How the affiliate wants to be paid: stripe | bank_transfer | paypal
+  payoutMethod          String?           @db.VarChar(16)
+  payoutIban            String?           @db.VarChar(34)
+  payoutAccountName     String?           @db.VarChar(120)
+  paypalEmail           String?           @db.VarChar(191)
   approvedAt            DateTime?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
@@ -841,7 +848,7 @@ model Commission {
   baseCents             Int
   commissionBps         Int
   amountCents           Int
-  /// pending | review | approved | paid | cancelled
+  /// pending | review | approved | requested (in a withdrawal) | paid | cancelled
   status                String           @default("pending") @db.VarChar(16)
   /// End of the approval window.
   availableAt           DateTime
@@ -856,20 +863,50 @@ model Commission {
   @@map("commissions")
 }
 
+/// A withdrawal of approved commissions, requested by the affiliate (or made by
+/// the monthly run), with every step kept in AffiliatePayoutEvent.
 model AffiliatePayout {
-  id               String       @id @db.VarChar(64)
-  affiliateId      String       @db.VarChar(64)
-  affiliate        Affiliate    @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
+  id               String                 @id @db.VarChar(64)
+  /// Short reference shown to the affiliate and on the bank statement, e.g. WD-7K2M9Q.
+  reference        String?                @unique @db.VarChar(16)
+  affiliateId      String                 @db.VarChar(64)
+  affiliate        Affiliate              @relation(fields: [affiliateId], references: [id], onDelete: Restrict)
   amountCents      Int
-  /// paid | failed
-  status           String       @db.VarChar(16)
-  stripeTransferId String?      @unique @db.VarChar(64)
-  error            String?      @db.Text
-  createdAt        DateTime     @default(now())
+  /// stripe | bank_transfer | paypal
+  method           String                 @default("stripe") @db.VarChar(16)
+  /// requested | approved | processing | paid | rejected | failed | cancelled
+  status           String                 @db.VarChar(16)
+  /// Where the money goes, copied when requested: IBAN and name, or PayPal address.
+  details          Json?
+  stripeTransferId String?                @unique @db.VarChar(64)
+  /// The bank or PayPal transaction reference entered when paid by hand.
+  transactionRef   String?                @db.VarChar(120)
+  error            String?                @db.Text
+  rejectReason     String?                @db.VarChar(300)
+  reviewedById     String?                @db.VarChar(64)
+  reviewedAt       DateTime?
+  paidAt           DateTime?
+  createdAt        DateTime               @default(now())
   commissions      Commission[]
+  events           AffiliatePayoutEvent[]
 
   @@index([affiliateId, createdAt])
+  @@index([status])
   @@map("affiliate_payouts")
+}
+
+/// Every step of a withdrawal: requested, approved, paid, rejected… with who and why.
+model AffiliatePayoutEvent {
+  id        String          @id @db.VarChar(64)
+  payoutId  String          @db.VarChar(64)
+  payout    AffiliatePayout @relation(fields: [payoutId], references: [id], onDelete: Cascade)
+  status    String          @db.VarChar(16)
+  note      String?         @db.VarChar(500)
+  actorId   String?         @db.VarChar(64)
+  createdAt DateTime        @default(now())
+
+  @@index([payoutId, createdAt])
+  @@map("affiliate_payout_events")
 }
 
 /// Logos, banners, email templates and videos affiliates can use.

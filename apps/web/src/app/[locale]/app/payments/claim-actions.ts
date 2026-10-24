@@ -18,7 +18,7 @@ function done() {
 
 /** The money is in: records the payment and sends the customer a receipt. */
 export async function confirmClaimAction(claimId: string, receivedOn?: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.payments");
+  const { viewer, organization } = await requireAgency("agency.payments.confirm");
   const t = await getTranslations("paymentClaims");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
@@ -38,7 +38,7 @@ export async function confirmClaimAction(claimId: string, receivedOn?: string): 
 
 /** Not (yet) received: the customer is told, with the reason. */
 export async function rejectClaimAction(claimId: string, reason: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.payments");
+  const { viewer, organization } = await requireAgency("agency.payments.confirm");
   const t = await getTranslations("paymentClaims");
   if (!reason.trim()) return { ok: false, message: t("reasonRequired") };
   try {

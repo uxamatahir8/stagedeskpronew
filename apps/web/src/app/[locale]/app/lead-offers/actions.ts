@@ -14,7 +14,7 @@ import { requireAgency } from "@/lib/viewer";
 
 /** The agency takes a lead (it becomes their booking) or passes on it. */
 export async function respondLeadOfferAction(leadId: string, accept: boolean): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.bookings");
+  const { viewer, organization } = await requireAgency("agency.leads");
   const t = await getTranslations("leadOffers");
   if (accept) {
     const blocked = await writeBlocked(organization.id);

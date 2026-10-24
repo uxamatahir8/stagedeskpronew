@@ -1,11 +1,11 @@
-import { can, type Permission } from "@stagedesk/core";
+import type { Permission } from "@stagedesk/core";
 import { prisma, tenantDb } from "@stagedesk/db";
 import { getViewer } from "@/lib/viewer";
 
 const kinds: Record<string, Permission> = {
-  bookings: "agency.bookings",
+  bookings: "agency.reports",
   customers: "agency.customers",
-  payments: "agency.payments",
+  payments: "agency.reports",
   waitlist: "platform.pages",
 };
 
@@ -34,7 +34,7 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
   const permission = kinds[kind];
   const viewer = await getViewer();
   if (!permission) return new Response(null, { status: 404 });
-  if (!viewer?.role || !can(viewer.role, permission)) return new Response(null, { status: 403 });
+  if (!viewer?.role || !viewer.permissions.includes(permission)) return new Response(null, { status: 403 });
 
   if (kind === "waitlist") {
     // Platform-level list, not agency data.

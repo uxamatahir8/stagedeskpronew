@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { isRole } from "@stagedesk/core";
+import { defaultAgencyGrants, isRole, sanitizeRolePermissions } from "@stagedesk/core";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { requireAgency } from "@/lib/viewer";
+import { cn } from "@/lib/utils";
+import { requireAgency, viewerCan } from "@/lib/viewer";
+import { PermissionsEditor } from "./permissions-editor";
 import { InviteDialog, TeamTables } from "./team-manager";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/team">): Promise<Metadata> {
@@ -13,19 +16,23 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app/team
   return { title: t("title") };
 }
 
-export default async function TeamPage({ params }: PageProps<"/[locale]/app/team">) {
+export default async function TeamPage({ params, searchParams }: PageProps<"/[locale]/app/team">) {
   setRequestLocale((await params).locale as Locale);
   return (
     <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-      <Team />
+      <Team searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Team() {
+async function Team({ searchParams }: Pick<PageProps<"/[locale]/app/team">, "searchParams">) {
   const { viewer, organization, db } = await requireAgency("agency.team");
-  const [t, format, members, invitations] = await Promise.all([
+  const canPermissions = viewerCan(viewer, "agency.permissions");
+  const tab = (await searchParams)["tab"] === "roles" && canPermissions ? "roles" : "members";
+  const manage = viewerCan(viewer, "agency.team.manage");
+  const [t, tp, format, members, invitations] = await Promise.all([
     getTranslations("team"),
+    getTranslations("permissions"),
     getFormatter(),
     db.member.findMany({
       where: { role: { not: "customer" } },
@@ -36,23 +43,46 @@ async function Team() {
   ]);
 
   const date = (d: Date) => format.dateTime(d, { day: "numeric", month: "short", year: "numeric" });
+  const custom = organization.rolePermissions;
+  const grants = {
+    agency_admin: [...(custom?.agency_admin ?? defaultAgencyGrants.agency_admin)],
+    agency_staff: [...(custom?.agency_staff ?? defaultAgencyGrants.agency_staff)],
+  } as Parameters<typeof PermissionsEditor>[0]["initial"];
 
   return (
     <div className="grid gap-8">
-      <PageHeader
-        title={t("title")}
-        description={t("description")}
-        actions={<InviteDialog organizationId={organization.id} />}
-      />
-      <TeamTables
-        organizationId={organization.id}
-        viewerRole={viewer.role}
-        viewerUserId={viewer.user.id}
-        members={members
-          .filter((m) => isRole(m.role))
-          .map((m) => ({ id: m.id, userId: m.userId, name: m.user.name, email: m.user.email, role: m.role, joined: date(m.createdAt) }))}
-        invitations={invitations.map((i) => ({ id: i.id, email: i.email, role: i.role ?? "", expires: date(i.expiresAt) }))}
-      />
+      <PageHeader title={t("title")} description={t("description")} actions={tab === "members" && manage ? <InviteDialog /> : undefined} />
+      {canPermissions && (
+        <nav className="flex w-fit gap-1 rounded-lg bg-muted p-1 text-sm" aria-label={t("title")}>
+          {(["members", "roles"] as const).map((x) => (
+            <Link
+              key={x}
+              href={x === "members" ? "/app/team" : "/app/team?tab=roles"}
+              aria-current={x === tab ? "page" : undefined}
+              className={cn("rounded-md px-3 py-1.5", x === tab ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground")}
+            >
+              {tp(`tab_${x}`)}
+            </Link>
+          ))}
+        </nav>
+      )}
+      {tab === "roles" ? (
+        <PermissionsEditor
+          initial={sanitizeRolePermissions(grants) as typeof grants}
+          defaults={{ agency_admin: [...defaultAgencyGrants.agency_admin], agency_staff: [...defaultAgencyGrants.agency_staff] }}
+          custom={Boolean(custom)}
+        />
+      ) : (
+        <TeamTables
+          manage={manage}
+          viewerRole={viewer.role}
+          viewerUserId={viewer.user.id}
+          members={members
+            .filter((m) => isRole(m.role))
+            .map((m) => ({ id: m.id, userId: m.userId, name: m.user.name, email: m.user.email, role: m.role, joined: date(m.createdAt) }))}
+          invitations={invitations.map((i) => ({ id: i.id, email: i.email, role: i.role ?? "", expires: date(i.expiresAt) }))}
+        />
+      )}
     </div>
   );
 }

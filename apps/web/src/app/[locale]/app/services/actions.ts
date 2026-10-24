@@ -18,7 +18,7 @@ const schema = z.object({
 });
 
 export async function saveServiceAction(input: z.input<typeof schema>): Promise<ActionResult> {
-  const { organization, db } = await requireAgency("agency.quotes");
+  const { organization, db } = await requireAgency("agency.services");
   const [t, tb] = await Promise.all([getTranslations("services"), getTranslations("newBooking")]);
   const parsed = schema.safeParse(input);
   const unitPriceCents = parsed.success ? parseEuros(parsed.data.price) : null;
@@ -39,7 +39,7 @@ export async function saveServiceAction(input: z.input<typeof schema>): Promise<
 }
 
 export async function archiveServiceAction(id: string): Promise<ActionResult> {
-  const { db } = await requireAgency("agency.quotes");
+  const { db } = await requireAgency("agency.services");
   await db.serviceItem.updateMany({ where: { id }, data: { active: false } });
   return { ok: true, message: (await getTranslations("services"))("archived") };
 }

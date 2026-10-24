@@ -24,7 +24,7 @@ export default async function BookingPageSettings({ params }: PageProps<"/[local
 }
 
 async function Settings() {
-  const { organization } = await requireAgency("agency.settings");
+  const { organization } = await requireAgency("agency.website");
   const [t, locale] = await Promise.all([getTranslations("bookingPageSettings"), getLocale()]);
   const agency = await prisma.organization.findUniqueOrThrow({
     where: { id: organization.id },

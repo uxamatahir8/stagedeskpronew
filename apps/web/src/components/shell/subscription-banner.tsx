@@ -1,5 +1,5 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { can, type Role } from "@stagedesk/core";
+
 import { agencyBilling } from "@stagedesk/db";
 import { Link } from "@/i18n/navigation";
 import { dateTime } from "@/lib/format";
@@ -11,7 +11,7 @@ function daysUntil(date: Date) {
 }
 
 /** Trial countdown, grace warning or read-only notice for the agency team. */
-export async function SubscriptionBanner({ organizationId, role }: { organizationId: string; role: Role }) {
+export async function SubscriptionBanner({ organizationId, canBill }: { organizationId: string; canBill: boolean }) {
   const [{ access }, t, format] = await Promise.all([agencyBilling(organizationId), getTranslations("billing"), getFormatter()]);
   if (access.reason === "active") return null;
 
@@ -42,7 +42,7 @@ export async function SubscriptionBanner({ organizationId, role }: { organizatio
       )}
     >
       <span>{text}</span>
-      {can(role, "agency.billing") && (
+      {canBill && (
         <Link href="/app/billing" className="font-medium underline underline-offset-4">
           {t("bannerAction")}
         </Link>

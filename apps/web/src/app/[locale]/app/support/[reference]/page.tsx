@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { can } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Pill } from "@/components/status-badge";
@@ -34,7 +33,7 @@ const statusTone = { open: "warning", answered: "info", closed: "neutral" } as c
 async function Ticket({ params }: Pick<PageProps<"/[locale]/app/support/[reference]">, "params">) {
   setRequestLocale((await params).locale as Locale);
   const viewer = await requirePermission("support");
-  const staff = can(viewer.role, "platform.support");
+  const staff = viewer.permissions.includes("platform.support");
   const { reference } = await params;
   const ticket = await prisma.supportTicket.findUnique({
     where: { reference },

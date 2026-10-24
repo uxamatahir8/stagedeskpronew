@@ -22,8 +22,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cancelInvitationAction, inviteMemberAction, removeMemberAction, updateMemberRoleAction } from "./actions";
 import { useRouter } from "@/i18n/navigation";
-import { authClient } from "@/lib/auth-client";
 
 const invitable = ["agency_admin", "agency_staff", "artist"] as const;
 const assignable = ["agency_owner", "agency_admin", "agency_staff", "artist"] as const;
@@ -51,7 +51,7 @@ function useErrorToast() {
   };
 }
 
-export function InviteDialog({ organizationId }: { organizationId: string }) {
+export function InviteDialog() {
   const t = useTranslations();
   const router = useRouter();
   const fail = useErrorToast();
@@ -62,7 +62,7 @@ export function InviteDialog({ organizationId }: { organizationId: string }) {
   async function invite(form: FormData) {
     const email = String(form.get("email")).trim();
     setPending(true);
-    const { error } = await authClient.organization.inviteMember({ email, role, organizationId, resend: true });
+    const { error } = await inviteMemberAction(email, role);
     setPending(false);
     if (error) return fail(error);
     toast.success(t("team.sent", { email }));
@@ -119,13 +119,14 @@ export function InviteDialog({ organizationId }: { organizationId: string }) {
 }
 
 export function TeamTables({
-  organizationId,
+  manage,
   viewerRole,
   viewerUserId,
   members,
   invitations,
 }: {
-  organizationId: string;
+  /** Whether the viewer may invite, change and remove (the agency's permission settings). */
+  manage: boolean;
   viewerRole: Role;
   viewerUserId: string;
   members: MemberRow[];
@@ -138,26 +139,26 @@ export function TeamTables({
 
   /** Owners manage everyone; admins manage everyone except owners. Nobody edits themselves here. */
   function canManage(member: MemberRow) {
-    if (member.userId === viewerUserId) return false;
+    if (!manage || member.userId === viewerUserId) return false;
     return isOwner || member.role !== "agency_owner";
   }
 
   async function changeRole(member: MemberRow, role: string) {
-    const { error } = await authClient.organization.updateMemberRole({ memberId: member.id, role, organizationId });
+    const { error } = await updateMemberRoleAction(member.id, role);
     if (error) return fail(error);
     toast.success(t("team.roleChanged"));
     router.refresh();
   }
 
   async function remove(member: MemberRow) {
-    const { error } = await authClient.organization.removeMember({ memberIdOrEmail: member.id, organizationId });
+    const { error } = await removeMemberAction(member.id);
     if (error) return fail(error);
     toast.success(t("team.removed", { name: member.name }));
     router.refresh();
   }
 
   async function cancel(invitationId: string) {
-    const { error } = await authClient.organization.cancelInvitation({ invitationId });
+    const { error } = await cancelInvitationAction(invitationId);
     if (error) return fail(error);
     toast.success(t("team.canceled"));
     router.refresh();
@@ -248,7 +249,7 @@ export function TeamTables({
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">{i.expires}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => cancel(i.id)}>
+                      <Button variant="ghost" size="sm" disabled={!manage} onClick={() => cancel(i.id)}>
                         {t("team.cancelInvite")}
                       </Button>
                     </TableCell>

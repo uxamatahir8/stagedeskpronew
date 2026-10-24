@@ -34,7 +34,7 @@ const tone = { pending: "info", verified: "success", failed: "danger" } as const
 const cnameTarget = process.env.SITES_CNAME_TARGET || `sites.${sitesBase}`;
 
 async function Domains() {
-  const { organization } = await requireAgency("agency.settings");
+  const { organization } = await requireAgency("agency.website");
   const [t, format, domains, billing, editor] = await Promise.all([
     getTranslations("websiteEditor"),
     getFormatter(),

@@ -17,6 +17,7 @@ import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { requireAgency } from "@/lib/viewer";
+import { IfCan } from "@/components/if-can";
 
 const tabs = {
   all: null,
@@ -43,13 +44,17 @@ export default async function BookingsPage({ params, searchParams }: PageProps<"
         description={t("description")}
         actions={
           <div className="flex flex-wrap gap-2">
-            <ExportButton kind="bookings" />
-            <Button asChild>
-              <Link href="/app/bookings/new">
-                <PlusIcon />
-                {t("new")}
-              </Link>
-            </Button>
+            <IfCan permission="agency.reports">
+              <ExportButton kind="bookings" />
+            </IfCan>
+            <IfCan permission="agency.bookings.create">
+              <Button asChild>
+                <Link href="/app/bookings/new">
+                  <PlusIcon />
+                  {t("new")}
+                </Link>
+              </Button>
+            </IfCan>
           </div>
         }
       />

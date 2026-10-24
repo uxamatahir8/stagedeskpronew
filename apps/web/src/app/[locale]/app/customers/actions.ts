@@ -15,7 +15,7 @@ const schema = z.object({
 });
 
 export async function addCustomer(_prev: FormState, form: FormData): Promise<FormState> {
-  const { db, organization } = await requireAgency("agency.customers");
+  const { db, organization } = await requireAgency("agency.customers.manage");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { message: blocked };
   const [t, ts] = await Promise.all([getTranslations("customers"), getTranslations("agencySettings")]);

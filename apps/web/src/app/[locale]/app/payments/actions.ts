@@ -14,7 +14,7 @@ import { requireAgency } from "@/lib/viewer";
 
 /** Stripe Express onboarding for the agency's own account (start or finish). */
 export async function connectAgencyAction(): Promise<RedirectResult> {
-  const { viewer, organization } = await requireAgency("agency.payments");
+  const { viewer, organization } = await requireAgency("agency.settings");
   const stripe = await getStripe();
   if (!stripe) return { message: (await getTranslations("payments"))("stripeMissing") };
   const locale = await getLocale();
@@ -47,7 +47,7 @@ export async function agencyDashboardAction(): Promise<RedirectResult> {
 
 /** Refunds (part of) a payment; `amount` is what the user typed, in euros. */
 export async function refundAction(paymentId: string, amount: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.payments");
+  const { viewer, organization } = await requireAgency("agency.payments.refund");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const cents = parseEuros(amount);

@@ -26,7 +26,7 @@ export default async function NewBookingPage({ params }: PageProps<"/[locale]/ap
 }
 
 async function Form() {
-  const { db } = await requireAgency("agency.bookings");
+  const { db } = await requireAgency("agency.bookings.create");
   const customers = await db.member.findMany({
     where: { role: "customer" },
     include: { user: { select: { id: true, name: true, email: true } } },

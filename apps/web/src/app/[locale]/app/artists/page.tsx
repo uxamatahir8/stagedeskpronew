@@ -13,6 +13,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { requireAgency } from "@/lib/viewer";
 import { ArtistDialog, ShareResponse } from "./artist-forms";
+import { IfCan } from "@/components/if-can";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/artists">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "artists" });
@@ -51,7 +52,11 @@ async function Artists() {
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} actions={<ArtistDialog accounts={accounts} />} />
+      <PageHeader title={t("title")} description={t("description")} actions={
+          <IfCan permission="agency.artists.manage">
+            <ArtistDialog accounts={accounts} />
+          </IfCan>
+        } />
 
       {requests.length > 0 && (
         <Card>

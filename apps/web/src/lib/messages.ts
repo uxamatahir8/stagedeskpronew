@@ -1,5 +1,4 @@
 import "server-only";
-import { can } from "@stagedesk/core";
 import { type MessageChannel, prisma } from "@stagedesk/db";
 import type { Viewer } from "./viewer";
 
@@ -26,7 +25,7 @@ export async function messageAccess(viewer: Viewer & { role: NonNullable<Viewer[
   });
   if (!booking) return null;
   const channels: MessageChannel[] = [];
-  if (viewer.organization?.id === booking.organizationId && can(viewer.role, "agency.bookings")) channels.push("customer", "artist");
+  if (viewer.organization?.id === booking.organizationId && viewer.permissions.includes("agency.bookings")) channels.push("customer", "artist");
   else {
     if (booking.assignments.some((a) => a.artist.userId === viewer.user.id)) channels.push("artist");
     if (booking.customerId === viewer.user.id) channels.push("customer");
@@ -36,7 +35,7 @@ export async function messageAccess(viewer: Viewer & { role: NonNullable<Viewer[
 
 /** Which conversations list a role sees on the messages page. */
 export function conversationScope(viewer: Viewer & { role: NonNullable<Viewer["role"]> }) {
-  if (viewer.organization && can(viewer.role, "agency.bookings")) return { userId: viewer.user.id, agencyId: viewer.organization.id };
+  if (viewer.organization && viewer.permissions.includes("agency.bookings")) return { userId: viewer.user.id, agencyId: viewer.organization.id };
   if (viewer.role === "artist") return { userId: viewer.user.id, artistUserId: viewer.user.id };
   return { userId: viewer.user.id, customerId: viewer.user.id };
 }

@@ -28,7 +28,7 @@ export default async function WebsitePage({ params }: PageProps<"/[locale]/app/w
 }
 
 async function Website() {
-  const { organization } = await requireAgency("agency.settings");
+  const { organization } = await requireAgency("agency.website");
   const [t, editor, data, branding, domains] = await Promise.all([
     getTranslations("websiteEditor"),
     siteEditorData(organization.id),

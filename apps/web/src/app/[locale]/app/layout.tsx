@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getLocale, setRequestLocale } from "next-intl/server";
-import { can } from "@stagedesk/core";
+
 import { pendingLegal, prisma } from "@stagedesk/db";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SubscriptionBanner } from "@/components/shell/subscription-banner";
@@ -25,18 +25,18 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
 }
 
 async function Shell({ children }: { children: React.ReactNode }) {
-  const { user, role, organization, memberships, support } = await requireViewer();
+  const { user, role, organization, memberships, support, permissions } = await requireViewer();
   // New Terms (or, for agencies, a new data processing agreement) are accepted before anything else.
   if ((await pendingLegal(user.id)).length > 0) redirect({ href: "/accept-terms", locale: (await getLocale()) as Locale });
   // A suspended agency is closed to its team and customers; they can still switch agency or sign out.
   const suspended = organization ? await prisma.organization.findUnique({ where: { id: organization.id }, select: { suspendedAt: true, suspendReason: true } }) : null;
   return (
     <SidebarProvider>
-      <AppSidebar viewer={{ user, role, organization, memberships }} />
+      <AppSidebar viewer={{ user, role, organization, memberships, permissions }} />
       <SidebarInset>
-        <TopBar role={role} />
+        <TopBar permissions={permissions} />
         {support && <SupportBanner agency={support.name} />}
-        {organization && can(role, "agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} role={role} />}
+        {organization && permissions.includes("agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} canBill={permissions.includes("agency.billing")} />}
         <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
           {/* Support can still look inside a suspended agency; writes stay blocked by writeBlocked. */}
           {suspended?.suspendedAt && !support ? <SuspendedNotice agency={organization!.name} reason={suspended.suspendReason} /> : children}

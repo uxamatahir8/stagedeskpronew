@@ -1,6 +1,6 @@
 import { BanknoteIcon, AlertTriangleIcon, CalendarCheckIcon, EuroIcon, InboxIcon, Music2Icon, TimerIcon, WalletIcon } from "lucide-react";
 import { getFormatter, getTranslations } from "next-intl/server";
-import { can, type Role, todayInNetherlands } from "@stagedesk/core";
+import { type Permission, todayInNetherlands } from "@stagedesk/core";
 import { getSetting, type TenantDb, toDateOnly } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
@@ -25,7 +25,7 @@ interface AttentionItem {
 }
 
 /** The agency's home: four headline figures and the queue of bookings that need someone to act. */
-export async function AgencyHome({ db, role, currency }: { db: TenantDb; role: Role; currency: string }) {
+export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; permissions: readonly Permission[]; currency: string }) {
   const [t, ta, format, defaults] = await Promise.all([
     getTranslations("home"),
     getTranslations("attention"),
@@ -38,7 +38,7 @@ export async function AgencyHome({ db, role, currency }: { db: TenantDb; role: R
   const soon = new Date(now.getTime() + 3 * 86_400_000);
   // Offline payments are stored at midday UTC on the day received, so a UTC month boundary is exact.
   const monthStart = new Date(`${today.slice(0, 7)}-01T00:00:00Z`);
-  const showMoney = can(role, "agency.payments");
+  const showMoney = permissions.includes("agency.payments");
   const customer = { customer: { select: { name: true } } };
 
   const [newInquiries, quotesExpiring, eventsThisWeek, collected, inquiries, expiring, booked, balanceDue, claims] = await Promise.all([

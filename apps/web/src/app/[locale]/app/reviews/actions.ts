@@ -36,7 +36,7 @@ export async function submitReviewAction(bookingId: string, rating: number, comm
 }
 
 export async function moderateReviewAction(reviewId: string, approve: boolean): Promise<ActionResult> {
-  const { db } = await requireAgency("agency.bookings");
+  const { db } = await requireAgency("agency.reviews");
   await db.review.updateMany({ where: { id: reviewId }, data: { status: approve ? "approved" : "rejected", moderatedAt: new Date() } });
   return { ok: true, message: (await getTranslations("reviews"))("updated") };
 }

@@ -40,7 +40,7 @@ function done() {
 
 /** Editing needs the settings permission and an agency that can still make changes. */
 async function editor() {
-  const ctx = await requireAgency("agency.settings");
+  const ctx = await requireAgency("agency.website");
   const blocked = await writeBlocked(ctx.organization.id);
   return { ...ctx, blocked };
 }

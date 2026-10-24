@@ -2,7 +2,6 @@ import { LifeBuoyIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { can } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -35,7 +34,7 @@ const statuses = ["open", "answered", "closed"] as const;
 
 async function Support({ searchParams }: Pick<PageProps<"/[locale]/app/support">, "searchParams">) {
   const viewer = await requirePermission("support");
-  const staff = can(viewer.role, "platform.support");
+  const staff = viewer.permissions.includes("platform.support");
   const requested = (await searchParams)["status"];
   const filter = statuses.includes(requested as (typeof statuses)[number]) ? (requested as (typeof statuses)[number]) : staff ? "open" : null;
   const [t, format, tickets, counts] = await Promise.all([
