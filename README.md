@@ -152,9 +152,12 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   solutions for weddings & events and band agencies (`/solutions/<slug>`), pricing (from the plans in Settings),
   about, for agencies, for artists, partner program, blog, help centre, changelog and contact, in Dutch and English.
   Feature and solution pages share `components/site/detail-page.tsx`; their copy is under `featureDetail.<slug>`.
-- **Blog, help and changelog** are MDX files in `apps/web/src/content`. To add a post: write
-  `blog/posts/<slug>.nl.mdx` and `.en.mdx` and add its entry to `blog/index.ts` (help works the same way).
-  Blog comments wait for approval under Pages → Blog comments.
+- **Blog, help and changelog** live in the database and are managed under **Blog and help** in the admin panel:
+  categories you create yourself, featured posts (the newest featured post opens the blog), cover images,
+  scheduling, SEO title and description, and a Markdown editor with live preview. English is optional per
+  article; without it English readers see the Dutch text with a notice. Starter content is Markdown in
+  `packages/db/content` and is added by `pnpm db:seed` (or only that: `pnpm db:seed-content`); it never
+  overwrites what was edited in the admin panel. Blog comments wait for approval under Pages → Blog comments.
 - **Page builder** (`/app/pages`, platform admin): Terms, Privacy and any other page, built from
   blocks (headings, text, lists, tables, images, callouts) in both languages, placed in the header or a footer
   column. Every save is a version; compare any version with the live one, restore it, or publish it.

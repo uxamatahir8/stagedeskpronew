@@ -45,12 +45,15 @@ const onTestDomain = (field: "email" | "authorEmail") => testDomains.map((d) => 
 const invitations = await prisma.invitation.count({ where: { OR: onTestDomain("email") } });
 const comments = await prisma.blogComment.count({ where: { OR: onTestDomain("authorEmail") } });
 const leads = await prisma.lead.count({ where: { OR: onTestDomain("email") } });
+// Website pages made by the e2e tests (their slugs start with e2e-).
+const testPages = await prisma.page.findMany({ where: { slugNl: { startsWith: "e2e-" } }, select: { id: true } });
+const testPageIds = testPages.map((p) => p.id);
 
 console.log(`Test accounts: ${userIds.length}`);
 console.log(`Agencies owned by test accounts: ${orgIds.length}`);
 console.log(`Bookings: ${bookingIds.length}, payments: ${paymentIds.length}`);
 console.log(`Partner accounts: ${affiliateIds.length}, artist profiles: ${artistIds.length}`);
-console.log(`Invitations: ${invitations}, blog comments: ${comments}, leads: ${leads}`);
+console.log(`Invitations: ${invitations}, blog comments: ${comments}, leads: ${leads}, test pages: ${testPageIds.length}`);
 
 if (!apply) {
   console.log("\nNothing removed. Run again with --yes to remove these.");
@@ -74,6 +77,9 @@ if (!apply) {
       await tx.blogComment.deleteMany({ where: { OR: onTestDomain("authorEmail") } });
       // Their offers go with them.
       await tx.lead.deleteMany({ where: { OR: onTestDomain("email") } });
+      await tx.legalAcceptance.deleteMany({ where: { pageId: { in: testPageIds } } });
+      await tx.page.updateMany({ where: { id: { in: testPageIds } }, data: { publishedVersionId: null } });
+      await tx.page.deleteMany({ where: { id: { in: testPageIds } } });
       // The communication spec writes on a demo booking, ending each message with its run id (Date.now() in base 36).
       await tx.$executeRaw`DELETE FROM booking_messages WHERE body REGEXP ${" m[a-z0-9]{7}$"}`;
       // Notifications for demo accounts that pointed at the removed bookings.

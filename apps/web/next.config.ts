@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import type { NextConfig } from "next";
-import createMDX from "@next/mdx";
 import createNextIntlPlugin from "next-intl/plugin";
 
 // The single .env lives at the repo root, shared with the worker and Prisma.
@@ -41,8 +40,5 @@ const nextConfig: NextConfig = {
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
-// Blog, help and changelog are MDX files in src/content, imported per slug.
-// Plugins are named by string so Turbopack can load them.
-const withMDX = createMDX({ options: { remarkPlugins: [["remark-gfm"]] } });
 
-export default withNextIntl(withMDX(nextConfig));
+export default withNextIntl(nextConfig);

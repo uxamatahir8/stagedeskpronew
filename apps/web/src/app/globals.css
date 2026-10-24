@@ -285,3 +285,8 @@
     animation: none;
   }
 }
+
+/* Headlines in the blog and help centre: a reading serif, loaded by their layouts. */
+@utility font-editorial {
+  font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
+}

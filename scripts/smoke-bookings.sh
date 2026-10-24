@@ -12,7 +12,7 @@ pdf() { # name, cookie-or-empty, path, expect(pdf|404)
   local h; h=$(curl -s ${2:+-b "$D/$2"} "$B$3" | head -c 4)
   if [ "$4" = pdf ] && [ "$h" = "%PDF" ]; then echo "  PASS  $1"; elif [ "$4" = 404 ] && [ "$h" != "%PDF" ]; then echo "  PASS  $1"; else echo "  FAIL  $1 (got '$h')"; fi; }
 
-for i in $(seq 1 40); do grep -q "Ready" /c/dev/stagedesk/.dev-web.log 2>/dev/null && break; sleep 2; done
+for i in $(seq 1 40); do grep -q "Ready" /d/dev/stagedesk/.dev-web.log 2>/dev/null && break; sleep 2; done
 echo "sign in: owner $(signin owner eigenaar@feestband.local) artist $(signin artist dj.sem@feestband.local) customer $(signin cust sanne@klant.local) rot $(signin rot eigenaar@rotterdamdj.local)"
 
 echo "Agency"
@@ -54,5 +54,5 @@ pdf "quote PDF with link token" "" "/api/pdf/quote/$(SQL "select id from quotes 
 pdf "agency downloads invoice" owner "/api/pdf/invoice/$INV" pdf
 pdf "artist can't download invoice" artist "/api/pdf/invoice/$INV" 404
 
-grep -iE "⨯|\"level\":\"ERROR\"" /c/dev/stagedesk/apps/web/.next/dev/logs/next-development.log | cut -c1-300 | head -5
+grep -iE "⨯|\"level\":\"ERROR\"" /d/dev/stagedesk/apps/web/.next/dev/logs/next-development.log | cut -c1-300 | head -5
 rm -rf "$D"

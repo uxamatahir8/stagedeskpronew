@@ -24,10 +24,13 @@ export function pageMetadata(input: {
   kicker?: string;
   type?: "website" | "article";
   publishedTime?: string;
+  modifiedTime?: string;
+  /** A page image (path or URL) instead of the generated card, e.g. a blog cover. */
+  image?: string | null;
   noIndex?: boolean;
 }): Metadata {
   const url = siteUrl(input.locale, input.paths[input.locale]);
-  const image = `${appUrl}/api/og?${new URLSearchParams({ title: input.title, ...(input.kicker ? { kicker: input.kicker } : {}) })}`;
+  const image = input.image ? (input.image.startsWith("/") ? `${appUrl}${input.image}` : input.image) : `${appUrl}/api/og?${new URLSearchParams({ title: input.title, ...(input.kicker ? { kicker: input.kicker } : {}) })}`;
   return {
     title: input.title,
     description: input.description,
@@ -42,8 +45,9 @@ export function pageMetadata(input: {
       title: input.title,
       description: input.description,
       locale: input.locale === "en" ? "en_GB" : "nl_NL",
-      images: [{ url: image, width: 1200, height: 630, alt: input.title }],
+      images: [{ url: image, ...(input.image ? {} : { width: 1200, height: 630 }), alt: input.title }],
       ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
+      ...(input.modifiedTime ? { modifiedTime: input.modifiedTime } : {}),
     },
     twitter: { card: "summary_large_image", title: input.title, description: input.description, images: [image] },
     ...(input.noIndex ? { robots: { index: false, follow: true } } : {}),

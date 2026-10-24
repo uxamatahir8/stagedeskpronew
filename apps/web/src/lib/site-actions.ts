@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { parseViaCookie, viaCookie } from "@stagedesk/core";
-import { notify, platformAdminIds, prisma } from "@stagedesk/db";
+import { notify, platformAdminIds, prisma, publishedArticle } from "@stagedesk/db";
 import { deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { siteSettings } from "@/lib/site";
@@ -92,7 +92,8 @@ export async function commentAction(form: FormData): Promise<FormResult> {
   if (blocked === "bot") return { ok: true };
   if (blocked) return { ok: false, message: blocked };
   const parsed = commentSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { ok: false, message: t("invalidComment") };
+  // Comments only on posts that are live.
+  if (!parsed.success || !(await publishedArticle("blog", parsed.data.slug))) return { ok: false, message: t("invalidComment") };
   const session = await getSession();
   await prisma.blogComment.create({
     data: {

@@ -27,6 +27,10 @@ await seedPlans(prisma);
 const { seedPages } = await import("./seed-pages");
 await seedPages(prisma);
 
+// Blog posts, help articles and the changelog, edited afterwards in the admin panel.
+const { seedContent } = await import("./seed-content");
+await seedContent(prisma);
+
 // Demo accounts for every role, never in production.
 if (process.env["NODE_ENV"] !== "production") {
   const { seedDemo, DEMO_PASSWORD } = await import("./seed-demo");

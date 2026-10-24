@@ -66,6 +66,8 @@ export interface ArticleInput {
   publishedAt: string | null;
   coverImage: string;
   authorName: string;
+  /** Order within a help topic. */
+  position?: number;
   nl: unknown;
   en: unknown | null;
 }
@@ -87,6 +89,7 @@ function checkArticle(input: ArticleInput) {
     publishedAt: input.status === "published" ? (publishedAt ?? new Date()) : publishedAt,
     coverImage: cover.data || null,
     authorName: input.authorName.trim().slice(0, 120) || null,
+    position: Math.max(0, Math.min(9999, Math.trunc(input.position ?? 0))),
     nl: nl.data as Prisma.InputJsonValue,
     en: en?.success ? (en.data as Prisma.InputJsonValue) : undefined,
   };
@@ -140,8 +143,8 @@ export async function publishedArticles(kind: ContentKind, { categorySlug = null
   const [rows, total] = await Promise.all([
     prisma.contentArticle.findMany({
       where,
-      // Featured first, then newest.
-      orderBy: [{ featured: "desc" }, { publishedAt: "desc" }],
+      // Blog: featured first, then newest. Help follows the order set in the admin panel.
+      orderBy: kind === "help" ? [{ position: "asc" }, { publishedAt: "desc" }] : [{ featured: "desc" }, { publishedAt: "desc" }],
       skip: (Math.max(1, page) - 1) * pageSize,
       take: pageSize,
       include: { category: true },
