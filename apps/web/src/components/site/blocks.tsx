@@ -1,5 +1,6 @@
 import { InfoIcon, TriangleAlertIcon } from "lucide-react";
 import { type Block, parseInline } from "@stagedesk/core";
+import { Markdown } from "@/components/content/markdown";
 import { cn } from "@/lib/utils";
 
 /** Text with **bold**, *italic* and safe [links](…). Rendered as React nodes, never as HTML. */
@@ -99,6 +100,8 @@ export function Blocks({ blocks }: { blocks: Block[] }) {
                 {b.caption && <figcaption className="mt-2 text-sm text-muted-foreground">{b.caption}</figcaption>}
               </figure>
             );
+          case "richtext":
+            return <Markdown key={i} className="my-4">{b.markdown}</Markdown>;
           case "callout": {
             const Icon = b.tone === "warning" ? TriangleAlertIcon : InfoIcon;
             return (

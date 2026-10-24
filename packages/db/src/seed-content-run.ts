@@ -7,4 +7,6 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 const { prisma } = await import("./client");
 const { seedContent } = await import("./seed-content");
 await seedContent(prisma);
+const { seedFooter } = await import("./footer");
+await seedFooter(prisma);
 await prisma.$disconnect();

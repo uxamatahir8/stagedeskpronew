@@ -219,7 +219,7 @@
 @keyframes page-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -227,7 +227,7 @@
   }
 }
 @utility animate-page-in {
-  animation: page-in 0.45s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+  animation: page-in 0.6s cubic-bezier(0.2, 0.65, 0.3, 1) both;
 }
 @keyframes reveal-in {
   from {
@@ -253,8 +253,9 @@
 
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    /* Blocks inside the page's sections; a block inside another block moves with it. */
-    main
+    /* Blocks inside the website's sections; a block inside another block moves with it. */
+    .site-motion
+      main
       section
       :is(h1, h2, h3, p, li, figure, img, details, form, blockquote, [data-slot="card"], [data-slot="button"], span:has(> svg)):not(
         :is(h1, h2, h3, p, li, figure, details, form, blockquote, [data-slot="card"]) *
@@ -263,9 +264,11 @@
         reveal-in cubic-bezier(0.2, 0.65, 0.3, 1) both,
         reveal-out ease-in both;
       animation-timeline: view(), view();
+      /* Measured against the screen, not the block: a block fades in over the bottom quarter
+         of the screen and out again as it reaches the top. */
       animation-range:
-        entry 0% entry 90%,
-        exit 40% exit 100%;
+        cover 0% cover 28%,
+        cover 82% cover 100%;
     }
   }
   @supports (animation-timeline: scroll()) {
@@ -277,8 +280,18 @@
     }
   }
   .animate-page-in {
-    animation: page-in 0.45s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+    animation: page-in 0.6s cubic-bezier(0.2, 0.65, 0.3, 1) both;
   }
+  /* In-page links (the jump links on Features, a table of contents) glide instead of jump.
+     Next.js turns this off for a moment when it changes page, via data-scroll-behavior. */
+  html[data-scroll-behavior="smooth"] {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Room for the sticky header (and the jump links under it) when scrolling to an anchor. */
+html {
+  scroll-padding-top: 8.5rem;
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-page-in {

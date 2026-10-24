@@ -56,6 +56,27 @@ export const siteGeneralSchema = z.object({
   waitlistMode: z.boolean().default(false),
 });
 
+/** What the website footer shows besides its link columns. */
+export const siteFooterSchema = z.object({
+  taglineNl: z.string().max(300),
+  taglineEn: z.string().max(300),
+  email: z.string().max(191),
+  phone: z.string().max(40),
+  address: z.string().max(300),
+  kvkNumber: z.string().max(20),
+  vatNumber: z.string().max(30),
+  bottomNl: z.string().max(200),
+  bottomEn: z.string().max(200),
+  socials: z.object({
+    instagram: z.string().max(300),
+    facebook: z.string().max(300),
+    linkedin: z.string().max(300),
+    youtube: z.string().max(300),
+    tiktok: z.string().max(300),
+    x: z.string().max(300),
+  }),
+});
+
 /** Which ways of paying agencies may offer. Each agency then chooses within these. */
 export const paymentMethodsSchema = z.object({
   online: z.boolean(),
@@ -81,6 +102,21 @@ export const settingsRegistry = {
       supportEmail: "support@stagedesk.pro",
       maintenanceMode: false,
       waitlistMode: false,
+    },
+  },
+  "site.footer": {
+    schema: siteFooterSchema,
+    defaults: {
+      taglineNl: "Boekingssoftware voor DJ- en bandbureaus in Nederland.",
+      taglineEn: "Booking software for DJ and band agencies in the Netherlands.",
+      email: "hallo@stagedesk.pro",
+      phone: "",
+      address: "Utrecht, Nederland",
+      kvkNumber: "",
+      vatNumber: "",
+      bottomNl: "Gemaakt in Nederland",
+      bottomEn: "Made in the Netherlands",
+      socials: { instagram: "", facebook: "", linkedin: "", youtube: "", tiktok: "", x: "" },
     },
   },
   "fees.platform": {

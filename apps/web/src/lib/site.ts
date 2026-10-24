@@ -1,13 +1,13 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { parseLimits } from "@stagedesk/core";
-import { activePlans, getSetting, placedPages, publishedPageBySlug } from "@stagedesk/db";
+import { activePlans, footerColumns, getSetting, placedPages, publishedPageBySlug } from "@stagedesk/db";
 
 /**
  * What the public website reads, cached and tagged. Admin actions call
  * updateTag() with the same tag, so a publish shows up on the next request.
  */
-export const SITE_TAGS = { pages: "site-pages", plans: "site-plans", settings: "site-settings" } as const;
+export const SITE_TAGS = { pages: "site-pages", plans: "site-plans", settings: "site-settings", footer: "site-footer" } as const;
 
 export async function sitePages() {
   "use cache";
@@ -51,4 +51,14 @@ export async function siteSettings() {
   cacheLife("hours");
   const [site, fees, program] = await Promise.all([getSetting("site.general"), getSetting("fees.platform"), getSetting("affiliates.program")]);
   return { site, fees, program };
+}
+
+/** Footer columns with their links, plus the footer settings; changes call updateTag(SITE_TAGS.footer). */
+export async function siteFooter() {
+  "use cache";
+  cacheTag(SITE_TAGS.footer);
+  cacheTag(SITE_TAGS.pages);
+  cacheLife("hours");
+  const [columns, settings] = await Promise.all([footerColumns(), getSetting("site.footer")]);
+  return { columns, settings };
 }

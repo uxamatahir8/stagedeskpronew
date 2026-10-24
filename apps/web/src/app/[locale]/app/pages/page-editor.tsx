@@ -1,8 +1,8 @@
 "use client";
 
-import { ArrowDownIcon, ArrowUpIcon, EyeIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, EyeIcon, ImageUpIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import type { Block, PageContent } from "@stagedesk/core";
 import { FormField } from "@/components/form-field";
@@ -17,6 +17,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { MarkdownEditor } from "@/components/content/markdown-editor";
+import { uploadContentImageAction } from "../content/actions";
 import { savePageAction } from "./actions";
 
 export interface PageMetaValues {
@@ -25,11 +27,12 @@ export interface PageMetaValues {
   kind: "standard" | "legal";
   legalKey: "terms" | "privacy" | "cookies" | "dpa" | "imprint" | null;
   acceptance: "none" | "all" | "agencies";
-  placement: "none" | "header" | "footer_product" | "footer_company" | "footer_legal";
+  /** none, header, or footer_<columnId>. */
+  placement: string;
   position: number;
 }
 
-const blockTypes = ["heading", "paragraph", "list", "table", "image", "callout"] as const;
+const blockTypes = ["richtext", "heading", "paragraph", "list", "table", "image", "callout"] as const;
 const emptyBlock = (type: (typeof blockTypes)[number]): Block =>
   type === "heading"
     ? { type, level: 2, text: "" }
@@ -41,12 +44,24 @@ const emptyBlock = (type: (typeof blockTypes)[number]): Block =>
           ? { type, header: ["", ""], rows: [["", ""]] }
           : type === "image"
             ? { type, url: "", alt: "" }
-            : { type, tone: "info", text: "" };
+            : type === "richtext"
+              ? { type, markdown: "" }
+              : { type, tone: "info", text: "" };
 
 /** Lines of a textarea as list items or table cells ("|" separates cells). */
 const lines = (s: string) => s.split("\n");
 
-export function PageEditor({ pageId, initialMeta, initialContent }: { pageId: string | null; initialMeta: PageMetaValues; initialContent: PageContent }) {
+export function PageEditor({
+  pageId,
+  initialMeta,
+  initialContent,
+  footerColumns,
+}: {
+  pageId: string | null;
+  initialMeta: PageMetaValues;
+  initialContent: PageContent;
+  footerColumns: { id: string; title: string }[];
+}) {
   const t = useTranslations("pageBuilder");
   const router = useRouter();
   const [meta, setMeta] = useState(initialMeta);
@@ -107,9 +122,14 @@ export function PageEditor({ pageId, initialMeta, initialContent }: { pageId: st
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {(["none", "header", "footer_product", "footer_company", "footer_legal"] as const).map((p) => (
+                {(["none", "header"] as const).map((p) => (
                   <SelectItem key={p} value={p}>
                     {t(`placement_${p}`)}
+                  </SelectItem>
+                ))}
+                {footerColumns.map((c) => (
+                  <SelectItem key={c.id} value={`footer_${c.id}`}>
+                    {t("placement_footer", { column: c.title })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -259,6 +279,7 @@ function isFilled(b: Block) {
   if (b.type === "list") return b.items.some((i) => i.trim());
   if (b.type === "table") return b.header.some((h) => h.trim());
   if (b.type === "image") return Boolean(b.url.trim());
+  if (b.type === "richtext") return Boolean(b.markdown.trim());
   return Boolean(b.text.trim());
 }
 
@@ -321,11 +342,13 @@ function BlockFields({ block, id, onChange }: { block: Block; id: string; onChan
           </FormField>
         </div>
       );
+    case "richtext":
+      return <MarkdownEditor id={`${id}-md`} value={block.markdown} onChange={(markdown) => onChange({ ...block, markdown })} upload={uploadContentImageAction} />;
     case "image":
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField id={`${id}-url`} label={t("imageUrl")} hint={t("imageUrlHint")}>
-            <Input id={`${id}-url`} value={block.url} onChange={(e) => onChange({ ...block, url: e.target.value })} />
+            <ImageInput id={`${id}-url`} value={block.url} onChange={(url) => onChange({ ...block, url })} />
           </FormField>
           <FormField id={`${id}-alt`} label={t("imageAlt")}>
             <Input id={`${id}-alt`} value={block.alt} maxLength={300} onChange={(e) => onChange({ ...block, alt: e.target.value })} />
@@ -351,4 +374,41 @@ function BlockFields({ block, id, onChange }: { block: Block; id: string; onChan
         </div>
       );
   }
+}
+
+/** An image address, or upload one; shows a small preview. */
+function ImageInput({ id, value, onChange }: { id: string; value: string; onChange: (url: string) => void }) {
+  const t = useTranslations("pageBuilder");
+  const [pending, start] = useTransition();
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <div className="grid gap-2">
+      <div className="flex gap-2">
+        <Input id={id} value={value} placeholder="https:// …" onChange={(e) => onChange(e.target.value)} />
+        <Button type="button" variant="outline" size="icon" aria-label={t("uploadImage")} title={t("uploadImage")} disabled={pending} onClick={() => input.current?.click()}>
+          <ImageUpIcon />
+        </Button>
+        <input
+          ref={input}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            const form = new FormData();
+            form.set("image", file);
+            start(async () => {
+              const r = await uploadContentImageAction(form);
+              if (!r.ok) return void toast.error(r.message);
+              onChange(r.url);
+            });
+          }}
+        />
+      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element -- preview of an uploaded or linked image */}
+      {value && <img src={value} alt="" className="h-24 w-full rounded-md border object-cover" />}
+    </div>
+  );
 }

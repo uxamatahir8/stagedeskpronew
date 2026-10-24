@@ -31,6 +31,10 @@ await seedPages(prisma);
 const { seedContent } = await import("./seed-content");
 await seedContent(prisma);
 
+// The footer columns and links, edited afterwards under Pages → Footer.
+const { seedFooter } = await import("./footer");
+await seedFooter(prisma);
+
 // Demo accounts for every role, never in production.
 if (process.env["NODE_ENV"] !== "production") {
   const { seedDemo, DEMO_PASSWORD } = await import("./seed-demo");

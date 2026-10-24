@@ -2,7 +2,7 @@ import { DownloadIcon, FileTextIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
-import { parsePageContent, prisma } from "@stagedesk/db";
+import { footerColumns, getSetting, parsePageContent, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Pill } from "@/components/status-badge";
@@ -15,6 +15,7 @@ import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { requirePermission } from "@/lib/viewer";
 import { CommentButtons } from "./comment-buttons";
+import { FooterManager } from "./footer-manager";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/pages">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "pageBuilder" });
@@ -30,7 +31,7 @@ export default async function PagesPage({ params, searchParams }: PageProps<"/[l
   );
 }
 
-const tabs = ["pages", "comments", "waitlist"] as const;
+const tabs = ["pages", "footer", "comments", "waitlist"] as const;
 
 async function Pages({ searchParams }: Pick<PageProps<"/[locale]/app/pages">, "searchParams">) {
   await requirePermission("platform.pages");
@@ -41,7 +42,7 @@ async function Pages({ searchParams }: Pick<PageProps<"/[locale]/app/pages">, "s
     prisma.blogComment.count({ where: { status: "pending" } }),
     prisma.waitlistEntry.count(),
   ]);
-  const counts = { pages: null, comments: pendingComments, waitlist: waitlistCount };
+  const counts = { pages: null, footer: null, comments: pendingComments, waitlist: waitlistCount };
 
   return (
     <div className="grid gap-6">
@@ -79,13 +80,13 @@ async function Pages({ searchParams }: Pick<PageProps<"/[locale]/app/pages">, "s
           </Link>
         ))}
       </nav>
-      {tab === "pages" ? <PageList /> : tab === "comments" ? <Comments /> : <Waitlist />}
+      {tab === "pages" ? <PageList /> : tab === "footer" ? <FooterTab /> : tab === "comments" ? <Comments /> : <Waitlist />}
     </div>
   );
 }
 
 async function PageList() {
-  const [t, format, locale, pages] = await Promise.all([
+  const [t, format, locale, pages, columns] = await Promise.all([
     getTranslations("pageBuilder"),
     getFormatter(),
     getLocale(),
@@ -93,7 +94,12 @@ async function PageList() {
       orderBy: [{ placement: "asc" }, { position: "asc" }],
       include: { publishedVersion: { select: { content: true, publishedAt: true, number: true } }, versions: { orderBy: { number: "desc" }, take: 1, select: { number: true, content: true } } },
     }),
+    footerColumns(),
   ]);
+  const columnTitle = (id: string) => {
+    const c = columns.find((x) => x.id === id);
+    return c ? (locale === "en" ? c.titleEn : c.titleNl) : id;
+  };
   if (pages.length === 0) return <EmptyState icon={FileTextIcon} title={t("empty")} />;
   return (
     <Card>
@@ -122,7 +128,7 @@ async function PageList() {
                       /{p.slugNl} · /en/{p.slugEn}
                     </div>
                   </TableCell>
-                  <TableCell>{t(`placement_${p.placement as "none"}`)}</TableCell>
+                  <TableCell>{p.placement.startsWith("footer_") ? t("placement_footer", { column: columnTitle(p.placement.slice(7)) }) : t(`placement_${p.placement as "none"}`)}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       <Pill tone={p.status === "published" ? "success" : "neutral"}>{t(`status_${p.status as "draft"}`)}</Pill>
@@ -206,5 +212,28 @@ async function Waitlist() {
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+/** The footer's columns and links, with the pages placed in each column. */
+async function FooterTab() {
+  const [locale, columns, settings, pages] = await Promise.all([
+    getLocale(),
+    footerColumns(),
+    getSetting("site.footer"),
+    prisma.page.findMany({ where: { placement: { startsWith: "footer_" } }, orderBy: { position: "asc" }, include: { versions: { orderBy: { number: "desc" }, take: 1, select: { content: true } } } }),
+  ]);
+  const title = (p: (typeof pages)[number]) => parsePageContent(p.versions[0]?.content)?.[locale as Locale].title ?? (locale === "en" ? p.slugEn : p.slugNl);
+  return (
+    <FooterManager
+      settings={settings}
+      columns={columns.map((c) => ({
+        id: c.id,
+        titleNl: c.titleNl,
+        titleEn: c.titleEn,
+        links: c.links.map((l) => ({ id: l.id, kind: l.kind === "url" ? "url" : "route", target: l.target, labelNl: l.labelNl, labelEn: l.labelEn, newTab: l.newTab })),
+        pages: pages.filter((p) => p.placement === `footer_${c.id}`).map((p) => ({ id: p.id, title: title(p) })),
+      }))}
+    />
   );
 }

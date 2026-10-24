@@ -13,6 +13,8 @@ export const blockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("table"), header: z.array(text(200)).min(1).max(8), rows: z.array(z.array(text(1000))).max(100) }),
   z.object({ type: z.literal("image"), url: z.string().trim().max(500).refine(isSafeImageUrl, "unsafe url"), alt: text(300), caption: text(300).optional() }),
   z.object({ type: z.literal("callout"), tone: z.enum(["info", "warning"]), text: text(2000).min(1) }),
+  /** Formatted text written in the editor (Markdown, no HTML), with images between paragraphs. */
+  z.object({ type: z.literal("richtext"), markdown: z.string().max(60_000).min(1) }),
 ]);
 export type Block = z.infer<typeof blockSchema>;
 export const blockTypes = ["heading", "paragraph", "list", "table", "image", "callout"] as const;
@@ -27,8 +29,13 @@ export const pageContentSchema = z.object({ nl: pageLocaleSchema, en: pageLocale
 export type PageLocaleContent = z.infer<typeof pageLocaleSchema>;
 export type PageContent = z.infer<typeof pageContentSchema>;
 
-export const pagePlacements = ["none", "header", "footer_product", "footer_company", "footer_legal"] as const;
-export type PagePlacement = (typeof pagePlacements)[number];
+/**
+ * Where a page is linked: nowhere, the header, or a footer column
+ * (`footer_<columnId>`; the starter columns are product, company and legal).
+ */
+export const pagePlacementPattern = /^(none|header|footer_[a-z0-9-]{1,32})$/;
+export type PagePlacement = string;
+export const isPagePlacement = (value: string) => pagePlacementPattern.test(value);
 export const legalKeys = ["terms", "privacy", "cookies", "dpa", "imprint"] as const;
 export type LegalKey = (typeof legalKeys)[number];
 
@@ -89,6 +96,7 @@ export function blocksToLines(content: PageLocaleContent) {
     else if (b.type === "list") b.items.forEach((item, i) => lines.push(`${b.ordered ? `${i + 1}.` : "-"} ${item}`));
     else if (b.type === "table") [b.header, ...b.rows].forEach((row) => lines.push(`| ${row.join(" | ")} |`));
     else if (b.type === "image") lines.push(`[image: ${b.alt || b.url}]`);
+    else if (b.type === "richtext") lines.push(...b.markdown.split("\n"));
     else lines.push(`! ${b.text}`);
   }
   return lines;

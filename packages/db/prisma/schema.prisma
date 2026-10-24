@@ -1388,3 +1388,33 @@ model ExchangeRate {
 
   @@map("exchange_rates")
 }
+
+/// A column of links in the website footer. The starter columns have the ids
+/// product, company and legal; a page placed in `footer_<id>` appears in it too.
+model FooterColumn {
+  id       String       @id @db.VarChar(32)
+  titleNl  String       @db.VarChar(80)
+  titleEn  String       @db.VarChar(80)
+  position Int          @default(0)
+  links    FooterLink[]
+
+  @@map("footer_columns")
+}
+
+/// A link in a footer column: a page of the website (route) or any address (url).
+model FooterLink {
+  id       String       @id @db.VarChar(64)
+  columnId String       @db.VarChar(32)
+  column   FooterColumn @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  /// route | url
+  kind     String       @db.VarChar(8)
+  /// A path like /pricing, or a full https:// address.
+  target   String       @db.VarChar(500)
+  labelNl  String       @db.VarChar(120)
+  labelEn  String       @db.VarChar(120)
+  newTab   Boolean      @default(false)
+  position Int          @default(0)
+
+  @@index([columnId, position])
+  @@map("footer_links")
+}

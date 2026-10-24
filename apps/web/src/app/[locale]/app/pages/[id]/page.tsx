@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import type { PageContent } from "@stagedesk/core";
-import { parsePageContent, prisma } from "@stagedesk/db";
+import { footerColumns, parsePageContent, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
@@ -38,12 +38,13 @@ async function Editor({ params }: Pick<PageProps<"/[locale]/app/pages/[id]">, "p
   const { id, locale } = await params;
   const [t, format] = await Promise.all([getTranslations("pageBuilder"), getFormatter()]);
 
+  const columns = (await footerColumns()).map((c) => ({ id: c.id, title: locale === "en" ? c.titleEn : c.titleNl }));
   if (id === "new") {
     return (
       <div className="grid gap-6">
         <Back label={t("allPages")} />
         <PageHeader title={t("new")} />
-        <PageEditor pageId={null} initialMeta={blankMeta} initialContent={blank} />
+        <PageEditor pageId={null} initialMeta={blankMeta} initialContent={blank} footerColumns={columns} />
       </div>
     );
   }
@@ -79,6 +80,7 @@ async function Editor({ params }: Pick<PageProps<"/[locale]/app/pages/[id]">, "p
       />
       <PageEditor
         key={latest?.id}
+        footerColumns={columns}
         pageId={page.id}
         initialMeta={{
           slugNl: page.slugNl,

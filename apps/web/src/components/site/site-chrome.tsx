@@ -1,3 +1,4 @@
+import { MailIcon, MapPinIcon, PhoneIcon } from "lucide-react";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -7,7 +8,7 @@ import { displayCurrency } from "@/lib/display-currency";
 import { CurrencySwitch } from "./currency-switch";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { sitePages, siteSettings } from "@/lib/site";
+import { siteFooter, sitePages, siteSettings } from "@/lib/site";
 import { LocaleSwitch, MobileNav, type NavEntry, NavLinks } from "./site-nav";
 
 /** The primary call to action: start a trial, or join the waitlist before launch. */
@@ -95,53 +96,41 @@ export function SiteHeader() {
   );
 }
 
+/** The footer's link columns, from the admin panel, with builder pages placed in them. */
 async function FooterColumns() {
   await connection();
-  const [t, locale, pages] = await Promise.all([getTranslations("site"), getLocale(), sitePages()]);
-  const placed = (placement: string) =>
-    pages.filter((p) => p.placement === placement).map((p) => ({ href: `/${locale === "en" ? p.slugEn : p.slugNl}`, label: locale === "en" ? p.titleEn : p.titleNl }));
-  const columns = [
-    {
-      title: t("footer.product"),
+  const [locale, pages, { columns }] = await Promise.all([getLocale(), sitePages(), siteFooter()]);
+  const en = locale === "en";
+  const list = columns
+    .map((c) => ({
+      id: c.id,
+      title: en ? c.titleEn : c.titleNl,
       links: [
-        { href: "/features", label: t("nav.features") },
-        { href: "/tour", label: t("nav.tour") },
-        ...featurePages.map((slug) => ({ href: `/features/${slug}`, label: t(`nav.feature_${slug}`) })),
-        { href: "/pricing", label: t("nav.pricing") },
-        { href: "/changelog", label: t("nav.changelog") },
-        ...placed("footer_product"),
+        ...c.links.map((l) => ({ key: l.id, href: l.target, external: l.kind === "url", newTab: l.newTab, label: en ? l.labelEn : l.labelNl })),
+        ...pages
+          .filter((p) => p.placement === `footer_${c.id}`)
+          .map((p) => ({ key: p.id, href: `/${en ? p.slugEn : p.slugNl}`, external: false, newTab: false, label: en ? p.titleEn : p.titleNl })),
       ],
-    },
-    {
-      title: t("footer.company"),
-      links: [
-        { href: "/about", label: t("nav.about") },
-        { href: "/for-agencies", label: t("nav.forAgencies") },
-        { href: "/solutions/weddings-events", label: t("nav.weddingsEvents") },
-        { href: "/solutions/band-agencies", label: t("nav.bandAgencies") },
-        { href: "/request", label: t("nav.request") },
-        { href: "/for-artists", label: t("nav.forArtists") },
-        ...placed("footer_company"),
-        { href: "/blog", label: t("nav.blog") },
-        { href: "/help", label: t("nav.help") },
-        { href: "/partners", label: t("nav.partners") },
-        { href: "/contact", label: t("nav.contact") },
-      ],
-    },
-    { title: t("footer.legal"), links: placed("footer_legal") },
-  ].filter((c) => c.links.length > 0);
+    }))
+    .filter((c) => c.links.length > 0);
 
   return (
-    <div className="grid gap-8 sm:grid-cols-3">
-      {columns.map((c) => (
-        <div key={c.title} className="grid content-start gap-3">
+    <div className="grid grid-cols-2 gap-x-8 gap-y-10 sm:grid-cols-[repeat(auto-fit,minmax(10rem,1fr))]">
+      {list.map((c) => (
+        <div key={c.id} className="grid content-start gap-3">
           <h2 className="text-sm font-semibold">{c.title}</h2>
           <ul className="grid gap-2 text-sm text-muted-foreground">
             {c.links.map((l) => (
-              <li key={l.href}>
-                <Link href={l.href} className="hover:text-foreground">
-                  {l.label}
-                </Link>
+              <li key={l.key}>
+                {l.external ? (
+                  <a href={l.href} className="hover:text-foreground" {...(l.newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
+                    {l.label}
+                  </a>
+                ) : (
+                  <Link href={l.href} className="hover:text-foreground">
+                    {l.label}
+                  </Link>
+                )}
               </li>
             ))}
           </ul>
@@ -151,22 +140,91 @@ async function FooterColumns() {
   );
 }
 
+const socialNames = { instagram: "Instagram", facebook: "Facebook", linkedin: "LinkedIn", youtube: "YouTube", tiktok: "TikTok", x: "X" } as const;
+
+/** Tagline, contact details and social links from the footer settings. */
+async function FooterBrand() {
+  await connection();
+  const [locale, { settings }] = await Promise.all([getLocale(), siteFooter()]);
+  const en = locale === "en";
+  const socials = (Object.keys(socialNames) as (keyof typeof socialNames)[]).filter((k) => /^https:\/\//.test(settings.socials[k]));
+  return (
+    <>
+      <p className="max-w-xs text-sm text-muted-foreground">{en ? settings.taglineEn : settings.taglineNl}</p>
+      <ul className="grid gap-1.5 text-sm text-muted-foreground">
+        {settings.email && (
+          <li className="flex items-center gap-2">
+            <MailIcon className="size-4 shrink-0" aria-hidden />
+            <a href={`mailto:${settings.email}`} className="hover:text-foreground">
+              {settings.email}
+            </a>
+          </li>
+        )}
+        {settings.phone && (
+          <li className="flex items-center gap-2">
+            <PhoneIcon className="size-4 shrink-0" aria-hidden />
+            <a href={`tel:${settings.phone.replace(/[^+\d]/g, "")}`} className="hover:text-foreground">
+              {settings.phone}
+            </a>
+          </li>
+        )}
+        {settings.address && (
+          <li className="flex items-center gap-2">
+            <MapPinIcon className="size-4 shrink-0" aria-hidden />
+            {settings.address}
+          </li>
+        )}
+      </ul>
+      {socials.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {socials.map((k) => (
+            <li key={k}>
+              <a href={settings.socials[k]} target="_blank" rel="noopener noreferrer" className="inline-flex rounded-full border bg-background px-3 py-1 text-xs font-medium hover:border-primary/50 hover:text-primary">
+                {socialNames[k]}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+/** The bottom line: copyright, company numbers and the footer text. */
+async function FooterBottom() {
+  await connection();
+  const [t, locale, { settings }, { site }] = await Promise.all([getTranslations("site"), getLocale(), siteFooter(), siteSettings()]);
+  const en = locale === "en";
+  const parts = [
+    `© ${new Date().getFullYear()} ${site.siteName}`,
+    settings.kvkNumber ? `${t("footer.kvk")} ${settings.kvkNumber}` : null,
+    settings.vatNumber ? `${t("footer.vat")} ${settings.vatNumber}` : null,
+    (en ? settings.bottomEn : settings.bottomNl) || null,
+  ].filter(Boolean);
+  return <p>{parts.join(" · ")}</p>;
+}
+
 export async function SiteFooter() {
-  const t = await getTranslations("site");
   return (
     <footer className="border-t bg-muted/30">
-      <div className="mx-auto grid w-full max-w-[88rem] gap-10 px-5 py-12 sm:px-8 lg:px-12 md:grid-cols-[1fr_2fr]">
-        <div className="grid content-start gap-3">
+      <div className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-14 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.6fr)] lg:px-12">
+        <div className="grid content-start gap-4">
           <Link href="/" className="w-fit" aria-label="StageDesk Pro">
             <Logo className="h-11" />
           </Link>
-          <p className="max-w-xs text-sm text-muted-foreground">{t("footer.tagline")}</p>
+          <Suspense fallback={<div className="h-24" />}>
+            <FooterBrand />
+          </Suspense>
         </div>
         <Suspense fallback={<div className="h-40" />}>
           <FooterColumns />
         </Suspense>
       </div>
-      <div className="mx-auto w-full max-w-[88rem] border-t px-5 py-6 text-xs text-muted-foreground sm:px-8 lg:px-12">{t("footer.madeIn")}</div>
+      <div className="mx-auto flex w-full max-w-[88rem] flex-wrap items-center justify-between gap-3 border-t px-5 py-6 text-xs text-muted-foreground sm:px-8 lg:px-12">
+        <Suspense fallback={null}>
+          <FooterBottom />
+        </Suspense>
+      </div>
     </footer>
   );
 }

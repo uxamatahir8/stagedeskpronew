@@ -3,8 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { isValidSlug, legalKeys, pageContentSchema, pagePlacements } from "@stagedesk/core";
-import { audit, PageError, prisma, publishPageVersion, restorePageVersion, savePageDraft, unpublishPage } from "@stagedesk/db";
+import { isPagePlacement, isValidSlug, legalKeys, pageContentSchema } from "@stagedesk/core";
+import { audit, PageError, prisma, publishPageVersion, restorePageVersion, savePageDraft, unpublishPage, deleteFooterColumn, deleteFooterLink, FooterError, type FooterLinkInput, moveFooterItem, saveFooterColumn, saveFooterLink, updateSetting } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { SITE_TAGS } from "@/lib/site";
 import { requirePermission } from "@/lib/viewer";
@@ -15,7 +15,7 @@ const metaSchema = z.object({
   kind: z.enum(["standard", "legal"]),
   legalKey: z.enum(legalKeys).nullable(),
   acceptance: z.enum(["none", "all", "agencies"]),
-  placement: z.enum(pagePlacements),
+  placement: z.string().refine(isPagePlacement),
   position: z.int().min(0).max(999),
 });
 
@@ -95,4 +95,73 @@ export async function moderateCommentAction(commentId: string, status: "approved
   revalidatePath("/[locale]/app/pages", "page");
   revalidatePath("/[locale]/blog/[slug]", "page");
   return { ok: true, message: (await getTranslations("pageBuilder"))(status === "approved" ? "commentApproved" : "commentRejected") };
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────
+
+function footerDone() {
+  updateTag(SITE_TAGS.footer);
+  revalidatePath("/[locale]/app/pages", "page");
+}
+
+async function footerResult(task: () => Promise<unknown>, message: string): Promise<ActionResult> {
+  try {
+    await task();
+  } catch (error) {
+    if (error instanceof FooterError) return { ok: false, message: (await getTranslations("footerAdmin"))(`error_${error.code}`) };
+    throw error;
+  }
+  footerDone();
+  return { ok: true, message };
+}
+
+export async function saveFooterColumnAction(id: string | null, input: { titleNl: string; titleEn: string }): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.pages");
+  const t = await getTranslations("footerAdmin");
+  return footerResult(async () => {
+    const column = await saveFooterColumn(id, input);
+    await audit({ actorId: viewer.user.id, action: "footer.column_save", targetType: "footer_column", targetId: column.id });
+  }, t("columnSaved"));
+}
+
+export async function deleteFooterColumnAction(id: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.pages");
+  const t = await getTranslations("footerAdmin");
+  return footerResult(async () => {
+    await deleteFooterColumn(id);
+    await audit({ actorId: viewer.user.id, action: "footer.column_delete", targetType: "footer_column", targetId: id });
+  }, t("columnDeleted"));
+}
+
+export async function saveFooterLinkAction(id: string | null, input: FooterLinkInput): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.pages");
+  const t = await getTranslations("footerAdmin");
+  return footerResult(async () => {
+    const link = await saveFooterLink(id, input);
+    await audit({ actorId: viewer.user.id, action: "footer.link_save", targetType: "footer_link", targetId: link.id, data: { target: link.target } });
+  }, t("linkSaved"));
+}
+
+export async function deleteFooterLinkAction(id: string): Promise<ActionResult> {
+  await requirePermission("platform.pages");
+  const t = await getTranslations("footerAdmin");
+  return footerResult(() => deleteFooterLink(id), t("linkDeleted"));
+}
+
+export async function moveFooterItemAction(kind: "column" | "link", id: string, direction: -1 | 1): Promise<ActionResult> {
+  await requirePermission("platform.pages");
+  return footerResult(() => moveFooterItem(kind, id, direction), "");
+}
+
+/** Tagline, contact details, company numbers and social links. */
+export async function saveFooterSettingsAction(value: unknown): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.pages");
+  const t = await getTranslations("footerAdmin");
+  try {
+    await updateSetting("site.footer", value, viewer.user.id);
+  } catch {
+    return { ok: false, message: t("error_invalid") };
+  }
+  footerDone();
+  return { ok: true, message: t("settingsSaved") };
 }
