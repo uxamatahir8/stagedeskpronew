@@ -36,6 +36,8 @@ function appPath(locale: EmailLocale, path: string) {
   return `${appUrl}${locale === "en" ? "/en" : ""}${path}`;
 }
 
+const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
+
 export const auth = betterAuth({
   appName: "StageDesk",
   baseURL: appUrl,
@@ -112,12 +114,13 @@ export const auth = betterAuth({
     max: 100,
     customRules: {
       // Per IP: high enough for an office of agency staff behind one address.
-      "/sign-in/email": { window: 60, max: 10 },
-      "/sign-up/email": { window: 60, max: 3 },
-      "/email-otp/send-verification-otp": { window: 300, max: 3 },
-      "/sign-in/email-otp": { window: 60, max: 5 },
-      "/request-password-reset": { window: 300, max: 3 },
-      "/two-factor/verify-totp": { window: 60, max: 5 },
+      // In development everything comes from localhost (you, scripts, e2e tests), so 20x.
+      "/sign-in/email": { window: 60, max: devLimit(10) },
+      "/sign-up/email": { window: 60, max: devLimit(3) },
+      "/email-otp/send-verification-otp": { window: 300, max: devLimit(3) },
+      "/sign-in/email-otp": { window: 60, max: devLimit(5) },
+      "/request-password-reset": { window: 300, max: devLimit(3) },
+      "/two-factor/verify-totp": { window: 60, max: devLimit(5) },
     },
   },
 
