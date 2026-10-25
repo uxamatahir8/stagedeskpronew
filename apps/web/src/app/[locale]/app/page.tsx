@@ -6,12 +6,15 @@ import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { requireViewer } from "@/lib/viewer";
+import { AdminAnalytics } from "./admin-analytics";
 import { AdminHome } from "./admin-home";
 import { AffiliateHome } from "./affiliate-home";
+import { AgencyAnalytics } from "./agency-analytics";
 import { AgencyHome } from "./agency-home";
 import { AgencyInsights } from "./agency-insights";
 import { ArtistHome } from "./artist-home";
 import { CustomerHome } from "./customer-home";
+import { AffiliateAnalytics, ArtistAnalytics, CustomerProgress } from "./role-analytics";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app">): Promise<Metadata> {
   const { locale } = await params;
@@ -43,17 +46,48 @@ async function RoleHome() {
       <>
         <AgencyHome db={db} permissions={permissions} currency={organization.currency} />
         <AgencyInsights organizationId={organization.id} db={db} permissions={permissions} currency={organization.currency} />
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <AgencyAnalytics organizationId={organization.id} permissions={permissions} currency={organization.currency} />
+        </Suspense>
       </>
     );
   } else if (role === "platform_admin") {
-    body = <AdminHome />;
+    body = (
+      <>
+        <AdminHome />
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <AdminAnalytics />
+        </Suspense>
+      </>
+    );
   } else if (role === "artist") {
-    body = <ArtistHome userId={user.id} />;
+    body = (
+      <>
+        <ArtistHome userId={user.id} />
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <ArtistAnalytics userId={user.id} />
+        </Suspense>
+      </>
+    );
   } else if (role === "customer" && organization) {
-    body = <CustomerHome db={tenantDb(organization.id)} userId={user.id} agency={organization.name} />;
+    const db = tenantDb(organization.id);
+    body = (
+      <>
+        <CustomerProgress db={db} userId={user.id} />
+        <CustomerHome db={db} userId={user.id} agency={organization.name} />
+      </>
+    );
   } else if (role === "affiliate") {
     const affiliate = await prisma.affiliate.findUnique({ where: { userId: user.id }, select: { id: true } });
-    if (affiliate) body = <AffiliateHome affiliateId={affiliate.id} />;
+    if (affiliate)
+      body = (
+        <>
+          <AffiliateHome affiliateId={affiliate.id} />
+          <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <AffiliateAnalytics affiliateId={affiliate.id} />
+          </Suspense>
+        </>
+      );
   }
 
   return (

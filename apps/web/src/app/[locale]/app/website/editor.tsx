@@ -366,7 +366,7 @@ export function SiteEditor({
         </div>
 
         {/* Settings */}
-        <aside className="grid content-start gap-4">
+        <aside className="grid content-start gap-4 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <Tabs value={tab === "section" && !selectedSection ? "page" : tab} onValueChange={(v) => setTab(v as Tab)}>
             <TabsList className="w-full">
               <TabsTrigger value="section" disabled={!selectedSection} className="flex-1">

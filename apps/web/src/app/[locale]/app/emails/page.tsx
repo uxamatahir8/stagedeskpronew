@@ -62,7 +62,7 @@ async function Emails({ searchParams }: Pick<PageProps<"/[locale]/app/emails">, 
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} actions={<SendTestButton kind={kind} lang={lang} />} />
       <div className="grid gap-6 lg:grid-cols-[17rem_1fr]">
-        <nav className="grid content-start gap-5" aria-label={t("list")}>
+        <nav className="grid content-start gap-5 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1" aria-label={t("list")}>
           {groups.map((g) => (
             <div key={g.key} className="grid gap-1">
               <h2 className="px-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">{t(`group_${g.key}`)}</h2>

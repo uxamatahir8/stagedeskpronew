@@ -113,7 +113,7 @@ async function Texts({ searchParams }: Pick<PageProps<"/[locale]/app/texts">, "s
     <div className="grid gap-6">
       <PageHeader title={t("title")} description={t("description")} />
       <div className="grid gap-8 lg:grid-cols-[16rem_minmax(0,1fr)]">
-        <nav aria-label={t("groups")} className="flex min-w-0 flex-col gap-4">
+        <nav aria-label={t("groups")} className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20 lg:max-h-[calc(100svh-6rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
           <Link
             href="/app/texts?changed=1"
             aria-current={changedOnly ? "page" : undefined}

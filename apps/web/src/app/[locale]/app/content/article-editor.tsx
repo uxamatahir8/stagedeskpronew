@@ -277,7 +277,7 @@ export function ArticleEditor({
         </Card>
       </div>
 
-      <aside className="grid content-start gap-6">
+      <aside className="grid content-start gap-6 xl:sticky xl:top-20 xl:max-h-[calc(100svh-6rem)] xl:self-start xl:overflow-y-auto xl:pr-1">
         <Card>
           <CardHeader>
             <CardTitle>{t("publishing")}</CardTitle>
