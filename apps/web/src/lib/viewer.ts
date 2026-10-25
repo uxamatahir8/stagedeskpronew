@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { connection } from "next/server";
 import { forbidden } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { cache } from "react";
@@ -36,7 +37,14 @@ export interface Viewer {
   support?: { organizationId: string; name: string };
 }
 
-export const getSession = cache(async () => auth.api.getSession({ headers: await headers() }));
+/**
+ * The session is request data: `connection()` says so up front, so Next.js
+ * never tries to prerender past it (Better Auth checks expiry with Date.now()).
+ */
+export const getSession = cache(async () => {
+  await connection();
+  return auth.api.getSession({ headers: await headers() });
+});
 
 /** The signed-in user with their active agency and role, or null when signed out. */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
