@@ -44,6 +44,9 @@ if (process.env["NODE_ENV"] !== "production") {
   for (const org of await prisma.organization.findMany({ where: { subscription: null }, select: { id: true } })) await grantPlan(org.id, "pro");
   const { seedAffiliates } = await import("./seed-affiliates");
   await seedAffiliates(prisma);
+  // Volume: 100–150 of everything, for every list, filter and pager.
+  const { seedBulk } = await import("./seed-bulk");
+  await seedBulk(prisma);
   console.log(`\n  Demo accounts use the password: ${DEMO_PASSWORD}`);
 }
 
