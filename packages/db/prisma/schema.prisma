@@ -1433,3 +1433,74 @@ model UserGuide {
   @@id([userId, stepId])
   @@map("user_guides")
 }
+
+/// Someone on the newsletter list. Double opt-in: pending until the email link
+/// (or a verified sign-up) confirms it. The token signs confirm and unsubscribe links.
+model NewsletterSubscriber {
+  id             String               @id @db.VarChar(64)
+  email          String               @unique @db.VarChar(191)
+  name           String?              @db.VarChar(191)
+  locale         String               @default("nl") @db.VarChar(5)
+  /// pending | subscribed | unsubscribed
+  status         String               @default("pending") @db.VarChar(16)
+  /// footer | signup | profile | admin | waitlist
+  source         String               @default("footer") @db.VarChar(16)
+  userId         String?              @db.VarChar(64)
+  token          String               @unique @db.VarChar(64)
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  deliveries     NewsletterDelivery[]
+
+  @@index([status, locale])
+  @@map("newsletter_subscribers")
+}
+
+/// A newsletter: an intro in both languages plus chosen blog posts, sent to the
+/// confirmed subscribers of the audience, now or at a set time.
+model NewsletterCampaign {
+  id          String               @id @db.VarChar(64)
+  subjectNl   String               @db.VarChar(191)
+  subjectEn   String               @db.VarChar(191)
+  /// Markdown
+  bodyNl      String               @db.Text
+  bodyEn      String               @db.Text
+  /// Blog article ids, in the order shown
+  articleIds  Json
+  /// all | nl | en
+  audience    String               @default("all") @db.VarChar(8)
+  /// draft | scheduled | sending | sent | cancelled
+  status      String               @default("draft") @db.VarChar(16)
+  scheduledAt DateTime?
+  startedAt   DateTime?
+  sentAt      DateTime?
+  recipients  Int                  @default(0)
+  sentCount   Int                  @default(0)
+  failedCount Int                  @default(0)
+  createdById String?              @db.VarChar(64)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  deliveries  NewsletterDelivery[]
+
+  @@index([status, scheduledAt])
+  @@map("newsletter_campaigns")
+}
+
+/// One campaign to one subscriber; the unique key makes sending idempotent.
+model NewsletterDelivery {
+  id           String               @id @db.VarChar(64)
+  campaignId   String               @db.VarChar(64)
+  campaign     NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriberId String               @db.VarChar(64)
+  subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  /// queued | sent | failed
+  status       String               @default("queued") @db.VarChar(16)
+  error        String?              @db.VarChar(500)
+  sentAt       DateTime?
+  createdAt    DateTime             @default(now())
+
+  @@unique([campaignId, subscriberId])
+  @@index([campaignId, status])
+  @@map("newsletter_deliveries")
+}

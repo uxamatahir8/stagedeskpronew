@@ -4,6 +4,7 @@ import { parseEcbRates } from "@stagedesk/core";
 import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, processStoredEvent, runAffiliatePayouts, runDuePayouts } from "@stagedesk/payments";
+import { sendCampaign, sendDueCampaigns } from "./newsletter";
 import { sendReminders } from "./reminders";
 
 const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379", {
@@ -52,6 +53,11 @@ const systemWorker = new Worker(
       }
       case "exchange-rates":
         return updateExchangeRates();
+      case "newsletter-send":
+        // "Send now" from the admin panel.
+        return sendCampaign((job.data as { campaignId: string }).campaignId);
+      case "newsletter-due":
+        return sendDueCampaigns();
       case "retry-stripe-events": {
         // Picks up events whose immediate processing failed or never ran.
         if (!stripe) return { skipped: "Stripe not configured" };
@@ -120,6 +126,7 @@ await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }
 // Every six hours, and once at start so a fresh install has rates straight away.
 await systemQueue.upsertJobScheduler("exchange-rates", { every: 6 * 60 * 60_000 }, { name: "exchange-rates" });
 await systemQueue.add("exchange-rates", {}, { attempts: 3, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: 100 });
+await systemQueue.upsertJobScheduler("newsletter-due", { every: 60_000 }, { name: "newsletter-due" });
 await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 5 * 60_000 }, { name: "retry-stripe-events" });
 console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${(await getStripe()) ? "configured" : "not configured"}.`);
 

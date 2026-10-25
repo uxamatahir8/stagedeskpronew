@@ -36,6 +36,7 @@ import {
   WalletIcon,
   ScrollTextIcon,
   UsersRoundIcon,
+  MailPlusIcon,
 } from "lucide-react";
 import type { Permission } from "@stagedesk/core";
 import type { Messages } from "next-intl";
@@ -76,6 +77,7 @@ export const navigation: NavGroup[] = [
       { key: "pages", href: "/app/pages", icon: FileTextIcon, permission: "platform.pages" },
       { key: "content", href: "/app/content", icon: NewspaperIcon, permission: "platform.pages" },
       { key: "texts", href: "/app/texts", icon: TypeIcon, permission: "platform.pages" },
+      { key: "newsletter", href: "/app/newsletter", icon: MailPlusIcon, permission: "platform.newsletter" },
       { key: "emails", href: "/app/emails", icon: MailIcon, permission: "platform.settings" },
       { key: "users", href: "/app/users", icon: UsersRoundIcon, permission: "platform.users" },
       { key: "audit", href: "/app/audit", icon: ScrollTextIcon, permission: "platform.audit" },

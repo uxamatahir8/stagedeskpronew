@@ -7,7 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { passwordProblem, passwordRules, withinLimit } from "@stagedesk/core";
-import { agencyBilling, agencyDeskUserIds, agencyUsage, getSetting, notify, prisma } from "@stagedesk/db";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmPendingForEmail, getSetting, notify, prisma } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
@@ -89,6 +89,10 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24,
     sendVerificationEmail: async ({ user, url }) => {
       deliver({ kind: "verifyEmail", to: user.email, params: { locale: localeOf(user), name: user.name, url } });
+    },
+    // A newsletter box ticked at sign-up is confirmed by verifying the address.
+    afterEmailVerification: async (user) => {
+      await confirmPendingForEmail(user.email, user.id);
     },
   },
 

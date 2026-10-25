@@ -27,9 +27,11 @@ import {
   TicketReply,
   VerifyEmail,
 } from "./templates";
+import { Newsletter, type NewsletterArticle, NewsletterConfirm, newsletterCopy } from "./newsletter";
 
 export type { EmailLocale } from "./copy";
 export { emailSamples } from "./samples";
+export type { NewsletterArticle } from "./newsletter";
 
 export interface RenderedEmail {
   subject: string;
@@ -52,7 +54,7 @@ function getTransporter() {
   return transporter;
 }
 
-async function send(to: string, subject: string, element: ReactElement, replyTo?: string) {
+async function send(to: string, subject: string, element: ReactElement, replyTo?: string, headers?: Record<string, string>) {
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   const capture = previewing.getStore();
   if (capture) return capture({ subject, html, text });
@@ -61,6 +63,7 @@ async function send(to: string, subject: string, element: ReactElement, replyTo?
     to,
     subject,
     ...(replyTo ? { replyTo } : {}),
+    ...(headers ? { headers } : {}),
     html,
     text,
   });
@@ -166,6 +169,21 @@ export function sendPaymentReported(to: string, p: { locale: EmailLocale; custom
   return send(to, copy[p.locale].paymentReported.subject(p.customer, p.amount), createElement(PaymentReported, p));
 }
 
+export function sendNewsletterConfirm(to: string, p: { locale: EmailLocale; name: string | null; url: string }) {
+  return send(to, newsletterCopy[p.locale].confirmSubject, createElement(NewsletterConfirm, p));
+}
+
+/**
+ * One newsletter to one subscriber. The List-Unsubscribe headers give mail apps
+ * their own one-click unsubscribe button (RFC 8058).
+ */
+export function sendNewsletter(to: string, p: { locale: EmailLocale; subject: string; body: string; articles: NewsletterArticle[]; unsubscribeUrl: string }) {
+  return send(to, p.subject, createElement(Newsletter, p), undefined, {
+    "List-Unsubscribe": `<${p.unsubscribeUrl}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  });
+}
+
 /**
  * Every email the app sends, by name. Web and worker describe an email as a
  * job ({ kind, to, params }); the worker's email queue sends it with retries.
@@ -193,6 +211,8 @@ const senders = {
   paymentReceipt: sendPaymentReceipt,
   paymentNotReceived: sendPaymentNotReceived,
   paymentReported: sendPaymentReported,
+  newsletterConfirm: sendNewsletterConfirm,
+  newsletter: sendNewsletter,
 } as const;
 
 export type EmailKind = keyof typeof senders;

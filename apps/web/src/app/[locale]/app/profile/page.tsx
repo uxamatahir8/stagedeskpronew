@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { prisma } from "@stagedesk/db";
+import { newsletterStatusForEmail, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { requireViewer } from "@/lib/viewer";
+import { NewsletterCard } from "./newsletter-card";
 import { DetailsForm, PasswordForm, TwoFactorCard } from "./profile-forms";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/profile">): Promise<Metadata> {
@@ -29,6 +30,7 @@ async function Profile() {
     where: { id: viewer.user.id },
     select: { name: true, email: true, phone: true, locale: true, twoFactorEnabled: true },
   });
+  const newsletter = await newsletterStatusForEmail(user.email);
 
   return (
     <div className="grid max-w-3xl gap-8">
@@ -36,6 +38,7 @@ async function Profile() {
       <DetailsForm values={{ name: user.name, email: user.email, phone: user.phone ?? "", locale: user.locale === "en" ? "en" : "nl" }} />
       <PasswordForm />
       <TwoFactorCard enabled={Boolean(user.twoFactorEnabled)} />
+      <NewsletterCard subscribed={newsletter === "subscribed"} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ const kinds: Record<string, Permission> = {
   waitlist: "platform.pages",
   withdrawals: "platform.affiliates",
   commissions: "platform.affiliates",
+  newsletter: "platform.newsletter",
 };
 
 /** RFC 4180 field: quoted when needed; a leading =, +, - or @ is defused so spreadsheets don't run it as a formula. */
@@ -42,6 +43,11 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
     // Platform-level list, not agency data.
     const entries = await prisma.waitlistEntry.findMany({ orderBy: { createdAt: "asc" } });
     return csvResponse(kind, [["email", "name", "role", "company", "language", "source", "joined"], ...entries.map((e) => [e.email, e.name, e.role, e.company, e.locale, e.source, e.createdAt])]);
+  }
+
+  if (kind === "newsletter") {
+    const subscribers = await prisma.newsletterSubscriber.findMany({ orderBy: { createdAt: "asc" } });
+    return csvResponse(kind, [["email", "name", "status", "language", "source", "subscribed_at", "confirmed_at", "unsubscribed_at"], ...subscribers.map((s) => [s.email, s.name, s.status, s.locale, s.source, s.createdAt, s.confirmedAt, s.unsubscribedAt])]);
   }
 
   if (kind === "withdrawals") {

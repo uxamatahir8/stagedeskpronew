@@ -65,5 +65,22 @@ export function emailSamples(locale: EmailLocale, appUrl: string): { [K in Email
       url: url("/app/my-payments"),
     },
     paymentReported: { locale, customer: "Sanne de Vries", amount: "€ 324,89", method: nl ? "bankoverschrijving" : "bank transfer", code: "K7Q2M9XA", url: url("/app/bookings/K7Q2M9XA") },
+    newsletterConfirm: { locale, name: "Sanne", url: url("/newsletter/confirm?token=voorbeeld") },
+    newsletter: {
+      locale,
+      subject: nl ? "Nieuw bij StageDesk: oktober" : "New at StageDesk: October",
+      body: nl
+        ? "Hoi! Dit is wat er deze maand nieuw is.\n\n- Zoeken en filteren in elke lijst\n- Proefperiode per abonnement"
+        : "Hi! Here is what's new this month.\n\n- Search and filters on every list\n- Trial per plan",
+      articles: [
+        {
+          title: nl ? "Aanbetaling vragen zonder gedoe" : "Taking deposits without the hassle",
+          excerpt: nl ? "Waarom een aanbetaling je planning beschermt." : "Why a deposit protects your schedule.",
+          url: url("/blog/aanbetaling-en-uitbetaling"),
+          cover: "/content/covers/aanbetaling-en-uitbetaling.webp",
+        },
+      ],
+      unsubscribeUrl: url("/newsletter/unsubscribe?token=voorbeeld"),
+    },
   };
 }

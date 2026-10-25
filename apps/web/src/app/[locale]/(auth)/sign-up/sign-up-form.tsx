@@ -11,6 +11,7 @@ import { PasswordInput } from "@/components/password-input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
+import { signupNewsletterAction } from "@/lib/newsletter-actions";
 import { localePath, safeNext } from "@/lib/paths";
 import { passwordProblem } from "@stagedesk/core";
 
@@ -44,6 +45,8 @@ export function SignUpForm() {
     });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
+    // Confirmed when the address is verified; no extra email.
+    if (form.get("newsletter") === "on") await signupNewsletterAction(email, String(form.get("name")));
     setSentTo(email);
   }
 
@@ -84,6 +87,10 @@ export function SignUpForm() {
         <Label htmlFor="signup-confirm">{t("password.confirm")}</Label>
         <PasswordInput id="signup-confirm" name="confirm" autoComplete="new-password" required matches="signup-password" />
       </div>
+      <label htmlFor="signup-newsletter" className="flex items-start gap-2.5 text-sm text-muted-foreground">
+        <input id="signup-newsletter" name="newsletter" type="checkbox" className="mt-0.5 size-4 shrink-0 accent-primary" />
+        {t("newsletter.signupOptIn")}
+      </label>
       <FormMessage>{error}</FormMessage>
       <Button type="submit" disabled={pending}>
         {t("auth.signUp.submit")}

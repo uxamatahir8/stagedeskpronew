@@ -12,6 +12,7 @@ import { SiteAccountMenu } from "./site-account-menu";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { siteFooter, sitePages, siteSettings } from "@/lib/site";
+import { NewsletterForm } from "./newsletter-form";
 import { LocaleSwitch, MobileNav, type NavEntry, NavLinks } from "./site-nav";
 
 /** The primary call to action: start a trial, or join the waitlist before launch. */
@@ -222,6 +223,16 @@ async function FooterBrand() {
   );
 }
 
+async function NewsletterIntro() {
+  const t = await getTranslations("newsletter");
+  return (
+    <div className="grid gap-1">
+      <p className="text-lg font-semibold">{t("footerTitle")}</p>
+      <p className="text-sm text-muted-foreground">{t("footerBody")}</p>
+    </div>
+  );
+}
+
 /** The bottom line: copyright, company numbers and the footer text. */
 async function FooterBottom() {
   await connection();
@@ -239,6 +250,15 @@ async function FooterBottom() {
 export async function SiteFooter() {
   return (
     <footer className="border-t bg-muted/30">
+      {/* Newsletter sign-up, above the link columns. */}
+      <div className="border-b">
+        <div className="mx-auto grid w-full max-w-[88rem] gap-4 px-5 py-8 sm:px-8 md:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] md:items-center lg:px-12">
+          <Suspense fallback={<div className="h-12" />}>
+            <NewsletterIntro />
+          </Suspense>
+          <NewsletterForm />
+        </div>
+      </div>
       <div className="mx-auto grid w-full max-w-[88rem] gap-12 px-5 py-14 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2.6fr)] lg:px-12">
         <div className="grid content-start gap-4">
           <Link href="/" className="w-fit" aria-label="StageDesk Pro">

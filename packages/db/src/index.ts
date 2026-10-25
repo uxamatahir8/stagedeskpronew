@@ -25,3 +25,4 @@ export * from "./guides";
 export * from "./bookings";
 export * from "./inquiries";
 export * from "./generated/prisma/client";
+export * from "./newsletter";
