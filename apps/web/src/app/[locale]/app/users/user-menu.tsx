@@ -155,6 +155,7 @@ function EditUserDialog({ user, onClose }: { user: UserValues; onClose: () => vo
 /** Adds a platform admin; an existing account keeps its other roles. */
 export function CreateAdminDialog() {
   const t = useTranslations("users");
+  const tl = useTranslations("languages");
   const { pending, run } = useRun();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ name: "", email: "", locale: "en" as "nl" | "en" });
@@ -184,8 +185,8 @@ export function CreateAdminDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nl">Nederlands</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="nl">{tl("nl")}</SelectItem>
+                <SelectItem value="en">{tl("en")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>

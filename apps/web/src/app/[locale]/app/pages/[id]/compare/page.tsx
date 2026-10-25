@@ -40,6 +40,7 @@ async function Compare({ params, searchParams }: Pick<PageProps<"/[locale]/app/p
   const b = parsePageContent(to?.content);
   if (!from || !to || !a || !b) notFound();
   const t = await getTranslations("pageBuilder");
+  const tl = await getTranslations("languages");
 
   return (
     <div className="grid gap-6">
@@ -56,7 +57,7 @@ async function Compare({ params, searchParams }: Pick<PageProps<"/[locale]/app/p
         return (
           <Card key={lang}>
             <CardHeader>
-              <CardTitle>{lang === "nl" ? "Nederlands" : "English"}</CardTitle>
+              <CardTitle>{tl(lang === "nl" ? "nl" : "en")}</CardTitle>
             </CardHeader>
             <CardContent>
               {!changed ? (

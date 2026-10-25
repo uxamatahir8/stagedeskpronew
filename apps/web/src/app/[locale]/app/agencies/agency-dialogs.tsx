@@ -16,6 +16,7 @@ import { createAgencyAction } from "./actions";
 /** New agency for an owner: their account is created if needed and the trial starts. */
 export function CreateAgencyDialog() {
   const t = useTranslations("agencyAdmin");
+  const tl = useTranslations("languages");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ name: "", city: "", ownerName: "", ownerEmail: "", locale: "en" as "nl" | "en", sendEmail: true });
@@ -57,8 +58,8 @@ export function CreateAgencyDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nl">Nederlands</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="nl">{tl("nl")}</SelectItem>
+                <SelectItem value="en">{tl("en")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>

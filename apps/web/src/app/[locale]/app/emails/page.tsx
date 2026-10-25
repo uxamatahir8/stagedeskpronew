@@ -50,6 +50,7 @@ async function Emails({ searchParams }: Pick<PageProps<"/[locale]/app/emails">, 
   const view = one(sp["view"]) === "text" ? "text" : "html";
   const mobile = one(sp["width"]) === "mobile";
   const t = await getTranslations("emailPreviews");
+  const tl = await getTranslations("languages");
 
   const params = emailSamples(lang, appUrl)[kind];
   const email = await previewEmailJob({ kind, to: "preview@stagedesk.local", params } as EmailJob);
@@ -94,8 +95,8 @@ async function Emails({ searchParams }: Pick<PageProps<"/[locale]/app/emails">, 
               <FilterChips
                 label={t("language")}
                 options={[
-                  { key: "nl", label: "Nederlands", href: href({ lang: "nl" }), active: lang === "nl" },
-                  { key: "en", label: "English", href: href({ lang: "en" }), active: lang === "en" },
+                  { key: "nl", label: tl("nl"), href: href({ lang: "nl" }), active: lang === "nl" },
+                  { key: "en", label: tl("en"), href: href({ lang: "en" }), active: lang === "en" },
                 ]}
               />
               <FilterChips

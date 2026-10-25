@@ -1959,7 +1959,7 @@
     "pay": "Pay"
   },
   "site": {
-    "switchLanguage": "Nederlands",
+    "switchLanguage": "Dutch",
     "openMenu": "Open menu",
     "joinWaitlist": "Join the waitlist",
     "startTrial": "Get started",
@@ -4635,5 +4635,9 @@
     "clickToSignup": "Click → sign-up",
     "signupToPaying": "Sign-up → paying",
     "commissionsYear": "Commission, last 12 months"
+  },
+  "languages": {
+    "nl": "Dutch",
+    "en": "English"
   }
 }

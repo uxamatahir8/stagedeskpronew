@@ -46,6 +46,7 @@ export function CampaignEditor({
   testEmail: string;
 }) {
   const t = useTranslations("newsletter");
+  const tl = useTranslations("languages");
   const format = useFormatter();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -296,8 +297,8 @@ export function CampaignEditor({
               {t("preview")}
             </CardTitle>
             <select aria-label={t("previewLocale")} className={selectClass} value={previewLocale} onChange={(e) => setPreviewLocale(e.target.value as "nl")}>
-              <option value="nl">Nederlands</option>
-              <option value="en">English</option>
+              <option value="nl">{tl("nl")}</option>
+              <option value="en">{tl("en")}</option>
             </select>
           </CardHeader>
           <CardContent>

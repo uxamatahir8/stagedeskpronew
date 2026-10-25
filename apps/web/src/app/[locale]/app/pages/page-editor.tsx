@@ -63,6 +63,7 @@ export function PageEditor({
   footerColumns: { id: string; title: string }[];
 }) {
   const t = useTranslations("pageBuilder");
+  const tl = useTranslations("languages");
   const router = useRouter();
   const [meta, setMeta] = useState(initialMeta);
   const [content, setContent] = useState(initialContent);
@@ -183,8 +184,8 @@ export function PageEditor({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs value={locale} onValueChange={(v) => setLocale(v as "nl" | "en")}>
             <TabsList>
-              <TabsTrigger value="nl">Nederlands</TabsTrigger>
-              <TabsTrigger value="en">English</TabsTrigger>
+              <TabsTrigger value="nl">{tl("nl")}</TabsTrigger>
+              <TabsTrigger value="en">{tl("en")}</TabsTrigger>
             </TabsList>
           </Tabs>
           <Button variant="outline" size="sm" onClick={() => setPreview((p) => !p)} aria-pressed={preview}>

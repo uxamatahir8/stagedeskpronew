@@ -145,6 +145,7 @@ async function Subscribers({ raw }: { raw: Record<string, string | string[] | un
     getFormatter(),
     listSubscribers({ q: query.q, status: query.filters.status, locale: query.filters.locale, source: query.filters.source, sort: query.sort, dir: query.dir, ...win0 }),
   ]);
+  const tl = await getTranslations("languages");
   const day = (d: Date | null) => (d ? format.dateTime(d, { day: "numeric", month: "short", year: "numeric" }) : "—");
   return (
     <div className="grid gap-3">
@@ -163,7 +164,7 @@ async function Subscribers({ raw }: { raw: Record<string, string | string[] | un
         placeholder={t("searchSubscribers")}
         filters={[
           { key: "status", label: t("status"), options: subscriberStatuses.map((s) => ({ value: s, label: t(`subStatus_${s}`) })) },
-          { key: "locale", label: t("language"), options: [{ value: "nl", label: "Nederlands" }, { value: "en", label: "English" }] },
+          { key: "locale", label: t("language"), options: [{ value: "nl", label: tl("nl") }, { value: "en", label: tl("en") }] },
           { key: "source", label: t("source"), options: subscriberSources.map((s) => ({ value: s, label: t(`source_${s}`) })) },
         ]}
         columns={[

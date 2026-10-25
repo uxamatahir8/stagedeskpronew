@@ -102,7 +102,7 @@ async function Lead({ params }: Pick<PageProps<"/[locale]/app/leads/[id]">, "par
                 {lead.email}
               </a>
               {lead.phone && <span>{lead.phone}</span>}
-              <span className="text-muted-foreground">{lead.locale === "en" ? "English" : "Nederlands"}</span>
+              <span className="text-muted-foreground">{(await getTranslations("languages"))(lead.locale === "en" ? "en" : "nl")}</span>
             </CardContent>
           </Card>
           <LeadNotes leadId={lead.id} notes={lead.adminNotes ?? ""} />

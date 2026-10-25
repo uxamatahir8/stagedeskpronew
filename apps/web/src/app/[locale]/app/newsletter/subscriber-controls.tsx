@@ -14,6 +14,7 @@ import { addSubscriberAction, deleteSubscriberAction, unsubscribeSubscriberActio
 
 export function AddSubscriberDialog() {
   const t = useTranslations("newsletter");
+  const tl = useTranslations("languages");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
@@ -52,8 +53,8 @@ export function AddSubscriberDialog() {
           </FormField>
           <FormField id="ns-locale" label={t("language")}>
             <select id="ns-locale" name="locale" required defaultValue="nl" className="h-9 rounded-md border bg-background px-2.5 text-sm">
-              <option value="nl">Nederlands</option>
-              <option value="en">English</option>
+              <option value="nl">{tl("nl")}</option>
+              <option value="en">{tl("en")}</option>
             </select>
           </FormField>
           <DialogFooter>

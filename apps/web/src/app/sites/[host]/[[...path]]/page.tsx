@@ -56,7 +56,7 @@ async function Site({ params }: Props) {
     .filter((p) => p.inNav)
     .map((p) => ({ href: siteHref(lang, p.slug), label: (p.content[lang] ?? p.content.nl).title, current: p.slug === page.slug }));
   const otherLang = lang === "nl" ? "en" : "nl";
-  const langSwitch = site.englishEnabled && page.content.en ? { href: siteHref(otherLang, page.slug), label: otherLang === "en" ? "English" : "Nederlands" } : null;
+  const langSwitch = site.englishEnabled && page.content.en ? { href: siteHref(otherLang, page.slug), label: otherLang === "en" ? (lang === "nl" ? "Engels" : "English") : lang === "en" ? "Dutch" : "Nederlands" } : null;
 
   return (
     <NextIntlClientProvider locale={lang} messages={messages} timeZone="Europe/Amsterdam">

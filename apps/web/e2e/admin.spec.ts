@@ -95,7 +95,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await page.goto("/nl/app/emails");
     await page.getByRole("link", { name: /Offerte verstuurd/ }).click();
     await expect(page.getByText("Je offerte van Feestband Utrecht")).toBeVisible();
-    await page.getByRole("link", { name: "English" }).click();
+    await page.getByRole("link", { name: "Engels" }).click();
     await expect(page.getByText("Your quote from Feestband Utrecht")).toBeVisible();
     await expect(page.frameLocator("iframe").getByText("Feestband Utrecht").first()).toBeVisible();
     await page.getByRole("button", { name: "Test naar mij sturen" }).click();

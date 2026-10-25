@@ -162,6 +162,7 @@ export function AffiliateMenu({ affiliateId, name, status, canPay, values }: { a
 /** Adds a partner directly, approved straight away (no application needed). */
 export function CreatePartnerDialog() {
   const t = useTranslations("affiliatesAdmin");
+  const tl = useTranslations("languages");
   const [open, setOpen] = useState(false);
   const [v, setV] = useState({ name: "", email: "", code: "", website: "", ratePercent: "", locale: "en" as "nl" | "en", sendEmail: true });
   const [pending, run] = useRun();
@@ -195,8 +196,8 @@ export function CreatePartnerDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nl">Nederlands</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="nl">{tl("nl")}</SelectItem>
+                <SelectItem value="en">{tl("en")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>

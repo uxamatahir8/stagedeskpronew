@@ -20,6 +20,7 @@ import { passwordProblem } from "@stagedesk/core";
 
 export function DetailsForm({ values }: { values: { name: string; email: string; phone: string; locale: "nl" | "en" } }) {
   const t = useTranslations();
+  const tl = useTranslations("languages");
   const router = useRouter();
   const pathname = usePathname();
   const [locale, setLocale] = useState(values.locale);
@@ -62,8 +63,8 @@ export function DetailsForm({ values }: { values: { name: string; email: string;
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nl">Nederlands</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="nl">{tl("nl")}</SelectItem>
+                <SelectItem value="en">{tl("en")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>

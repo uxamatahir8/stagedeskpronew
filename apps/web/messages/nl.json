@@ -4635,5 +4635,9 @@
     "clickToSignup": "Klik → aanmelding",
     "signupToPaying": "Aanmelding → betalend",
     "commissionsYear": "Commissie, laatste 12 maanden"
+  },
+  "languages": {
+    "nl": "Nederlands",
+    "en": "Engels"
   }
 }

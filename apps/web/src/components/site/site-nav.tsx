@@ -136,14 +136,13 @@ export function NavLinks({ entries }: { entries: NavEntry[] }) {
 }
 
 /** Switches language on the same page. Builder pages redirect to their slug in the other language. */
-const languages = [
-  { code: "nl", label: "Nederlands" },
-  { code: "en", label: "English" },
-] as const;
+const languageCodes = ["nl", "en"] as const;
 
 /** Shows the language the page is in; the menu switches to the other one on the same page. */
 export function LocaleSwitch() {
   const t = useTranslations("site");
+  const tl = useTranslations("languages");
+  const languages = languageCodes.map((code) => ({ code, label: tl(code) }));
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();

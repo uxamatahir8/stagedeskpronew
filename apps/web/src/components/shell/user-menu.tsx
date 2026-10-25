@@ -24,7 +24,6 @@ import { routing } from "@/i18n/routing";
 import { authClient } from "@/lib/auth-client";
 import type { ShellViewer } from "./app-sidebar";
 
-const languageNames = { nl: "Nederlands", en: "English" } as const;
 
 export function initials(name: string) {
   return name
@@ -124,7 +123,7 @@ export function UserMenu({ viewer }: { viewer: ShellViewer }) {
                 <DropdownMenuRadioGroup value={locale} onValueChange={changeLocale}>
                   {routing.locales.map((code) => (
                     <DropdownMenuRadioItem key={code} value={code}>
-                      {languageNames[code]}
+                      {t(`languages.${code}`)}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>

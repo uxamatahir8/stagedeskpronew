@@ -40,6 +40,7 @@ export function TextRow({ row }: { row: TextRowData }) {
 
 function Field({ textKey, locale, file, override }: { textKey: string; locale: "nl" | "en"; file: string; override: string | null }) {
   const t = useTranslations("siteTexts");
+  const tl = useTranslations("languages");
   const saved = override ?? file;
   const [value, setValue] = useState(saved);
   const [pending, start] = useTransition();
@@ -54,7 +55,7 @@ function Field({ textKey, locale, file, override }: { textKey: string; locale: "
     <div className="grid content-start gap-1.5">
       <div className="flex min-h-7 items-center justify-between gap-2">
         <label htmlFor={id} className="text-xs font-medium text-muted-foreground uppercase">
-          {locale === "nl" ? "Nederlands" : "English"}
+          {tl(locale === "nl" ? "nl" : "en")}
           {override !== null && <span className="ml-2 rounded bg-primary/12 px-1.5 py-0.5 text-[11px] text-primary normal-case">{t("changed")}</span>}
         </label>
         {override !== null && !dirty && (

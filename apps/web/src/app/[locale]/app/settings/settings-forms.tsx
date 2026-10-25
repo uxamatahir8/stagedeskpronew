@@ -50,6 +50,7 @@ export function SettingsForms({
   plans: { key: string; name: string }[];
 }) {
   const t = useTranslations("platformSettings");
+  const tl = useTranslations("languages");
   const locale = useLocale();
   const [pending, save] = useSave();
 
@@ -190,8 +191,8 @@ export function SettingsForms({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nl">Nederlands</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="nl">{tl("nl")}</SelectItem>
+                <SelectItem value="en">{tl("en")}</SelectItem>
               </SelectContent>
             </Select>
           </FormField>
