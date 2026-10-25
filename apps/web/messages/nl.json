@@ -1157,7 +1157,9 @@
     "errors_nothing_due": "Er hoeft niets meer betaald te worden.",
     "errors_plan_not_synced": "Dit abonnement is nog niet online af te sluiten.",
     "errors_no_customer": "Er is nog geen betaalaccount.",
-    "searchPlaceholder": "Zoek op klant, code of kenmerk"
+    "searchPlaceholder": "Zoek op klant, code of kenmerk",
+    "errors_connect_not_enabled": "Online betalen via Stripe is nog niet ingeschakeld voor het platform. De platformbeheerder moet Stripe Connect aanzetten in het Stripe-dashboard (dashboard.stripe.com/connect).",
+    "errors_stripe_keys": "De Stripe-sleutels van het platform kloppen niet. De platformbeheerder kan ze controleren onder Betaalinstellingen."
   },
   "pay": {
     "payDeposit": "Aanbetaling betalen: {amount}",

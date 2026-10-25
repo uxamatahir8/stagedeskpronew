@@ -1157,7 +1157,9 @@
     "errors_nothing_due": "Nothing left to pay.",
     "errors_plan_not_synced": "This plan isn't available online yet.",
     "errors_no_customer": "There's no payment account yet.",
-    "searchPlaceholder": "Search by customer, code or reference"
+    "searchPlaceholder": "Search by customer, code or reference",
+    "errors_connect_not_enabled": "Online payments through Stripe aren’t switched on for the platform yet. The platform admin needs to enable Stripe Connect in the Stripe dashboard (dashboard.stripe.com/connect).",
+    "errors_stripe_keys": "The platform’s Stripe keys aren’t valid. The platform admin can check them under Payment setup."
   },
   "pay": {
     "payDeposit": "Pay deposit {amount}",
