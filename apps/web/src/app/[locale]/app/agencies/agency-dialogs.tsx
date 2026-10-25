@@ -45,8 +45,8 @@ export function CreateAgencyDialog() {
           <DialogDescription>{t("newHint")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="na-name" label={t("agencyName")} className="sm:col-span-2">
-            <Input id="na-name" value={v.name} maxLength={191} onChange={(e) => setV({ ...v, name: e.target.value })} />
+          <FormField required id="na-name" label={t("agencyName")} className="sm:col-span-2">
+            <Input required id="na-name" value={v.name} maxLength={191} onChange={(e) => setV({ ...v, name: e.target.value })} />
           </FormField>
           <FormField id="na-city" label={t("city")}>
             <Input id="na-city" value={v.city} maxLength={96} onChange={(e) => setV({ ...v, city: e.target.value })} />
@@ -62,11 +62,11 @@ export function CreateAgencyDialog() {
               </SelectContent>
             </Select>
           </FormField>
-          <FormField id="na-owner" label={t("ownerName")}>
-            <Input id="na-owner" value={v.ownerName} maxLength={191} autoComplete="off" onChange={(e) => setV({ ...v, ownerName: e.target.value })} />
+          <FormField required id="na-owner" label={t("ownerName")}>
+            <Input required id="na-owner" value={v.ownerName} maxLength={191} autoComplete="off" onChange={(e) => setV({ ...v, ownerName: e.target.value })} />
           </FormField>
-          <FormField id="na-email" label={t("ownerEmail")} hint={t("ownerEmailHint")}>
-            <Input id="na-email" type="email" value={v.ownerEmail} autoComplete="off" onChange={(e) => setV({ ...v, ownerEmail: e.target.value })} />
+          <FormField required id="na-email" label={t("ownerEmail")} hint={t("ownerEmailHint")}>
+            <Input required id="na-email" type="email" value={v.ownerEmail} autoComplete="off" onChange={(e) => setV({ ...v, ownerEmail: e.target.value })} />
           </FormField>
           <div className="flex items-center justify-between gap-3 sm:col-span-2">
             <label htmlFor="na-send" className="text-sm">

@@ -12,6 +12,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
 import { localePath, safeNext } from "@/lib/paths";
+import { PasswordInput } from "@/components/password-input";
 
 export function SignInForm() {
   const t = useTranslations();
@@ -101,7 +102,7 @@ export function SignInForm() {
                 {t("auth.signIn.forgot")}
               </Link>
             </div>
-            <Input id="signin-password" name="password" type="password" autoComplete="current-password" required />
+            <PasswordInput id="signin-password" name="password" autoComplete="current-password" required />
           </div>
           <FormMessage>{error}</FormMessage>
           <FormMessage tone="success">{notice}</FormMessage>

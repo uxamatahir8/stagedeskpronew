@@ -110,11 +110,11 @@ export function PageEditor({
           <CardTitle>{t("settings")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <FormField id="pg-slug-nl" label={t("slugNl")}>
-            <Input id="pg-slug-nl" value={meta.slugNl} onChange={(e) => setMeta({ ...meta, slugNl: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} />
+          <FormField required id="pg-slug-nl" label={t("slugNl")}>
+            <Input required id="pg-slug-nl" value={meta.slugNl} onChange={(e) => setMeta({ ...meta, slugNl: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} />
           </FormField>
-          <FormField id="pg-slug-en" label={t("slugEn")}>
-            <Input id="pg-slug-en" value={meta.slugEn} onChange={(e) => setMeta({ ...meta, slugEn: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} />
+          <FormField required id="pg-slug-en" label={t("slugEn")}>
+            <Input required id="pg-slug-en" value={meta.slugEn} onChange={(e) => setMeta({ ...meta, slugEn: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} />
           </FormField>
           <FormField id="pg-placement" label={t("placement")}>
             <Select value={meta.placement} onValueChange={(v) => setMeta({ ...meta, placement: v as PageMetaValues["placement"] })}>
@@ -204,8 +204,8 @@ export function PageEditor({
           <>
             <Card>
               <CardContent className="grid gap-4">
-                <FormField id={`pg-title-${locale}`} label={t("pageTitle")}>
-                  <Input id={`pg-title-${locale}`} value={current.title} maxLength={160} onChange={(e) => setLocaleContent({ title: e.target.value })} />
+                <FormField required id={`pg-title-${locale}`} label={t("pageTitle")}>
+                  <Input required id={`pg-title-${locale}`} value={current.title} maxLength={160} onChange={(e) => setLocaleContent({ title: e.target.value })} />
                 </FormField>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField id={`pg-seo-title-${locale}`} label={t("seoTitle")} hint={t("chars", { count: current.seoTitle.length, max: 70 })}>

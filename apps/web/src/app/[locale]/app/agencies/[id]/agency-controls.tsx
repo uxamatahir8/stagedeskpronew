@@ -173,8 +173,8 @@ export function DeleteAgencyButton({ organizationId, name, canDelete }: { organi
           <DialogDescription>{canDelete ? t("deleteHint") : t("deleteBlocked")}</DialogDescription>
         </DialogHeader>
         {canDelete && (
-          <FormField id="delete-confirm" label={t("typeName", { name })}>
-            <Input id="delete-confirm" value={confirm} autoComplete="off" onChange={(e) => setConfirm(e.target.value)} />
+          <FormField required id="delete-confirm" label={t("typeName", { name })}>
+            <Input required id="delete-confirm" value={confirm} autoComplete="off" onChange={(e) => setConfirm(e.target.value)} />
           </FormField>
         )}
         <DialogFooter>

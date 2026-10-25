@@ -241,7 +241,12 @@
     "backToSite": "Terug naar de website",
     "terms": "Voorwaarden",
     "privacy": "Privacy",
-    "help": "Hulp"
+    "help": "Hulp",
+    "passwordShort": "Gebruik minstens 10 tekens.",
+    "passwordLong": "Gebruik hoogstens 128 tekens.",
+    "passwordLetter": "Gebruik minstens één letter in je wachtwoord.",
+    "passwordNumber": "Gebruik minstens één cijfer in je wachtwoord.",
+    "passwordMismatch": "De wachtwoorden zijn niet gelijk."
   },
   "onboarding": {
     "title": "Zet je bureau op",
@@ -1286,7 +1291,8 @@
     "code": "Naam in je link (optioneel)",
     "codeHint": "Je link: {link}",
     "codeExample": "jouwnaam",
-    "submit": "Aanmelding versturen"
+    "submit": "Aanmelding versturen",
+    "passwordConfirm": "Herhaal wachtwoord"
   },
   "affiliate": {
     "status_pending": "Bedankt voor je aanmelding! We bekijken hem nu. Je krijgt een e-mail zodra hij is goedgekeurd.",
@@ -4356,5 +4362,25 @@
     "nav_website": "Bouw je eigen website met secties die je versleept, op je eigen domein.",
     "nav_billing": "Je abonnement, gebruik en facturen.",
     "nav_support": "Een vraag? Stel hem hier; we antwoorden in de app."
+  },
+  "password": {
+    "show": "Wachtwoord tonen",
+    "hide": "Wachtwoord verbergen",
+    "rules": "Minstens 10 tekens, met een letter en een cijfer.",
+    "weak": "Zwak",
+    "fair": "Redelijk",
+    "good": "Goed",
+    "strong": "Sterk",
+    "tip_length": "maak hem langer",
+    "tip_case": "gebruik hoofd- en kleine letters",
+    "tip_number": "voeg een cijfer toe",
+    "tip_symbol": "voeg een leesteken toe",
+    "tip_repeat": "vermijd herhalingen en bekende woorden",
+    "problem_short": "Gebruik minstens 10 tekens.",
+    "problem_long": "Gebruik hoogstens 128 tekens.",
+    "problem_letter": "Gebruik minstens één letter.",
+    "problem_number": "Gebruik minstens één cijfer.",
+    "mismatch": "De wachtwoorden zijn niet gelijk.",
+    "confirm": "Herhaal wachtwoord"
   }
 }

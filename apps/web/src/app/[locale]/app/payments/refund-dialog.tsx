@@ -43,8 +43,8 @@ export function RefundDialog({ paymentId, refundableCents, refundableLabel, onli
           <DialogTitle>{t("payments.refundTitle")}</DialogTitle>
           <DialogDescription>{online ? t("payments.refundBody", { amount: refundableLabel }) : t("payments.refundOffline")}</DialogDescription>
         </DialogHeader>
-        <FormField id={`refund-${paymentId}`} label={t("payments.amount")}>
-          <Input id={`refund-${paymentId}`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <FormField required id={`refund-${paymentId}`} label={t("payments.amount")}>
+          <Input required id={`refund-${paymentId}`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </FormField>
         <DialogFooter>
           <DialogClose asChild>

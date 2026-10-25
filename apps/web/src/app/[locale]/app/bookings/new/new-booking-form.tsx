@@ -50,7 +50,7 @@ export function NewBookingForm({
               <TabsTrigger value="new">{t("newBooking.newCustomer")}</TabsTrigger>
             </TabsList>
             <TabsContent value="existing" className="mt-4">
-              <FormField id="nb-customer" label={t("newBooking.customer")}>
+              <FormField required id="nb-customer" label={t("newBooking.customer")}>
                 <Select value={customerId} onValueChange={setCustomerId}>
                   <SelectTrigger id="nb-customer" className="w-full">
                     <SelectValue placeholder={t("newBooking.chooseCustomer")} />
@@ -66,11 +66,11 @@ export function NewBookingForm({
               </FormField>
             </TabsContent>
             <TabsContent value="new" className="mt-4 grid gap-4 sm:grid-cols-2">
-              <FormField id="nb-cname" label={t("auth.name")} error={errors["customerName"]}>
-                <Input id="nb-cname" name="customerName" maxLength={191} autoComplete="off" />
+              <FormField required id="nb-cname" label={t("auth.name")} error={errors["customerName"]}>
+                <Input required id="nb-cname" name="customerName" maxLength={191} autoComplete="off" />
               </FormField>
-              <FormField id="nb-cemail" label={t("auth.email")} error={errors["customerEmail"]}>
-                <Input id="nb-cemail" name="customerEmail" type="email" autoComplete="off" />
+              <FormField required id="nb-cemail" label={t("auth.email")} error={errors["customerEmail"]}>
+                <Input required id="nb-cemail" name="customerEmail" type="email" autoComplete="off" />
               </FormField>
               <FormField id="nb-cphone" label={t("customers.phone")} error={errors["customerPhone"]}>
                 <Input id="nb-cphone" name="customerPhone" type="tel" maxLength={32} autoComplete="off" />

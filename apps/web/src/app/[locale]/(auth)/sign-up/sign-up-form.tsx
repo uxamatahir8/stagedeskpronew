@@ -7,10 +7,12 @@ import { useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
 import { localePath, safeNext } from "@/lib/paths";
+import { passwordProblem } from "@stagedesk/core";
 
 export function SignUpForm() {
   const t = useTranslations();
@@ -27,12 +29,16 @@ export function SignUpForm() {
 
   async function signUp(form: FormData) {
     const email = String(form.get("email"));
+    const password = String(form.get("password"));
+    const problem = passwordProblem(password);
+    if (problem) return setError(t(`password.problem_${problem}`));
+    if (password !== String(form.get("confirm"))) return setError(t("password.mismatch"));
     setPending(true);
     setError(null);
     const { error } = await authClient.signUp.email({
       name: String(form.get("name")),
       email,
-      password: String(form.get("password")),
+      password,
       locale,
       callbackURL: localePath(locale, next),
     });
@@ -72,8 +78,11 @@ export function SignUpForm() {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="signup-password">{t("auth.password")}</Label>
-        <Input id="signup-password" name="password" type="password" autoComplete="new-password" minLength={10} required />
-        <p className="text-xs text-muted-foreground">{t("auth.signUp.passwordHint")}</p>
+        <PasswordInput id="signup-password" name="password" autoComplete="new-password" minLength={10} maxLength={128} required meter rules />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="signup-confirm">{t("password.confirm")}</Label>
+        <PasswordInput id="signup-confirm" name="confirm" autoComplete="new-password" required matches="signup-password" />
       </div>
       <FormMessage>{error}</FormMessage>
       <Button type="submit" disabled={pending}>

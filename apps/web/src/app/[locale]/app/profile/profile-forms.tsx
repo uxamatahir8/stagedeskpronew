@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
+import { PasswordInput } from "@/components/password-input";
+import { passwordProblem } from "@stagedesk/core";
 
 export function DetailsForm({ values }: { values: { name: string; email: string; phone: string; locale: "nl" | "en" } }) {
   const t = useTranslations();
@@ -82,11 +84,15 @@ export function PasswordForm() {
   const [pending, setPending] = useState(false);
 
   async function change(form: FormData) {
+    const next = String(form.get("newPassword"));
+    const problem = passwordProblem(next);
+    if (problem) return setError(t(`password.problem_${problem}`));
+    if (next !== String(form.get("confirmPassword"))) return setError(t("password.mismatch"));
     setPending(true);
     setError(null);
     const { error } = await authClient.changePassword({
       currentPassword: String(form.get("currentPassword")),
-      newPassword: String(form.get("newPassword")),
+      newPassword: next,
       revokeOtherSessions: true,
     });
     setPending(false);
@@ -103,10 +109,13 @@ export function PasswordForm() {
       <CardContent>
         <form id="password-form" action={change} className="grid gap-4 sm:grid-cols-2">
           <FormField id="profile-current-password" label={t("profile.currentPassword")}>
-            <Input id="profile-current-password" name="currentPassword" type="password" required autoComplete="current-password" />
+            <PasswordInput id="profile-current-password" name="currentPassword" required autoComplete="current-password" />
           </FormField>
-          <FormField id="profile-new-password" label={t("profile.newPassword")} hint={t("auth.signUp.passwordHint")}>
-            <Input id="profile-new-password" name="newPassword" type="password" required minLength={10} autoComplete="new-password" />
+          <FormField id="profile-new-password" label={t("profile.newPassword")} className="sm:col-start-1">
+            <PasswordInput id="profile-new-password" name="newPassword" required minLength={10} maxLength={128} autoComplete="new-password" meter rules />
+          </FormField>
+          <FormField id="profile-confirm-password" label={t("password.confirm")}>
+            <PasswordInput id="profile-confirm-password" name="confirmPassword" required autoComplete="new-password" matches="profile-new-password" />
           </FormField>
           <div className="sm:col-span-2">
             <FormMessage>{error}</FormMessage>
@@ -185,7 +194,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         {step.kind === "password" && (
           <form action={confirmPassword} className="grid max-w-sm gap-4">
             <FormField id="twofa-password" label={t("profile.confirmPassword")}>
-              <Input id="twofa-password" name="password" type="password" required autoComplete="current-password" />
+              <PasswordInput id="twofa-password" name="password" required autoComplete="current-password" />
             </FormField>
             <FormMessage>{error}</FormMessage>
             <div className="flex gap-2">

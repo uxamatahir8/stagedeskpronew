@@ -303,3 +303,20 @@ html {
 @utility font-editorial {
   font-family: var(--font-editorial), Georgia, "Times New Roman", serif;
 }
+
+/*
+ * Required fields: the label of any field whose input, select or textarea is
+ * required gets a red asterisk. Works for FormField and the plain label + input
+ * pairs on the auth pages, without each form having to remember it.
+ */
+:where(div):has(> label[data-slot="label"]):has(
+    > :is(input, select, textarea, button[role="combobox"]):is([required], [aria-required="true"]),
+    > * :is(input, select, textarea, button[role="combobox"]):is([required], [aria-required="true"])
+  )
+  > label[data-slot="label"]::after,
+label[data-slot="label"][data-required]::after {
+  /* Visual only: the empty alternative keeps it out of the accessible name. */
+  content: " *" / "";
+  color: var(--destructive);
+  font-weight: 600;
+}

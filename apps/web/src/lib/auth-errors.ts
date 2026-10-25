@@ -19,6 +19,12 @@ const byCode: Record<string, AuthMessageKey> = {
   INVALID_CODE: "auth.twoFactor.invalid",
   INVALID_BACKUP_CODE: "auth.twoFactor.invalid",
   ACCOUNT_DISABLED: "auth.signIn.disabled",
+  PASSWORD_SHORT: "auth.passwordShort",
+  PASSWORD_TOO_SHORT: "auth.passwordShort",
+  PASSWORD_LONG: "auth.passwordLong",
+  PASSWORD_TOO_LONG: "auth.passwordLong",
+  PASSWORD_LETTER: "auth.passwordLetter",
+  PASSWORD_NUMBER: "auth.passwordNumber",
 };
 
 /** Maps a Better Auth client error to a translation key. */

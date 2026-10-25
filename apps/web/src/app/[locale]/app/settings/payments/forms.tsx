@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { SettingValue } from "@stagedesk/core";
 import { CopyField } from "@/components/copy-field";
 import { FormField } from "@/components/form-field";
+import { PasswordInput } from "@/components/password-input";
 import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,9 +74,8 @@ export function StripeSetup({
       <CardContent className="grid gap-5">
         {fields.map((f) => (
           <FormField key={f} id={`stripe-${f}`} label={t(`label_${f}`)} hint={saved[f] ? t("savedHint", { hint: saved[f]!.hint, date: saved[f]!.updatedAt }) : t(`hint_${f}`)}>
-            <Input
+            <PasswordInput
               id={`stripe-${f}`}
-              type="password"
               autoComplete="off"
               spellCheck={false}
               placeholder={saved[f] ? saved[f]!.hint : t(`placeholder_${f}`)}

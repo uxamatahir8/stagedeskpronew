@@ -86,7 +86,7 @@ export function ServiceDialog({ service, vatRates }: { service?: Service; vatRat
           <FormField id="svc-price" label={t("services.price")}>
             <Input id="svc-price" name="price" defaultValue={service?.price} inputMode="decimal" required placeholder="0,00" />
           </FormField>
-          <FormField id="svc-unit" label={t("services.unit")}>
+          <FormField required id="svc-unit" label={t("services.unit")}>
             <Select value={unit} onValueChange={(v) => setUnit(v as Unit)}>
               <SelectTrigger id="svc-unit" className="w-full">
                 <SelectValue />
@@ -100,7 +100,7 @@ export function ServiceDialog({ service, vatRates }: { service?: Service; vatRat
               </SelectContent>
             </Select>
           </FormField>
-          <FormField id="svc-vat" label={t("services.vat")}>
+          <FormField required id="svc-vat" label={t("services.vat")}>
             <Select value={String(vatBps)} onValueChange={(v) => setVatBps(Number(v))}>
               <SelectTrigger id="svc-vat" className="w-full">
                 <SelectValue />

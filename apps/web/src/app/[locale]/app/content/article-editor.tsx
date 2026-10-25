@@ -182,8 +182,8 @@ export function ArticleEditor({
             </div>
             {lang === "en" && !hasText(v.en) && <p className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">{t("englishHint")}</p>}
 
-            <FormField id="title" label={t("fieldTitle")}>
-              <Input id="title" value={text.title} maxLength={160} onChange={(e) => setText({ title: e.target.value })} className="h-11 text-lg font-semibold" />
+            <FormField required id="title" label={t("fieldTitle")}>
+              <Input required id="title" value={text.title} maxLength={160} onChange={(e) => setText({ title: e.target.value })} className="h-11 text-lg font-semibold" />
             </FormField>
             <FormField id="excerpt" label={t("fieldExcerpt")} hint={t("excerptHint", { count: text.excerpt.length })}>
               <Textarea id="excerpt" rows={2} maxLength={400} value={text.excerpt} onChange={(e) => setText({ excerpt: e.target.value })} />
@@ -329,8 +329,8 @@ export function ArticleEditor({
             <CardTitle>{t("settings")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <FormField id="slug" label={t("slug")} hint={kind === "changelog" ? undefined : `/${kind}/${v.slug || "…"}`}>
-              <Input
+            <FormField required id="slug" label={t("slug")} hint={kind === "changelog" ? undefined : `/${kind}/${v.slug || "…"}`}>
+              <Input required
                 id="slug"
                 value={v.slug}
                 className="font-mono text-sm"

@@ -8,6 +8,7 @@ import { FormField } from "@/components/form-field";
 import { Turnstile } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@/i18n/navigation";
 import { applyAction, type ApplyResult } from "./actions";
@@ -45,8 +46,11 @@ export function ApplyForm({ signedInAs, turnstileKey, linkBase }: { signedInAs: 
           <FormField id="apply-email" label={t("email")}>
             <Input id="apply-email" name="email" type="email" autoComplete="email" required />
           </FormField>
-          <FormField id="apply-password" label={t("password")} hint={t("passwordHint")}>
-            <Input id="apply-password" name="password" type="password" autoComplete="new-password" minLength={10} required />
+          <FormField id="apply-password" label={t("password")}>
+            <PasswordInput id="apply-password" name="password" autoComplete="new-password" minLength={10} maxLength={128} required meter rules />
+          </FormField>
+          <FormField id="apply-confirm" label={t("passwordConfirm")} className="sm:col-start-2">
+            <PasswordInput id="apply-confirm" name="confirm" autoComplete="new-password" required matches="apply-password" />
           </FormField>
         </div>
       )}

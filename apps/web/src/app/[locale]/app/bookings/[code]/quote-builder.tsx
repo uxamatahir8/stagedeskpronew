@@ -200,11 +200,11 @@ export function QuoteBuilder({
 
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="grid content-start gap-4 sm:grid-cols-2">
-          <FormField id="q-deposit" label={t("deposit")}>
-            <Input id="q-deposit" value={depositPct} inputMode="decimal" onChange={(e) => setDepositPct(e.target.value)} />
+          <FormField required id="q-deposit" label={t("deposit")}>
+            <Input required id="q-deposit" value={depositPct} inputMode="decimal" onChange={(e) => setDepositPct(e.target.value)} />
           </FormField>
-          <FormField id="q-days" label={t("validDays")}>
-            <Input id="q-days" value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} />
+          <FormField required id="q-days" label={t("validDays")}>
+            <Input required id="q-days" value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} />
           </FormField>
           <FormField id="q-notes" label={t("notes")} className="sm:col-span-2">
             <Textarea id="q-notes" value={notes} rows={3} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />

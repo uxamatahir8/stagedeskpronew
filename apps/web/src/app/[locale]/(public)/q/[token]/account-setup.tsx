@@ -7,6 +7,7 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { useRouter } from "@/i18n/navigation";
 import { setupAccountByTokenAction } from "./actions";
 
@@ -42,11 +43,11 @@ export function AccountSetup({ token, email }: { token: string; email: string })
             <Input id="acc-email" value={email} readOnly className="bg-muted/50" autoComplete="username" />
           </FormField>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="acc-password" label={t("accountPassword")} hint={t("accountPasswordHint")}>
-              <Input id="acc-password" type="password" autoComplete="new-password" minLength={10} required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <FormField id="acc-password" label={t("accountPassword")}>
+              <PasswordInput id="acc-password" autoComplete="new-password" minLength={10} maxLength={128} required meter rules value={password} onChange={(e) => setPassword(e.target.value)} />
             </FormField>
             <FormField id="acc-repeat" label={t("accountRepeat")}>
-              <Input id="acc-repeat" type="password" autoComplete="new-password" minLength={10} required value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+              <PasswordInput id="acc-repeat" autoComplete="new-password" required matches="acc-password" value={repeat} onChange={(e) => setRepeat(e.target.value)} />
             </FormField>
           </div>
           <FormMessage>{error}</FormMessage>

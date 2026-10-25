@@ -1,11 +1,12 @@
 // Auth configuration. Import `auth` from "./auth" in app code; this file has no
 // server-only guard so the Better Auth CLI can load it to generate the schema.
 import { APIError, betterAuth } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
-import { withinLimit } from "@stagedesk/core";
+import { passwordProblem, passwordRules, withinLimit } from "@stagedesk/core";
 import { agencyBilling, agencyDeskUserIds, agencyUsage, notify, prisma } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
@@ -40,6 +41,17 @@ export const auth = betterAuth({
   baseURL: appUrl,
   database: prismaAdapter(prisma, { provider: "mysql" }),
 
+  // The same password rules as the forms, for every way a password is set.
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      const field = ctx.path === "/sign-up/email" ? "password" : ctx.path === "/reset-password" || ctx.path === "/change-password" ? "newPassword" : null;
+      if (!field) return;
+      const value = (ctx.body as Record<string, unknown> | undefined)?.[field];
+      const problem = typeof value === "string" ? passwordProblem(value) : "short";
+      if (problem) throw new APIError("BAD_REQUEST", { code: `PASSWORD_${problem.toUpperCase()}`, message: `Password rule: ${problem}` });
+    }),
+  },
+
   user: {
     additionalFields: {
       // Set by seed/admin tools only; never accepted from a form.
@@ -52,7 +64,8 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
-    minPasswordLength: 10,
+    minPasswordLength: passwordRules.min,
+    maxPasswordLength: passwordRules.max,
     resetPasswordTokenExpiresIn: 60 * 60,
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {

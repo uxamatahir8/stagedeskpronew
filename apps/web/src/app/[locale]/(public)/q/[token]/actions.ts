@@ -6,6 +6,7 @@ import { acceptQuote, prisma } from "@stagedesk/db";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/viewer";
+import { passwordProblem } from "@stagedesk/core";
 
 /**
  * Accepting through the quote link. The secret token is what grants access,
@@ -45,7 +46,8 @@ export async function setupAccountByTokenAction(token: string, password: string,
   });
   const customer = quote?.booking.customer;
   if (!quote || !customer) return { ok: false, message: t("notFound") };
-  if (password.length < 10) return { ok: false, message: t("accountPasswordShort") };
+  const problem = passwordProblem(password);
+  if (problem) return { ok: false, message: (await getTranslations("password"))(`problem_${problem}`) };
   if (password !== repeat) return { ok: false, message: t("accountPasswordMismatch") };
   if (await prisma.account.findFirst({ where: { userId: customer.id, providerId: "credential" }, select: { id: true } })) {
     return { ok: false, message: t("accountExists") };

@@ -123,8 +123,8 @@ export function PlanDialog({ plan, nextPosition }: { plan?: PlanValues; nextPosi
         </DialogHeader>
         <div className="grid gap-6">
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField id="plan-key" label={t("plans.key")} hint={t("plans.keyHint")}>
-              <Input id="plan-key" value={v.key} disabled={Boolean(plan)} onChange={(e) => set({ key: e.target.value.toLowerCase() })} />
+            <FormField required id="plan-key" label={t("plans.key")} hint={t("plans.keyHint")}>
+              <Input required id="plan-key" value={v.key} disabled={Boolean(plan)} onChange={(e) => set({ key: e.target.value.toLowerCase() })} />
             </FormField>
             <div className="grid content-start gap-2 rounded-lg border p-3">
               <div className="flex items-center justify-between gap-4">

@@ -267,8 +267,8 @@ export function QuoteControls({
               <DialogTitle>{t("booking.acceptOnBehalf")}</DialogTitle>
               <DialogDescription>{t("booking.acceptOnBehalfHint")}</DialogDescription>
             </DialogHeader>
-            <FormField id="accept-name" label={t("booking.acceptName")}>
-              <Input id="accept-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={191} />
+            <FormField required id="accept-name" label={t("booking.acceptName")}>
+              <Input required id="accept-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={191} />
             </FormField>
             <DialogFooter>
               <DialogClose asChild>
@@ -362,7 +362,7 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
           <FormField id="pay-date" label={t("booking.receivedAt")}>
             <Input id="pay-date" name="receivedAt" type="date" defaultValue={today} required />
           </FormField>
-          <FormField id="pay-kind" label={t("booking.kind")}>
+          <FormField required id="pay-kind" label={t("booking.kind")}>
             <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
               <SelectTrigger id="pay-kind" className="w-full">
                 <SelectValue />
@@ -376,7 +376,7 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
               </SelectContent>
             </Select>
           </FormField>
-          <FormField id="pay-method" label={t("booking.method")}>
+          <FormField required id="pay-method" label={t("booking.method")}>
             <Select value={method} onValueChange={(v) => setMethod(v as typeof method)}>
               <SelectTrigger id="pay-method" className="w-full">
                 <SelectValue />

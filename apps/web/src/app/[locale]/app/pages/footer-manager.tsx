@@ -174,11 +174,11 @@ export function FooterManager({ columns, settings }: { columns: FooterColumnRow[
           </DialogHeader>
           {column && (
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="fc-nl" label={t("titleNl")}>
-                <Input id="fc-nl" maxLength={80} value={column.titleNl} onChange={(e) => setColumn({ ...column, titleNl: e.target.value })} />
+              <FormField required id="fc-nl" label={t("titleNl")}>
+                <Input required id="fc-nl" maxLength={80} value={column.titleNl} onChange={(e) => setColumn({ ...column, titleNl: e.target.value })} />
               </FormField>
-              <FormField id="fc-en" label={t("titleEn")}>
-                <Input id="fc-en" maxLength={80} value={column.titleEn} onChange={(e) => setColumn({ ...column, titleEn: e.target.value })} />
+              <FormField required id="fc-en" label={t("titleEn")}>
+                <Input required id="fc-en" maxLength={80} value={column.titleEn} onChange={(e) => setColumn({ ...column, titleEn: e.target.value })} />
               </FormField>
             </div>
           )}
@@ -242,11 +242,11 @@ export function FooterManager({ columns, settings }: { columns: FooterColumnRow[
                 </FormField>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
-                <FormField id="fl-nl" label={t("labelNl")}>
-                  <Input id="fl-nl" maxLength={120} value={link.labelNl} onChange={(e) => setLink({ ...link, labelNl: e.target.value })} />
+                <FormField required id="fl-nl" label={t("labelNl")}>
+                  <Input required id="fl-nl" maxLength={120} value={link.labelNl} onChange={(e) => setLink({ ...link, labelNl: e.target.value })} />
                 </FormField>
-                <FormField id="fl-en" label={t("labelEn")}>
-                  <Input id="fl-en" maxLength={120} value={link.labelEn} onChange={(e) => setLink({ ...link, labelEn: e.target.value })} />
+                <FormField required id="fl-en" label={t("labelEn")}>
+                  <Input required id="fl-en" maxLength={120} value={link.labelEn} onChange={(e) => setLink({ ...link, labelEn: e.target.value })} />
                 </FormField>
               </div>
               {link.kind === "url" && (

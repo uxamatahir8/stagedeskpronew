@@ -13,3 +13,4 @@ export * from "./settings/registry";
 export * from "./sites";
 export * from "./content";
 export * from "./listing";
+export * from "./passwords";

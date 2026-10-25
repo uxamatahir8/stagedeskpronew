@@ -129,11 +129,11 @@ function EditUserDialog({ user, onClose }: { user: UserValues; onClose: () => vo
           <DialogDescription>{t("editHint")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
-          <FormField id="eu-name" label={t("name")}>
-            <Input id="eu-name" value={v.name} maxLength={191} onChange={(e) => setV({ ...v, name: e.target.value })} />
+          <FormField required id="eu-name" label={t("name")}>
+            <Input required id="eu-name" value={v.name} maxLength={191} onChange={(e) => setV({ ...v, name: e.target.value })} />
           </FormField>
-          <FormField id="eu-email" label={t("email")} hint={v.email.trim().toLowerCase() !== user.email ? t("emailChangeHint") : undefined}>
-            <Input id="eu-email" type="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} />
+          <FormField required id="eu-email" label={t("email")} hint={v.email.trim().toLowerCase() !== user.email ? t("emailChangeHint") : undefined}>
+            <Input required id="eu-email" type="email" value={v.email} onChange={(e) => setV({ ...v, email: e.target.value })} />
           </FormField>
           <FormField id="eu-phone" label={t("phone")}>
             <Input id="eu-phone" type="tel" value={v.phone} maxLength={32} onChange={(e) => setV({ ...v, phone: e.target.value })} />
@@ -172,11 +172,11 @@ export function CreateAdminDialog() {
           <DialogDescription>{t("newAdminHint")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField id="na-name" label={t("name")} className="sm:col-span-2">
-            <Input id="na-name" value={v.name} maxLength={191} autoComplete="off" onChange={(e) => setV({ ...v, name: e.target.value })} />
+          <FormField required id="na-name" label={t("name")} className="sm:col-span-2">
+            <Input required id="na-name" value={v.name} maxLength={191} autoComplete="off" onChange={(e) => setV({ ...v, name: e.target.value })} />
           </FormField>
-          <FormField id="na-email" label={t("email")}>
-            <Input id="na-email" type="email" value={v.email} autoComplete="off" onChange={(e) => setV({ ...v, email: e.target.value })} />
+          <FormField required id="na-email" label={t("email")}>
+            <Input required id="na-email" type="email" value={v.email} autoComplete="off" onChange={(e) => setV({ ...v, email: e.target.value })} />
           </FormField>
           <FormField id="na-locale" label={t("language")}>
             <Select value={v.locale} onValueChange={(l) => setV({ ...v, locale: l as "nl" | "en" })}>

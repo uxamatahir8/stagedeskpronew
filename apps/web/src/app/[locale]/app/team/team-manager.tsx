@@ -92,7 +92,7 @@ export function InviteDialog() {
           <FormField id="invite-email" label={t("auth.email")}>
             <Input id="invite-email" name="email" type="email" required autoComplete="off" />
           </FormField>
-          <FormField id="invite-role" label={t("team.role")}>
+          <FormField required id="invite-role" label={t("team.role")}>
             <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
               <SelectTrigger id="invite-role" className="w-full">
                 <SelectValue />

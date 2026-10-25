@@ -248,8 +248,8 @@ export function Sharing({ artistId, shares }: { artistId: string; shares: { id: 
       <form className="flex flex-wrap items-end gap-2" action={() => {
           if (slug) run(() => shareArtistAction(artistId, slug), () => setSlug(""));
         }}>
-        <FormField id="share-slug" label={t("partnerSlug")} hint={t("partnerSlugHint")} className="min-w-56 flex-1">
-          <Input id="share-slug" value={slug} onChange={(e) => setSlug(e.target.value)} maxLength={191} />
+        <FormField required id="share-slug" label={t("partnerSlug")} hint={t("partnerSlugHint")} className="min-w-56 flex-1">
+          <Input required id="share-slug" value={slug} onChange={(e) => setSlug(e.target.value)} maxLength={191} />
         </FormField>
         <Button type="submit" variant="outline" disabled={pending || !slug.trim()} className="mb-5">
           {t("shareSend")}

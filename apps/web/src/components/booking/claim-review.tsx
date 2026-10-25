@@ -41,8 +41,8 @@ export function ClaimReview({ claimId, paidOn }: { claimId: string; paidOn: stri
             <DialogTitle>{t("confirmTitle")}</DialogTitle>
             <DialogDescription>{t("confirmHint")}</DialogDescription>
           </DialogHeader>
-          <FormField id={`cr-date-${claimId}`} label={t("receivedOn")}>
-            <Input id={`cr-date-${claimId}`} type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} />
+          <FormField required id={`cr-date-${claimId}`} label={t("receivedOn")}>
+            <Input required id={`cr-date-${claimId}`} type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} />
           </FormField>
           <DialogFooter>
             <DialogClose asChild>
@@ -67,8 +67,8 @@ export function ClaimReview({ claimId, paidOn }: { claimId: string; paidOn: stri
             <DialogTitle>{t("rejectTitle")}</DialogTitle>
             <DialogDescription>{t("rejectHint")}</DialogDescription>
           </DialogHeader>
-          <FormField id={`cr-reason-${claimId}`} label={t("reason")}>
-            <Input id={`cr-reason-${claimId}`} maxLength={191} value={reason} placeholder={t("reasonPlaceholder")} onChange={(e) => setReason(e.target.value)} />
+          <FormField required id={`cr-reason-${claimId}`} label={t("reason")}>
+            <Input required id={`cr-reason-${claimId}`} maxLength={191} value={reason} placeholder={t("reasonPlaceholder")} onChange={(e) => setReason(e.target.value)} />
           </FormField>
           <DialogFooter>
             <DialogClose asChild>

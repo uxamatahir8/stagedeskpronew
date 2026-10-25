@@ -5,11 +5,12 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
+import { passwordProblem } from "@stagedesk/core";
 
 export function ResetPasswordForm() {
   const t = useTranslations();
@@ -21,6 +22,8 @@ export function ResetPasswordForm() {
 
   async function submit(form: FormData) {
     const password = String(form.get("password"));
+    const problem = passwordProblem(password);
+    if (problem) return setError(t(`password.problem_${problem}`));
     if (password !== String(form.get("confirm"))) return setError(t("auth.reset.mismatch"));
     if (!token) return setError(t("auth.reset.invalidToken"));
     setPending(true);
@@ -57,12 +60,11 @@ export function ResetPasswordForm() {
     <form action={submit} className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor="reset-password">{t("auth.reset.password")}</Label>
-        <Input id="reset-password" name="password" type="password" autoComplete="new-password" minLength={10} required />
-        <p className="text-xs text-muted-foreground">{t("auth.signUp.passwordHint")}</p>
+        <PasswordInput id="reset-password" name="password" autoComplete="new-password" minLength={10} maxLength={128} required meter rules />
       </div>
       <div className="grid gap-2">
         <Label htmlFor="reset-confirm">{t("auth.reset.confirm")}</Label>
-        <Input id="reset-confirm" name="confirm" type="password" autoComplete="new-password" minLength={10} required />
+        <PasswordInput id="reset-confirm" name="confirm" autoComplete="new-password" required matches="reset-password" />
       </div>
       <FormMessage>{error}</FormMessage>
       <Button type="submit" disabled={pending}>

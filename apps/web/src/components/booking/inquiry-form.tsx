@@ -92,7 +92,7 @@ export function InquiryForm({
     <form key={formKey} action={submit} className="grid gap-6">
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-semibold">{t("bookingPage.eventDetails")}</legend>
-        <FormField id="inq-type" label={t("bookingPage.eventType")}>
+        <FormField required id="inq-type" label={t("bookingPage.eventType")}>
           <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
             <SelectTrigger id="inq-type" className="w-full">
               <SelectValue />

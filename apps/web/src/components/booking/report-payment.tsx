@@ -58,7 +58,7 @@ export function ReportPaymentDialog({
         </DialogHeader>
         <div className="grid gap-4 sm:grid-cols-2">
           {methods.length > 1 && (
-            <FormField id="rp-method" label={t("pay.reportMethod")} className="sm:col-span-2">
+            <FormField required id="rp-method" label={t("pay.reportMethod")} className="sm:col-span-2">
               <Select value={v.method} onValueChange={(m) => setV({ ...v, method: m as ReportPaymentInput["method"] })}>
                 <SelectTrigger id="rp-method" className="w-full">
                   <SelectValue />
@@ -73,11 +73,11 @@ export function ReportPaymentDialog({
               </Select>
             </FormField>
           )}
-          <FormField id="rp-amount" label={t("pay.reportAmount")}>
-            <Input id="rp-amount" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} />
+          <FormField required id="rp-amount" label={t("pay.reportAmount")}>
+            <Input required id="rp-amount" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} />
           </FormField>
-          <FormField id="rp-date" label={t("pay.reportDate")}>
-            <Input id="rp-date" type="date" max={today} value={v.paidOn} onChange={(e) => setV({ ...v, paidOn: e.target.value })} />
+          <FormField required id="rp-date" label={t("pay.reportDate")}>
+            <Input required id="rp-date" type="date" max={today} value={v.paidOn} onChange={(e) => setV({ ...v, paidOn: e.target.value })} />
           </FormField>
           {v.method === "bank_transfer" && (
             <FormField id="rp-reference" label={t("pay.reportReference")} hint={t("pay.reportReferenceHint")} className="sm:col-span-2">

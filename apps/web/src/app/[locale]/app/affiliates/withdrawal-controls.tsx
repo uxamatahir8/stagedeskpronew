@@ -77,8 +77,8 @@ export function WithdrawalActions({ payoutId, status, method, today }: { payoutI
             <DialogDescription>{dialog === "reject" ? t("rejectHint") : t("markPaidHint")}</DialogDescription>
           </DialogHeader>
           {dialog === "reject" ? (
-            <FormField id="wd-reason" label={t("rejectReason")}>
-              <Textarea id="wd-reason" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} />
+            <FormField required id="wd-reason" label={t("rejectReason")}>
+              <Textarea required id="wd-reason" rows={3} maxLength={300} value={reason} onChange={(e) => setReason(e.target.value)} />
             </FormField>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">

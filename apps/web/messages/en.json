@@ -241,7 +241,12 @@
     "backToSite": "Back to the website",
     "terms": "Terms",
     "privacy": "Privacy",
-    "help": "Help"
+    "help": "Help",
+    "passwordShort": "Use at least 10 characters.",
+    "passwordLong": "Use at most 128 characters.",
+    "passwordLetter": "Use at least one letter in your password.",
+    "passwordNumber": "Use at least one number in your password.",
+    "passwordMismatch": "The passwords don’t match."
   },
   "onboarding": {
     "title": "Set up your agency",
@@ -1286,7 +1291,8 @@
     "code": "Your link name (optional)",
     "codeHint": "Your link: {link}",
     "codeExample": "yourname",
-    "submit": "Send application"
+    "submit": "Send application",
+    "passwordConfirm": "Repeat password"
   },
   "affiliate": {
     "status_pending": "Thanks for applying! We're reviewing your application. You'll get an email when it's approved.",
@@ -4356,5 +4362,25 @@
     "nav_website": "Build your own website from sections you drag, on your own domain.",
     "nav_billing": "Your subscription, usage and invoices.",
     "nav_support": "A question? Ask it here; we reply in the app."
+  },
+  "password": {
+    "show": "Show password",
+    "hide": "Hide password",
+    "rules": "At least 10 characters, with a letter and a number.",
+    "weak": "Weak",
+    "fair": "Fair",
+    "good": "Good",
+    "strong": "Strong",
+    "tip_length": "make it longer",
+    "tip_case": "mix upper and lower case",
+    "tip_number": "add a number",
+    "tip_symbol": "add a symbol",
+    "tip_repeat": "avoid repeats and common words",
+    "problem_short": "Use at least 10 characters.",
+    "problem_long": "Use at most 128 characters.",
+    "problem_letter": "Use at least one letter.",
+    "problem_number": "Use at least one number.",
+    "mismatch": "The passwords don’t match.",
+    "confirm": "Repeat password"
   }
 }

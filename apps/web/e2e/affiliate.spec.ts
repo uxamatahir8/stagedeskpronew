@@ -35,7 +35,8 @@ test("a partner applies, is approved, and gets credit for an agency from their l
     await partner.goto("/partners");
     await partner.getByLabel("Je naam").fill(`Eva E2E ${run}`);
     await partner.getByLabel("E-mailadres").fill(partnerEmail);
-    await partner.getByLabel("Wachtwoord").fill(DEMO_PASSWORD);
+    await partner.getByLabel("Wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
+    await partner.getByLabel("Herhaal wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
     await partner.getByLabel("Wie bereik je, en hoe?").fill("Ik organiseer bedrijfsfeesten en werk met tien DJ-bureaus.");
     await partner.getByLabel("Naam in je link (optioneel)").fill(code);
     await expect(partner.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 });
@@ -70,7 +71,8 @@ test("a partner applies, is approved, and gets credit for an agency from their l
     await agency.goto("/sign-up");
     await agency.getByLabel("Je naam").fill(`Bas Bureau ${run}`);
     await agency.getByLabel("E-mailadres").fill(agencyEmail);
-    await agency.getByLabel("Wachtwoord").fill(DEMO_PASSWORD);
+    await agency.getByLabel("Wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
+    await agency.getByLabel("Herhaal wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
     await agency.getByRole("button", { name: "Account aanmaken" }).click();
     // Confirming signs them in; without an agency yet they land on agency setup.
     await agency.goto(await verifyLink(agency.request, agencyEmail));

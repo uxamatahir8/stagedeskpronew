@@ -3,7 +3,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { headers } from "next/headers";
 import { z } from "zod";
-import { affiliateCodePattern } from "@stagedesk/core";
+import { affiliateCodePattern, passwordProblem } from "@stagedesk/core";
 import { applyForAffiliate, getSetting, prisma } from "@stagedesk/db";
 import { auth } from "@/lib/auth";
 import { localePath } from "@/lib/paths";
@@ -52,6 +52,9 @@ export async function applyAction(form: FormData): Promise<ApplyResult> {
     userId = viewer.user.id;
   } else {
     if (!d.email || !d.password) return { ok: false, message: t("errorFields") };
+    const problem = passwordProblem(d.password);
+    if (problem) return { ok: false, message: (await getTranslations("password"))(`problem_${problem}`) };
+    if (d.password !== fields["confirm"]) return { ok: false, message: (await getTranslations("password"))("mismatch") };
     if (await prisma.user.findUnique({ where: { email: d.email.toLowerCase() }, select: { id: true } })) return { ok: false, message: t("emailTaken") };
     const locale = await getLocale();
     const result = await auth.api.signUpEmail({ body: { name: d.name, email: d.email, password: d.password, locale, callbackURL: localePath(locale, "/app") } });

@@ -48,10 +48,10 @@ export function NewTicketDialog() {
           <DialogDescription>{t("newHint")}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4">
-          <FormField id="ticket-subject" label={t("subject")}>
-            <Input id="ticket-subject" value={subject} maxLength={191} onChange={(e) => setSubject(e.target.value)} />
+          <FormField required id="ticket-subject" label={t("subject")}>
+            <Input required id="ticket-subject" value={subject} maxLength={191} onChange={(e) => setSubject(e.target.value)} />
           </FormField>
-          <FormField id="ticket-category" label={t("category")}>
+          <FormField required id="ticket-category" label={t("category")}>
             <Select value={category} onValueChange={(v) => setCategory(v as typeof category)}>
               <SelectTrigger id="ticket-category" className="w-full">
                 <SelectValue />
@@ -65,8 +65,8 @@ export function NewTicketDialog() {
               </SelectContent>
             </Select>
           </FormField>
-          <FormField id="ticket-body" label={t("question")} hint={t("questionHint")}>
-            <Textarea id="ticket-body" rows={6} value={body} maxLength={10_000} onChange={(e) => setBody(e.target.value)} />
+          <FormField required id="ticket-body" label={t("question")} hint={t("questionHint")}>
+            <Textarea required id="ticket-body" rows={6} value={body} maxLength={10_000} onChange={(e) => setBody(e.target.value)} />
           </FormField>
         </div>
         <DialogFooter>
