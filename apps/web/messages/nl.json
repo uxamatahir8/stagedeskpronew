@@ -985,7 +985,7 @@
     "perYear": "/jaar",
     "recommended": "Aanbevolen",
     "choose": "Kies {plan}",
-    "current": "Je abonnement",
+    "current": "Huidig abonnement",
     "manage": "Betaling en facturen beheren",
     "platformFee": "Platformkosten op boekingen: {fee}",
     "noFee": "Geen platformkosten",
@@ -1008,7 +1008,18 @@
     "trialTerms": "Je betaalt pas na de proefperiode. Opzeggen kan altijd vóór die tijd.",
     "switchTo": "Overstappen naar {plan}",
     "switchTerms": "Je abonnement wordt direct aangepast; het verschil wordt naar rato verrekend op je volgende factuur.",
-    "switched": "Je abonnement is aangepast."
+    "switched": "Je abonnement is aangepast.",
+    "yourPlan": "Jouw abonnement",
+    "payFor": "{plan} betalen",
+    "changeTo": "Overstappen naar {plan}",
+    "cancelPlan": "Abonnement opzeggen",
+    "cancelTitle": "Abonnement opzeggen?",
+    "cancelBody": "Je abonnement loopt door tot {date}; daarna stopt het en betaal je niets meer. Tot die datum kun je de opzegging nog terugdraaien. Je gegevens blijven bewaard en daarna kun je ze nog bekijken.",
+    "keepPlan": "Abonnement houden",
+    "cancelConfirm": "Opzeggen per einde periode",
+    "cancelDone": "Opgezegd. Je abonnement loopt door tot het einde van de betaalde periode.",
+    "resume": "Opzegging intrekken",
+    "resumeDone": "Je abonnement loopt gewoon door."
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -1856,7 +1867,9 @@
         "domain_remove": "Websitedomein verwijderd"
       },
       "billing": {
-        "switch_plan": "Abonnement van plan gewisseld"
+        "switch_plan": "Abonnement van plan gewisseld",
+        "cancel": "Abonnement opgezegd",
+        "resume": "Opzegging ingetrokken"
       },
       "newsletter": {
         "save": "Nieuwsbriefcampagne opgeslagen",

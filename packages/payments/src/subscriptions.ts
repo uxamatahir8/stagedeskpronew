@@ -89,6 +89,17 @@ export async function changeSubscriptionPlan(stripe: Stripe, input: { organizati
   return applyStripeSubscription(updated);
 }
 
+/**
+ * Cancels at the end of the paid period (or trial): full access until then,
+ * no further charges. `resume` undoes it while the period is still running.
+ */
+export async function setCancelAtPeriodEnd(stripe: Stripe, organizationId: string, cancel: boolean) {
+  const current = await liveStripeSubscription(organizationId);
+  if (!current?.stripeSubscriptionId) throw new PaymentsError("not_found");
+  const updated = await stripe.subscriptions.update(current.stripeSubscriptionId, { cancel_at_period_end: cancel });
+  return applyStripeSubscription(updated);
+}
+
 /** Stripe's customer portal: card changes, invoices, cancellation. */
 export async function billingPortal(stripe: Stripe, organizationId: string, returnUrl: string) {
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { stripeCustomerId: true } });

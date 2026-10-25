@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { type EventType } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
+import { confirmCheckoutReturn } from "@/lib/checkout-return";
 import { FormMessage } from "@/components/auth/auth-card";
 import { PayPanel } from "@/components/booking/pay-panel";
 import { QuoteTable } from "@/components/booking/quote-table";
@@ -36,6 +37,13 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
   // Expiry depends on the current time, so this renders per request.
   await connection();
   const [t, format] = await Promise.all([getTranslations(), getFormatter()]);
+
+  // Back from paying online: record it before showing what's still due.
+  const sessionId = (await searchParams)["session_id"];
+  if (typeof sessionId === "string") {
+    const ref = await prisma.quote.findUnique({ where: { token }, select: { booking: { select: { id: true, organizationId: true } } } });
+    if (ref) await confirmCheckoutReturn(sessionId, { organizationId: ref.booking.organizationId, bookingId: ref.booking.id });
+  }
 
   // The token is a long random secret; possessing it is what grants access.
   const quote = await prisma.quote.findUnique({

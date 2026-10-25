@@ -2,7 +2,9 @@
 
 import { getLocale, getTranslations } from "next-intl/server";
 import { audit, prisma } from "@stagedesk/db";
-import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
+import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, setCancelAtPeriodEnd, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
+import { revalidatePath } from "next/cache";
+import type { ActionResult } from "@/lib/actions";
 import type { RedirectResult } from "@/components/redirect-button";
 import { paymentsErrorMessage } from "@/lib/billing";
 import { absoluteUrl } from "@/lib/mail";
@@ -33,7 +35,7 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
         interval,
         email: viewer.user.email,
         locale,
-        successUrl: absoluteUrl(locale, "/app/billing?checkout=success"),
+        successUrl: `${absoluteUrl(locale, "/app/billing?checkout=success")}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: absoluteUrl(locale, "/app/billing"),
       }),
     };
@@ -50,5 +52,21 @@ export async function billingPortalAction(): Promise<RedirectResult> {
     return { url: await billingPortal(stripe, organization.id, absoluteUrl(await getLocale(), "/app/billing")) };
   } catch (error) {
     return { message: await paymentsErrorMessage(error) };
+  }
+}
+
+/** Cancel at the end of the paid period, or undo that while it's still running. */
+export async function setCancelPlanAction(cancel: boolean): Promise<ActionResult> {
+  const { viewer, organization } = await requireAgency("agency.billing");
+  const t = await getTranslations("billing");
+  const stripe = await getStripe();
+  if (!stripe) return { ok: false, message: t("stripeMissing") };
+  try {
+    const sub = await setCancelAtPeriodEnd(stripe, organization.id, cancel);
+    await audit({ actorId: viewer.user.id, action: cancel ? "billing.cancel" : "billing.resume", agencyId: organization.id, targetType: "subscription", targetId: sub?.id ?? null });
+    revalidatePath("/[locale]/app/billing", "page");
+    return { ok: true, message: cancel ? t("cancelDone") : t("resumeDone") };
+  } catch (error) {
+    return { ok: false, message: await paymentsErrorMessage(error) };
   }
 }

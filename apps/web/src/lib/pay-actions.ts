@@ -23,7 +23,8 @@ async function checkout(booking: { id: string; organizationId: string; customer:
         bookingId: booking.id,
         customerEmail: booking.customer?.email ?? null,
         locale,
-        successUrl: absoluteUrl(locale, returnPath(1)),
+        // Stripe fills in the session id, so the page can confirm the payment itself.
+        successUrl: `${absoluteUrl(locale, returnPath(1))}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: absoluteUrl(locale, returnPath(0)),
       }),
     };

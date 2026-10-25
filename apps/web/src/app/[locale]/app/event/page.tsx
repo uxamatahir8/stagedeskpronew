@@ -19,6 +19,7 @@ import { euro, eventDate } from "@/lib/format";
 import { payBookingAction, reportPaymentAction } from "@/lib/pay-actions";
 import { requireAgency } from "@/lib/viewer";
 import { ReviewForm } from "./review-form";
+import { confirmCheckoutReturn } from "@/lib/checkout-return";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/event">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "customerEvent" });
@@ -36,6 +37,8 @@ export default async function EventPage({ params, searchParams }: PageProps<"/[l
 
 async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "searchParams">) {
   const { viewer, organization, db } = await requireAgency("customer.event");
+  // Back from paying online: record it now rather than waiting for the webhook.
+  await confirmCheckoutReturn((await searchParams)["session_id"], { organizationId: organization.id });
   const [t, format, locale] = await Promise.all([getTranslations(), getFormatter(), getLocale()]);
 
   // Only the signed-in customer's own bookings at this agency.

@@ -14,8 +14,10 @@ import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, percent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { requireAgency } from "@/lib/viewer";
+import { CancelPlan } from "./cancel-plan";
 import { ManageBillingButton, PlanPicker } from "./plan-picker";
 import { ReferralCard } from "./referral-card";
+import { confirmCheckoutReturn } from "@/lib/checkout-return";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/billing">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "billing" });
@@ -38,6 +40,8 @@ const loc = (value: unknown, locale: string) => {
 
 async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">, "searchParams">) {
   const { organization } = await requireAgency("agency.billing");
+  // Back from Checkout: apply the subscription now rather than waiting for the webhook.
+  await confirmCheckoutReturn((await searchParams)["session_id"], { organizationId: organization.id });
   const [t, format, locale, billing, usage, plans, fee, org, eligible] = await Promise.all([
     getTranslations("billing"),
     getFormatter(),
@@ -57,7 +61,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
 
   const statusLine = (() => {
     if (!subscription) return t("status_none");
-    if (access.reason === "trial") return t("status_trial", { date: dateTime(format, access.until!) });
+    if (access.reason === "trial") return t(subscription.cancelAtPeriodEnd ? "status_cancels" : "status_trial", { date: dateTime(format, access.until!) });
     if (access.reason === "grace") return t("status_grace", { date: dateTime(format, access.until!) });
     if (access.reason === "active" && subscription.currentPeriodEnd) {
       return subscription.cancelAtPeriodEnd
@@ -92,7 +96,16 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
             <p className="font-medium">{statusLine}</p>
             {access.level === "read_only" && <p className={subscription ? "text-destructive" : "text-muted-foreground"}>{t(subscription ? "readOnlyBody" : "noneBody")}</p>}
             <p className="text-muted-foreground">{feeText}</p>
-            {org.stripeCustomerId && <ManageBillingButton />}
+            <div className="flex flex-wrap gap-2">
+              {org.stripeCustomerId && <ManageBillingButton />}
+              {/* Only a running Stripe subscription can be cancelled here; a plan the admin granted is managed by StageDesk. */}
+              {subscription?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(subscription.status) && (
+                <CancelPlan
+                  cancelling={subscription.cancelAtPeriodEnd}
+                  endsOn={dateTime(format, (subscription.status === "trialing" ? subscription.trialEndsAt : subscription.currentPeriodEnd) ?? new Date())}
+                />
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -137,8 +150,16 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
 
       <PlanPicker
         stripeReady={await isStripeConfigured()}
-        // A plan you're on (paid, or on its Stripe trial) can't be bought again; others switch it.
-        current={subscription && (access.reason === "active" || subscription.stripeSubscriptionId) && access.level === "full" ? { planId: subscription.planId, interval: subscription.interval === "year" ? "year" : "month" } : null}
+        // The agency's plan unless cancelled; "paid" when active or on a Stripe trial (card on file).
+        current={
+          subscription && subscription.status !== "canceled"
+            ? {
+                planId: subscription.planId,
+                interval: subscription.interval === "year" ? "year" : "month",
+                paid: access.reason === "active" || (Boolean(subscription.stripeSubscriptionId) && subscription.status === "trialing" && access.level === "full"),
+              }
+            : null
+        }
         switching={Boolean(subscription?.stripeSubscriptionId && access.level === "full")}
         plans={plans
           .filter((p) => p.visible)

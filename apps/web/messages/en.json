@@ -985,7 +985,7 @@
     "perYear": "/year",
     "recommended": "Recommended",
     "choose": "Choose {plan}",
-    "current": "Your plan",
+    "current": "Current plan",
     "manage": "Manage payment and invoices",
     "platformFee": "Platform fee on bookings: {fee}",
     "noFee": "No platform fee",
@@ -1008,7 +1008,18 @@
     "trialTerms": "You pay only after the trial. Cancel any time before then.",
     "switchTo": "Switch to {plan}",
     "switchTerms": "Your subscription changes right away; the difference is prorated on your next invoice.",
-    "switched": "Your plan has been changed."
+    "switched": "Your plan has been changed.",
+    "yourPlan": "Your plan",
+    "payFor": "Pay for {plan}",
+    "changeTo": "Change to {plan}",
+    "cancelPlan": "Cancel plan",
+    "cancelTitle": "Cancel your plan?",
+    "cancelBody": "Your plan stays active until {date}, then it ends and you won’t be charged again. You can undo this until that date. Your data is kept and you can still view it afterwards.",
+    "keepPlan": "Keep plan",
+    "cancelConfirm": "Cancel at period end",
+    "cancelDone": "Cancelled. Your plan stays active until the end of the paid period.",
+    "resume": "Resume plan",
+    "resumeDone": "Your plan continues as normal."
   },
   "plans": {
     "title": "Plans & limits",
@@ -1856,7 +1867,9 @@
         "domain_remove": "Removed a website domain"
       },
       "billing": {
-        "switch_plan": "Switched the subscription plan"
+        "switch_plan": "Switched the subscription plan",
+        "cancel": "Cancelled the plan",
+        "resume": "Resumed the plan"
       },
       "newsletter": {
         "save": "Saved a newsletter campaign",

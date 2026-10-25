@@ -15,6 +15,7 @@ export {
   changeSubscriptionPlan,
   ensureCustomer,
   liveStripeSubscription,
+  setCancelAtPeriodEnd,
   PaymentsError,
   subscriptionCheckout,
 } from "./subscriptions";
@@ -23,3 +24,4 @@ export { amountDue, bookingCheckout, recordStripePayment } from "./booking-payme
 export { payoutBooking, runDuePayouts } from "./payouts";
 export { refundPayment } from "./refunds";
 export { handledStripeEvents, processStoredEvent, receiveWebhook } from "./webhooks";
+export { confirmCheckoutSession } from "./checkout-return";

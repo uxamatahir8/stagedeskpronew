@@ -15,6 +15,7 @@ import type { Locale } from "@/i18n/routing";
 import { euro, eventDate } from "@/lib/format";
 import { payBookingAction, reportPaymentAction } from "@/lib/pay-actions";
 import { requireAgency } from "@/lib/viewer";
+import { confirmCheckoutReturn } from "@/lib/checkout-return";
 
 const spec = { sorts: ["date", "booking", "amount"], defaultSort: "date", defaultDir: "desc" as const, filters: { kind: ["deposit", "balance", "refund", "other"] } };
 
@@ -33,7 +34,8 @@ export default async function MyPaymentsPage({ params, searchParams }: PageProps
 }
 
 async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-payments">, "searchParams">) {
-  const { viewer, db } = await requireAgency("customer.payments");
+  const { viewer, organization, db } = await requireAgency("customer.payments");
+  await confirmCheckoutReturn((await searchParams)["session_id"], { organizationId: organization.id });
   const [t, format, query] = await Promise.all([getTranslations(), getFormatter(), searchParams]);
 
   // Only the signed-in customer's own bookings at this agency.
