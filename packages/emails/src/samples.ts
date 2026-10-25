@@ -9,7 +9,7 @@ type Params<K extends EmailKind> = Extract<EmailJob, { kind: K }>["params"];
  */
 export function emailSamples(locale: EmailLocale, appUrl: string): { [K in EmailKind]: Params<K> } {
   const nl = locale === "nl";
-  const url = (path: string) => `${appUrl}${nl ? "" : "/en"}${path}`;
+  const url = (path: string) => `${appUrl}${nl ? "/nl" : ""}${path}`;
   return {
     verifyEmail: { locale, name: "Sanne", url: `${appUrl}/api/auth/verify-email?token=example` },
     loginCode: { locale, code: "482913" },

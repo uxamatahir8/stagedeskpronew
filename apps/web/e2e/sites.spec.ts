@@ -16,7 +16,7 @@ test("an agency builds and publishes its website, also on its own domain", async
 
   await test.step("the owner edits the hero, adds a packages section and publishes", async () => {
     await signIn(owner, "eigenaar@feestband.local");
-    await owner.goto("/app/website");
+    await owner.goto("/nl/app/website");
     const preview = owner.getByTestId("site-preview");
     await preview.locator("[data-section=hero] h1").click();
     await owner.getByLabel("Titel", { exact: true }).fill(title);
@@ -41,13 +41,13 @@ test("an agency builds and publishes its website, also on its own domain", async
   });
 
   await test.step("own domains are a Business feature", async () => {
-    await owner.goto("/app/website/domain");
+    await owner.goto("/nl/app/website/domain");
     await expect(owner.getByText("Een eigen domein hoort bij het Business-abonnement", { exact: false })).toBeVisible();
   });
 
   await test.step("on Business, Rotterdam connects its own domain and its site shows there", async () => {
     await signIn(admin, "admin@stagedesk.local");
-    await admin.goto("/app/agencies?q=Rotterdam");
+    await admin.goto("/nl/app/agencies?q=Rotterdam");
     await admin.getByRole("link", { name: "Rotterdam DJ Collectief" }).click();
     await admin.getByRole("combobox", { name: "Abonnement toekennen" }).click();
     await admin.getByRole("option", { name: "Business" }).click();
@@ -56,7 +56,7 @@ test("an agency builds and publishes its website, also on its own domain", async
 
     const domain = `www.rotterdam-${run}.localhost`;
     await signIn(rotterdam, "eigenaar@rotterdamdj.local");
-    await rotterdam.goto("/app/website");
+    await rotterdam.goto("/nl/app/website");
     // An earlier run may already have published it; publish only when there's something new.
     const publish = rotterdam.getByRole("button", { name: /^(Publiceren|Gepubliceerd)$/ });
     await expect(publish).toBeVisible();
@@ -64,7 +64,7 @@ test("an agency builds and publishes its website, also on its own domain", async
       await publish.click();
       await expect(rotterdam.getByText("Je site is gepubliceerd.")).toBeVisible();
     }
-    await rotterdam.goto("/app/website/domain");
+    await rotterdam.goto("/nl/app/website/domain");
     await rotterdam.getByLabel("Domein", { exact: true }).fill(domain);
     await rotterdam.getByRole("button", { name: "Domein toevoegen" }).click();
     await expect(rotterdam.getByText("Domein toegevoegd.", { exact: false })).toBeVisible();

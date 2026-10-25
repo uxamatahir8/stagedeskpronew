@@ -4,7 +4,7 @@ import { BoldIcon, EyeIcon, Heading2Icon, Heading3Icon, ImageIcon, ImageUpIcon, 
 import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { type ContentKind, readingMinutes } from "@stagedesk/core";
+import { type ContentKind, readingMinutes, localePrefix } from "@stagedesk/core";
 import { Markdown } from "@/components/content/markdown";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
@@ -267,7 +267,7 @@ export function ArticleEditor({
             <div className="grid gap-0.5 rounded-lg border bg-background p-4" aria-label={t("searchPreview")}>
               <p className="truncate text-xs text-muted-foreground">
                 {siteUrl}
-                {lang === "en" ? "/en" : ""}
+                {localePrefix(lang)}
                 {path}
               </p>
               <p className="truncate text-lg text-[#1a0dab] dark:text-[#8ab4f8]">{seoTitle ? `${seoTitle} · StageDesk` : t("fieldTitle")}</p>

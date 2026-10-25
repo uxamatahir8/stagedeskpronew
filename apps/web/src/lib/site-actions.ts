@@ -75,7 +75,7 @@ export async function contactAction(form: FormData): Promise<FormResult> {
   const parsed = contactSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { ok: false, message: t("invalidContact") };
   const { site } = await siteSettings();
-  deliver({ kind: "contactMessage", to: site.supportEmail, params: { locale: "nl", ...parsed.data, company: parsed.data.company || "" } });
+  deliver({ kind: "contactMessage", to: site.supportEmail, params: { locale: "en", ...parsed.data, company: parsed.data.company || "" } });
   return { ok: true };
 }
 

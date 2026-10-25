@@ -1,10 +1,14 @@
 import { defineRouting } from "next-intl/routing";
+import { defaultLocale, locales } from "@stagedesk/core";
 
-// Dutch is the default and has no prefix (/app); English lives under /en (/en/app).
+// English is the default and has no prefix (/app); Dutch lives under /nl (/nl/app).
+// No automatic switching by browser language: everyone starts in English and
+// picks another language with the switcher.
 export const routing = defineRouting({
-  locales: ["nl", "en"],
-  defaultLocale: "nl",
+  locales,
+  defaultLocale,
   localePrefix: "as-needed",
+  localeDetection: false,
 });
 
 export type Locale = (typeof routing.locales)[number];

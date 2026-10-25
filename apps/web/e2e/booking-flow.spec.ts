@@ -16,7 +16,7 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
 
   await test.step("owner turns on bank transfers with the agency's IBAN", async () => {
     await signIn(agency, "eigenaar@feestband.local");
-    await agency.goto("/app/agency-settings");
+    await agency.goto("/nl/app/agency-settings");
     await agency.getByRole("textbox", { name: "IBAN" }).fill("NL92ABNA0417164300");
     await agency.getByRole("textbox", { name: "Tenaamstelling" }).fill("Feestband Utrecht B.V.");
     await agency.getByRole("switch", { name: /Bankoverschrijving/ }).check();
@@ -28,7 +28,7 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
   });
 
   await test.step("owner records an inquiry for a new customer", async () => {
-    await agency.goto("/app/bookings/new");
+    await agency.goto("/nl/app/bookings/new");
     await agency.getByRole("tab", { name: "Nieuwe klant" }).click();
     await agency.getByLabel("Je naam").fill(`E2E Klant ${run}`);
     await agency.getByLabel("E-mailadres").fill(`klant.${run}@test.local`);
@@ -67,7 +67,7 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
 
   await test.step("DJ Sem accepts the gig", async () => {
     await signIn(artist, "dj.sem@feestband.local");
-    await artist.goto(`/app/gigs/${code}`);
+    await artist.goto(`/nl/app/gigs/${code}`);
     await expect(artist.getByText("Theater Kikker, Utrecht")).toBeVisible();
     await artist.getByRole("button", { name: "Optreden accepteren" }).click();
     await expect(artist.getByText("Optreden geaccepteerd.")).toBeVisible();

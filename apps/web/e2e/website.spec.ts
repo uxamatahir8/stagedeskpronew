@@ -28,7 +28,7 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
   await signIn(admin, "admin@stagedesk.local");
 
   await test.step("the admin publishes a page in the footer", async () => {
-    await admin.goto("/app/pages/new");
+    await admin.goto("/nl/app/pages/new");
     await fillPage(admin, `e2e-${run}`, `Werken bij ${run}`, "We zoeken nog een DJ-planner.");
     await admin.getByLabel("Getoond in").click();
     await admin.getByRole("option", { name: "Footer: Bedrijf" }).click();
@@ -39,18 +39,18 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
   });
 
   await test.step("visitors see it, in both languages, linked from the footer", async () => {
-    await visitor.goto("/");
+    await visitor.goto("/nl/");
     await visitor.getByRole("contentinfo").getByRole("link", { name: `Werken bij ${run}` }).click();
     await expect(visitor).toHaveURL(new RegExp(`/e2e-${run}-nl$`));
     await expect(visitor.getByText("We zoeken nog een DJ-planner.")).toBeVisible();
-    await visitor.goto(`/en/e2e-${run}-en`);
+    await visitor.goto(`/nl/en/e2e-${run}-en`);
     await expect(visitor.getByRole("heading", { name: `Werken bij ${run} (EN)` })).toBeVisible();
   });
 
   await test.step("a reader's comment appears after the admin approves it", async () => {
     // A fresh visitor: the previous one switched to English, which the site remembers.
     const visitor = await (await browser.newContext()).newPage();
-    await visitor.goto("/blog/offertes-die-worden-geaccepteerd");
+    await visitor.goto("/nl/blog/offertes-die-worden-geaccepteerd");
     await visitor.getByLabel("Naam").fill(`Lezer ${run}`);
     await visitor.getByLabel("E-mailadres").fill(`lezer.${run}@test.local`);
     await visitor.getByLabel("Reactie", { exact: true }).fill(`Handige tips! ${run}`);
@@ -60,7 +60,7 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
     await visitor.reload();
     await expect(visitor.getByText(`Handige tips! ${run}`)).toHaveCount(0);
 
-    await admin.goto("/app/pages?tab=comments");
+    await admin.goto("/nl/app/pages?tab=comments");
     await admin.locator("div").filter({ hasText: `Handige tips! ${run}` }).getByRole("button", { name: "Goedkeuren" }).last().click();
     await expect(admin.getByText("Reactie gepubliceerd.")).toBeVisible();
     await visitor.reload();
@@ -68,7 +68,7 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
   });
 
   await test.step("a new legal page is put to an agency owner at the next sign-in", async () => {
-    await admin.goto("/app/pages/new");
+    await admin.goto("/nl/app/pages/new");
     await fillPage(admin, `e2e-regels-${run}`, `Huisregels ${run}`, "Wees aardig voor elkaar.");
     await admin.getByLabel("Juridische pagina").click();
     await admin.getByLabel("Nieuwe versies laten accepteren").click();
@@ -87,7 +87,7 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
     await expect(owner).toHaveURL(/\/app$/);
 
     // Clean up: the admin is asked too; then the test page goes offline so nobody else is.
-    await admin.goto("/app");
+    await admin.goto("/nl/app");
     await settleOnDashboard(admin);
     await admin.goto(editUrl);
     await admin.getByRole("button", { name: "Offline halen" }).click();

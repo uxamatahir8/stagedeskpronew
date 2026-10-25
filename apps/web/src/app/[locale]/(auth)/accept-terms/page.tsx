@@ -1,3 +1,4 @@
+import { localePrefix } from "@stagedesk/core";
 import { ExternalLinkIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -35,7 +36,7 @@ async function Pending() {
   const pending = await pendingLegal(viewer!.user.id);
   if (pending.length === 0) redirect({ href: await homeHref(viewer!), locale });
   const [t, format] = await Promise.all([getTranslations("acceptTerms"), getFormatter()]);
-  const prefix = locale === "en" ? "/en" : "";
+  const prefix = localePrefix(locale);
 
   return (
     <div className="grid gap-5">

@@ -99,7 +99,7 @@ export function Newsletter({
           ))}
           {articles.length > 0 && (
             <Text style={{ fontSize: 14, margin: "8px 0 0" }}>
-              <Link href={`${appUrl}${locale === "en" ? "/en" : ""}/blog`} style={{ color: brand }}>
+              <Link href={`${appUrl}${locale === "nl" ? "/nl" : ""}/blog`} style={{ color: brand }}>
                 {c.viewOnline}
               </Link>
             </Text>

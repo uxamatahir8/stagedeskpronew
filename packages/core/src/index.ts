@@ -14,3 +14,4 @@ export * from "./sites";
 export * from "./content";
 export * from "./listing";
 export * from "./passwords";
+export * from "./locale";

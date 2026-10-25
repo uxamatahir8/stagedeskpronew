@@ -98,7 +98,7 @@ export const settingsRegistry = {
     schema: siteGeneralSchema,
     defaults: {
       siteName: "StageDesk",
-      defaultLocale: "nl",
+      defaultLocale: "en",
       supportEmail: "support@stagedesk.pro",
       maintenanceMode: false,
       waitlistMode: false,

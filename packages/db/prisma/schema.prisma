@@ -27,7 +27,7 @@ model User {
   twoFactorEnabled Boolean?          @default(false)
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
   platformRole     String?           @db.VarChar(32)
-  locale           String?           @default("nl") @db.VarChar(8)
+  locale           String?           @default("en") @db.VarChar(8)
   /// Set by the platform admin: the user can't sign in.
   disabledAt       DateTime?
   phone            String?           @db.VarChar(32)
@@ -1176,7 +1176,7 @@ model Lead {
   name             String        @db.VarChar(191)
   email            String        @db.VarChar(191)
   phone            String?       @db.VarChar(32)
-  locale           String        @default("nl") @db.VarChar(8)
+  locale           String        @default("en") @db.VarChar(8)
   eventType        String        @db.VarChar(24)
   eventDate        DateTime?     @db.Date
   startTime        String?       @db.VarChar(5)
@@ -1440,7 +1440,7 @@ model NewsletterSubscriber {
   id             String               @id @db.VarChar(64)
   email          String               @unique @db.VarChar(191)
   name           String?              @db.VarChar(191)
-  locale         String               @default("nl") @db.VarChar(5)
+  locale         String               @default("en") @db.VarChar(5)
   /// pending | subscribed | unsubscribed
   status         String               @default("pending") @db.VarChar(16)
   /// footer | signup | profile | admin | waitlist

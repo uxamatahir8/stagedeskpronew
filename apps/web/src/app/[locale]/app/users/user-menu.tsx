@@ -157,7 +157,7 @@ export function CreateAdminDialog() {
   const t = useTranslations("users");
   const { pending, run } = useRun();
   const [open, setOpen] = useState(false);
-  const [v, setV] = useState({ name: "", email: "", locale: "nl" as "nl" | "en" });
+  const [v, setV] = useState({ name: "", email: "", locale: "en" as "nl" | "en" });
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -201,7 +201,7 @@ export function CreateAdminDialog() {
                 () => createPlatformAdminAction(v),
                 () => {
                   setOpen(false);
-                  setV({ name: "", email: "", locale: "nl" });
+                  setV({ name: "", email: "", locale: "en" });
                 },
               )
             }

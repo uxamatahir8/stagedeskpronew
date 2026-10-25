@@ -77,7 +77,7 @@ export async function createPlatformAdmin(input: { name: string; email: string; 
   const existing = await prisma.user.findUnique({ where: { email }, select: { id: true, platformRole: true } });
   if (existing?.platformRole) throw new UserAdminError("email_taken");
   if (existing) return prisma.user.update({ where: { id: existing.id }, data: { platformRole: "platform_admin" } });
-  return prisma.user.create({ data: { id: randomUUID(), name: input.name.trim(), email, locale: input.locale ?? "nl", platformRole: "platform_admin" } });
+  return prisma.user.create({ data: { id: randomUUID(), name: input.name.trim(), email, locale: input.locale ?? "en", platformRole: "platform_admin" } });
 }
 
 /** Name, email and phone. A new email address has to be confirmed again by the user. */

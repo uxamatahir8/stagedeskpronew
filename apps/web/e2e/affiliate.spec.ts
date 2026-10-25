@@ -32,7 +32,7 @@ test("a partner applies, is approved, and gets credit for an agency from their l
   const agency = await (await browser.newContext()).newPage();
 
   await test.step("a visitor applies on the partner page and confirms their email", async () => {
-    await partner.goto("/partners");
+    await partner.goto("/nl/partners");
     await partner.getByLabel("Je naam").fill(`Eva E2E ${run}`);
     await partner.getByLabel("E-mailadres").fill(partnerEmail);
     await partner.getByLabel("Wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
@@ -53,22 +53,22 @@ test("a partner applies, is approved, and gets credit for an agency from their l
 
   await test.step("the platform admin approves the application", async () => {
     await signIn(admin, "admin@stagedesk.local");
-    await admin.goto("/app/affiliates?tab=partners");
+    await admin.goto("/nl/app/affiliates?tab=partners");
     const application = admin.locator("div").filter({ hasText: partnerEmail }).filter({ has: admin.getByRole("button", { name: "Goedkeuren" }) }).last();
     await application.getByRole("button", { name: "Goedkeuren" }).click();
     await expect(admin.getByText("Partner goedgekeurd.")).toBeVisible();
   });
 
   await test.step("the partner sees their link and code", async () => {
-    await partner.goto("/app/links");
+    await partner.goto("/nl/app/links");
     await expect(partner.getByLabel("Je link").first()).toHaveValue(new RegExp(`via=${code}`));
     await partner.getByLabel("Campagne").fill("e2e");
     await expect(partner.getByLabel("Je link").first()).toHaveValue(new RegExp(`via=${code}&c=e2e`));
   });
 
   await test.step("an agency arrives through the campaign link, signs up and creates its agency", async () => {
-    await agency.goto(`/?via=${code}&c=e2e`);
-    await agency.goto("/sign-up");
+    await agency.goto(`/nl/?via=${code}&c=e2e`);
+    await agency.goto("/nl/sign-up");
     await agency.getByLabel("Je naam").fill(`Bas Bureau ${run}`);
     await agency.getByLabel("E-mailadres").fill(agencyEmail);
     await agency.getByLabel("Wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
@@ -95,7 +95,7 @@ test("a partner applies, is approved, and gets credit for an agency from their l
   });
 
   await test.step("the partner's funnel shows the click and the signup for the campaign", async () => {
-    await partner.goto("/app");
+    await partner.goto("/nl/app");
     const row = partner.getByRole("row").filter({ hasText: "e2e" });
     await expect(row.getByRole("cell").nth(1)).toHaveText("1");
     await expect(row.getByRole("cell").nth(2)).toHaveText("1");

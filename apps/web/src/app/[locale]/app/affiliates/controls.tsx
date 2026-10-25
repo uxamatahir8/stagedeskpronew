@@ -163,7 +163,7 @@ export function AffiliateMenu({ affiliateId, name, status, canPay, values }: { a
 export function CreatePartnerDialog() {
   const t = useTranslations("affiliatesAdmin");
   const [open, setOpen] = useState(false);
-  const [v, setV] = useState({ name: "", email: "", code: "", website: "", ratePercent: "", locale: "nl" as "nl" | "en", sendEmail: true });
+  const [v, setV] = useState({ name: "", email: "", code: "", website: "", ratePercent: "", locale: "en" as "nl" | "en", sendEmail: true });
   const [pending, run] = useRun();
   const field = (key: "name" | "email" | "code" | "website" | "ratePercent", label: string, props: React.ComponentProps<typeof Input> = {}) => (
     <FormField id={`np-${key}`} label={label}>

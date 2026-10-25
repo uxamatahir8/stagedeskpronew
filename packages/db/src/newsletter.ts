@@ -1,3 +1,4 @@
+import { localePrefix } from "@stagedesk/core";
 import { randomBytes, randomUUID } from "node:crypto";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
@@ -202,7 +203,7 @@ export async function campaignEmailContent(campaign: { subjectNl: string; subjec
     const a = rows.find((r) => r.id === id);
     if (!a) return [];
     const text = ((locale === "en" ? (a.en as ArticleText) : null) ?? (a.nl as ArticleText)) || {};
-    return [{ title: text.title ?? a.slug, excerpt: text.excerpt ?? "", url: `${appUrl}${locale === "en" ? "/en" : ""}/blog/${a.slug}`, cover: a.coverImage }];
+    return [{ title: text.title ?? a.slug, excerpt: text.excerpt ?? "", url: `${appUrl}${localePrefix(locale)}/blog/${a.slug}`, cover: a.coverImage }];
   });
   return {
     subject: locale === "en" ? campaign.subjectEn : campaign.subjectNl,

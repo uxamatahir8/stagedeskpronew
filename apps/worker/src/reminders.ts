@@ -1,10 +1,11 @@
+import { localePrefix } from "@stagedesk/core";
 import { agencyDeskUserIds, balancesDue, claimReminder, eventsInDays, notify, quotesExpiringWithin } from "@stagedesk/db";
 import type { EmailJob } from "@stagedesk/emails";
 
 type Locale = "nl" | "en";
-const localeOf = (value: string | null | undefined): Locale => (value === "en" ? "en" : "nl");
+const localeOf = (value: string | null | undefined): Locale => (value === "nl" ? "nl" : "en");
 const appUrl = process.env["APP_URL"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000";
-const link = (locale: Locale, path: string) => `${appUrl}${locale === "en" ? "/en" : ""}${path}`;
+const link = (locale: Locale, path: string) => `${appUrl}${localePrefix(locale)}${path}`;
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
 const intl = (locale: Locale) => (locale === "en" ? "en-GB" : "nl-NL");
 const date = (locale: Locale, value: Date) => new Intl.DateTimeFormat(intl(locale), { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(value);

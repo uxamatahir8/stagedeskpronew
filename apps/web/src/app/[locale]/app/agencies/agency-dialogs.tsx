@@ -18,7 +18,7 @@ export function CreateAgencyDialog() {
   const t = useTranslations("agencyAdmin");
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [v, setV] = useState({ name: "", city: "", ownerName: "", ownerEmail: "", locale: "nl" as "nl" | "en", sendEmail: true });
+  const [v, setV] = useState({ name: "", city: "", ownerName: "", ownerEmail: "", locale: "en" as "nl" | "en", sendEmail: true });
   const [pending, startTransition] = useTransition();
 
   function submit() {

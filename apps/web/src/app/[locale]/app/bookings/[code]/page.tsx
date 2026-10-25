@@ -10,6 +10,7 @@ import {
   isBudgetRange,
   paymentStatus,
   todayInNetherlands,
+  localePrefix,
 } from "@stagedesk/core";
 import { bookableArtists, fromDateOnly, getSetting, isArtistFree, prisma } from "@stagedesk/db";
 import { QuoteTable } from "@/components/booking/quote-table";
@@ -266,7 +267,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 canQuote={canQuote}
                 hasQuote={Boolean(current)}
                 quoteId={openQuote?.id ?? null}
-                quoteLink={openQuote ? `${locale === "en" ? "/en" : ""}/q/${openQuote.token}` : null}
+                quoteLink={openQuote ? `${localePrefix(locale)}/q/${openQuote.token}` : null}
                 pdfHref={shownQuote ? `/api/pdf/quote/${shownQuote.id}?lang=${locale}` : null}
                 canAcceptOnBehalf={Boolean(openQuote) && viewerCan(viewer, "agency.quotes.accept")}
                 customerName={booking.customer?.name ?? ""}

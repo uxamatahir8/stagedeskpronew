@@ -11,7 +11,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   await signIn(page, "admin@stagedesk.local");
 
   await test.step("a new agency is created for an owner and opens on its own page", async () => {
-    await page.goto("/app/agencies");
+    await page.goto("/nl/app/agencies");
     await page.getByRole("button", { name: "Nieuw bureau" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Naam van het bureau").fill(agency);
@@ -24,7 +24,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   });
 
   await test.step("search finds it by owner email", async () => {
-    await page.goto("/app/agencies");
+    await page.goto("/nl/app/agencies");
     await page.getByPlaceholder("Naam, plaats, KvK of e-mail eigenaar").fill(`eigenaar.${run}`);
     await page.getByRole("button", { name: "Zoeken", exact: true }).click();
     await expect(page.getByRole("row").filter({ hasText: agency })).toHaveCount(1);
@@ -48,7 +48,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   });
 
   await test.step("a partner is added, edited and deleted", async () => {
-    await page.goto("/app/affiliates?tab=partners");
+    await page.goto("/nl/app/affiliates?tab=partners");
     await page.getByRole("button", { name: "Partner toevoegen" }).click();
     let dialog = page.getByRole("dialog");
     await dialog.getByLabel("Naam", { exact: true }).fill(partner);
@@ -73,7 +73,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   });
 
   await test.step("a platform admin is added, found with the filter and deleted again", async () => {
-    await page.goto("/app/users");
+    await page.goto("/nl/app/users");
     await page.getByRole("button", { name: "Beheerder toevoegen" }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Naam").fill(`Bea Beheer ${run}`);
@@ -92,7 +92,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   });
 
   await test.step("email previews show each email in both languages and send a test", async () => {
-    await page.goto("/app/emails");
+    await page.goto("/nl/app/emails");
     await page.getByRole("link", { name: /Offerte verstuurd/ }).click();
     await expect(page.getByText("Je offerte van Feestband Utrecht")).toBeVisible();
     await page.getByRole("link", { name: "English" }).click();
@@ -103,7 +103,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   });
 
   await test.step("the platform admin creates a booking for an agency, which shows up in the overview", async () => {
-    await page.goto("/app/admin-bookings");
+    await page.goto("/nl/app/admin-bookings");
     await page.getByRole("button", { name: "Boeking aanmaken" }).click();
     await page.getByRole("dialog").getByRole("combobox").click();
     await page.getByRole("option", { name: /Feestband Utrecht/ }).click();
@@ -117,7 +117,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     // Back on the overview, which confirms the booking.
     await expect(page.getByText("door de platformbeheerder aangemaakt voor Feestband Utrecht", { exact: false })).toBeVisible();
 
-    await page.goto(`/app/admin-bookings?source=platform_admin&q=platform.${run}`);
+    await page.goto(`/nl/app/admin-bookings?source=platform_admin&q=platform.${run}`);
     const row = page.getByRole("row").filter({ hasText: `Klant Platform ${run}` });
     await expect(row).toContainText("platformbeheerder (Iris Platform)");
     await expect(row).toContainText("Aanvraag");
@@ -131,20 +131,20 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await expect(page.getByText(`Klant Platform ${run}`).first()).toBeVisible();
 
     // Platform pages are closed while supporting; the agency's own pages are open.
-    await page.goto("/app/agencies");
+    await page.goto("/nl/app/agencies");
     await expect(page.getByText("Je hebt geen toegang", { exact: false })).toBeVisible();
-    await page.goto("/app/bookings");
+    await page.goto("/nl/app/bookings");
     await expect(page.getByText(`Klant Platform ${run}`).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Supportmodus verlaten" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Feestband Utrecht" })).toBeVisible();
     await expect(page.getByText("Supportmodus: je werkt in", { exact: false })).toHaveCount(0);
-    await page.goto("/app/audit?group=support");
+    await page.goto("/nl/app/audit?group=support");
     await expect(page.getByText("Supportmodus verlaten").first()).toBeVisible();
   });
 
   await test.step("payment setup refuses a malformed Stripe key and saves the payment methods", async () => {
-    await page.goto("/app/settings/payments");
+    await page.goto("/nl/app/settings/payments");
     await expect(page.getByText("Webhook-endpoint", { exact: true })).toBeVisible();
     await page.getByRole("textbox", { name: "Geheime sleutel" }).fill("not-a-key");
     await page.getByRole("button", { name: "Sleutels opslaan" }).click();

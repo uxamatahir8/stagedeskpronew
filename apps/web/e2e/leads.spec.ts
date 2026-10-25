@@ -22,7 +22,7 @@ test("a platform lead is offered to agencies and the first to accept gets the bo
   let reference = "";
 
   await test.step("a visitor sends a request on the StageDesk site", async () => {
-    await visitor.goto("/request");
+    await visitor.goto("/nl/request");
     await expect(visitor.getByRole("heading", { level: 1 })).toContainText("DJ of band");
     await visitor.getByLabel("Datum").fill(futureDate());
     await visitor.getByLabel("Plaats").fill("Rotterdam");
@@ -43,7 +43,7 @@ test("a platform lead is offered to agencies and the first to accept gets the bo
 
   await test.step("the admin offers the lead to two agencies", async () => {
     await signIn(admin, "admin@stagedesk.local");
-    await admin.goto(`/app/leads?q=${reference}`);
+    await admin.goto(`/nl/app/leads?q=${reference}`);
     await admin.getByRole("link", { name: /Bruiloft/ }).click();
     await expect(admin.getByText(name)).toBeVisible();
     await admin.getByRole("checkbox", { name: /Rotterdam DJ Collectief/ }).check();
@@ -54,7 +54,7 @@ test("a platform lead is offered to agencies and the first to accept gets the bo
 
   await test.step("Rotterdam sees the request without contact details and accepts it", async () => {
     await signIn(rotterdam, "eigenaar@rotterdamdj.local");
-    await rotterdam.goto("/app/lead-offers");
+    await rotterdam.goto("/nl/app/lead-offers");
     const card = rotterdam.locator('[data-slot="card"]').filter({ hasText: reference });
     await expect(card).toContainText("Rotterdam");
     await expect(card).not.toContainText(email);
@@ -65,7 +65,7 @@ test("a platform lead is offered to agencies and the first to accept gets the bo
 
   await test.step("Feestband was too late, and the admin sees who has it", async () => {
     await signIn(feestband, "eigenaar@feestband.local");
-    await feestband.goto("/app/lead-offers");
+    await feestband.goto("/nl/app/lead-offers");
     await expect(feestband.getByText(reference)).toHaveCount(0);
 
     await admin.reload();

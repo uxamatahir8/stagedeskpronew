@@ -14,7 +14,7 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
   await signIn(admin, "admin@stagedesk.local");
 
   await test.step("the admin adds a category", async () => {
-    await admin.goto("/app/content");
+    await admin.goto("/nl/app/content");
     await admin.getByRole("button", { name: "Categorie toevoegen" }).click();
     await admin.getByLabel("Naam (Nederlands)").fill(`Testrubriek ${run}`);
     await admin.getByLabel("Naam (Engels)").fill(`Test section ${run}`);
@@ -23,7 +23,7 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
   });
 
   await test.step("and publishes a featured post in it, in both languages", async () => {
-    await admin.goto("/app/content/new?kind=blog");
+    await admin.goto("/nl/app/content/new?kind=blog");
     await admin.locator("#title:visible").fill(`Uitgelicht ${run}`);
     await admin.locator("#excerpt:visible").fill("Korte omschrijving.");
     await admin.locator("#body:visible").fill("Intro.\n\n## Eerste kop\n\nTekst.\n\n## Tweede kop\n\nMeer tekst.");
@@ -38,7 +38,7 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
   });
 
   await test.step("readers see it first, with its category and table of contents", async () => {
-    await reader.goto("/blog");
+    await reader.goto("/nl/blog");
     await expect(reader.getByRole("heading", { level: 2 }).first()).toHaveText(`Uitgelicht ${run}`);
     await reader.getByRole("link", { name: new RegExp(`Testrubriek ${run}`) }).first().click();
     await expect(reader).toHaveURL(/\/blog\/category\/testrubriek-/);

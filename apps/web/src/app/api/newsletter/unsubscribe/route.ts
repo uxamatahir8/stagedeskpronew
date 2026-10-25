@@ -1,3 +1,4 @@
+import { localePrefix } from "@stagedesk/core";
 import { NextResponse } from "next/server";
 import { unsubscribeNewsletter } from "@stagedesk/db";
 
@@ -16,6 +17,6 @@ export async function POST(request: Request) {
 export function GET(request: Request) {
   const url = new URL(request.url);
   const token = url.searchParams.get("token") ?? "";
-  const locale = url.searchParams.get("locale") === "en" ? "/en" : "";
+  const locale = localePrefix(url.searchParams.get("locale"));
   return NextResponse.redirect(new URL(`${locale}/newsletter/unsubscribe?token=${encodeURIComponent(token)}`, url.origin));
 }

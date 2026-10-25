@@ -1,3 +1,4 @@
+import { localePrefix } from "@stagedesk/core";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
@@ -31,7 +32,7 @@ async function Settings() {
     select: { slug: true, bookingPageEnabled: true, bookingIntro: true, coverUrl: true, showReviews: true, faq: true },
   });
   const faq = Array.isArray(agency.faq) ? (agency.faq as { question: string; answer: string }[]) : [];
-  const prefix = locale === "en" ? "/en" : "";
+  const prefix = localePrefix(locale);
 
   return (
     <div className="grid max-w-3xl gap-6">

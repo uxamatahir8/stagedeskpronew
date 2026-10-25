@@ -2,7 +2,7 @@ import { CalendarIcon, FileDownIcon, MapPinIcon, PartyPopperIcon } from "lucide-
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
-import { type BookingStatus, type EventType, paymentStatus, todayInNetherlands } from "@stagedesk/core";
+import { type BookingStatus, type EventType, paymentStatus, todayInNetherlands, localePrefix } from "@stagedesk/core";
 import { PayPanel } from "@/components/booking/pay-panel";
 import { MessageThread } from "@/components/messages/message-thread";
 import { QuoteTable } from "@/components/booking/quote-table";
@@ -72,7 +72,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
   const daysToGo = booking.eventDate
     ? Math.round((booking.eventDate.getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 86_400_000)
     : null;
-  const langPrefix = locale === "en" ? "/en" : "";
+  const langPrefix = localePrefix(locale);
 
   return (
     <div className="grid gap-6">

@@ -1,6 +1,6 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
-import { parseEcbRates } from "@stagedesk/core";
+import { parseEcbRates, localePrefix } from "@stagedesk/core";
 import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, processStoredEvent, runAffiliatePayouts, runDuePayouts } from "@stagedesk/payments";
@@ -107,7 +107,7 @@ async function queuePayoutStatement(payoutId: string) {
       name: user.name.split(/\s+/)[0] ?? user.name,
       amount: money(payout.amountCents),
       lines: payout.commissions.map((c) => `${c.referral.agency.name} · ${date(c.createdAt)} · ${money(c.amountCents)}`),
-      url: `${base}${locale === "en" ? "/en" : ""}/app/payouts`,
+      url: `${base}${localePrefix(locale)}/app/payouts`,
     },
   });
 }

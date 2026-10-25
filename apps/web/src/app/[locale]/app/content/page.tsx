@@ -2,7 +2,7 @@ import { ExternalLinkIcon, NewspaperIcon, PlusIcon, StarIcon } from "lucide-reac
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
-import { type ArticleLocale, type ContentKind, readingMinutes } from "@stagedesk/core";
+import { type ArticleLocale, type ContentKind, readingMinutes, localePrefix } from "@stagedesk/core";
 import { listContentArticlesAdmin, listContentCategories } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -126,7 +126,7 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
                     ...(kind === "blog" ? [<FeatureButton key="f" id={a.id} featured={a.featured} />] : []),
                     live ? (
                       <Button key="v" asChild variant="ghost" size="icon" aria-label={t("view")} title={t("view")}>
-                        <a href={kind === "changelog" ? publicBase : `${en ? "/en" : ""}${publicBase}/${a.slug}`} target="_blank" rel="noreferrer">
+                        <a href={kind === "changelog" ? publicBase : `${localePrefix(en ? "en" : "nl")}${publicBase}/${a.slug}`} target="_blank" rel="noreferrer">
                           <ExternalLinkIcon />
                         </a>
                       </Button>

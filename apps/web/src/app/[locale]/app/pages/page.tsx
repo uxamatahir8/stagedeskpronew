@@ -133,7 +133,7 @@ async function PageList() {
                 {title}
               </Link>
               <div className="font-mono text-xs text-muted-foreground">
-                /{p.slugNl} · /en/{p.slugEn}
+                /nl/{p.slugNl} · /{p.slugEn}
               </div>
             </div>,
             placementLabel(p.placement),

@@ -6,7 +6,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
-import { passwordProblem, passwordRules, withinLimit } from "@stagedesk/core";
+import { passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
 import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmPendingForEmail, getSetting, notify, prisma } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
@@ -28,12 +28,12 @@ const assignableRoles = new Set<string>(["agency_owner", "agency_admin", "agency
 
 // Callbacks receive the base user type; our `locale` field is there at runtime.
 function localeOf(user: object | null | undefined): EmailLocale {
-  return user && "locale" in user && user.locale === "en" ? "en" : "nl";
+  return user && "locale" in user && user.locale === "nl" ? "nl" : "en";
 }
 
-/** Locale-aware app URL: Dutch has no prefix, English lives under /en. */
+/** Locale-aware app URL: English has no prefix, Dutch lives under /nl. */
 function appPath(locale: EmailLocale, path: string) {
-  return `${appUrl}${locale === "en" ? "/en" : ""}${path}`;
+  return `${appUrl}${localePrefix(locale)}${path}`;
 }
 
 const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
@@ -67,7 +67,7 @@ export const auth = betterAuth({
     additionalFields: {
       // Set by seed/admin tools only; never accepted from a form.
       platformRole: { type: "string", required: false, input: false },
-      locale: { type: "string", required: false, defaultValue: "nl", input: true },
+      locale: { type: "string", required: false, defaultValue: "en", input: true },
       phone: { type: "string", required: false, input: true },
     },
   },

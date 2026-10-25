@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextFetchEvent, NextResponse, type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import { formatViaCookie, normalizeCampaign, normalizeCode, siteHost, viaCookie } from "@stagedesk/core";
+import { formatViaCookie, normalizeCampaign, normalizeCode, siteHost, viaCookie, localePrefix, locales } from "@stagedesk/core";
 import { routing } from "./i18n/routing";
 
 const intl = createMiddleware(routing);
@@ -39,7 +39,8 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname, search } = request.nextUrl;
   // The platform's own sitemap and robots (matched below only so agency sites can have theirs).
   if (pathname === "/sitemap.xml" || pathname === "/robots.txt") return NextResponse.next();
-  const prefix = pathname === "/en" || pathname.startsWith("/en/") ? "/en" : "";
+  // The language prefix (none for English), kept when sending someone to sign in.
+  const prefix = locales.map((l) => localePrefix(l)).find((p) => p && (pathname === p || pathname.startsWith(`${p}/`))) ?? "";
   const path = pathname.slice(prefix.length) || "/";
 
   const needsSession = protectedPrefixes.some((p) => path === p || path.startsWith(`${p}/`));

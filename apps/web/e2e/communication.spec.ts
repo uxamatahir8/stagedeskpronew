@@ -34,16 +34,16 @@ test("customer and agency message each other, and support answers a question", a
   await signIn(customer, "sanne@klant.local");
 
   await test.step("the customer writes to the agency from their event page", async () => {
-    await customer.goto("/app/event");
+    await customer.goto("/nl/app/event");
     await customer.getByLabel("Schrijf een bericht").fill(`Kan de DJ om 23:00 stoppen? ${run}`);
     await customer.getByRole("button", { name: "Versturen" }).click();
     await expect(customer.getByText(`Kan de DJ om 23:00 stoppen? ${run}`)).toBeVisible();
   });
 
   await test.step("the agency gets a live notification and sees it unread in Messages", async () => {
-    await agency.goto("/app");
+    await agency.goto("/nl/app");
     await expect(agency.getByRole("button", { name: /Meldingen, \d+ ongelezen/ })).toBeVisible({ timeout: 20_000 });
-    await agency.goto("/app/messages");
+    await agency.goto("/nl/app/messages");
     const row = agency.getByRole("link").filter({ hasText: run });
     await expect(row.getByLabel(/ongelezen/)).toBeVisible();
     await row.click();
@@ -62,7 +62,7 @@ test("customer and agency message each other, and support answers a question", a
   });
 
   await test.step("the customer asks support a question", async () => {
-    await customer.goto("/app/support");
+    await customer.goto("/nl/app/support");
     await customer.getByRole("button", { name: "Stel een vraag" }).click();
     const dialog = customer.getByRole("dialog");
     await dialog.getByLabel("Onderwerp", { exact: true }).fill(`Factuur aanpassen ${run}`);
@@ -74,7 +74,7 @@ test("customer and agency message each other, and support answers a question", a
 
   await test.step("the platform admin answers it", async () => {
     await signIn(admin, "admin@stagedesk.local");
-    await admin.goto("/app/support");
+    await admin.goto("/nl/app/support");
     await admin.getByRole("link", { name: `Factuur aanpassen ${run}` }).click();
     await admin.getByLabel("Antwoorden").fill("Zeker, dat hebben we aangepast.");
     await admin.getByRole("button", { name: "Antwoord versturen" }).click();

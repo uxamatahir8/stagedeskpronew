@@ -1,13 +1,14 @@
+import { localePrefix } from "@stagedesk/core";
 import "server-only";
 import type { Metadata } from "next";
 import { appUrl } from "./mail";
 
 type Locale = "nl" | "en";
 
-/** Absolute URL of a public path in a language (Dutch without prefix, English under /en). */
+/** Absolute URL of a public path in a language (English without prefix, Dutch under /nl). */
 export function siteUrl(locale: Locale, path: string) {
   const clean = path === "/" ? "" : path;
-  return `${appUrl}${locale === "en" ? "/en" : ""}${clean}` || appUrl;
+  return `${appUrl}${localePrefix(locale)}${clean}` || appUrl;
 }
 
 /**

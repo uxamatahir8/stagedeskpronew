@@ -6,7 +6,7 @@ test("platform admin changes subscription rules and an agency fee deal", async (
   await signIn(page, "admin@stagedesk.local");
 
   await test.step("grace days are saved and shown again after a reload", async () => {
-    await page.goto("/app/settings");
+    await page.goto("/nl/app/settings");
     const grace = page.getByLabel("Respijtdagen na mislukte betaling of verlopen proefperiode");
     const before = await grace.inputValue();
     await grace.fill("9");
@@ -28,7 +28,7 @@ test("platform admin changes subscription rules and an agency fee deal", async (
   });
 
   await test.step("a fee deal is set for one agency and removed again", async () => {
-    await page.goto("/app/agencies");
+    await page.goto("/nl/app/agencies");
     const row = page.getByRole("row").filter({ hasText: "Rotterdam DJ Collectief" });
     await row.getByRole("button", { name: "Kostenafspraak" }).click();
     const dialog = page.getByRole("dialog");

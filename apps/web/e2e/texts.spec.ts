@@ -11,7 +11,7 @@ test("website texts from the admin panel", async ({ browser }) => {
   const admin = await (await browser.newContext()).newPage();
   const visitor = await (await browser.newContext()).newPage();
   await signIn(admin, "admin@stagedesk.local");
-  await admin.goto("/app/texts?ns=landing");
+  await admin.goto("/nl/app/texts?ns=landing");
   const field = admin.locator('textarea[id="nl-landing.title"]');
 
   await test.step("an unknown placeholder is refused", async () => {
@@ -24,7 +24,7 @@ test("website texts from the admin panel", async ({ browser }) => {
     await field.fill("Je hele bureau, <hl>één systeem</hl>");
     await admin.getByRole("button", { name: "Opslaan" }).first().click();
     await expect(admin.getByText("Tekst opgeslagen en live.")).toBeVisible();
-    await visitor.goto("/");
+    await visitor.goto("/nl/");
     await expect(visitor.getByRole("heading", { level: 1 })).toHaveText("Je hele bureau, één systeem");
   });
 

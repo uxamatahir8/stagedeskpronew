@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/b/[slug]
   return {
     title: { absolute: `${agency.name}${agency.city ? ` · ${agency.city}` : ""}` },
     description,
-    alternates: { canonical: `/b/${slug}`, languages: { nl: `/b/${slug}`, en: `/en/b/${slug}` } },
+    alternates: { canonical: `/b/${slug}`, languages: { en: `/b/${slug}`, nl: `/nl/b/${slug}` } },
     openGraph: { title: agency.name, description, type: "website", images: image ? [`${appUrl}${image}`] : undefined },
   };
 }

@@ -1,3 +1,4 @@
+import { localePrefix } from "@stagedesk/core";
 import { ArrowLeftIcon, ExternalLinkIcon, GitCompareIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -54,7 +55,7 @@ async function Editor({ params }: Pick<PageProps<"/[locale]/app/pages/[id]">, "p
   const latest = page.versions[0];
   const content = parsePageContent(latest?.content) ?? blank;
   const authors = await prisma.user.findMany({ where: { id: { in: page.versions.flatMap((v) => (v.createdById ? [v.createdById] : [])) } }, select: { id: true, name: true } });
-  const livePath = `${locale === "en" ? "/en" : ""}/${locale === "en" ? page.slugEn : page.slugNl}`;
+  const livePath = `${localePrefix(locale)}/${locale === "en" ? page.slugEn : page.slugNl}`;
 
   return (
     <div className="grid gap-6">

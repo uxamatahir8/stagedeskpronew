@@ -14,7 +14,7 @@ export async function signIn(page: Page, email: string) {
  */
 export async function submitSignIn(page: Page, email: string) {
   for (let attempt = 0; attempt < 2; attempt++) {
-    await page.goto("/sign-in");
+    await page.goto("/nl/sign-in");
     await page.locator("#signin-email").fill(email);
     await page.locator("#signin-password").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Inloggen", exact: true }).click();
