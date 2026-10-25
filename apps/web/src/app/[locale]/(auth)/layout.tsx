@@ -20,28 +20,26 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden overflow-hidden bg-[oklch(0.24_0.08_322)] text-white lg:flex lg:flex-col">
-        <div className="relative z-10 grid gap-10 p-12 xl:p-16">
-          <Link href="/" className="w-fit" aria-label="StageDesk Pro">
+        {/* Logo top left; the artist app sits in the top right corner, tilted, and fades out above the
+            text. This area clips the phone, so it never covers the words. */}
+        <div className="relative min-h-56 flex-1 overflow-hidden [mask-image:linear-gradient(to_bottom,black_80%,transparent)]">
+          <Link href="/" className="relative z-10 m-12 block w-fit xl:m-16" aria-label="StageDesk Pro">
             <Logo onDark className="h-11" priority />
           </Link>
-          <div className="grid max-w-md gap-6">
-            <p className="text-3xl leading-tight font-semibold text-balance">{t("brandLine")}</p>
-            <ul className="grid gap-3 text-white/80">
-              {(["brandPoint1", "brandPoint2", "brandPoint3"] as const).map((k) => (
-                <li key={k} className="flex gap-3">
-                  <CheckIcon className="mt-0.5 size-5 shrink-0 text-[oklch(0.78_0.15_352)]" aria-hidden />
-                  {t(k)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-        {/* The artist app, tilted slightly and cut off by the bottom edge, like a phone on a table.
-            It has its own space under the text, so it never covers the headline or the list. */}
-        <div aria-hidden className="pointer-events-none relative mt-auto h-[clamp(12rem,38svh,24rem)] shrink-0">
-          <div className="absolute top-6 right-10 w-[17rem] rotate-[-6deg] xl:right-16 xl:w-[19rem]">
+          <div aria-hidden className="pointer-events-none absolute top-10 right-6 w-[16rem] rotate-[8deg] xl:right-14 xl:w-[18rem]">
             <Screenshot name="artist" />
           </div>
+        </div>
+        <div className="relative z-10 grid max-w-xl shrink-0 gap-6 p-12 pt-4 xl:p-16 xl:pt-6">
+          <p className="text-3xl leading-tight font-semibold text-balance">{t("brandLine")}</p>
+          <ul className="grid gap-3 text-white/80">
+            {(["brandPoint1", "brandPoint2", "brandPoint3"] as const).map((k) => (
+              <li key={k} className="flex gap-3">
+                <CheckIcon className="mt-0.5 size-5 shrink-0 text-[oklch(0.78_0.15_352)]" aria-hidden />
+                {t(k)}
+              </li>
+            ))}
+          </ul>
         </div>
       </aside>
 
