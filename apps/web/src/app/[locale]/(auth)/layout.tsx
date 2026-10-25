@@ -36,9 +36,12 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
             </ul>
           </div>
         </div>
-        {/* The artist app, tilted slightly and cut off by the bottom edge, like a phone on a table. */}
-        <div aria-hidden className="pointer-events-none absolute -right-8 -bottom-64 w-[19rem] rotate-[-6deg] xl:-bottom-56 xl:w-[21rem]">
-          <Screenshot name="artist" />
+        {/* The artist app, tilted slightly and cut off by the bottom edge, like a phone on a table.
+            It has its own space under the text, so it never covers the headline or the list. */}
+        <div aria-hidden className="pointer-events-none relative mt-auto h-[clamp(12rem,38svh,24rem)] shrink-0">
+          <div className="absolute top-6 right-10 w-[17rem] rotate-[-6deg] xl:right-16 xl:w-[19rem]">
+            <Screenshot name="artist" />
+          </div>
         </div>
       </aside>
 
