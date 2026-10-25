@@ -967,7 +967,9 @@
     "via_lead": "StageDesk-lead",
     "paymentReported": "{name} meldt een betaling van {amount}",
     "confirmReceipt": "Ontvangst bevestigen",
-    "via_platform_admin": "aangemaakt door platformbeheerder"
+    "via_platform_admin": "aangemaakt door platformbeheerder",
+    "via_gig": "optreden besteld via de gids",
+    "via_profile": "via je openbare profiel"
   },
   "billing": {
     "title": "Abonnement",
@@ -1085,7 +1087,11 @@
     "searchPlaceholder": "Zoek op naam of code",
     "state": "Zichtbaarheid",
     "stateActive": "Actief en zichtbaar",
-    "agenciesCol": "Bureaus"
+    "agenciesCol": "Bureaus",
+    "audience": "Voor",
+    "audienceHint": "Artiest-abonnementen worden alleen aan zelfstandige artiesten aangeboden; ze geven een openbaar profiel en direct boeken.",
+    "audience_agency": "Bureaus",
+    "audience_artist": "Zelfstandige artiesten"
   },
   "fees": {
     "type": "Soort kosten",
@@ -2020,7 +2026,9 @@
       "request": "Offerte aanvragen",
       "requestHint": "Vertel over je event; wij zoeken het bureau",
       "tour": "Producttour",
-      "tourHint": "Elk scherm, met demogegevens"
+      "tourHint": "Elk scherm, met demogegevens",
+      "artists": "Boek een artiest",
+      "artistsHint": "Zelfstandige DJ’s, bands en acts die je direct boekt."
     },
     "footer": {
       "product": "Product",
@@ -3678,7 +3686,9 @@
     "source_manual": "door het bureau",
     "source_platform_admin": "platformbeheerder",
     "openCreated": "Boeking openen",
-    "createdNotice": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht."
+    "createdNotice": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht.",
+    "source_gig": "Bestelling optreden",
+    "source_profile": "Artiestenprofiel"
   },
   "websiteEditor": {
     "title": "Website",
@@ -4683,7 +4693,9 @@
     "commissionStatus": "Commissie per status",
     "clickToSignup": "Klik → aanmelding",
     "signupToPaying": "Aanmelding → betalend",
-    "commissionsYear": "Commissie, laatste 12 maanden"
+    "commissionsYear": "Commissie, laatste 12 maanden",
+    "source_gig": "Bestelde optredens",
+    "source_profile": "Openbaar artiestenprofiel"
   },
   "languages": {
     "nl": "Nederlands",
@@ -4822,5 +4834,82 @@
     "invalidMedia": "Deze link kan niet getoond worden: {link}",
     "invalidPrice": "Vul de prijs vanaf in als bedrag, bijv. 750.",
     "notSolo": "Deze pagina is voor zelfstandige artiesten."
+  },
+  "listings": {
+    "title": "Mijn optredens",
+    "description": "Optredens voor een vaste prijs die klanten via je openbare profiel kunnen bestellen.",
+    "add": "Optreden aanbieden",
+    "edit": "Optreden bewerken",
+    "dialogHint": "Klanten zien de titel, beschrijving en de prijs incl. btw. Bestellen ze, dan krijg je de boeking met je offerte al verstuurd.",
+    "titleLabel": "Titel",
+    "titlePlaceholder": "Bruiloftsfeest-DJ, 4 uur",
+    "descriptionHint": "Apparatuur, licht, speelduur, reiskosten: wat de klant krijgt.",
+    "price": "Prijs excl. btw ({currency})",
+    "vat": "Btw",
+    "deposit": "Aanbetaling (%)",
+    "hours": "Uren",
+    "hoursShort": "{hours} u",
+    "eventTypes": "Voor deze evenementen",
+    "allTypes": "Alle evenementen",
+    "active": "Aangeboden",
+    "activeHint": "Zet uit om het optreden te verbergen zonder het te verwijderen.",
+    "inactive": "Verborgen",
+    "save": "Optreden opslaan",
+    "saved": "Optreden opgeslagen.",
+    "deleted": "Optreden verwijderd.",
+    "delete": "Optreden verwijderen",
+    "deleteConfirm": "Dit optreden verwijderen? Bestellingen die al gedaan zijn houden hun boeking.",
+    "priceMeta": "+ {vat} btw · {deposit} aanbetaling",
+    "orders": "{count, plural, =0 {nog geen bestellingen} one {# bestelling} other {# bestellingen}}",
+    "empty": "Nog geen optredens",
+    "emptyHint": "Bied een optreden aan voor een vaste prijs, bijv. \"Bruiloft-DJ, 5 uur\". Klanten bestellen het direct via je profiel.",
+    "listedHint": "Je staat in de artiestengids: klanten vinden je en kunnen deze optredens bestellen.",
+    "notListedHint": "Je optredens en profiel worden openbaar met het Artiest-abonnement. Tot die tijd kun je wel aanvragen beantwoorden en prijzen sturen.",
+    "viewProfile": "Mijn openbare profiel bekijken",
+    "getPlan": "Artiest-abonnement nemen",
+    "invalid": "Controleer het optreden: het heeft een titel en minstens één soort evenement nodig.",
+    "invalidPrice": "Vul de prijs in als bedrag, bijv. 650.",
+    "invalidHours": "Uren moeten tussen 0 en 24 liggen.",
+    "notSolo": "Alleen zelfstandige artiesten kunnen optredens aanbieden.",
+    "descriptionLabel": "Wat zit erin"
+  },
+  "artistDirectory": {
+    "metaTitle": "Boek direct een DJ, band of live act",
+    "metaDescription": "Zelfstandige DJ's, bands en acts in de buurt. Bekijk hun optredens en prijzen, luister hun mixen en boek direct.",
+    "eyebrow": "Artiesten",
+    "title": "Boek direct een artiest",
+    "intro": "Zelfstandige DJ's, bands en acts. Zie wat ze aanbieden en voor hoeveel, en bestel een optreden of vraag een prijs.",
+    "search": "Naam, stijl of genre",
+    "searchPlaceholder": "bijv. saxofoon, 80s, bruiloft",
+    "place": "Plaats",
+    "eventType": "Evenement",
+    "allEvents": "Alle evenementen",
+    "find": "Zoeken",
+    "count": "{count, plural, =0 {Geen artiesten} one {# artiest} other {# artiesten}}",
+    "emptyTitle": "Geen artiesten gevonden",
+    "emptyBody": "Probeer een andere plaats of evenement, of stuur één aanvraag: bureaus en artiesten in de buurt sturen hun prijs.",
+    "emptyCta": "Aanvraag sturen",
+    "from": "vanaf {price}",
+    "rating": "{average} ({count, plural, one {# review} other {# reviews}})",
+    "plays": "Speelt in {places}",
+    "back": "Alle artiesten",
+    "gigsTitle": "Optredens",
+    "hours": "{hours} uur",
+    "inclVat": "incl. btw",
+    "order": "Bestellen",
+    "orderTitle": "Bestellen: {title}",
+    "orderHint": "{price}. Vertel de artiest over je evenement; je krijgt de offerte per mail om te accepteren en de aanbetaling te doen.",
+    "orderSubmit": "Bestelling versturen",
+    "orderSent": "Je bestelling {code} is binnen. Kijk in je mail voor de offerte: accepteer die om te boeken.",
+    "mediaTitle": "Luisteren en kijken",
+    "listen": "luisteren",
+    "reviewsTitle": "Reviews",
+    "stars": "{count} van de 5 sterren",
+    "askTitle": "Vraag {name} om een prijs",
+    "askBody": "Iets anders in gedachten? Beschrijf je evenement en de artiest stuurt je een prijs.",
+    "error_not_found": "Dit optreden is niet meer beschikbaar.",
+    "error_not_listed": "Deze artiest kan nu niet online geboekt worden.",
+    "error_unavailable": "De artiest kan niet op die datum. Kies een andere datum of vraag een prijs.",
+    "error_customer_on_team": "Je kunt niet bij je eigen bedrijf bestellen."
   }
 }

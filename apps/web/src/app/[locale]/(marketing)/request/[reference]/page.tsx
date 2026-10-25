@@ -19,8 +19,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/request/
   return { title: t("metaTitle"), robots: { index: false, follow: false } };
 }
 
-export default async function RequestComparePage({ params, searchParams }: PageProps<"/[locale]/request/[reference]">) {
-  setRequestLocale((await params).locale as Locale);
+export default function RequestComparePage({ params, searchParams }: PageProps<"/[locale]/request/[reference]">) {
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-8 px-5 py-14 sm:px-8 sm:py-20">
       <Suspense fallback={<Skeleton className="h-[30rem] w-full" />}>
@@ -33,7 +32,9 @@ export default async function RequestComparePage({ params, searchParams }: PageP
 async function Compare({ params, searchParams }: Pick<PageProps<"/[locale]/request/[reference]">, "params" | "searchParams">) {
   // Prices expire, so the page compares against the time of each request.
   await connection();
-  const [{ reference }, sp, t, te, format] = await Promise.all([params, searchParams, getTranslations("leadCompare"), getTranslations("eventTypes"), getFormatter()]);
+  const { reference, locale } = await params;
+  setRequestLocale(locale as Locale);
+  const [sp, t, te, format] = await Promise.all([searchParams, getTranslations("leadCompare"), getTranslations("eventTypes"), getFormatter()]);
   const token = typeof sp["t"] === "string" ? sp["t"] : "";
   const data = token ? await leadForCustomer(reference, token) : null;
   if (!data) {

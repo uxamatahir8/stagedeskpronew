@@ -8,6 +8,7 @@ export * from "./audit";
 export * from "./leads";
 export * from "./marketplace";
 export * from "./solo";
+export * from "./listings";
 export * from "./geo";
 export * from "./messages";
 export * from "./notifications";

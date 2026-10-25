@@ -43,6 +43,7 @@ async function navEntries(): Promise<NavEntry[]> {
         { href: "/solutions/weddings-events", label: t("nav.weddingsEvents"), description: t("nav.weddingsEventsHint"), icon: "heart" },
         { href: "/solutions/band-agencies", label: t("nav.bandAgencies"), description: t("nav.bandAgenciesHint"), icon: "calendar" },
         { href: "/request", label: t("nav.request"), description: t("nav.requestHint"), icon: "sparkles" },
+        { href: "/artists", label: t("nav.artists"), description: t("nav.artistsHint"), icon: "music" },
         { href: "/for-artists", label: t("nav.forArtists"), description: t("nav.forArtistsHint"), icon: "music" },
       ],
     },

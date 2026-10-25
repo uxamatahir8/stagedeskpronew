@@ -12,6 +12,7 @@ const plans: {
   limits: PlanLimits;
   feeBps: number;
   recommended?: boolean;
+  audience?: "agency" | "artist";
   features: { nl: string[]; en: string[] };
 }[] = [
   {
@@ -54,14 +55,29 @@ const plans: {
       en: ["Unlimited artists and bookings", "Custom domain", "No StageDesk branding", "No platform fee"],
     },
   },
+  {
+    key: "artist",
+    audience: "artist",
+    name: { nl: "Artiest", en: "Artist" },
+    description: { nl: "Voor zelfstandige artiesten: een openbaar profiel dat klanten direct boeken.", en: "For independent artists: a public profile customers book directly." },
+    monthly: 1_900,
+    yearly: 19_000,
+    feeBps: 200,
+    limits: { maxArtists: 1, maxStaff: 1, maxBookingsPerMonth: null, storageGb: 2, bookingPage: false, embedWidget: false, customDomain: false, removeBranding: false, artistSharing: false },
+    features: {
+      nl: ["In de artiestengids", "Optredens met vaste prijs die klanten bestellen", "Direct boeken en betalen", "Reviews op je profiel"],
+      en: ["Listed in the artist directory", "Fixed-price gigs customers order", "Direct booking and payment", "Reviews on your profile"],
+    },
+  },
 ];
 
 export async function seedPlans(prisma: PrismaClient) {
-  if (await prisma.plan.count()) {
-    console.log("  kept     plans");
-    return;
-  }
+  // Plans the admin already has are kept as they are; only missing ones are added.
+  const existing = new Set((await prisma.plan.findMany({ select: { key: true } })).map((p) => p.key));
+  let created = 0;
   for (const [position, p] of plans.entries()) {
+    if (existing.has(p.key)) continue;
+    created++;
     await prisma.plan.create({
       data: {
         id: randomUUID(),
@@ -75,9 +91,10 @@ export async function seedPlans(prisma: PrismaClient) {
         limits: p.limits,
         feeRule: p.feeBps === 0 ? { type: "none", percentageBps: 0, fixedCents: 0, minCents: null, maxCents: null } : { type: "percentage", percentageBps: p.feeBps, fixedCents: 0, minCents: null, maxCents: null },
         recommended: p.recommended ?? false,
+        audience: p.audience ?? "agency",
         position,
       },
     });
   }
-  console.log(`  created  ${plans.length} plans`);
+  console.log(created ? `  created  ${created} plans` : "  kept     plans");
 }

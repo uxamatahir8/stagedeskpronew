@@ -22,8 +22,9 @@ const parseFeeRule = (value: unknown): FeeRule | null => {
   return value && result.success ? result.data : null;
 };
 
-export async function activePlans() {
-  return prisma.plan.findMany({ where: { active: true }, orderBy: [{ position: "asc" }, { monthlyPriceCents: "asc" }] });
+/** Plans on offer: agency plans by default, or the Artist plans for independent artists. */
+export async function activePlans(audience: "agency" | "artist" = "agency") {
+  return prisma.plan.findMany({ where: { active: true, audience }, orderBy: [{ position: "asc" }, { monthlyPriceCents: "asc" }] });
 }
 
 export interface AgencyBilling {

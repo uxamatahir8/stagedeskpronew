@@ -61,6 +61,7 @@ async function Plans() {
       limits: parseLimits(p.limits),
       feeRule: p.feeRule && fee.success ? fee.data : null,
       recommended: p.recommended,
+      audience: p.audience === "artist" ? "artist" : "agency",
       visible: p.visible,
       active: p.active,
       position: p.position,
@@ -98,6 +99,7 @@ async function Plans() {
               <div key="n">
                 <div className="flex flex-wrap items-center gap-2 font-medium">
                   {name}
+                  {p.audience === "artist" && <Pill tone="info">{t("audience_artist")}</Pill>}
                   {p.recommended && <Pill tone="brand">{t("recommended")}</Pill>}
                   {!p.visible && <Pill>{t("hidden")}</Pill>}
                   {!p.active && <Pill tone="danger">{t("inactive")}</Pill>}

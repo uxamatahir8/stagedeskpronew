@@ -102,7 +102,7 @@ async function logEvent(tx: Tx, bookingId: string, type: string, actorId: string
 }
 
 /** How a booking came in. */
-export const bookingSources = ["manual", "booking_page", "platform_admin", "lead"] as const;
+export const bookingSources = ["manual", "booking_page", "platform_admin", "lead", "gig", "profile"] as const;
 export type BookingSource = (typeof bookingSources)[number];
 
 export interface NewBooking {

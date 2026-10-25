@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { savePlanAction } from "./actions";
 
 export interface PlanValues {
@@ -31,6 +32,7 @@ export interface PlanValues {
   limits: PlanLimits;
   feeRule: FeeRule | null;
   recommended: boolean;
+  audience: "agency" | "artist";
   visible: boolean;
   active: boolean;
   position: number;
@@ -58,6 +60,7 @@ export function PlanDialog({ plan, nextPosition }: { plan?: PlanValues; nextPosi
     limits: fallbackLimits,
     feeRule: null,
     recommended: false,
+    audience: "agency",
     visible: true,
     active: true,
     position: nextPosition,
@@ -125,6 +128,17 @@ export function PlanDialog({ plan, nextPosition }: { plan?: PlanValues; nextPosi
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField required id="plan-key" label={t("plans.key")} hint={t("plans.keyHint")}>
               <Input required id="plan-key" value={v.key} disabled={Boolean(plan)} onChange={(e) => set({ key: e.target.value.toLowerCase() })} />
+            </FormField>
+            <FormField id="plan-audience" label={t("plans.audience")} hint={t("plans.audienceHint")}>
+              <Select value={v.audience} onValueChange={(a) => set({ audience: a as "agency" | "artist" })}>
+                <SelectTrigger id="plan-audience" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="agency">{t("plans.audience_agency")}</SelectItem>
+                  <SelectItem value="artist">{t("plans.audience_artist")}</SelectItem>
+                </SelectContent>
+              </Select>
             </FormField>
             <div className="grid content-start gap-2 rounded-lg border p-3">
               <div className="flex items-center justify-between gap-4">

@@ -98,7 +98,7 @@ export interface InquiryInput {
  * person's account, links them to the agency as a customer and opens a
  * booking in "inquiry". Existing accounts keep their own name and phone.
  */
-export async function submitInquiry(slug: string, input: InquiryInput) {
+export async function submitInquiry(slug: string, input: InquiryInput, source: "booking_page" | "profile" = "booking_page") {
   const agency = await publicAgency(slug);
   if (!agency) return null;
 
@@ -138,7 +138,7 @@ export async function submitInquiry(slug: string, input: InquiryInput) {
       preferredArtistId: preferred,
       preferredGenre: input.preferredGenre,
       budgetRange: isBudgetRange(input.budgetRange) ? input.budgetRange : null,
-      source: "booking_page",
+      source,
     },
     null,
   );

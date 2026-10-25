@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, type EventType, feeRuleSchema } from "@stagedesk/core";
-import { activePlans, agencyOverview } from "@stagedesk/db";
+import { activePlans, agencyOverview, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { BookingStatusBadge, Pill } from "@/components/status-badge";
@@ -39,7 +39,9 @@ async function Agency({ params }: Pick<PageProps<"/[locale]/app/agencies/[id]">,
   const { locale, id } = await params;
   setRequestLocale(locale as Locale);
   await requirePermission("platform.agencies");
-  const [overview, plans] = await Promise.all([agencyOverview(id), activePlans()]);
+  const kind = (await prisma.organization.findUnique({ where: { id }, select: { kind: true } }))?.kind;
+  // An independent artist gets Artist plans; agencies the agency plans.
+  const [overview, plans] = await Promise.all([agencyOverview(id), activePlans(kind === "solo" ? "artist" : "agency")]);
   if (!overview) notFound();
   const { org, access, stats, recent, activity } = overview;
   const [t, ts, tr, te, tau, format, lang] = await Promise.all([

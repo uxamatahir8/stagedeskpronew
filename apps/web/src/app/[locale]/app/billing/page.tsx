@@ -43,13 +43,15 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
   const { organization } = await requireAgency("agency.billing");
   // Back from Checkout: apply the subscription now rather than waiting for the webhook.
   await confirmCheckoutReturn((await searchParams)["session_id"], { organizationId: organization.id });
+  // Independent artists see the Artist plans; agencies the agency plans.
+  const { kind } = await prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { kind: true } });
   const [t, format, locale, billing, usage, plans, fee, org, eligible] = await Promise.all([
     getTranslations("billing"),
     getFormatter(),
     getLocale(),
     agencyBilling(organization.id),
     agencyUsage(organization.id),
-    activePlans(),
+    activePlans(kind === "solo" ? "artist" : "agency"),
     effectiveFeeSnapshot(organization.id),
     prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { stripeCustomerId: true } }),
     trialEligible(organization.id),
@@ -110,6 +112,8 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
           </CardContent>
         </Card>
 
+        {/* Seats, artists and website features are agency matters; an independent artist has none of them. */}
+        {kind !== "solo" && (
         <Card>
           <CardHeader>
             <CardTitle>{t("usage")}</CardTitle>
@@ -147,6 +151,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
             </ul>
           </CardContent>
         </Card>
+        )}
       </div>
 
       <PlanPicker
@@ -182,7 +187,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
           })}
       />
 
-      <ReferralCard organizationId={organization.id} />
+      {kind !== "solo" && <ReferralCard organizationId={organization.id} />}
     </div>
   );
 }

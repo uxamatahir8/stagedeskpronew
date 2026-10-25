@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
-import { allPublishedSlugs, listContentCategories, prisma } from "@stagedesk/db";
+import { allPublishedSlugs, directoryArtists, listContentCategories, prisma } from "@stagedesk/db";
 import { siteUrl } from "@/lib/seo";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -19,15 +19,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const fixed = [
     "/", "/features", "/pricing", "/about", "/for-agencies", "/for-artists", "/partners", "/blog", "/help", "/changelog", "/contact",
     "/features/booking-page", "/features/quotes-invoices", "/features/payments-payouts", "/features/artist-management",
-    "/solutions/weddings-events", "/solutions/band-agencies", "/request", "/tour", "/partners/how-it-works", "/partners/earnings", "/partners/faq",
+    "/solutions/weddings-events", "/solutions/band-agencies", "/request", "/tour", "/partners/how-it-works", "/partners/earnings", "/partners/faq", "/artists",
   ];
-  const [pages, agencies, posts, articles, categories] = await Promise.all([
+  const [pages, agencies, posts, articles, categories, artists] = await Promise.all([
     prisma.page.findMany({ where: { status: "published" }, select: { slugNl: true, slugEn: true, updatedAt: true } }),
     // Public booking pages that are switched on.
     prisma.organization.findMany({ where: { bookingPageEnabled: true, suspendedAt: null }, select: { slug: true } }),
     allPublishedSlugs("blog"),
     allPublishedSlugs("help"),
     listContentCategories("blog"),
+    // Independent artists in the directory (with the Artist plan).
+    directoryArtists(),
   ]);
   return [
     ...fixed.flatMap((p) => both({ nl: p, en: p }, { changeFrequency: "weekly", priority: p === "/" ? 1 : 0.8 })),
@@ -36,5 +38,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categories.filter((c) => c._count.articles > 0).flatMap((c) => both({ nl: `/blog/category/${c.slug}`, en: `/blog/category/${c.slug}` }, { changeFrequency: "weekly", priority: 0.5 })),
     ...pages.flatMap((p) => both({ nl: `/${p.slugNl}`, en: `/${p.slugEn}` }, { lastModified: p.updatedAt, changeFrequency: "yearly", priority: 0.3 })),
     ...agencies.flatMap((a) => both({ nl: `/b/${a.slug}`, en: `/b/${a.slug}` }, { changeFrequency: "weekly", priority: 0.6 })),
+    ...artists.flatMap((a) => both({ nl: `/artists/${a.slug}`, en: `/artists/${a.slug}` }, { changeFrequency: "weekly", priority: 0.6 })),
   ];
 }

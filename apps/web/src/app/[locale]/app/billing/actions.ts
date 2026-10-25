@@ -19,8 +19,12 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
   const locale = (await getLocale()) === "en" ? "en" : "nl";
   try {
     // A plan not yet in Stripe (new, or after a reset) is pushed there first, so checkout just works.
-    const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { active: true, stripeMonthlyPriceId: true, stripeYearlyPriceId: true } });
-    if (!plan?.active) return { message: (await getTranslations("billing"))("planNotSynced") };
+    const [plan, org] = await Promise.all([
+      prisma.plan.findUnique({ where: { id: planId }, select: { active: true, audience: true, stripeMonthlyPriceId: true, stripeYearlyPriceId: true } }),
+      prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { kind: true } }),
+    ]);
+    // Artist plans are for independent artists only, and agency plans for agencies.
+    if (!plan?.active || plan.audience !== (org.kind === "solo" ? "artist" : "agency")) return { message: (await getTranslations("billing"))("planNotSynced") };
     if (!plan.stripeMonthlyPriceId || !plan.stripeYearlyPriceId) await syncPlanToStripe(stripe, planId);
     // A running Stripe subscription is switched in place, never doubled.
     if (await liveStripeSubscription(organization.id)) {

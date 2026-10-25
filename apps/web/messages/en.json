@@ -967,7 +967,9 @@
     "via_lead": "StageDesk lead",
     "paymentReported": "{name} reports a payment of {amount}",
     "confirmReceipt": "Confirm receipt",
-    "via_platform_admin": "created by platform admin"
+    "via_platform_admin": "created by platform admin",
+    "via_gig": "gig ordered from the directory",
+    "via_profile": "via your public profile"
   },
   "billing": {
     "title": "Subscription",
@@ -1085,7 +1087,11 @@
     "searchPlaceholder": "Search by name or code",
     "state": "Visibility",
     "stateActive": "Active and visible",
-    "agenciesCol": "Agencies"
+    "agenciesCol": "Agencies",
+    "audience": "For",
+    "audienceHint": "Artist plans are offered to independent artists only; they give a public profile and direct booking.",
+    "audience_agency": "Agencies",
+    "audience_artist": "Independent artists"
   },
   "fees": {
     "type": "Fee type",
@@ -2020,7 +2026,9 @@
       "request": "Request a quote",
       "requestHint": "Tell us about your event; we find the agency",
       "tour": "Product tour",
-      "tourHint": "Every screen, with demo data"
+      "tourHint": "Every screen, with demo data",
+      "artists": "Book an artist",
+      "artistsHint": "Independent DJs, bands and acts you can book directly."
     },
     "footer": {
       "product": "Product",
@@ -3678,7 +3686,9 @@
     "source_manual": "by the agency",
     "source_platform_admin": "platform admin",
     "openCreated": "Open the booking",
-    "createdNotice": "Platform admin booking {code} created for {agency}. Their team has been notified."
+    "createdNotice": "Platform admin booking {code} created for {agency}. Their team has been notified.",
+    "source_gig": "Gig order",
+    "source_profile": "Artist profile"
   },
   "websiteEditor": {
     "title": "Website",
@@ -4683,7 +4693,9 @@
     "commissionStatus": "Commission by status",
     "clickToSignup": "Click → sign-up",
     "signupToPaying": "Sign-up → paying",
-    "commissionsYear": "Commission, last 12 months"
+    "commissionsYear": "Commission, last 12 months",
+    "source_gig": "Gig orders",
+    "source_profile": "Public artist profile"
   },
   "languages": {
     "nl": "Dutch",
@@ -4822,5 +4834,82 @@
     "invalidMedia": "This link can't be shown: {link}",
     "invalidPrice": "Enter the price from as an amount, e.g. 750.",
     "notSolo": "This page is for independent artists."
+  },
+  "listings": {
+    "title": "Gigs I offer",
+    "description": "Gigs at a fixed price that customers can order from your public profile.",
+    "add": "Offer a gig",
+    "edit": "Edit gig",
+    "dialogHint": "Customers see the title, description and the price including VAT. When they order, you get the booking with your quote already sent.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Wedding party DJ, 4 hours",
+    "descriptionHint": "Equipment, lights, set length, travel: what the customer gets.",
+    "price": "Price excl. VAT ({currency})",
+    "vat": "VAT",
+    "deposit": "Deposit (%)",
+    "hours": "Hours",
+    "hoursShort": "{hours} h",
+    "eventTypes": "For these events",
+    "allTypes": "All events",
+    "active": "Offered",
+    "activeHint": "Switch off to hide the gig without deleting it.",
+    "inactive": "Hidden",
+    "save": "Save gig",
+    "saved": "Gig saved.",
+    "deleted": "Gig deleted.",
+    "delete": "Delete gig",
+    "deleteConfirm": "Delete this gig? Orders already made keep their booking.",
+    "priceMeta": "+ {vat} VAT · {deposit} deposit",
+    "orders": "{count, plural, =0 {no orders yet} one {# order} other {# orders}}",
+    "empty": "No gigs yet",
+    "emptyHint": "Offer a gig with a fixed price, e.g. \"Wedding DJ, 5 hours\". Customers can order it straight from your profile.",
+    "listedHint": "You're in the artist directory: customers can find you and order these gigs.",
+    "notListedHint": "Your gigs and profile become public with the Artist plan. Until then you can still answer requests and send prices.",
+    "viewProfile": "View my public profile",
+    "getPlan": "Get the Artist plan",
+    "invalid": "Check the gig: it needs a title and at least one event type.",
+    "invalidPrice": "Enter the price as an amount, e.g. 650.",
+    "invalidHours": "Hours must be between 0 and 24.",
+    "notSolo": "Only independent artists can offer gigs.",
+    "descriptionLabel": "What's included"
+  },
+  "artistDirectory": {
+    "metaTitle": "Book a DJ, band or live act directly",
+    "metaDescription": "Independent DJs, bands and acts near you. See their gigs and prices, listen to their mixes and book directly.",
+    "eyebrow": "Artists",
+    "title": "Book an artist directly",
+    "intro": "Independent DJs, bands and acts. See what they offer and for how much, and order a gig or ask for a price.",
+    "search": "Name, style or genre",
+    "searchPlaceholder": "e.g. saxophone, 80s, wedding",
+    "place": "Place",
+    "eventType": "Event",
+    "allEvents": "All events",
+    "find": "Find",
+    "count": "{count, plural, =0 {No artists} one {# artist} other {# artists}}",
+    "emptyTitle": "No artists match",
+    "emptyBody": "Try another place or event, or send one request: agencies and artists near you send their price.",
+    "emptyCta": "Send a request",
+    "from": "from {price}",
+    "rating": "{average} ({count, plural, one {# review} other {# reviews}})",
+    "plays": "Plays in {places}",
+    "back": "All artists",
+    "gigsTitle": "Gigs",
+    "hours": "{hours} hours",
+    "inclVat": "incl. VAT",
+    "order": "Order",
+    "orderTitle": "Order: {title}",
+    "orderHint": "{price}. Tell the artist about your event; you get their quote by email to accept and pay the deposit.",
+    "orderSubmit": "Send order",
+    "orderSent": "Your order {code} is in. Check your email for the quote: accept it to book.",
+    "mediaTitle": "Listen and watch",
+    "listen": "listen",
+    "reviewsTitle": "Reviews",
+    "stars": "{count} out of 5 stars",
+    "askTitle": "Ask {name} for a price",
+    "askBody": "Something else in mind? Describe your event and the artist sends you a price.",
+    "error_not_found": "This gig isn't available any more.",
+    "error_not_listed": "This artist can't be booked online right now.",
+    "error_unavailable": "The artist isn't available on that date. Choose another date or ask for a price.",
+    "error_customer_on_team": "You can't order from your own business."
   }
 }

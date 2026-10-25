@@ -29,6 +29,7 @@ const schema = z.object({
   limits: planLimitsSchema,
   feeRule: feeRuleSchema.nullable(),
   recommended: z.boolean(),
+  audience: z.enum(["agency", "artist"]),
   visible: z.boolean(),
   active: z.boolean(),
   position: z.number().int().min(0).max(100),
@@ -55,6 +56,7 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
     // DbNull clears the column, so the plan falls back to the platform default.
     feeRule: d.feeRule ?? Prisma.DbNull,
     recommended: d.recommended,
+    audience: d.audience,
     visible: d.visible,
     active: d.active,
     position: d.position,
@@ -67,7 +69,7 @@ export async function savePlanAction(input: z.input<typeof schema>): Promise<Act
     await prisma.plan.create({ data: { ...data, id, key: d.key } });
   }
   // Only one plan is recommended at a time.
-  if (d.recommended) await prisma.plan.updateMany({ where: { id: { not: id } }, data: { recommended: false } });
+  if (d.recommended) await prisma.plan.updateMany({ where: { id: { not: id }, audience: d.audience }, data: { recommended: false } });
 
   const stripe = await getStripe();
   await audit({ actorId: viewer.user.id, action: "plan.save", targetType: "plan", targetId: d.key });

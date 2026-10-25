@@ -19,8 +19,8 @@ import {
   toDateOnly,
 } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
-import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import type { Locale } from "@/i18n/routing";
+import { emailQuote } from "@/lib/quote-email";
 import { parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
@@ -123,31 +123,6 @@ export async function sendQuoteAction(bookingId: string, input: QuoteDraft): Pro
 }
 
 /** Emails the customer their quote link, in their own language. */
-async function emailQuote(quoteId: string, agencyName: string) {
-  const quote = await prisma.quote.findUnique({
-    where: { id: quoteId },
-    select: { token: true, totalCents: true, expiresAt: true, booking: { select: { currency: true, customer: { select: { name: true, email: true, locale: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } } } } },
-  });
-  const customer = quote?.booking.customer;
-  if (!quote || !customer) return;
-  const locale = userLocale(customer.locale);
-  const intl = locale === "en" ? "en-GB" : "nl-NL";
-  deliver({
-    kind: "quote",
-    to: customer.email,
-    params: {
-      locale,
-      name: customer.name.split(/\s+/)[0] ?? customer.name,
-      agency: agencyName,
-      total: new Intl.NumberFormat(intl, { style: "currency", currency: quote.booking.currency }).format(quote.totalCents / 100),
-      until: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long", timeZone: "Europe/Amsterdam" }).format(quote.expiresAt),
-      url: absoluteUrl(locale, `/q/${quote.token}`),
-      // No password yet: invite them to make their own account from the quote page.
-      accountUrl: customer.accounts.length === 0 ? absoluteUrl(locale, `/q/${quote.token}#account`) : undefined,
-    },
-  });
-}
-
 export async function acceptOnBehalfAction(quoteId: string, name: string): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.quotes.accept");
   const t = await getTranslations("booking");
