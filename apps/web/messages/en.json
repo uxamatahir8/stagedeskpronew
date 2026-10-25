@@ -2324,9 +2324,10 @@
     "feeExampleFee": "Platform fee",
     "feeExampleRest": "For you and your artist",
     "billedInEuro": "Billed as {amount} a month",
-    "convertedNote": "Prices in {currency} are an estimate at the ECB rate of {date}. You pay in euros.",
+    "convertedNote": "Prices in {currency} are an estimate at the exchange rate of {date}. You pay in euros.",
     "compareLink": "Compare all plans",
-    "trialCard": "Try {days} days free"
+    "trialCard": "Try {days} days free",
+    "noRateNote": "There's no exchange rate for {currency} yet, so prices are shown in euros. You pay in euros."
   },
   "forAgencies": {
     "eyebrow": "For DJ and band agencies",
@@ -4733,16 +4734,16 @@
     "hint": "Which currencies agencies can work in and visitors can see prices in. Plans are always billed in euros.",
     "search": "Search currencies",
     "currency": "Currency",
-    "ecbRate": "ECB rate (1 EUR)",
+    "ecbRate": "Daily rate (1 EUR)",
     "manualRate": "Manual rate",
     "enabled": "On",
     "base": "Base currency",
-    "noEcb": "Not published by the ECB",
+    "noEcb": "No rate yet",
     "manualRateFor": "Manual rate for {currency}",
     "enableFor": "Offer {currency}",
-    "rateHint": "Rates are how much of the currency one euro buys. A manual rate replaces the ECB rate; leave it empty to use the ECB rate, updated every working day.",
+    "rateHint": "Rates are how much of the currency one euro buys. They update every day: from the ECB, and for currencies it doesn't publish (such as PKR, AED, SAR) from open.er-api.com. A manual rate replaces the daily one.",
     "invalidRate": "The rate for {currency} must be a number above 0.",
-    "needsRate": "Add a manual rate for {list}: the ECB doesn’t publish it.",
+    "needsRate": "Add a manual rate for {list}: there's no daily rate for it yet.",
     "save": "Save currencies"
   },
   "leadCompare": {

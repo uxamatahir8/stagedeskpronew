@@ -1,6 +1,6 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
-import { parseEcbRates, localePrefix } from "@stagedesk/core";
+import { localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
 import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, processStoredEvent, runAffiliatePayouts, runDuePayouts } from "@stagedesk/payments";
@@ -77,15 +77,34 @@ const systemWorker = new Worker(
 );
 
 const ECB_URL = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
+/** Free daily rates (no key) for currencies the ECB doesn't publish, e.g. PKR, AED, SAR. */
+const OPEN_RATES_URL = "https://open.er-api.com/v6/latest/EUR";
 
-/** The ECB publishes euro reference rates once a working day, around 16:00 CET. */
+/**
+ * The ECB publishes euro reference rates once a working day, around 16:00 CET.
+ * Currencies it leaves out are filled in from open.er-api.com; a failure
+ * there doesn't stop the ECB update. Manual rates (Settings) win over both.
+ */
 async function updateExchangeRates() {
   const response = await fetch(ECB_URL, { signal: AbortSignal.timeout(20_000) });
   if (!response.ok) throw new Error(`ECB rates: HTTP ${response.status}`);
   const parsed = parseEcbRates(await response.text());
   if (!parsed) throw new Error("ECB rates: no rates in the response");
   await saveExchangeRates(parsed.date, parsed.rates);
-  return { date: parsed.date, currencies: Object.keys(parsed.rates).length };
+
+  let extra = 0;
+  try {
+    const open = await fetch(OPEN_RATES_URL, { signal: AbortSignal.timeout(20_000) });
+    const other = open.ok ? parseOpenRates(await open.json()) : null;
+    const missing = Object.fromEntries(Object.entries(other?.rates ?? {}).filter(([code]) => !(code in parsed.rates)));
+    if (other && Object.keys(missing).length > 0) {
+      await saveExchangeRates(other.date, missing);
+      extra = Object.keys(missing).length;
+    }
+  } catch (error) {
+    console.error("[rates] open.er-api.com", error);
+  }
+  return { date: parsed.date, currencies: Object.keys(parsed.rates).length + extra };
 }
 
 /** Emails the affiliate a statement listing every commission in the payout. */

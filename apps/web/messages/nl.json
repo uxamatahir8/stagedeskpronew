@@ -2324,9 +2324,10 @@
     "feeExampleFee": "Platformkosten",
     "feeExampleRest": "Voor jou en je artiest",
     "billedInEuro": "Gefactureerd als {amount} per maand",
-    "convertedNote": "Prijzen in {currency} zijn een schatting tegen de ECB-koers van {date}. Je betaalt in euro.",
+    "convertedNote": "Prijzen in {currency} zijn een schatting tegen de wisselkoers van {date}. Je betaalt in euro's.",
     "compareLink": "Alle abonnementen vergelijken",
-    "trialCard": "{days} dagen gratis proberen"
+    "trialCard": "{days} dagen gratis proberen",
+    "noRateNote": "Er is nog geen wisselkoers voor {currency}, dus prijzen staan in euro's. Je betaalt in euro's."
   },
   "forAgencies": {
     "eyebrow": "Voor DJ- en bandbureaus",
@@ -4733,16 +4734,16 @@
     "hint": "In welke valuta bureaus kunnen werken en bezoekers prijzen kunnen zien. Abonnementen worden altijd in euro’s gefactureerd.",
     "search": "Valuta zoeken",
     "currency": "Valuta",
-    "ecbRate": "ECB-koers (1 EUR)",
+    "ecbRate": "Dagkoers (1 EUR)",
     "manualRate": "Eigen koers",
     "enabled": "Aan",
     "base": "Basisvaluta",
-    "noEcb": "Niet gepubliceerd door de ECB",
+    "noEcb": "Nog geen koers",
     "manualRateFor": "Eigen koers voor {currency}",
     "enableFor": "{currency} aanbieden",
-    "rateHint": "Koersen zijn hoeveel van de valuta je voor één euro krijgt. Een eigen koers vervangt de ECB-koers; laat leeg om de ECB-koers te gebruiken, die elke werkdag wordt bijgewerkt.",
+    "rateHint": "Koersen zijn hoeveel van de valuta je voor één euro krijgt. Ze worden dagelijks bijgewerkt: van de ECB, en voor valuta die de ECB niet publiceert (zoals PKR, AED, SAR) van open.er-api.com. Een eigen koers vervangt de dagkoers.",
     "invalidRate": "De koers voor {currency} moet een getal boven 0 zijn.",
-    "needsRate": "Vul een eigen koers in voor {list}: de ECB publiceert die niet.",
+    "needsRate": "Vul een eigen koers in voor {list}: er is nog geen dagkoers voor.",
     "save": "Valuta opslaan"
   },
   "leadCompare": {

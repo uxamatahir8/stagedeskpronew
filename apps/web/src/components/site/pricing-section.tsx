@@ -70,9 +70,12 @@ export async function buildPricing() {
       trialDays: p.trialDays,
     };
   });
+  // No rate for the chosen currency yet: say so, instead of showing euros as if they were that currency.
   const convertedNote = converted
     ? t("convertedNote", { currency: shown, date: date ? format.dateTime(new Date(`${date}T12:00:00Z`), { day: "numeric", month: "long", year: "numeric" }) : "" })
-    : null;
+    : shown !== "EUR"
+      ? t("noRateNote", { currency: shown })
+      : null;
   return { t, format, plans, cards, cta, trialDays: Math.max(0, ...plans.map((p) => p.trialDays)), convertedNote, money, describeFee, ruleOf, loc };
 }
 

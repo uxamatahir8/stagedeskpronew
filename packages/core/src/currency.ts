@@ -78,3 +78,20 @@ export function feeRuleInCurrency<T extends { fixedCents: number; minCents: numb
     maxCents: rule.maxCents === null ? null : convert(rule.maxCents),
   };
 }
+
+/**
+ * Rates from open.er-api.com (one euro in each currency), for currencies the
+ * ECB doesn't publish, such as PKR, AED and SAR. Only supported currencies
+ * other than EUR are kept; the date is the source's last update.
+ */
+export function parseOpenRates(json: unknown): { date: string; rates: RateTable } | null {
+  if (!json || typeof json !== "object") return null;
+  const data = json as { result?: string; base_code?: string; time_last_update_unix?: number; rates?: Record<string, unknown> };
+  if (data.result !== "success" || data.base_code !== "EUR" || !data.rates) return null;
+  const rates: RateTable = {};
+  for (const [code, rate] of Object.entries(data.rates)) {
+    if (isCurrency(code) && code !== "EUR" && typeof rate === "number" && rate > 0) rates[code] = rate;
+  }
+  const date = new Date((data.time_last_update_unix ?? Date.now() / 1000) * 1000).toISOString().slice(0, 10);
+  return Object.keys(rates).length > 0 ? { date, rates } : null;
+}
