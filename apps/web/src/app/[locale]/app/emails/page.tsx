@@ -34,7 +34,7 @@ const groups: { key: "account" | "bookings" | "leads" | "team" | "partners" | "p
   { key: "account", kinds: ["verifyEmail", "loginCode", "resetPassword"] },
   { key: "bookings", kinds: ["inquiryReceived", "newInquiry", "quote", "quoteExpiring", "balanceDue", "eventReminder", "newMessage", "paymentReported", "paymentReceipt", "paymentNotReceived"] },
   { key: "leads", kinds: ["leadReceived", "leadOffer", "leadQuote", "leadWon", "leadLost"] },
-  { key: "team", kinds: ["invitation", "gigReminder", "agencyCreated"] },
+  { key: "team", kinds: ["invitation", "gigReminder", "agencyCreated", "artistRequest"] },
   { key: "partners", kinds: ["affiliateApproved", "affiliatePayout"] },
   { key: "platform", kinds: ["ticketReply", "contactMessage"] },
 ];

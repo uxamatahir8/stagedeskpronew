@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import Stripe from "stripe";
-import { getSetting, prisma, updateSetting } from "@stagedesk/db";
+import { acceptQuote, answerArtistRequest, createArtistRequest, createBooking, getSetting, prisma, sendQuote, updateSetting } from "@stagedesk/db";
 import { recordStripePayment } from "./booking-payments";
 import { payoutBooking } from "./payouts";
 import { refundPayment, syncChargeRefund } from "./refunds";
-import { agencyWithAccounts, cleanup, complete, confirmedBooking, fakeStripe, paidSession } from "./test/fixtures";
+import { agencyWithAccounts, cleanup, complete, confirmedBooking, fakeStripe, lines, paidSession } from "./test/fixtures";
 import { processStoredEvent, receiveWebhook } from "./webhooks";
 
 const run = `p${Date.now().toString(36)}`;
@@ -76,6 +76,40 @@ describe("booking money flow", () => {
     await expect(
       refundPayment(stripe, { organizationId: a.organizationId, paymentId: balance.id, amountCents: 60_000, actorId: a.owner }),
     ).rejects.toThrow("invalid_amount");
+  });
+
+  it("pays a lending agency the agreed fee out of the booking agency's share", async () => {
+    const borrower = await agencyWithAccounts(`${run}l1`, { artistConnected: true });
+    const lender = await agencyWithAccounts(`${run}l2`, { artistConnected: true });
+    await prisma.artist.update({ where: { id: lender.artistId }, data: { lendable: true } });
+    const booking = await createBooking(borrower.organizationId, { customerId: borrower.customer, eventType: "wedding", eventDate: "2027-06-12" }, borrower.owner);
+    const quote = await sendQuote(borrower.organizationId, booking.id, { lines, depositBps: 3_000, expiresInDays: 14 }, borrower.owner, may);
+    await acceptQuote(borrower.organizationId, quote.id, { actor: "customer", actorId: borrower.customer, name: "Customer" }, may);
+
+    // The borrower offers €500, the lender asks €600, the borrower agrees.
+    const request = await createArtistRequest(borrower.organizationId, { bookingId: booking.id, artistId: lender.artistId, feeCents: 50_000, message: null }, borrower.owner);
+    await expect(answerArtistRequest(request.id, borrower.organizationId, { action: "accept" }, borrower.owner, may)).rejects.toThrow("not_your_turn");
+    await answerArtistRequest(request.id, lender.organizationId, { action: "counter", feeCents: 60_000, message: null }, lender.owner, may);
+    await answerArtistRequest(request.id, borrower.organizationId, { action: "accept" }, borrower.owner, may);
+    const confirmed = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id }, include: { assignments: { where: { status: "accepted" } } } });
+    expect(confirmed.status).toBe("confirmed");
+    expect(confirmed.assignments[0]).toMatchObject({ artistId: lender.artistId, shareBps: 0 });
+
+    const { stripe, calls } = fakeStripe({ stripeFeeCents: 0 });
+    await recordStripePayment(stripe, paidSession(borrower.organizationId, booking.id, 150_004, "balance"));
+    await complete(borrower, booking.id, new Date("2027-06-12T22:00:00Z"));
+    await payoutBooking(stripe, booking.id, afterEvent);
+
+    const transfers = calls.filter((c) => c.method === "transfers.create");
+    const sum = (party: string) => transfers.filter((t) => (t.params["metadata"] as { party: string }).party === party).reduce((s, t) => s + (t.params["amount"] as number), 0);
+    expect(sum("lender")).toBe(60_000);
+    expect(sum("artist")).toBe(0);
+    expect(transfers.find((t) => (t.params["metadata"] as { party: string }).party === "lender")?.params["destination"]).toBe(`acct_${run}l2_agency`);
+    const fees = await prisma.ledgerEntry.aggregate({ where: { bookingId: booking.id, type: "platform_fee" }, _sum: { amountCents: true } });
+    expect(sum("agency") + sum("lender") + fees._sum.amountCents!).toBe(150_004);
+    // Paying out again doesn't pay the fee twice.
+    await payoutBooking(stripe, booking.id, afterEvent);
+    expect(calls.filter((c) => c.method === "transfers.create" && (c.params["metadata"] as { party: string }).party === "lender")).toHaveLength(1);
   });
 
   it("uses the new fee for bookings accepted after the change", async () => {

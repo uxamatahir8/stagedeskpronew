@@ -525,3 +525,27 @@ export async function expireQuotes(now = new Date()) {
   }
   return due.length;
 }
+
+/**
+ * Puts an artist lent by another agency on a booking once both agencies
+ * agreed (see artist-requests). The lending agency answers for its artist,
+ * so the gig is confirmed straight away; the artist's own share is 0 here,
+ * because their agency pays them out of the agreed fee.
+ */
+export async function assignLentArtist(organizationId: string, bookingId: string, artistId: string, actorId: string | null, now = new Date()) {
+  const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { userId: true, stageName: true } });
+  const booking = await tenantDb(organizationId).$transaction(async (tx) => {
+    const booking = await loadBooking(tx, bookingId);
+    if (booking.status !== "booked" && booking.status !== "confirmed") throw new BookingError("invalid_status");
+    if (booking.eventDate && !(await isArtistFree(artistId, booking.eventDate, booking.id))) throw new BookingError("artist_unavailable");
+    if (booking.status === "confirmed") await applyTransition(tx, booking, "release_artist", "agency", actorId, now);
+    await tx.bookingAssignment.updateMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, data: { status: "withdrawn", respondedAt: now } });
+    await tx.bookingAssignment.create({ data: { id: randomUUID(), organizationId, bookingId, artistId, status: "accepted", shareBps: 0, respondedAt: now } });
+    await logEvent(tx, bookingId, "artist_assigned", actorId, { artistId, stageName: artist?.stageName ?? "", lent: true });
+    // Their agency accepted for them, so it counts as the artist accepting.
+    await applyTransition(tx, await loadBooking(tx, bookingId), "artist_accepted", "artist", artist?.userId ?? actorId, now);
+    return booking;
+  });
+  const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+  await notify([artist?.userId], { type: "gig_request", data: { name: agency?.name ?? "", code: booking.trackingCode }, url: `/app/gigs/${booking.trackingCode}` });
+}

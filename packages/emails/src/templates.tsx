@@ -283,6 +283,16 @@ export function LeadOffer({ locale, agency, event, date, city, url }: { locale: 
   );
 }
 
+export function ArtistRequest({ locale, status, other, artist, event, fee, url }: { locale: EmailLocale; status: string; other: string; artist: string; event: string; fee: string; url: string }) {
+  const c = copy[locale].artistRequest;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading(status)}>
+      <Paragraph>{c.body(status, other, artist, event, fee)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
 export function LeadQuote({ locale, name, provider, event, total, url }: { locale: EmailLocale; name: string; provider: string; event: string; total: string; url: string }) {
   const c = copy[locale].leadQuote;
   return (

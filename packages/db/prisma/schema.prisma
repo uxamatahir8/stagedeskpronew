@@ -202,6 +202,8 @@ model Organization {
   agencySitePages     AgencySitePage[]
   agencyDomains       AgencyDomain[]
   gigListings         GigListing[]
+  artistRequestsMade  ArtistRequest[]  @relation("ArtistRequestBorrower")
+  artistRequestsIn    ArtistRequest[]  @relation("ArtistRequestLender")
 
   @@map("organizations")
 }
@@ -283,10 +285,13 @@ model Artist {
   mediaLinks        Json?
   /// Default share of each booking payment, in basis points.
   defaultShareBps   Int                    @default(4000)
+  /// Other agencies may ask to book this artist for one of their bookings, for an agreed fee.
+  lendable          Boolean                @default(false)
   /// Independent artists: one line under their name in the directory, and their lowest price.
   headline          String?                @db.VarChar(160)
   priceFromCents    Int?
   listings          GigListing[]
+  requests          ArtistRequest[]
   active            Boolean                @default(true)
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
@@ -412,6 +417,7 @@ model Booking {
   ledger            LedgerEntry[]
   messages          BookingMessage[]
   paymentClaims     PaymentClaim[]
+  artistRequests    ArtistRequest[]
 
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
@@ -1594,4 +1600,38 @@ model GigListing {
 
   @@index([organizationId, active])
   @@map("gig_listings")
+}
+
+/// One agency asks another to lend one of its artists for a booking, for a fee
+/// they agree on (proposed by one side, accepted or countered by the other).
+/// At payout the fee goes from the booking agency's share to the lending agency.
+model ArtistRequest {
+  id          String       @id @db.VarChar(64)
+  bookingId   String       @db.VarChar(64)
+  booking     Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// The agency that has the booking and asks.
+  borrowerId  String       @db.VarChar(64)
+  borrower    Organization @relation("ArtistRequestBorrower", fields: [borrowerId], references: [id], onDelete: Cascade)
+  /// The artist's own agency.
+  lenderId    String       @db.VarChar(64)
+  lender      Organization @relation("ArtistRequestLender", fields: [lenderId], references: [id], onDelete: Cascade)
+  artistId    String       @db.VarChar(64)
+  artist      Artist       @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  /// The fee on the table, in the booking's currency.
+  feeCents    Int
+  currency    String       @db.VarChar(3)
+  /// pending (waiting for the other side) | accepted | declined | withdrawn | cancelled
+  status      String       @default("pending") @db.VarChar(16)
+  /// Who made the current offer: "borrower" or "lender"; the other side answers.
+  offeredBy   String       @default("borrower") @db.VarChar(8)
+  message     String?      @db.Text
+  createdById String?      @db.VarChar(64)
+  respondedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([borrowerId, status])
+  @@index([lenderId, status])
+  @@index([bookingId, status])
+  @@map("artist_requests")
 }

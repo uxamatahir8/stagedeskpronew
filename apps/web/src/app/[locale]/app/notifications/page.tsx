@@ -67,6 +67,8 @@ const icons: Record<string, { icon: LucideIcon; tone: string }> = {
   payment_confirmed: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
   payment_rejected: { icon: BanknoteIcon, tone: "bg-warning/18 text-foreground" },
   artist_joined: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
+  artist_request: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
+  artist_request_answer: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
 };
 const fallback = { icon: ReceiptIcon, tone: "bg-muted text-muted-foreground" };
 

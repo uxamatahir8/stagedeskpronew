@@ -9,6 +9,7 @@ export * from "./leads";
 export * from "./marketplace";
 export * from "./solo";
 export * from "./listings";
+export * from "./artist-requests";
 export * from "./geo";
 export * from "./messages";
 export * from "./notifications";

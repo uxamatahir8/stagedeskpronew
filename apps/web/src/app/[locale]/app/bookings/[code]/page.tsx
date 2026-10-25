@@ -25,6 +25,7 @@ import { RefundDialog } from "../../payments/refund-dialog";
 import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { requireAgency, viewerCan } from "@/lib/viewer";
+import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
   AssignArtist,
@@ -112,6 +113,12 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
   const pay = paymentStatus(booking.paidCents, booking.totalCents, booking.depositCents);
 
   const canAssign = status === "booked" || status === "confirmed";
+  // Asks to other agencies for one of their artists, newest first.
+  const artistRequests = await prisma.artistRequest.findMany({
+    where: { bookingId: booking.id },
+    orderBy: { createdAt: "desc" },
+    include: { artist: { select: { stageName: true } }, lender: { select: { name: true } } },
+  });
   const artistOptions = canAssign
     ? await Promise.all(
         (await bookableArtists(organization.id)).map(async (a) => ({
@@ -451,9 +458,26 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 </p>
               )}
               {canAssign ? (
-                <AssignArtist bookingId={booking.id} options={artistOptions} hasArtist={Boolean(activeAssignment)} />
+                <>
+                  <AssignArtist bookingId={booking.id} options={artistOptions} hasArtist={Boolean(activeAssignment)} />
+                  <BorrowArtist bookingId={booking.id} currency={booking.currency} />
+                </>
               ) : (
                 ["inquiry", "quoted", "expired"].includes(status) && <p className="text-muted-foreground">{t("booking.assignBlocked")}</p>
+              )}
+              {artistRequests.length > 0 && (
+                <ul className="grid gap-1 border-t pt-3 text-xs">
+                  {artistRequests.map((r) => (
+                    <li key={r.id} className="flex flex-wrap items-center justify-between gap-2">
+                      <span>
+                        {t("artistRequests.lineFrom", { artist: r.artist.stageName, agency: r.lender.name })} · <span className="tabular-nums">{euro(format, r.feeCents, r.currency)}</span>
+                      </span>
+                      <Link href="/app/artist-requests" className="text-muted-foreground underline-offset-4 hover:underline">
+                        {t(`artistRequests.status_${r.status === "pending" ? (r.offeredBy === "lender" ? "yourTurn" : "theirTurn") : (r.status as "accepted")}`)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               )}
             </CardContent>
           </Card>

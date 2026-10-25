@@ -140,6 +140,21 @@ export const copy = {
         `Er is een aanvraag voor ${agency}: ${event} op ${date} in ${city}. Stuur je prijs; de klant vergelijkt de prijzen en kiest er één.`,
       button: "Prijs sturen",
     },
+    artistRequest: {
+      subject: (status: string, artist: string, other: string) =>
+        ({ new: `${other} wil ${artist} boeken`, counter: `Tegenbod voor ${artist}`, accepted: `${artist} is rond`, declined: `${other} zegt nee tegen ${artist}`, withdrawn: `Verzoek voor ${artist} ingetrokken` })[status] ?? `${artist}`,
+      preview: "Een verzoek om een artiest tussen bureaus.",
+      heading: (status: string) => ({ new: "Verzoek om een artiest", counter: "Een tegenbod", accepted: "Afgesproken", declined: "Verzoek afgewezen", withdrawn: "Verzoek ingetrokken" })[status] ?? "Verzoek om een artiest",
+      body: (status: string, other: string, artist: string, event: string, fee: string) =>
+        ({
+          new: `${other} wil ${artist} boeken voor een ${event} en biedt ${fee}. Accepteer, doe een tegenbod of wijs af.`,
+          counter: `${other} stelt ${fee} voor voor ${artist} (${event}). Accepteer, doe een tegenbod of wijs af.`,
+          accepted: `${other} heeft ${fee} voor ${artist} (${event}) geaccepteerd. ${artist} staat op de boeking; de vergoeding wordt na het evenement uitbetaald aan het bureau van de artiest.`,
+          declined: `${other} heeft het verzoek voor ${artist} (${event}) afgewezen.`,
+          withdrawn: `${other} heeft het verzoek voor ${artist} (${event}) ingetrokken.`,
+        })[status] ?? "",
+      button: "Verzoeken bekijken",
+    },
     leadQuote: {
       subject: (provider: string) => `${provider} heeft je een prijs gestuurd`,
       preview: "Vergelijk de prijzen voor je evenement.",
@@ -339,6 +354,21 @@ export const copy = {
       body: (agency: string, event: string, date: string, city: string) =>
         `There's a request for ${agency}: ${event} on ${date} in ${city}. Send your price; the customer compares the prices and chooses one.`,
       button: "Send a price",
+    },
+    artistRequest: {
+      subject: (status: string, artist: string, other: string) =>
+        ({ new: `${other} wants to book ${artist}`, counter: `Counter-offer for ${artist}`, accepted: `${artist} is agreed`, declined: `${other} said no to ${artist}`, withdrawn: `Request for ${artist} withdrawn` })[status] ?? `${artist}`,
+      preview: "A request for an artist between agencies.",
+      heading: (status: string) => ({ new: "A request for your artist", counter: "A counter-offer", accepted: "Agreed", declined: "Request declined", withdrawn: "Request withdrawn" })[status] ?? "A request for your artist",
+      body: (status: string, other: string, artist: string, event: string, fee: string) =>
+        ({
+          new: `${other} would like to book ${artist} for a ${event} and offers ${fee}. Accept, counter or decline.`,
+          counter: `${other} proposes ${fee} for ${artist} (${event}). Accept, counter or decline.`,
+          accepted: `${other} accepted ${fee} for ${artist} (${event}). ${artist} is on the booking; the fee is paid to the artist's agency after the event.`,
+          declined: `${other} declined the request for ${artist} (${event}).`,
+          withdrawn: `${other} withdrew the request for ${artist} (${event}).`,
+        })[status] ?? "",
+      button: "See requests",
     },
     leadQuote: {
       subject: (provider: string) => `${provider} sent you a price`,

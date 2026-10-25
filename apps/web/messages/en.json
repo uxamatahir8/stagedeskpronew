@@ -68,7 +68,8 @@
     "newsletter": "Newsletter",
     "artistProfile": "Artist profile",
     "listings": "Gigs I offer",
-    "soloSettings": "Business settings"
+    "soloSettings": "Business settings",
+    "artistRequests": "Artist requests"
   },
   "shell": {
     "search": "Search…",
@@ -1635,7 +1636,9 @@
     "withdrawal_approved": "Your withdrawal {reference} of {amount, number, ::currency/EUR} was approved",
     "withdrawal_paid": "Your withdrawal {reference} of {amount, number, ::currency/EUR} was paid",
     "withdrawal_rejected": "Your withdrawal {reference} was rejected: {reason}",
-    "artist_joined": "{name} joined as an artist. Link their account to an artist profile."
+    "artist_joined": "{name} joined as an artist. Link their account to an artist profile.",
+    "artist_request": "{name} {status, select, counter {made a counter-offer for} other {asks to book}} {artist}",
+    "artist_request_answer": "{name} {status, select, accepted {agreed on} declined {declined the request for} other {withdrew the request for}} {artist}"
   },
   "messages": {
     "title": "Messages",
@@ -3324,7 +3327,9 @@
     "kind_leadWon": "Price accepted",
     "kind_leadWonHint": "To the provider whose price the customer accepted",
     "kind_leadLost": "Customer chose someone else",
-    "kind_leadLostHint": "To the other providers once the customer has chosen"
+    "kind_leadLostHint": "To the other providers once the customer has chosen",
+    "kind_artistRequest": "Artist request between agencies",
+    "kind_artistRequestHint": "To the other agency when a request is sent, countered, accepted, declined or withdrawn"
   },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
@@ -4450,7 +4455,8 @@
     "nav_support": "A question? Ask it here; we reply in the app.",
     "nav_artistProfile": "Your photo, bio, videos and prices, and where you play. This is what customers see.",
     "nav_listings": "Gigs you offer at a fixed price. With the Artist plan customers order them from your public profile.",
-    "nav_soloSettings": "Your business details, currency, date and time, and how customers can pay you."
+    "nav_soloSettings": "Your business details, currency, date and time, and how customers can pay you.",
+    "nav_artistRequests": "Book artists from other agencies for your bookings, and answer when they ask for yours. You agree on a fee; it's paid to the artist's agency after the event."
   },
   "password": {
     "show": "Show password",
@@ -4911,5 +4917,65 @@
     "error_not_listed": "This artist can't be booked online right now.",
     "error_unavailable": "The artist isn't available on that date. Choose another date or ask for a price.",
     "error_customer_on_team": "You can't order from your own business."
+  },
+  "artistRequests": {
+    "title": "Artist requests",
+    "description": "Book artists from other agencies for your bookings, and lend yours. You agree on a fee; at payout it goes to the artist's agency.",
+    "empty": "No artist requests yet",
+    "emptyHint": "On a booking, choose \"Book an artist from another agency\". Lend your own artists by switching on \"Lend to other agencies\" on the artist.",
+    "incoming": "Asked of you",
+    "incomingHint": "Other agencies that want to book one of your artists.",
+    "outgoing": "You asked",
+    "outgoingHint": "Artists you asked other agencies for.",
+    "noIncoming": "Nobody has asked for your artists yet.",
+    "noOutgoing": "You haven't asked for any artists.",
+    "askedBy": "Asked by {agency}",
+    "askedOf": "Asked of {agency}",
+    "guests": "{count} guests",
+    "status_yourTurn": "Your turn",
+    "status_theirTurn": "Waiting for them",
+    "status_accepted": "Agreed",
+    "status_declined": "Declined",
+    "status_withdrawn": "Withdrawn",
+    "status_cancelled": "No longer needed",
+    "lineFrom": "{artist} from {agency}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "counter": "Counter",
+    "withdraw": "Withdraw",
+    "counterTitle": "Make a counter-offer",
+    "counterHint": "Propose a different fee. The other agency can accept, decline or counter again.",
+    "sendCounter": "Send counter-offer",
+    "borrow": "Book an artist from another agency",
+    "borrowTitle": "Book an artist from another agency",
+    "borrowHint": "Artists other agencies lend out who are free on this date. Agencies in the event's city come first.",
+    "searchPlaceholder": "Search by name, genre, agency or city",
+    "searching": "Looking for available artists…",
+    "noneFree": "No lendable artists are free on this date.",
+    "offerTitle": "Ask for {artist}",
+    "offerHint": "{agency} gets your request and can accept, counter or decline. Once agreed, the artist is on this booking and the fee is paid to {agency} after the event, from your share.",
+    "fee": "Fee you offer ({currency})",
+    "feeHint": "What you pay the artist's agency for this gig.",
+    "message": "Message",
+    "back": "Back",
+    "send": "Send request",
+    "from": "from {price}",
+    "sent": "Request sent. You'll hear when they answer.",
+    "done_accept": "Agreed: the artist is on the booking.",
+    "done_decline": "Request declined.",
+    "done_counter": "Counter-offer sent.",
+    "done_withdraw": "Request withdrawn.",
+    "lendable": "Lend to other agencies",
+    "lendableHint": "Other agencies can ask to book this artist for their bookings, for a fee you agree on.",
+    "lendableOn": "Other agencies can now ask for this artist.",
+    "lendableOff": "This artist is no longer lent out.",
+    "error_not_found": "This request wasn't found.",
+    "error_not_your_turn": "It's the other agency's turn to answer.",
+    "error_closed": "This request is already closed.",
+    "error_invalid_status": "Artists can only be added to booked or confirmed bookings.",
+    "error_not_lendable": "This artist isn't lent out.",
+    "error_unavailable": "The artist isn't available on that date any more.",
+    "error_duplicate": "You already have an open request for this artist on this booking.",
+    "error_invalid_fee": "Enter the fee as an amount, e.g. 600."
   }
 }

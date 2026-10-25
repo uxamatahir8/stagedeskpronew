@@ -13,6 +13,7 @@ import {
   GigReminder,
   InquiryReceived,
   Invitation,
+  ArtistRequest,
   LeadLost,
   LeadOffer,
   LeadQuote,
@@ -157,6 +158,10 @@ export function sendLeadOffer(to: string, p: { locale: EmailLocale; agency: stri
   return send(to, copy[p.locale].leadOffer.subject(p.event, p.date), createElement(LeadOffer, p));
 }
 
+export function sendArtistRequest(to: string, p: { locale: EmailLocale; status: "new" | "counter" | "accepted" | "declined" | "withdrawn"; other: string; artist: string; event: string; fee: string; url: string }) {
+  return send(to, copy[p.locale].artistRequest.subject(p.status, p.artist, p.other), createElement(ArtistRequest, p));
+}
+
 export function sendLeadQuote(to: string, p: { locale: EmailLocale; name: string; provider: string; event: string; total: string; url: string }) {
   return send(to, copy[p.locale].leadQuote.subject(p.provider), createElement(LeadQuote, p));
 }
@@ -224,6 +229,7 @@ const senders = {
   leadReceived: sendLeadReceived,
   leadOffer: sendLeadOffer,
   leadQuote: sendLeadQuote,
+  artistRequest: sendArtistRequest,
   leadWon: sendLeadWon,
   leadLost: sendLeadLost,
   paymentReceipt: sendPaymentReceipt,

@@ -15,6 +15,7 @@ import type { Locale } from "@/i18n/routing";
 import { eventDate, percent } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { ArtistDialog, PhotoUpload, Sharing, UnavailableDates } from "../artist-forms";
+import { LendableSwitch } from "../lendable-switch";
 
 export const metadata: Metadata = {};
 
@@ -145,7 +146,8 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
             <CardTitle>{t("sharing")}</CardTitle>
             <CardDescription>{t("sharingHint")}</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-4">
+            <LendableSwitch artistId={artist.id} initial={artist.lendable} />
             <Sharing artistId={artist.id} shares={artist.shares.map((s) => ({ id: s.id, agency: s.partnerOrganization.name, status: s.status }))} />
           </CardContent>
         </Card>

@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { type FeeSnapshot, splitBookingPayment } from "@stagedesk/core";
-import { changeBookingStatus, getSetting, prisma, tenantDb } from "@stagedesk/db";
+import { changeBookingStatus, getSetting, lenderFee, prisma, tenantDb } from "@stagedesk/db";
 
 /**
  * Splits a booking's Stripe payments and transfers the shares, once the event
@@ -31,6 +31,12 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
   const artistAccount = assignment?.artist.connectedAccount?.payoutsEnabled ? assignment.artist.connectedAccount : null;
   let transferred = 0;
 
+  // An artist lent by another agency: their agreed fee comes out of this agency's share, until it's paid in full.
+  const lent = await lenderFee(booking.id);
+  const lenderAccount = lent ? await prisma.connectedAccount.findFirst({ where: { organizationId: lent.lenderId, artistId: null, payoutsEnabled: true } }) : null;
+  const feePaid = lent ? ((await prisma.ledgerEntry.aggregate({ where: { bookingId: booking.id, type: "lender_fee" }, _sum: { amountCents: true } }))._sum.amountCents ?? 0) : 0;
+  let feeLeft = lent ? Math.max(0, lent.feeCents - feePaid) : 0;
+
   for (const payment of booking.payments) {
     const amount = payment.amountCents - payment.refundedCents;
     if (amount <= 0 || !payment.stripeChargeId) continue;
@@ -42,7 +48,12 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
       stripeFeePaidBy: fees.stripeFeePaidBy,
     });
     const toArtist = artistAccount ? split.artist : 0;
-    const toAgency = split.agency + (artistAccount ? 0 : split.artist);
+    const agencyPart = split.agency + (artistAccount ? 0 : split.artist);
+    const lenderCut = Math.min(feeLeft, agencyPart);
+    feeLeft -= lenderCut;
+    // Without a Stripe account the lender's cut stays with this agency and is recorded as owed.
+    const toLender = lenderAccount ? lenderCut : 0;
+    const toAgency = agencyPart - toLender;
 
     const transfer = async (destination: string, cents: number, party: string) =>
       cents > 0
@@ -60,6 +71,7 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
         : null;
     const artistTransfer = artistAccount ? await transfer(artistAccount.stripeAccountId, toArtist, "artist") : null;
     const agencyTransfer = await transfer(agencyAccount.stripeAccountId, toAgency, "agency");
+    const lenderTransfer = lenderAccount ? await transfer(lenderAccount.stripeAccountId, toLender, "lender") : null;
 
     const base = { organizationId: booking.organizationId, bookingId: booking.id, paymentId: payment.id };
     const artistId = assignment?.artistId ?? null;
@@ -71,6 +83,9 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
           { ...base, type: "agency_share", party: "agency", amountCents: split.agency },
           ...(artistTransfer ? [{ ...base, type: "transfer", party: "artist", amountCents: toArtist, artistId, stripeObjectId: artistTransfer.id }] : []),
           ...(agencyTransfer ? [{ ...base, type: "transfer", party: "agency", amountCents: toAgency, stripeObjectId: agencyTransfer.id }] : []),
+          ...(lent && lenderCut > 0 ? [{ ...base, type: "lender_fee", party: "lender", amountCents: lenderCut }] : []),
+          ...(lenderTransfer ? [{ ...base, type: "transfer", party: "lender", amountCents: toLender, stripeObjectId: lenderTransfer.id }] : []),
+          ...(lent && !lenderAccount && lenderCut > 0 ? [{ ...base, type: "owed_by_agency", party: "lender", amountCents: lenderCut }] : []),
           ...(artistId && !artistAccount && split.artist > 0
             ? [{ ...base, type: "owed_by_agency", party: "artist", amountCents: split.artist, artistId }]
             : []),
@@ -78,7 +93,7 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
       }),
       prisma.payment.update({ where: { id: payment.id }, data: { transferredAt: now } }),
     ]);
-    transferred += toArtist + toAgency;
+    transferred += toArtist + toAgency + toLender;
   }
 
   await prisma.booking.update({ where: { id: booking.id }, data: { paidOutAt: now } });

@@ -68,7 +68,8 @@
     "newsletter": "Nieuwsbrief",
     "artistProfile": "Artiestenprofiel",
     "listings": "Mijn optredens",
-    "soloSettings": "Bedrijfsinstellingen"
+    "soloSettings": "Bedrijfsinstellingen",
+    "artistRequests": "Artiestverzoeken"
   },
   "shell": {
     "search": "Zoeken…",
@@ -1635,7 +1636,9 @@
     "withdrawal_approved": "Je opname {reference} van {amount, number, ::currency/EUR} is goedgekeurd",
     "withdrawal_paid": "Je opname {reference} van {amount, number, ::currency/EUR} is uitbetaald",
     "withdrawal_rejected": "Je opname {reference} is afgewezen: {reason}",
-    "artist_joined": "{name} doet mee als artiest. Koppel het account aan een artiestenprofiel."
+    "artist_joined": "{name} doet mee als artiest. Koppel het account aan een artiestenprofiel.",
+    "artist_request": "{name} {status, select, counter {deed een tegenbod voor} other {wil boeken:}} {artist}",
+    "artist_request_answer": "{name} {status, select, accepted {is akkoord over} declined {wees het verzoek af voor} other {trok het verzoek in voor}} {artist}"
   },
   "messages": {
     "title": "Berichten",
@@ -3324,7 +3327,9 @@
     "kind_leadWon": "Prijs geaccepteerd",
     "kind_leadWonHint": "Aan de aanbieder van wie de klant de prijs accepteerde",
     "kind_leadLost": "Klant koos iemand anders",
-    "kind_leadLostHint": "Aan de andere aanbieders zodra de klant gekozen heeft"
+    "kind_leadLostHint": "Aan de andere aanbieders zodra de klant gekozen heeft",
+    "kind_artistRequest": "Artiestverzoek tussen bureaus",
+    "kind_artistRequestHint": "Aan het andere bureau als een verzoek is gestuurd, tegengeboden, geaccepteerd, afgewezen of ingetrokken"
   },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
@@ -4450,7 +4455,8 @@
     "nav_support": "Een vraag? Stel hem hier; we antwoorden in de app.",
     "nav_artistProfile": "Je foto, bio, video’s en prijzen, en waar je speelt. Dit zien klanten.",
     "nav_listings": "Optredens die je aanbiedt voor een vaste prijs. Met het Artiest-abonnement bestellen klanten ze via je openbare profiel.",
-    "nav_soloSettings": "Je bedrijfsgegevens, valuta, datum en tijd, en hoe klanten je kunnen betalen."
+    "nav_soloSettings": "Je bedrijfsgegevens, valuta, datum en tijd, en hoe klanten je kunnen betalen.",
+    "nav_artistRequests": "Boek artiesten van andere bureaus voor je boekingen, en antwoord als zij om de jouwe vragen. Je spreekt een vergoeding af; die gaat na het evenement naar het bureau van de artiest."
   },
   "password": {
     "show": "Wachtwoord tonen",
@@ -4911,5 +4917,65 @@
     "error_not_listed": "Deze artiest kan nu niet online geboekt worden.",
     "error_unavailable": "De artiest kan niet op die datum. Kies een andere datum of vraag een prijs.",
     "error_customer_on_team": "Je kunt niet bij je eigen bedrijf bestellen."
+  },
+  "artistRequests": {
+    "title": "Artiestverzoeken",
+    "description": "Boek artiesten van andere bureaus voor je boekingen, en leen de jouwe uit. Je spreekt een vergoeding af; bij uitbetaling gaat die naar het bureau van de artiest.",
+    "empty": "Nog geen artiestverzoeken",
+    "emptyHint": "Kies bij een boeking \"Artiest van een ander bureau boeken\". Leen je eigen artiesten uit door \"Uitlenen aan andere bureaus\" aan te zetten bij de artiest.",
+    "incoming": "Aan jou gevraagd",
+    "incomingHint": "Andere bureaus die een van je artiesten willen boeken.",
+    "outgoing": "Door jou gevraagd",
+    "outgoingHint": "Artiesten die je bij andere bureaus hebt gevraagd.",
+    "noIncoming": "Nog niemand heeft om je artiesten gevraagd.",
+    "noOutgoing": "Je hebt nog geen artiesten gevraagd.",
+    "askedBy": "Gevraagd door {agency}",
+    "askedOf": "Gevraagd aan {agency}",
+    "guests": "{count} gasten",
+    "status_yourTurn": "Jouw beurt",
+    "status_theirTurn": "Wacht op hen",
+    "status_accepted": "Afgesproken",
+    "status_declined": "Afgewezen",
+    "status_withdrawn": "Ingetrokken",
+    "status_cancelled": "Niet meer nodig",
+    "lineFrom": "{artist} van {agency}",
+    "accept": "Accepteren",
+    "decline": "Afwijzen",
+    "counter": "Tegenbod",
+    "withdraw": "Intrekken",
+    "counterTitle": "Tegenbod doen",
+    "counterHint": "Stel een andere vergoeding voor. Het andere bureau kan accepteren, afwijzen of opnieuw een tegenbod doen.",
+    "sendCounter": "Tegenbod sturen",
+    "borrow": "Artiest van een ander bureau boeken",
+    "borrowTitle": "Artiest van een ander bureau boeken",
+    "borrowHint": "Artiesten die andere bureaus uitlenen en op deze datum kunnen. Bureaus in de plaats van het evenement staan bovenaan.",
+    "searchPlaceholder": "Zoek op naam, genre, bureau of plaats",
+    "searching": "Beschikbare artiesten zoeken…",
+    "noneFree": "Er zijn geen uitleenbare artiesten vrij op deze datum.",
+    "offerTitle": "{artist} vragen",
+    "offerHint": "{agency} krijgt je verzoek en kan accepteren, een tegenbod doen of afwijzen. Na akkoord staat de artiest op deze boeking en wordt de vergoeding na het evenement aan {agency} betaald, uit jouw deel.",
+    "fee": "Vergoeding die je biedt ({currency})",
+    "feeHint": "Wat je het bureau van de artiest betaalt voor dit optreden.",
+    "message": "Bericht",
+    "back": "Terug",
+    "send": "Verzoek sturen",
+    "from": "vanaf {price}",
+    "sent": "Verzoek gestuurd. Je hoort het als ze antwoorden.",
+    "done_accept": "Afgesproken: de artiest staat op de boeking.",
+    "done_decline": "Verzoek afgewezen.",
+    "done_counter": "Tegenbod gestuurd.",
+    "done_withdraw": "Verzoek ingetrokken.",
+    "lendable": "Uitlenen aan andere bureaus",
+    "lendableHint": "Andere bureaus kunnen vragen om deze artiest voor hun boekingen, voor een vergoeding die jullie afspreken.",
+    "lendableOn": "Andere bureaus kunnen nu om deze artiest vragen.",
+    "lendableOff": "Deze artiest wordt niet meer uitgeleend.",
+    "error_not_found": "Dit verzoek is niet gevonden.",
+    "error_not_your_turn": "Het andere bureau is aan de beurt.",
+    "error_closed": "Dit verzoek is al afgesloten.",
+    "error_invalid_status": "Artiesten kunnen alleen aan geboekte of bevestigde boekingen worden toegevoegd.",
+    "error_not_lendable": "Deze artiest wordt niet uitgeleend.",
+    "error_unavailable": "De artiest kan niet meer op die datum.",
+    "error_duplicate": "Je hebt al een open verzoek voor deze artiest op deze boeking.",
+    "error_invalid_fee": "Vul de vergoeding in als bedrag, bijv. 600."
   }
 }
