@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { generateTrackingCode, isBudgetRange, type EventType } from "@stagedesk/core";
+import { randomBytes, randomUUID } from "node:crypto";
+import { generateTrackingCode, isBudgetRange, type EventType, type QuoteLineInput } from "@stagedesk/core";
 import { createBooking, resolveBookingCustomer, toDateOnly } from "./bookings";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
@@ -42,6 +42,7 @@ export async function submitLead(input: LeadInput) {
       data: {
         id: randomUUID(),
         reference,
+        accessToken: randomBytes(24).toString("base64url"),
         ...input,
         email: input.email.trim().toLowerCase(),
         eventDate: input.eventDate ? toDateOnly(input.eventDate) : null,
@@ -197,10 +198,18 @@ export async function saveLeadNotes(leadId: string, notes: string | null) {
  */
 export async function agencyLeadOffers(agencyId: string) {
   const offers = await prisma.leadOffer.findMany({
-    where: { agencyId, status: "pending", lead: { status: { in: ["new", "offered"] } } },
+    where: { agencyId, status: { in: ["pending", "quoted"] }, lead: { status: { in: ["new", "offered"] } } },
     orderBy: { createdAt: "desc" },
     select: {
       createdAt: true,
+      status: true,
+      source: true,
+      quoteLines: true,
+      depositBps: true,
+      totalCents: true,
+      currency: true,
+      quoteMessage: true,
+      validUntil: true,
       lead: {
         select: {
           id: true,
@@ -214,9 +223,26 @@ export async function agencyLeadOffers(agencyId: string) {
           preferredGenre: true,
           message: true,
           _count: { select: { offers: true } },
+          offers: { where: { status: { in: ["quoted", "accepted"] } }, select: { id: true } },
         },
       },
     },
   });
-  return offers.map((o) => ({ offeredAt: o.createdAt, ...o.lead, offeredTo: o.lead._count.offers }));
+  // Others' prices stay private; only how many have been sent is shown.
+  return offers.map(({ lead: { offers: quoted, _count, ...lead }, ...o }) => ({
+    ...lead,
+    offeredAt: o.createdAt,
+    offeredTo: _count.offers,
+    quotesSent: quoted.length,
+    offer: {
+      status: o.status,
+      source: o.source,
+      lines: (o.quoteLines ?? []) as unknown as QuoteLineInput[],
+      depositBps: o.depositBps,
+      totalCents: o.totalCents,
+      currency: o.currency,
+      message: o.quoteMessage,
+      validUntil: o.validUntil,
+    },
+  }));
 }

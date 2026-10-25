@@ -126,19 +126,42 @@ export const copy = {
     },
     leadReceived: {
       subject: (reference: string) => `We hebben je aanvraag ontvangen (${reference})`,
-      preview: "We zoeken het bureau dat bij je event past.",
+      preview: "Bureaus en artiesten in de buurt sturen je hun prijs.",
       heading: "Bedankt voor je aanvraag",
       body: (name: string, reference: string) =>
-        `Hoi ${name}, we hebben je aanvraag ontvangen (referentie ${reference}). We zoeken nu een bureau dat bij je event past. Zodra een bureau je aanvraag oppakt, krijg je van hen een bevestiging en daarna een offerte.`,
-      button: "Meer over StageDesk",
+        `Hoi ${name}, we hebben je aanvraag ontvangen (referentie ${reference}) en naar bureaus en artiesten in de buurt gestuurd. Je krijgt een mail zodra iemand een prijs stuurt. Vergelijk de prijzen en kies degene die bij je past.`,
+      button: "Prijzen bekijken",
     },
     leadOffer: {
       subject: (event: string, date: string) => `Nieuwe lead: ${event} op ${date}`,
       preview: "StageDesk biedt je bureau een aanvraag aan.",
       heading: "Er is een lead voor je bureau",
       body: (agency: string, event: string, date: string, city: string) =>
-        `StageDesk biedt ${agency} een aanvraag aan: ${event} op ${date} in ${city}. Bekijk de details en neem hem aan; het eerste bureau dat accepteert krijgt de boeking.`,
-      button: "Lead bekijken",
+        `Er is een aanvraag voor ${agency}: ${event} op ${date} in ${city}. Stuur je prijs; de klant vergelijkt de prijzen en kiest er één.`,
+      button: "Prijs sturen",
+    },
+    leadQuote: {
+      subject: (provider: string) => `${provider} heeft je een prijs gestuurd`,
+      preview: "Vergelijk de prijzen voor je evenement.",
+      heading: "Er is een prijs voor je evenement",
+      body: (name: string, provider: string, event: string, total: string) =>
+        `Hoi ${name}, ${provider} wil graag spelen op je ${event} en vraagt ${total}. Bekijk alle prijzen naast elkaar en accepteer degene die je kiest.`,
+      button: "Prijzen vergelijken",
+    },
+    leadWon: {
+      subject: (code: string) => `Je prijs is geaccepteerd (${code})`,
+      preview: "De klant heeft voor jou gekozen.",
+      heading: "Je hebt de boeking",
+      body: (name: string, event: string, code: string) =>
+        `${name} heeft je prijs voor de ${event} geaccepteerd. Het is nu boeking ${code}, met een geaccepteerde offerte; de klant kan de aanbetaling doen.`,
+      button: "Boeking openen",
+    },
+    leadLost: {
+      subject: (reference: string) => `De klant koos iemand anders (${reference})`,
+      preview: "Deze aanvraag is vergeven.",
+      heading: "Deze keer niet",
+      body: (event: string, reference: string) => `De klant van aanvraag ${reference} (${event}) heeft voor een andere aanbieder gekozen. Bedankt voor je prijs.`,
+      button: "Andere aanvragen bekijken",
     },
     paymentReceipt: {
       subject: (agency: string, code: string) => `Betaalbewijs van ${agency} (${code})`,
@@ -303,19 +326,42 @@ export const copy = {
     },
     leadReceived: {
       subject: (reference: string) => `We've received your request (${reference})`,
-      preview: "We're finding the agency that fits your event.",
+      preview: "Agencies and artists nearby will send you their price.",
       heading: "Thanks for your request",
       body: (name: string, reference: string) =>
-        `Hi ${name}, we've received your request (reference ${reference}). We're now finding an agency that fits your event. As soon as an agency takes it on, they'll confirm and then send you a quote.`,
-      button: "More about StageDesk",
+        `Hi ${name}, we've received your request (reference ${reference}) and sent it to agencies and artists near your event. You'll get an email whenever someone sends a price. Compare them and choose the one that suits you.`,
+      button: "See the prices",
     },
     leadOffer: {
       subject: (event: string, date: string) => `New lead: ${event} on ${date}`,
       preview: "StageDesk is offering your agency a request.",
       heading: "There's a lead for your agency",
       body: (agency: string, event: string, date: string, city: string) =>
-        `StageDesk is offering ${agency} a request: ${event} on ${date} in ${city}. Look at the details and take it on; the first agency to accept gets the booking.`,
-      button: "View the lead",
+        `There's a request for ${agency}: ${event} on ${date} in ${city}. Send your price; the customer compares the prices and chooses one.`,
+      button: "Send a price",
+    },
+    leadQuote: {
+      subject: (provider: string) => `${provider} sent you a price`,
+      preview: "Compare the prices for your event.",
+      heading: "There's a price for your event",
+      body: (name: string, provider: string, event: string, total: string) =>
+        `Hi ${name}, ${provider} would like to play at your ${event} and asks ${total}. See all prices side by side and accept the one you choose.`,
+      button: "Compare prices",
+    },
+    leadWon: {
+      subject: (code: string) => `Your price was accepted (${code})`,
+      preview: "The customer chose you.",
+      heading: "You've got the booking",
+      body: (name: string, event: string, code: string) =>
+        `${name} accepted your price for the ${event}. It's now booking ${code}, with an accepted quote; the customer can pay the deposit.`,
+      button: "Open the booking",
+    },
+    leadLost: {
+      subject: (reference: string) => `The customer chose someone else (${reference})`,
+      preview: "This request has been given to another provider.",
+      heading: "Not this time",
+      body: (event: string, reference: string) => `The customer behind request ${reference} (${event}) chose another provider. Thanks for sending your price.`,
+      button: "See other requests",
     },
     paymentReceipt: {
       subject: (agency: string, code: string) => `Receipt from ${agency} (${code})`,

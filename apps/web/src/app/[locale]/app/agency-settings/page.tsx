@@ -10,6 +10,7 @@ import { platformDatePrefs } from "@/lib/date-prefs";
 import { requireAgency } from "@/lib/viewer";
 import { AgencyForm, LogoForm } from "./agency-forms";
 import { PaymentMethodsForm } from "./payment-methods-form";
+import { ServiceAreaForm } from "./service-area-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/agency-settings">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "agencySettings" });
@@ -58,6 +59,16 @@ async function AgencySettings() {
         dates={{ timeZone: agency.timeZone ?? "", dateFormat: agency.dateFormat ?? "", timeFormat: agency.timeFormat ?? "" }}
         platformDates={platformDates}
         currencyOptions={currencyOptions.includes(agency.currency as never) ? currencyOptions : [agency.currency, ...currencyOptions]}
+      />
+      <ServiceAreaForm
+        initial={{
+          acceptsLeads: agency.acceptsLeads,
+          regions: Array.isArray(agency.serviceRegions) ? (agency.serviceRegions as string[]) : [],
+          radiusKm: agency.serviceRadiusKm ? String(agency.serviceRadiusKm) : "",
+          eventTypes: Array.isArray(agency.serviceEventTypes) ? (agency.serviceEventTypes as string[]) : null,
+          located: agency.latitude !== null ? [agency.addressLine, agency.city].filter(Boolean).join(", ") || agency.city : null,
+          ownCity: agency.city,
+        }}
       />
       <PaymentMethodsForm
         values={{

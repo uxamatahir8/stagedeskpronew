@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { currencies, dateFormats, isTimeZone, isValidIban, normalizeIban, timeFormats } from "@stagedesk/core";
-import { enabledCurrencies, getSetting, prisma } from "@stagedesk/db";
+import { cleanRegions, currencies, dateFormats, eventTypes, isTimeZone, isValidIban, normalizeIban, timeFormats } from "@stagedesk/core";
+import { enabledCurrencies, geocode, getSetting, Prisma, prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { auth } from "@/lib/auth";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
@@ -125,4 +125,35 @@ export async function savePaymentMethodsAction(input: PaymentMethodsInput): Prom
   });
   revalidatePath("/[locale]/app/agency-settings", "page");
   return { ok: true, message: t("saved") };
+}
+
+const serviceAreaSchema = z.object({
+  acceptsLeads: z.boolean(),
+  regions: z.array(z.string().max(96)).max(50),
+  radiusKm: z.number().int().min(1).max(1000).nullable(),
+  eventTypes: z.array(z.enum(eventTypes)).min(1).nullable(),
+});
+
+/** Where and what the agency plays, for matching website requests. The address is put on the map for the radius. */
+export async function saveServiceAreaAction(input: z.input<typeof serviceAreaSchema>): Promise<ActionResult> {
+  const { organization } = await requireAgency("agency.settings");
+  const t = await getTranslations("serviceArea");
+  const parsed = serviceAreaSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: t("invalid") };
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { addressLine: true, postalCode: true, city: true } });
+  const address = [org.addressLine, [org.postalCode, org.city].filter(Boolean).join(" ")].filter(Boolean).join(", ");
+  const spot = address ? ((await geocode(address)) ?? (org.city ? await geocode(org.city) : null)) : null;
+  await prisma.organization.update({
+    where: { id: organization.id },
+    data: {
+      acceptsLeads: parsed.data.acceptsLeads,
+      serviceRegions: cleanRegions(parsed.data.regions),
+      serviceRadiusKm: parsed.data.radiusKm,
+      serviceEventTypes: parsed.data.eventTypes ?? Prisma.DbNull,
+      latitude: spot?.latitude ?? null,
+      longitude: spot?.longitude ?? null,
+    },
+  });
+  revalidatePath("/[locale]/app/agency-settings", "page");
+  return { ok: true, message: parsed.data.radiusKm && !spot ? t("savedNoMap") : t("saved") };
 }

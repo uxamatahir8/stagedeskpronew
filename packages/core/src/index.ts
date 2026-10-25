@@ -16,3 +16,4 @@ export * from "./listing";
 export * from "./passwords";
 export * from "./locale";
 export * from "./datetime";
+export * from "./geo";

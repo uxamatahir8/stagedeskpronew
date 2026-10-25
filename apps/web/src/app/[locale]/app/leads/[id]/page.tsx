@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { eventDate } from "@/lib/format";
+import { eventDate, euro } from "@/lib/format";
 import { startSupportAction } from "@/lib/support-actions";
 import { requirePermission } from "@/lib/viewer";
 import { leadTone } from "../lead-tone";
@@ -31,7 +31,7 @@ export default function LeadPage({ params }: PageProps<"/[locale]/app/leads/[id]
   );
 }
 
-const offerTone = { pending: "warning", accepted: "success", declined: "danger", withdrawn: "neutral" } as const;
+const offerTone = { pending: "warning", quoted: "info", accepted: "success", declined: "danger", lost: "neutral", withdrawn: "neutral" } as const;
 
 async function Lead({ params }: Pick<PageProps<"/[locale]/app/leads/[id]">, "params">) {
   const { locale, id } = await params;
@@ -136,7 +136,7 @@ async function Lead({ params }: Pick<PageProps<"/[locale]/app/leads/[id]">, "par
               </CardHeader>
             </Card>
           )}
-          {open && <LeadRouting leadId={lead.id} agencies={ranked} city={city} offered={lead.offers.map((o) => o.agency.id)} />}
+          {open && <LeadRouting leadId={lead.id} agencies={ranked} city={city} offered={lead.offers.map((o) => o.agency.id)} broadcastAt={lead.broadcastAt?.toISOString() ?? null} />}
           <Card>
             <CardHeader>
               <CardTitle>{t("offers")}</CardTitle>
@@ -154,6 +154,10 @@ async function Lead({ params }: Pick<PageProps<"/[locale]/app/leads/[id]">, "par
                           {o.agency.name}
                         </Link>
                         {o.agency.city && <span className="text-muted-foreground"> · {o.agency.city}</span>}
+                        <span className="block text-xs text-muted-foreground">
+                          {t(o.source === "broadcast" ? "source_broadcast" : "source_admin")}
+                          {o.totalCents ? ` · ${euro(format, o.totalCents, o.currency ?? "EUR")}` : ""}
+                        </span>
                       </span>
                       <Pill tone={offerTone[o.status as keyof typeof offerTone]}>{t(`offer_${o.status as keyof typeof offerTone}`)}</Pill>
                     </li>

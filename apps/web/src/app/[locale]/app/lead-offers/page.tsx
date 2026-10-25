@@ -1,15 +1,16 @@
 import { SparklesIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { agencyLeadOffers } from "@stagedesk/db";
+import { agencyLeadOffers, getSetting, tenantDb } from "@stagedesk/db";
+import { Pill } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
-import { eventDate } from "@/lib/format";
+import { centsToInput, eventDate, euro } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { OfferButtons } from "./offer-buttons";
 import { CardList } from "@/components/list/data-table";
@@ -32,14 +33,23 @@ export default async function LeadOffersPage({ params }: PageProps<"/[locale]/ap
 
 async function Offers() {
   const { organization } = await requireAgency("agency.leads");
-  const [t, te, tb, format, offers] = await Promise.all([
+  const [t, te, tb, format, locale, offers, catalog, defaults] = await Promise.all([
     getTranslations("leadOffers"),
     getTranslations("eventTypes"),
     getTranslations("budgetRanges"),
     getFormatter(),
-    // Only this agency's own offers; contact details stay hidden until it accepts.
+    getLocale(),
+    // Only this agency's own offers; contact details stay hidden until the customer accepts.
     agencyLeadOffers(organization.id),
+    tenantDb(organization.id).serviceItem.findMany({ where: { active: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
+    getSetting("bookings.defaults"),
   ]);
+  const builderBase = {
+    catalog: catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, unitPriceCents: c.unitPriceCents, vatBps: c.vatBps })),
+    vatRates: defaults.vatRatesBps,
+    defaultExpiryDays: Math.min(60, defaults.quoteExpiryDays),
+    currency: organization.currency,
+  };
 
   return (
     <div className="grid gap-6">
@@ -67,7 +77,16 @@ async function Offers() {
                 <CardDescription>
                   {o.reference} · {t("offeredOn", { date: format.dateTime(o.offeredAt, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
                   {o.offeredTo > 1 ? ` · ${t("competing", { count: o.offeredTo })}` : ""}
+                  {` · ${t("quotesSent", { count: o.quotesSent })}`}
                 </CardDescription>
+                {o.offer.status === "quoted" && o.offer.totalCents !== null && (
+                  <div className="pt-1">
+                    <Pill tone="info">
+                      {t("yourPrice", { total: euro(format, o.offer.totalCents, o.offer.currency ?? organization.currency) })}
+                      {o.offer.validUntil ? ` · ${t("validUntil", { date: eventDate(format, o.offer.validUntil, "short") ?? "" })}` : ""}
+                    </Pill>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="grid gap-4">
                 <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -88,7 +107,22 @@ async function Offers() {
                 </dl>
                 {o.message && <p className="rounded-lg bg-muted/50 p-3 text-sm whitespace-pre-line">{o.message}</p>}
                 <p className="text-xs text-muted-foreground">{t("contactHidden")}</p>
-                <OfferButtons leadId={o.id} />
+                <OfferButtons
+                  leadId={o.id}
+                  title={`${te(o.eventType as "wedding")} · ${eventDate(format, o.eventDate, "short") ?? ""}`}
+                  quoted={o.offer.status === "quoted"}
+                  canTakeDirectly={o.offer.source === "admin" && o.offer.status === "pending"}
+                  builder={{
+                    ...builderBase,
+                    defaultDepositBps: o.offer.depositBps ?? defaults.depositBps,
+                    initialLines: o.offer.lines.map((l) => ({
+                      description: l.description,
+                      quantity: String(l.quantityHundredths / 100).replace(".", locale === "en" ? "." : ","),
+                      unitPrice: centsToInput(l.unitPriceCents, locale),
+                      vatBps: l.vatBps,
+                    })),
+                  }}
+                />
               </CardContent>
             </Card>
             ),

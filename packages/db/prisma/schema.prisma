@@ -121,6 +121,17 @@ model Organization {
   timeZone           String?                @db.VarChar(64)
   dateFormat         String?                @db.VarChar(16)
   timeFormat         String?                @db.VarChar(4)
+  /// Quote requests from the website: which ones reach this agency.
+  acceptsLeads       Boolean                @default(true)
+  /// string[]: cities, provinces or states served, matched without case or accents. Empty = only the radius.
+  serviceRegions     Json?
+  /// Also serve events within this many km of the address (needs latitude/longitude).
+  serviceRadiusKm    Int?
+  /// string[] of event types; null = all.
+  serviceEventTypes  Json?
+  /// The address on the map (geocoded on save), for radius matching.
+  latitude           Float?
+  longitude          Float?
   vatNumber          String?                @db.VarChar(20)
   contactEmail       String?                @db.VarChar(191)
   phone              String?                @db.VarChar(32)
@@ -1202,6 +1213,14 @@ model Lead {
   closedReason     String?       @db.VarChar(191)
   /// Admin's notes, never shown to agencies or the customer.
   adminNotes       String?       @db.Text
+  /// Lets the customer compare and accept quotes without an account (/request/{reference}?t=…).
+  accessToken      String?       @unique @db.VarChar(48)
+  /// Where the venue city is on the map, and its province/state, for matching providers.
+  latitude         Float?
+  longitude        Float?
+  region           String?       @db.VarChar(96)
+  /// When the request went out to matching providers automatically.
+  broadcastAt      DateTime?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   offers           LeadOffer[]
@@ -1217,10 +1236,22 @@ model LeadOffer {
   lead          Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
   agencyId      String       @db.VarChar(64)
   agency        Organization @relation("LeadOffers", fields: [agencyId], references: [id], onDelete: Cascade)
-  /// pending | accepted | declined | withdrawn
+  /// pending | quoted | accepted | declined | lost | withdrawn
   status        String       @default("pending") @db.VarChar(16)
   respondedById String?      @db.VarChar(64)
   respondedAt   DateTime?
+  /// The provider's price for the customer to compare: QuoteLineInput[] and its totals.
+  quoteLines    Json?
+  depositBps    Int?
+  totalCents    Int?
+  depositCents  Int?
+  currency      String?      @db.VarChar(3)
+  quoteMessage  String?      @db.Text
+  quotedAt      DateTime?
+  quotedById    String?      @db.VarChar(64)
+  validUntil    DateTime?
+  /// "broadcast" (matched automatically) or "admin" (offered by StageDesk).
+  source        String       @default("admin") @db.VarChar(16)
   createdAt     DateTime     @default(now())
 
   @@unique([leadId, agencyId])
@@ -1511,4 +1542,17 @@ model NewsletterDelivery {
   @@unique([campaignId, subscriberId])
   @@index([campaignId, status])
   @@map("newsletter_deliveries")
+}
+
+/// Places looked up on the map (OpenStreetMap Nominatim), so each is asked once.
+model GeoCache {
+  query     String   @id @db.VarChar(191)
+  latitude  Float?
+  longitude Float?
+  city      String?  @db.VarChar(96)
+  region    String?  @db.VarChar(96)
+  country   String?  @db.VarChar(2)
+  createdAt DateTime @default(now())
+
+  @@map("geo_cache")
 }

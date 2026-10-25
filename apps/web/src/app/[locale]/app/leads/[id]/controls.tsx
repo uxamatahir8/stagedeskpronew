@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
-import { assignLeadAction, closeLeadAction, offerLeadAction, saveLeadNotesAction } from "../actions";
+import { assignLeadAction, broadcastLeadAction, closeLeadAction, offerLeadAction, saveLeadNotesAction } from "../actions";
 
 function useRun() {
   const router = useRouter();
@@ -32,7 +32,7 @@ function useRun() {
 type Agency = { id: string; name: string; city: string | null };
 
 /** Offer the lead to several agencies (first to accept wins), assign it to one, or close it. */
-export function LeadRouting({ leadId, agencies, city, offered }: { leadId: string; agencies: Agency[]; city: string; offered: string[] }) {
+export function LeadRouting({ leadId, agencies, city, offered, broadcastAt }: { leadId: string; agencies: Agency[]; city: string; offered: string[]; broadcastAt: string | null }) {
   const t = useTranslations("leads");
   const { pending, run } = useRun();
   const [chosen, setChosen] = useState<string[]>([]);
@@ -48,6 +48,13 @@ export function LeadRouting({ leadId, agencies, city, offered }: { leadId: strin
         <CardDescription>{t("routeHint")}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+          <span className="text-muted-foreground">{broadcastAt ? t("broadcastDone") : t("broadcastNotYet")}</span>
+          <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => broadcastLeadAction(leadId))}>
+            <SendIcon />
+            {t("broadcast")}
+          </Button>
+        </div>
         <fieldset className="grid gap-2">
           <legend className="mb-1 text-sm font-medium">{t("offerTo")}</legend>
           {candidates.length === 0 ? (

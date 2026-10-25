@@ -1,11 +1,13 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { eventTypes, generateTrackingCode, todayInNetherlands } from "@stagedesk/core";
 import { notify, platformAdminIds, submitLead } from "@stagedesk/db";
 import type { InquiryResult } from "@/app/[locale]/(public)/b/[slug]/actions";
+import { runLeadBroadcast } from "@/lib/lead-market";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -31,8 +33,9 @@ const schema = z.object({
 });
 
 /**
- * The platform's own request form: the request becomes a lead that the admin
- * matches with an agency. Same bot defences as an agency's booking page.
+ * The platform's own request form: the request becomes a lead that goes out
+ * to every agency and artist serving the area, who send their price; the
+ * customer compares and accepts one. Same bot defences as a booking page.
  */
 export async function submitLeadAction(form: FormData): Promise<InquiryResult> {
   const t = await getTranslations("bookingPage");
@@ -58,7 +61,9 @@ export async function submitLeadAction(form: FormData): Promise<InquiryResult> {
   const locale = userLocale(await getLocale());
   const lead = await submitLead({ ...d, locale });
   const first = d.name.split(/\s+/)[0] ?? d.name;
-  deliver({ kind: "leadReceived", to: d.email, params: { locale, name: first, reference: lead.reference, url: absoluteUrl(locale, "/") } });
+  deliver({ kind: "leadReceived", to: d.email, params: { locale, name: first, reference: lead.reference, url: absoluteUrl(locale, `/request/${lead.reference}?t=${lead.accessToken}`) } });
   await notify(await platformAdminIds(), { type: "lead_new", data: { name: d.name, code: lead.reference }, url: `/app/leads/${lead.id}` });
+  // Matching needs the map (a network call), so it runs after the customer has their answer.
+  after(() => runLeadBroadcast(lead.id));
   return { ok: true, code: lead.reference, name: first };
 }

@@ -3,11 +3,10 @@
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
-import type { EventType } from "@stagedesk/core";
-import { assignLead, audit, closeLead, LeadError, notify, offerLead, prisma, saveLeadNotes } from "@stagedesk/db";
+import { assignLead, audit, closeLead, LeadError, offerLead, saveLeadNotes } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { announceLeadAssigned } from "@/lib/announce";
-import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
+import { announceLeadOffered, runLeadBroadcast } from "@/lib/lead-market";
 import { clientIp } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/viewer";
 
@@ -29,37 +28,23 @@ export async function offerLeadAction(leadId: string, agencyIds: string[]): Prom
   if (agencyIds.length === 0) return { ok: false, message: t("chooseAgencies") };
   try {
     const fresh = await offerLead(leadId, agencyIds.slice(0, 20));
-    const lead = await prisma.lead.findUniqueOrThrow({ where: { id: leadId }, select: { reference: true, eventType: true, eventDate: true, venueCity: true } });
-    const staff = await prisma.member.findMany({
-      where: { organizationId: { in: fresh }, role: { in: ["agency_owner", "agency_admin", "agency_staff"] } },
-      include: { user: { select: { email: true, locale: true } }, organization: { select: { name: true } } },
-    });
-    for (const m of staff) {
-      const locale = userLocale(m.user.locale);
-      const te = await getTranslations({ locale, namespace: "eventTypes" });
-      deliver({
-        kind: "leadOffer",
-        to: m.user.email,
-        params: {
-          locale,
-          agency: m.organization.name,
-          event: te(lead.eventType as EventType).toLowerCase(),
-          date: lead.eventDate ? new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(lead.eventDate) : "—",
-          city: lead.venueCity ?? "—",
-          url: absoluteUrl(locale, "/app/lead-offers"),
-        },
-      });
-    }
-    await notify(
-      staff.map((m) => m.userId),
-      { type: "lead_offer", data: { code: lead.reference, city: lead.venueCity ?? "" }, url: "/app/lead-offers" },
-    );
+    await announceLeadOffered(leadId, fresh);
     await audit({ actorId: viewer.user.id, action: "lead.offer", targetType: "lead", targetId: leadId, data: { agencies: fresh }, ip: clientIp(await headers()) });
     done();
     return { ok: true, message: t("offered", { count: fresh.length }) };
   } catch (error) {
     return { ok: false, message: await leadError(error) };
   }
+}
+
+/** Sends the lead again to every provider whose area and event types match (e.g. after new agencies joined). */
+export async function broadcastLeadAction(leadId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.agencies");
+  const t = await getTranslations("leads");
+  const fresh = await runLeadBroadcast(leadId);
+  await audit({ actorId: viewer.user.id, action: "lead.broadcast", targetType: "lead", targetId: leadId, data: { providers: fresh }, ip: clientIp(await headers()) });
+  done();
+  return { ok: true, message: t("broadcasted", { count: fresh.length }) };
 }
 
 /** Gives the lead straight to one agency, without waiting for them to accept. */

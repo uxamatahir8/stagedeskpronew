@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { parseEuros, parseQuantity, type QuoteLineInput } from "@stagedesk/core";
+import { parseEuros } from "@stagedesk/core";
 import {
   acceptQuote,
   assignArtist,
@@ -21,6 +21,7 @@ import {
 import { redirect } from "@/i18n/navigation";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import type { Locale } from "@/i18n/routing";
+import { parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
 import { limitBlocked, writeBlocked } from "@/lib/billing";
@@ -91,33 +92,18 @@ export async function updateDetailsAction(bookingId: string, _prev: FormState, f
   return { ok: true, message: (await getTranslations("booking"))("saved") };
 }
 
-const quoteSchema = z.object({
-  depositPct: z.number().min(0).max(100),
-  expiresInDays: z.number().int().min(1).max(180),
-  notes: z.string().max(2000).nullable(),
-  lines: z
-    .array(z.object({ description: z.string(), quantity: z.string(), unitPrice: z.string(), vatBps: z.number().int() }))
-    .max(50),
-});
-
-export async function sendQuoteAction(bookingId: string, input: z.input<typeof quoteSchema>): Promise<ActionResult> {
+export async function sendQuoteAction(bookingId: string, input: QuoteDraft): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.quotes.send");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
-  const parsed = quoteSchema.safeParse(input);
+  const parsed = quoteDraftSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: (await getTranslations("auth"))("generic") };
 
   const { vatRatesBps } = await getSetting("bookings.defaults");
-  const quoteLines: QuoteLineInput[] = [];
-  for (const [i, line] of parsed.data.lines.entries()) {
-    const quantityHundredths = parseQuantity(line.quantity);
-    const unitPriceCents = parseEuros(line.unitPrice);
-    if (!line.description.trim() || line.description.length > 500 || quantityHundredths === null || unitPriceCents === null || !vatRatesBps.includes(line.vatBps)) {
-      return { ok: false, message: t("invalidLine", { n: i + 1 }) };
-    }
-    quoteLines.push({ description: line.description.trim(), quantityHundredths, unitPriceCents, vatBps: line.vatBps });
-  }
+  const parsedLines = parseQuoteLines(parsed.data.lines, vatRatesBps);
+  if ("badLine" in parsedLines) return { ok: false, message: t("invalidLine", { n: parsedLines.badLine }) };
+  const quoteLines = parsedLines.lines;
 
   return runAction(async () => {
     const quote = await sendQuote(

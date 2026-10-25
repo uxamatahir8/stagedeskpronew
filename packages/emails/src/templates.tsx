@@ -283,6 +283,37 @@ export function LeadOffer({ locale, agency, event, date, city, url }: { locale: 
   );
 }
 
+export function LeadQuote({ locale, name, provider, event, total, url }: { locale: EmailLocale; name: string; provider: string; event: string; total: string; url: string }) {
+  const c = copy[locale].leadQuote;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, provider, event, total)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function LeadWon({ locale, name, event, code, url }: { locale: EmailLocale; name: string; event: string; code: string; url: string }) {
+  const c = copy[locale].leadWon;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, event, code)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
+export function LeadLost({ locale, event, reference, url }: { locale: EmailLocale; event: string; reference: string; url: string }) {
+  const c = copy[locale].leadLost;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(event, reference)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+    </EmailLayout>
+  );
+}
+
 export function PaymentReceipt({
   locale,
   name,

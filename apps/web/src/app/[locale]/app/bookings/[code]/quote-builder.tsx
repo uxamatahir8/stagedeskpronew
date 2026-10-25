@@ -19,6 +19,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { centsToInput, euro, percent } from "@/lib/format";
+import type { ActionResult } from "@/lib/actions";
+import type { QuoteDraft } from "@/lib/quote-input";
 import { sendQuoteAction } from "../actions";
 
 export interface BuilderLine {
@@ -49,8 +51,13 @@ export function QuoteBuilder({
   defaultExpiryDays,
   currency,
   onDone,
+  submit: submitDraft,
+  submitLabel,
 }: {
-  bookingId: string;
+  /** Sends a quote on this booking; or pass `submit` to send the draft elsewhere (a price for a lead). */
+  bookingId?: string;
+  submit?: (input: QuoteDraft) => Promise<ActionResult>;
+  submitLabel?: string;
   catalog: CatalogItem[];
   vatRates: number[];
   initialLines: Omit<BuilderLine, "key">[];
@@ -99,12 +106,13 @@ export function QuoteBuilder({
 
   function submit() {
     startTransition(async () => {
-      const result = await sendQuoteAction(bookingId, {
+      const draft: QuoteDraft = {
         depositPct: Math.min(100, Math.max(0, Number(depositPct.replace(",", ".")) || 0)),
         expiresInDays: Math.max(1, Math.min(180, Number(days) || 14)),
         notes: notes || null,
         lines: lines.map(({ description, quantity, unitPrice, vatBps }) => ({ description, quantity, unitPrice, vatBps })),
-      });
+      };
+      const result = submitDraft ? await submitDraft(draft) : await sendQuoteAction(bookingId!, draft);
       if (!result.ok) return void toast.error(result.message);
       toast.success(result.message);
       onDone();
@@ -241,7 +249,7 @@ export function QuoteBuilder({
         </Button>
         <Button onClick={submit} disabled={pending || totals.lines.length === 0}>
           <SendIcon />
-          {t("send")}
+          {submitLabel ?? t("send")}
         </Button>
       </div>
     </div>

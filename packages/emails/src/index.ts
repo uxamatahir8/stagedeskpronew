@@ -13,7 +13,10 @@ import {
   GigReminder,
   InquiryReceived,
   Invitation,
+  LeadLost,
   LeadOffer,
+  LeadQuote,
+  LeadWon,
   LeadReceived,
   LoginCode,
   NewInquiry,
@@ -154,6 +157,18 @@ export function sendLeadOffer(to: string, p: { locale: EmailLocale; agency: stri
   return send(to, copy[p.locale].leadOffer.subject(p.event, p.date), createElement(LeadOffer, p));
 }
 
+export function sendLeadQuote(to: string, p: { locale: EmailLocale; name: string; provider: string; event: string; total: string; url: string }) {
+  return send(to, copy[p.locale].leadQuote.subject(p.provider), createElement(LeadQuote, p));
+}
+
+export function sendLeadWon(to: string, p: { locale: EmailLocale; name: string; event: string; code: string; url: string }) {
+  return send(to, copy[p.locale].leadWon.subject(p.code), createElement(LeadWon, p));
+}
+
+export function sendLeadLost(to: string, p: { locale: EmailLocale; event: string; reference: string; url: string }) {
+  return send(to, copy[p.locale].leadLost.subject(p.reference), createElement(LeadLost, p));
+}
+
 export function sendPaymentReceipt(
   to: string,
   p: { locale: EmailLocale; name: string; agency: string; code: string; amount: string; method: string; date: string; paid: string; remaining: string; url: string },
@@ -208,6 +223,9 @@ const senders = {
   agencyCreated: sendAgencyCreated,
   leadReceived: sendLeadReceived,
   leadOffer: sendLeadOffer,
+  leadQuote: sendLeadQuote,
+  leadWon: sendLeadWon,
+  leadLost: sendLeadLost,
   paymentReceipt: sendPaymentReceipt,
   paymentNotReceived: sendPaymentNotReceived,
   paymentReported: sendPaymentReported,
