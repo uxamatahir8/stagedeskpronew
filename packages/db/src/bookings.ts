@@ -277,6 +277,28 @@ export async function acceptQuote(
     { type: "quote_accepted", data: { name: by.name, code: booking.trackingCode }, url: `/app/bookings/${booking.trackingCode}` },
     by.actorId,
   );
+  await confirmSoloBooking(organizationId, booking.id, now);
+}
+
+/**
+ * An independent artist plays their own gigs: once a quote is accepted the
+ * booking is confirmed with them as the artist, unless they've marked that
+ * day unavailable (then it stays "booked" for them to sort out). Their share
+ * is 0: the business they own already receives the payments.
+ */
+export async function confirmSoloBooking(organizationId: string, bookingId: string, now = new Date()) {
+  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { kind: true } });
+  if (org?.kind !== "solo") return;
+  const artist = await prisma.artist.findFirst({ where: { organizationId, userId: { not: null } }, select: { id: true, userId: true, stageName: true } });
+  if (!artist) return;
+  await tenantDb(organizationId).$transaction(async (tx) => {
+    const booking = await loadBooking(tx, bookingId);
+    if (booking.status !== "booked") return;
+    if (booking.eventDate && !(await isArtistFree(artist.id, booking.eventDate, booking.id))) return;
+    await tx.bookingAssignment.create({ data: { id: randomUUID(), organizationId, bookingId, artistId: artist.id, status: "accepted", shareBps: 0, respondedAt: now } });
+    await logEvent(tx, bookingId, "artist_assigned", artist.userId, { artistId: artist.id, stageName: artist.stageName });
+    await applyTransition(tx, booking, "artist_accepted", "artist", artist.userId, now);
+  });
 }
 
 /** Artists the agency can book: its own, plus accepted shares from partner agencies. */

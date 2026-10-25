@@ -1,4 +1,4 @@
-import { ArrowRightIcon, Building2Icon, MailOpenIcon, UserRoundIcon } from "lucide-react";
+import { ArrowRightIcon, Building2Icon, MailOpenIcon, UserRoundIcon, Music2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link, redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { getViewer } from "@/lib/viewer";
-import { OnboardingForm } from "./onboarding-form";
+import { OnboardingForm, SoloArtistForm } from "./onboarding-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/onboarding">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "onboarding" });
@@ -37,7 +37,8 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
   if (!viewer) redirect({ href: "/sign-in?next=/onboarding", locale });
   if (viewer!.role) redirect({ href: "/app", locale });
   const t = await getTranslations("onboarding");
-  const startAgency = (await searchParams)["start"] === "agency";
+  const start = (await searchParams)["start"];
+  const startAgency = start === "agency";
   const invitations = await prisma.invitation.findMany({
     where: { email: viewer!.user.email.toLowerCase(), status: "pending", expiresAt: { gt: new Date() } },
     include: { organization: { select: { name: true } } },
@@ -52,6 +53,17 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
       </SignOutButton>
     </p>
   );
+
+  if (start === "artist") {
+    return (
+      <AuthCard title={t("soloTitle")} description={t("soloBody")}>
+        <div className="grid gap-6">
+          <SoloArtistForm />
+          {footer}
+        </div>
+      </AuthCard>
+    );
+  }
 
   if (startAgency) {
     return (
@@ -84,6 +96,16 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
             <span className="text-sm text-muted-foreground">{t("agencyBody")}</span>
             <Button asChild size="sm" className="w-fit">
               <Link href="/onboarding?start=agency">{t("agencyButton")}</Link>
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-[2.5rem_1fr] gap-3 rounded-xl border p-4">
+          <Music2Icon className="mt-0.5 size-5 text-primary" aria-hidden />
+          <div className="grid gap-2">
+            <span className="font-medium">{t("soloChoiceTitle")}</span>
+            <span className="text-sm text-muted-foreground">{t("soloChoiceBody")}</span>
+            <Button asChild size="sm" variant="outline" className="w-fit">
+              <Link href="/onboarding?start=artist">{t("soloChoiceButton")}</Link>
             </Button>
           </div>
         </div>

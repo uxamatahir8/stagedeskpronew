@@ -121,6 +121,8 @@ model Organization {
   timeZone           String?                @db.VarChar(64)
   dateFormat         String?                @db.VarChar(16)
   timeFormat         String?                @db.VarChar(4)
+  /// "agency", or "solo" for an independent artist's own business (one person, who is also the artist).
+  kind               String                 @default("agency") @db.VarChar(8)
   /// Quote requests from the website: which ones reach this agency.
   acceptsLeads       Boolean                @default(true)
   /// string[]: cities, provinces or states served, matched without case or accents. Empty = only the radius.
@@ -199,6 +201,7 @@ model Organization {
   agencySite          AgencySite?
   agencySitePages     AgencySitePage[]
   agencyDomains       AgencyDomain[]
+  gigListings         GigListing[]
 
   @@map("organizations")
 }
@@ -280,6 +283,10 @@ model Artist {
   mediaLinks        Json?
   /// Default share of each booking payment, in basis points.
   defaultShareBps   Int                    @default(4000)
+  /// Independent artists: one line under their name in the directory, and their lowest price.
+  headline          String?                @db.VarChar(160)
+  priceFromCents    Int?
+  listings          GigListing[]
   active            Boolean                @default(true)
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
@@ -368,8 +375,11 @@ model Booking {
   /// Key from core's budgetRanges, e.g. "750_1500".
   budgetRange       String?             @db.VarChar(16)
   ceremony          Boolean?
-  /// manual | booking_page
+  /// manual | booking_page | lead | gig | profile
   source            String              @default("manual") @db.VarChar(16)
+  /// The gig an independent artist offered that the customer ordered (source "gig").
+  listingId         String?             @db.VarChar(64)
+  listing           GigListing?         @relation(fields: [listingId], references: [id], onDelete: SetNull)
   /// Copied from the accepted quote.
   totalCents        Int                 @default(0)
   depositCents      Int                 @default(0)
@@ -601,6 +611,8 @@ model LedgerEntry {
 model Plan {
   id                   String         @id @db.VarChar(64)
   key                  String         @unique @db.VarChar(48)
+  /// "agency" plans, or "artist" for independent artists (public profile and direct booking).
+  audience             String         @default("agency") @db.VarChar(8)
   /// { nl, en }
   name                 Json
   /// { nl, en }
@@ -1555,4 +1567,31 @@ model GeoCache {
   createdAt DateTime @default(now())
 
   @@map("geo_cache")
+}
+
+/// A gig an independent artist offers at a set price, which customers can order from their public profile.
+model GigListing {
+  id              String       @id @db.VarChar(64)
+  organizationId  String       @db.VarChar(64)
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  artistId        String       @db.VarChar(64)
+  artist          Artist       @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  title           String       @db.VarChar(120)
+  description     String?      @db.Text
+  /// Excluding VAT, in the business's currency.
+  priceCents      Int
+  vatBps          Int
+  depositBps      Int          @default(3000)
+  durationMinutes Int?
+  /// string[] of event types; null = all.
+  eventTypes      Json?
+  photoUrl        String?      @db.Text
+  active          Boolean      @default(true)
+  position        Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  bookings        Booking[]
+
+  @@index([organizationId, active])
+  @@map("gig_listings")
 }

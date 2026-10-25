@@ -36,6 +36,19 @@ export const fallbackLimits: PlanLimits = {
   artistSharing: false,
 };
 
+/** An independent artist works for free: one artist (themselves), no team, unlimited bookings. */
+export const soloLimits: PlanLimits = {
+  maxArtists: 1,
+  maxStaff: 1,
+  maxBookingsPerMonth: null,
+  storageGb: 1,
+  bookingPage: false,
+  embedWidget: false,
+  customDomain: false,
+  removeBranding: false,
+  artistSharing: false,
+};
+
 export function parseLimits(value: unknown): PlanLimits {
   const result = planLimitsSchema.safeParse(value);
   return result.success ? result.data : fallbackLimits;
@@ -52,7 +65,7 @@ export type LocalizedText = z.infer<typeof localizedText>;
 
 export type SubscriptionStatus = "trialing" | "active" | "past_due" | "unpaid" | "canceled" | "incomplete";
 
-export type AccessReason = "trial" | "active" | "grace" | "trial_ended" | "payment_failed" | "canceled" | "none";
+export type AccessReason = "trial" | "active" | "grace" | "trial_ended" | "payment_failed" | "canceled" | "none" | "free";
 
 export interface SubscriptionAccess {
   /** "read_only" keeps all data visible but blocks changes until the agency pays. */

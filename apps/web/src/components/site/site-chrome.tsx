@@ -78,7 +78,7 @@ async function HeaderActions() {
   // Signed in: the person's name with their most used pages instead of "Sign in" and the trial button.
   const signedIn = viewer?.role ? viewer : null;
   const shortcuts = signedIn
-    ? navigationFor(signedIn.permissions)
+    ? navigationFor(signedIn.permissions, signedIn.role)
         .flatMap((g) => g.items)
         .filter((i) => i.href !== "/app")
         .slice(0, 6)

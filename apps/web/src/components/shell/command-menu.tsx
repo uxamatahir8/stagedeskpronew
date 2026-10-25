@@ -3,7 +3,7 @@
 import { SearchIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { Permission } from "@stagedesk/core";
+import type { Permission, Role } from "@stagedesk/core";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -18,11 +18,11 @@ import { footerNavigationFor, navigationFor } from "@/config/navigation";
 import { useRouter } from "@/i18n/navigation";
 
 /** Ctrl+K / ⌘K page search over everything the current role can open. */
-export function CommandMenu({ permissions }: { permissions: readonly Permission[] }) {
+export function CommandMenu({ permissions, role }: { permissions: readonly Permission[]; role?: Role | null }) {
   const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const groups = navigationFor(permissions);
+  const groups = navigationFor(permissions, role);
   const footer = footerNavigationFor(permissions);
 
   useEffect(() => {

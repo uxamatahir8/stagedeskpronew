@@ -39,9 +39,9 @@ async function Shell({ children }: { children: React.ReactNode }) {
       <SidebarProvider>
         <AppSidebar viewer={{ user, role, organization, memberships, permissions }} />
         <SidebarInset>
-          <TopBar permissions={permissions} />
+          <TopBar permissions={permissions} role={role} />
           <Suspense fallback={null}>
-            <Guide userId={user.id} permissions={permissions} />
+            <Guide userId={user.id} permissions={permissions} role={role} />
           </Suspense>
           {support && <SupportBanner agency={support.name} />}
           {organization && permissions.includes("agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} canBill={permissions.includes("agency.billing")} />}

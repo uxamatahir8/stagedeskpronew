@@ -9,7 +9,8 @@
     "agency_admin": "Agency admin",
     "agency_staff": "Agency staff",
     "artist": "Artist",
-    "customer": "Customer"
+    "customer": "Customer",
+    "solo_artist": "Independent artist"
   },
   "navGroups": {
     "overview": "Overview",
@@ -18,7 +19,8 @@
     "manage": "Manage",
     "artist": "My work",
     "customer": "My event",
-    "affiliate": "Partner program"
+    "affiliate": "Partner program",
+    "business": "My business"
   },
   "nav": {
     "home": "Home",
@@ -63,7 +65,10 @@
     "content": "Blog and help",
     "texts": "Website texts",
     "referrals": "Invite agencies",
-    "newsletter": "Newsletter"
+    "newsletter": "Newsletter",
+    "artistProfile": "Artist profile",
+    "listings": "Gigs I offer",
+    "soloSettings": "Business settings"
   },
   "shell": {
     "search": "Search…",
@@ -94,7 +99,8 @@
       "agency_admin": "What needs your attention at the agency.",
       "agency_staff": "What needs your attention at the agency.",
       "artist": "Your upcoming gigs and earnings.",
-      "customer": "Everything about your event in one place."
+      "customer": "Everything about your event in one place.",
+      "solo_artist": "Your requests, bookings and earnings."
     },
     "noData": "No data yet",
     "stats": {
@@ -272,7 +278,17 @@
     "agencyBody": "You manage inquiries, quotes, artists and payments for your own agency.",
     "agencyButton": "Set up agency",
     "otherTitle": "Customer or artist?",
-    "otherBody": "Then you get access through your agency: open the link in the quote or invitation email. No email? Ask your agency to invite you again."
+    "otherBody": "Then you get access through your agency: open the link in the quote or invitation email. No email? Ask your agency to invite you again.",
+    "soloChoiceTitle": "I'm an independent artist",
+    "soloChoiceBody": "DJ, band or act without an agency: get requests from customers near you, send your price, take bookings and get paid.",
+    "soloChoiceButton": "Start as an artist",
+    "soloTitle": "Start as an independent artist",
+    "soloBody": "Your stage name is how customers see you. You can change everything later.",
+    "stageName": "Stage name",
+    "genres": "Genres",
+    "genresHint": "Separate them with commas.",
+    "genresPlaceholder": "House, 80s, Top 40",
+    "soloSubmit": "Create my artist account"
   },
   "invite": {
     "title": "Join {agency}",
@@ -1020,7 +1036,8 @@
     "cancelConfirm": "Cancel at period end",
     "cancelDone": "Cancelled. Your plan stays active until the end of the paid period.",
     "resume": "Resume plan",
-    "resumeDone": "Your plan continues as normal."
+    "resumeDone": "Your plan continues as normal.",
+    "status_free": "Free: answering requests and taking bookings costs nothing. The Artist plan adds your public profile and direct booking."
   },
   "plans": {
     "title": "Plans & limits",
@@ -2407,7 +2424,7 @@
     "fix4": "Earnings at a glance",
     "fix4Body": "See what you earned, what's paid out and what's coming, per booking.",
     "closingTitle": "How do I join?",
-    "closingBody": "Artists join through their agency: ask them to invite you. Run your own agency? Get started with StageDesk.",
+    "closingBody": "Play for an agency? Ask them to invite you. Independent? Create your own artist account and get requests from customers near you.",
     "closingHref": "/for-agencies",
     "closingLink": "For agencies",
     "tourLink": "See how it works",
@@ -2454,7 +2471,10 @@
     "faq5A": "No. An agency only sees the gigs it booked with you, and the days you mark as unavailable.",
     "agencyTitle": "Do you run an agency yourself?",
     "agencyBody": "Do you also book artists for others? Then StageDesk for agencies is for you.",
-    "agencyLink": "StageDesk for agencies"
+    "agencyLink": "StageDesk for agencies",
+    "soloTitle": "Independent? Get requests yourself",
+    "soloBody": "No agency? Create a free artist account: customers near you send requests, you send your price and take the booking. With the Artist plan you get a public profile customers can book directly.",
+    "soloLink": "Start as an artist"
   },
   "contactPage": {
     "title": "Contact",
@@ -4417,7 +4437,10 @@
     "nav_bookingPage": "Your own booking page and the form for your website.",
     "nav_website": "Build your own website from sections you drag, on your own domain.",
     "nav_billing": "Your subscription, usage and invoices.",
-    "nav_support": "A question? Ask it here; we reply in the app."
+    "nav_support": "A question? Ask it here; we reply in the app.",
+    "nav_artistProfile": "Your photo, bio, videos and prices, and where you play. This is what customers see.",
+    "nav_listings": "Gigs you offer at a fixed price. With the Artist plan customers order them from your public profile.",
+    "nav_soloSettings": "Your business details, currency, date and time, and how customers can pay you."
   },
   "password": {
     "show": "Show password",
@@ -4753,7 +4776,7 @@
     "remove": "Remove {region}",
     "radius": "Also within this distance of your address",
     "located": "Measured from {place}.",
-    "notLocated": "We'll put your address (Agency details) on the map when you save.",
+    "notLocated": "We'll put your address (from your business details) on the map when you save.",
     "onMap": "Address found on the map",
     "eventTypes": "Event types you do",
     "allTypes": "All event types.",
@@ -4762,5 +4785,42 @@
     "saved": "Service area saved.",
     "savedNoMap": "Saved, but we couldn't find your address on the map, so only your places count. Check the address in Agency details.",
     "invalid": "Check the service area: choose at least one event type and a radius between 1 and 1000 km."
+  },
+  "artistProfile": {
+    "title": "Artist profile",
+    "description": "How customers see you, and where and what you play.",
+    "welcome": "Your artist account is ready. Finish the steps below: requests from customers in your area will start coming in, and you can send your price straight away.",
+    "checklist": "Getting started",
+    "checklistHint": "{done} of {total} done",
+    "step_photo": "Add a photo",
+    "step_bio": "Write a headline and bio",
+    "step_area": "Set where you play",
+    "step_availability": "Mark the days you're not available",
+    "step_payouts": "Connect Stripe to get paid online",
+    "step_listings": "Offer a gig with a fixed price",
+    "profileTitle": "Your profile",
+    "profileHint": "Shown on your prices and quotes, and in the artist directory with the Artist plan.",
+    "photo": "Photo",
+    "addPhoto": "Add a photo",
+    "changePhoto": "Change photo",
+    "photoHint": "JPG, PNG or WebP, up to 4 MB. Square works best.",
+    "stageName": "Stage name",
+    "priceFrom": "Price from ({currency})",
+    "priceFromHint": "Your lowest price, shown as \"from …\" in the directory.",
+    "headline": "Headline",
+    "headlineHint": "One line under your name.",
+    "headlinePlaceholder": "Wedding DJ with live saxophone",
+    "genres": "Genres",
+    "genresHint": "Separate them with commas.",
+    "bio": "About you",
+    "media": "Videos and mixes",
+    "mediaHint": "Up to three YouTube, Vimeo, SoundCloud or Mixcloud links, one per line.",
+    "save": "Save profile",
+    "saved": "Profile saved.",
+    "photoSaved": "Photo saved.",
+    "invalid": "Check your profile: the stage name is required.",
+    "invalidMedia": "This link can't be shown: {link}",
+    "invalidPrice": "Enter the price from as an amount, e.g. 750.",
+    "notSolo": "This page is for independent artists."
   }
 }

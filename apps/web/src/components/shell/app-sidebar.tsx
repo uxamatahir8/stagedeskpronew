@@ -35,7 +35,7 @@ export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships" |
 
 export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
   const t = useTranslations();
-  const groups = navigationFor(viewer.permissions);
+  const groups = navigationFor(viewer.permissions, viewer.role);
   const footer = footerNavigationFor(viewer.permissions);
 
   return (

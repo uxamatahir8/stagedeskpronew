@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import type { Permission } from "@stagedesk/core";
+import type { Permission, Role } from "@stagedesk/core";
 import { seenGuides } from "@stagedesk/db";
 import { footerNavigationFor, navigationFor } from "@/config/navigation";
 import { type GuideStep, GuideTour } from "./guide-tour";
@@ -9,9 +9,9 @@ import { type GuideStep, GuideTour } from "./guide-tour";
  * search, notifications and their account. Steps they've already seen are
  * left out, so a new menu item later becomes a short "what's new" tour.
  */
-export async function Guide({ userId, permissions }: { userId: string; permissions: readonly Permission[] }) {
+export async function Guide({ userId, permissions, role }: { userId: string; permissions: readonly Permission[]; role?: Role | null }) {
   const [t, tn, seen] = await Promise.all([getTranslations("guides"), getTranslations("nav"), seenGuides(userId)]);
-  const items = [...navigationFor(permissions).flatMap((g) => g.items), ...footerNavigationFor(permissions)].filter((i) => t.has(`nav_${i.key}` as "nav_home"));
+  const items = [...navigationFor(permissions, role).flatMap((g) => g.items), ...footerNavigationFor(permissions)].filter((i) => t.has(`nav_${i.key}` as "nav_home"));
   const core: GuideStep[] = [
     ...items.map((i) => ({ id: `nav.${i.key}`, target: `[data-tour="nav-${i.key}"]`, title: tn(i.key as "home"), body: t(`nav_${i.key}` as "nav_home") })),
     { id: "search", target: '[data-tour="search"]', title: t("searchTitle"), body: t("searchBody") },

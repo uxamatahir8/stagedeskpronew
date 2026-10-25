@@ -7,6 +7,7 @@ export * from "./analytics";
 export * from "./audit";
 export * from "./leads";
 export * from "./marketplace";
+export * from "./solo";
 export * from "./geo";
 export * from "./messages";
 export * from "./notifications";

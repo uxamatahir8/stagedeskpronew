@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { normalizePromoCode, parseViaCookie, viaCookie } from "@stagedesk/core";
-import { attachReferral, prisma } from "@stagedesk/db";
+import { attachReferral, createSoloArtist, prisma } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
@@ -60,5 +60,29 @@ export async function createAgency(_prev: FormState, form: FormData): Promise<Fo
   }
   // No automatic trial: the owner chooses a plan first (plans may offer free days).
   redirect({ href: organization ? "/app/billing?welcome=1" : "/app", locale: (await getLocale()) as Locale });
+  return { ok: true };
+}
+
+const soloSchema = z.object({
+  stageName: requiredText(120),
+  city: optionalText(96),
+  genres: z.string().max(500).default(""),
+});
+
+/** An independent artist starts their own business: no plan needed to answer requests and take bookings. */
+export async function createSoloArtistAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const viewer = await getViewer();
+  if (!viewer) return { message: "unauthenticated" };
+  const locale = (await getLocale()) as Locale;
+  if (viewer.role) redirect({ href: "/app", locale });
+  const t = await getTranslations("agencySettings");
+  const parsed = soloSchema.safeParse(Object.fromEntries(form));
+  if (!parsed.success) {
+    const keys = fieldErrorKeys(parsed.error);
+    return { fieldErrors: Object.fromEntries(Object.entries(keys).map(([f, k]) => [f, t(k as "required")])) };
+  }
+  const genres = parsed.data.genres.split(",").map((g) => g.trim()).filter(Boolean);
+  await createSoloArtist(viewer.user.id, { stageName: parsed.data.stageName, city: parsed.data.city, genres });
+  redirect({ href: "/app/artist-profile?welcome=1", locale });
   return { ok: true };
 }

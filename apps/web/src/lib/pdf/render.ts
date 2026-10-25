@@ -2,7 +2,7 @@ import "server-only";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createTranslator } from "next-intl";
 import { createElement } from "react";
-import { isRole, type VatGroup } from "@stagedesk/core";
+import { deskRoles, isRole, type VatGroup } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import en from "../../../messages/en.json";
 import nl from "../../../messages/nl.json";
@@ -12,7 +12,7 @@ import { BookingDocument, type PdfData } from "./booking-document";
 
 export type { PdfLine } from "./booking-document";
 
-const staffRoles = new Set(["agency_owner", "agency_admin", "agency_staff"]);
+const staffRoles = new Set<string>(deskRoles);
 
 /** Agency staff of the booking's agency, or the booking's own customer. */
 export async function canOpenBooking(request: Request, booking: { organizationId: string; customerId: string | null }) {

@@ -14,7 +14,7 @@ function daysUntil(date: Date) {
 /** Trial countdown, grace warning or read-only notice for the agency team. */
 export async function SubscriptionBanner({ organizationId, canBill }: { organizationId: string; canBill: boolean }) {
   const [{ access }, t, format] = await Promise.all([agencyBilling(organizationId), getTranslations("billing"), getFormatter()]);
-  if (access.reason === "active") return null;
+  if (access.reason === "active" || access.reason === "free") return null;
 
   let text: string;
   let tone: "info" | "warning" | "danger";

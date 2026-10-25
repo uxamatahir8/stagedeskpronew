@@ -1,5 +1,5 @@
+import { deskRoles as coreDeskRoles, type Role } from "@stagedesk/core";
 import { randomUUID } from "node:crypto";
-import type { Role } from "@stagedesk/core";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 
@@ -44,7 +44,7 @@ export async function notify(userIds: (string | null | undefined)[], input: Noti
   return ids.length;
 }
 
-const deskRoles: Role[] = ["agency_owner", "agency_admin", "agency_staff"];
+const deskRoles: Role[] = [...coreDeskRoles];
 
 /** The people who run an agency's bookings (owner, admins, staff), or a narrower set of roles. */
 export async function agencyDeskUserIds(organizationId: string, roles: Role[] = deskRoles) {

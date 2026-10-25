@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { Permission } from "@stagedesk/core";
+import type { Permission, Role } from "@stagedesk/core";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -17,7 +17,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { CommandMenu } from "./command-menu";
 import { NotificationBell } from "./notification-bell";
 
-export function TopBar({ permissions }: { permissions: readonly Permission[] }) {
+export function TopBar({ permissions, role }: { permissions: readonly Permission[]; role?: Role | null }) {
   const t = useTranslations();
   const pathname = usePathname();
   const current = pathname === "/app" ? undefined : findNavItem(pathname);
@@ -57,7 +57,7 @@ export function TopBar({ permissions }: { permissions: readonly Permission[] }) 
 
       <div className="ml-auto flex items-center gap-2">
         <div data-tour="search">
-          <CommandMenu permissions={permissions} />
+          <CommandMenu permissions={permissions} role={role} />
         </div>
         <div data-tour="notifications">
           <NotificationBell />

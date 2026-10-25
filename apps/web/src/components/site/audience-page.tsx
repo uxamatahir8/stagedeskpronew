@@ -211,6 +211,20 @@ export async function ArtistsPage() {
           />
         </div>
       </section>
+      <section className="border-t">
+        <div className={`${container} grid gap-4 py-16 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center`}>
+          <div className="grid gap-1">
+            <h2 className="text-2xl font-bold tracking-tight">{t("soloTitle")}</h2>
+            <p className="text-muted-foreground">{t("soloBody")}</p>
+          </div>
+          <Button asChild size="lg">
+            <Link href={`/sign-up?next=${encodeURIComponent("/onboarding?start=artist")}`}>
+              {t("soloLink")}
+              <ArrowRightIcon />
+            </Link>
+          </Button>
+        </div>
+      </section>
       <section className="border-t bg-muted/30">
         <div className={`${container} grid gap-4 py-16 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center`}>
           <div className="grid gap-1">

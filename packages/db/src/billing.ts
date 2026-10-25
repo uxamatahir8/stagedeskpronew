@@ -4,6 +4,7 @@ import {
   feeRuleSchema,
   type FeeSnapshot,
   fallbackLimits,
+  soloLimits,
   parseLimits,
   type PlanLimits,
   resolveFeeRule,
@@ -34,15 +35,21 @@ export interface AgencyBilling {
 
 /** The agency's plan, limits and what its subscription allows right now. */
 export async function agencyBilling(organizationId: string, now = new Date()): Promise<AgencyBilling> {
-  const [subscription, { graceDays }] = await Promise.all([
+  const [subscription, { graceDays }, org] = await Promise.all([
     prisma.subscription.findUnique({ where: { organizationId }, include: { plan: true } }),
     getSetting("billing.defaults"),
+    prisma.organization.findUnique({ where: { id: organizationId }, select: { kind: true } }),
   ]);
+  const access = subscriptionAccess(subscription, now, graceDays);
+  // An independent artist works for free; their plan only adds the public profile and direct booking.
+  if (org?.kind === "solo") {
+    return { subscription, plan: subscription?.plan ?? null, limits: soloLimits, access: access.level === "full" ? access : { level: "full", reason: "free", until: null } };
+  }
   return {
     subscription,
     plan: subscription?.plan ?? null,
     limits: subscription ? parseLimits(subscription.plan.limits) : fallbackLimits,
-    access: subscriptionAccess(subscription, now, graceDays),
+    access,
   };
 }
 

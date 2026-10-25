@@ -9,7 +9,8 @@
     "agency_admin": "Beheerder bureau",
     "agency_staff": "Medewerker bureau",
     "artist": "Artiest",
-    "customer": "Klant"
+    "customer": "Klant",
+    "solo_artist": "Zelfstandige artiest"
   },
   "navGroups": {
     "overview": "Overzicht",
@@ -18,7 +19,8 @@
     "manage": "Beheer",
     "artist": "Mijn werk",
     "customer": "Mijn evenement",
-    "affiliate": "Partnerprogramma"
+    "affiliate": "Partnerprogramma",
+    "business": "Mijn bedrijf"
   },
   "nav": {
     "home": "Home",
@@ -63,7 +65,10 @@
     "content": "Blog en help",
     "texts": "Websiteteksten",
     "referrals": "Bureaus uitnodigen",
-    "newsletter": "Nieuwsbrief"
+    "newsletter": "Nieuwsbrief",
+    "artistProfile": "Artiestenprofiel",
+    "listings": "Mijn optredens",
+    "soloSettings": "Bedrijfsinstellingen"
   },
   "shell": {
     "search": "Zoeken…",
@@ -94,7 +99,8 @@
       "agency_admin": "Wat er bij het bureau je aandacht nodig heeft.",
       "agency_staff": "Wat er bij het bureau je aandacht nodig heeft.",
       "artist": "Je komende optredens en inkomsten.",
-      "customer": "Alles over je evenement op één plek."
+      "customer": "Alles over je evenement op één plek.",
+      "solo_artist": "Je aanvragen, boekingen en verdiensten."
     },
     "noData": "Nog geen gegevens",
     "stats": {
@@ -272,7 +278,17 @@
     "agencyBody": "Je beheert aanvragen, offertes, artiesten en betalingen voor je eigen bureau.",
     "agencyButton": "Bureau instellen",
     "otherTitle": "Klant of artiest?",
-    "otherBody": "Dan krijg je toegang via je bureau: open de link in de offerte- of uitnodigingsmail. Geen mail ontvangen? Vraag je bureau om je opnieuw uit te nodigen."
+    "otherBody": "Dan krijg je toegang via je bureau: open de link in de offerte- of uitnodigingsmail. Geen mail ontvangen? Vraag je bureau om je opnieuw uit te nodigen.",
+    "soloChoiceTitle": "Ik ben een zelfstandige artiest",
+    "soloChoiceBody": "DJ, band of act zonder bureau: krijg aanvragen van klanten in de buurt, stuur je prijs, neem boekingen aan en word betaald.",
+    "soloChoiceButton": "Start als artiest",
+    "soloTitle": "Start als zelfstandige artiest",
+    "soloBody": "Je artiestennaam is hoe klanten je zien. Je kunt alles later aanpassen.",
+    "stageName": "Artiestennaam",
+    "genres": "Genres",
+    "genresHint": "Scheid ze met komma's.",
+    "genresPlaceholder": "House, 80s, Top 40",
+    "soloSubmit": "Mijn artiestenaccount maken"
   },
   "invite": {
     "title": "Word lid van {agency}",
@@ -1020,7 +1036,8 @@
     "cancelConfirm": "Opzeggen per einde periode",
     "cancelDone": "Opgezegd. Je abonnement loopt door tot het einde van de betaalde periode.",
     "resume": "Opzegging intrekken",
-    "resumeDone": "Je abonnement loopt gewoon door."
+    "resumeDone": "Je abonnement loopt gewoon door.",
+    "status_free": "Gratis: aanvragen beantwoorden en boekingen aannemen kost niets. Het Artiest-abonnement voegt je openbare profiel en direct boeken toe."
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -2407,7 +2424,7 @@
     "fix4": "Verdiensten in één oogopslag",
     "fix4Body": "Zie wat je verdiende, wat is uitbetaald en wat er nog komt, per boeking.",
     "closingTitle": "Hoe doe ik mee?",
-    "closingBody": "Artiesten doen mee via hun bureau: vraag of ze je uitnodigen. Heb je zelf een bureau? Begin met StageDesk.",
+    "closingBody": "Speel je voor een bureau? Vraag of ze je uitnodigen. Zelfstandig? Maak je eigen artiestenaccount en krijg aanvragen van klanten in de buurt.",
     "closingHref": "/for-agencies",
     "closingLink": "Voor bureaus",
     "tourLink": "Bekijk hoe het werkt",
@@ -2454,7 +2471,10 @@
     "faq5A": "Nee. Een bureau ziet alleen de optredens die het zelf bij je heeft geboekt, en de dagen die je als niet beschikbaar markeert.",
     "agencyTitle": "Heb je zelf een bureau?",
     "agencyBody": "Boek je ook artiesten voor anderen? Dan is StageDesk voor bureaus iets voor jou.",
-    "agencyLink": "StageDesk voor bureaus"
+    "agencyLink": "StageDesk voor bureaus",
+    "soloTitle": "Zelfstandig? Krijg zelf aanvragen",
+    "soloBody": "Geen bureau? Maak een gratis artiestenaccount: klanten in de buurt sturen aanvragen, jij stuurt je prijs en neemt de boeking aan. Met het Artiest-abonnement krijg je een openbaar profiel dat klanten direct kunnen boeken.",
+    "soloLink": "Start als artiest"
   },
   "contactPage": {
     "title": "Contact",
@@ -4417,7 +4437,10 @@
     "nav_bookingPage": "Je eigen boekingspagina en het formulier voor je website.",
     "nav_website": "Bouw je eigen website met secties die je versleept, op je eigen domein.",
     "nav_billing": "Je abonnement, gebruik en facturen.",
-    "nav_support": "Een vraag? Stel hem hier; we antwoorden in de app."
+    "nav_support": "Een vraag? Stel hem hier; we antwoorden in de app.",
+    "nav_artistProfile": "Je foto, bio, video’s en prijzen, en waar je speelt. Dit zien klanten.",
+    "nav_listings": "Optredens die je aanbiedt voor een vaste prijs. Met het Artiest-abonnement bestellen klanten ze via je openbare profiel.",
+    "nav_soloSettings": "Je bedrijfsgegevens, valuta, datum en tijd, en hoe klanten je kunnen betalen."
   },
   "password": {
     "show": "Wachtwoord tonen",
@@ -4753,7 +4776,7 @@
     "remove": "{region} verwijderen",
     "radius": "Ook binnen deze afstand van je adres",
     "located": "Gemeten vanaf {place}.",
-    "notLocated": "We zetten je adres (Bureaugegevens) op de kaart als je opslaat.",
+    "notLocated": "We zetten je adres (uit je bedrijfsgegevens) op de kaart als je opslaat.",
     "onMap": "Adres gevonden op de kaart",
     "eventTypes": "Soorten evenementen die je doet",
     "allTypes": "Alle soorten evenementen.",
@@ -4762,5 +4785,42 @@
     "saved": "Werkgebied opgeslagen.",
     "savedNoMap": "Opgeslagen, maar we konden je adres niet op de kaart vinden, dus alleen je plaatsen tellen. Controleer het adres bij Bureaugegevens.",
     "invalid": "Controleer het werkgebied: kies minstens één soort evenement en een straal tussen 1 en 1000 km."
+  },
+  "artistProfile": {
+    "title": "Artiestenprofiel",
+    "description": "Hoe klanten je zien, en waar en wat je speelt.",
+    "welcome": "Je artiestenaccount is klaar. Doe de stappen hieronder: aanvragen van klanten in je gebied komen dan binnen, en je kunt meteen je prijs sturen.",
+    "checklist": "Aan de slag",
+    "checklistHint": "{done} van {total} klaar",
+    "step_photo": "Voeg een foto toe",
+    "step_bio": "Schrijf een kopregel en bio",
+    "step_area": "Stel in waar je speelt",
+    "step_availability": "Markeer de dagen dat je niet kunt",
+    "step_payouts": "Koppel Stripe om online betaald te worden",
+    "step_listings": "Bied een optreden aan met een vaste prijs",
+    "profileTitle": "Je profiel",
+    "profileHint": "Te zien bij je prijzen en offertes, en in de artiestengids met het Artiest-abonnement.",
+    "photo": "Foto",
+    "addPhoto": "Foto toevoegen",
+    "changePhoto": "Foto wijzigen",
+    "photoHint": "JPG, PNG of WebP, tot 4 MB. Vierkant werkt het best.",
+    "stageName": "Artiestennaam",
+    "priceFrom": "Prijs vanaf ({currency})",
+    "priceFromHint": "Je laagste prijs, als \"vanaf …\" in de gids.",
+    "headline": "Kopregel",
+    "headlineHint": "Eén regel onder je naam.",
+    "headlinePlaceholder": "Bruiloft-DJ met live saxofoon",
+    "genres": "Genres",
+    "genresHint": "Scheid ze met komma's.",
+    "bio": "Over jou",
+    "media": "Video's en mixen",
+    "mediaHint": "Tot drie YouTube-, Vimeo-, SoundCloud- of Mixcloud-links, één per regel.",
+    "save": "Profiel opslaan",
+    "saved": "Profiel opgeslagen.",
+    "photoSaved": "Foto opgeslagen.",
+    "invalid": "Controleer je profiel: de artiestennaam is verplicht.",
+    "invalidMedia": "Deze link kan niet getoond worden: {link}",
+    "invalidPrice": "Vul de prijs vanaf in als bedrag, bijv. 750.",
+    "notSolo": "Deze pagina is voor zelfstandige artiesten."
   }
 }

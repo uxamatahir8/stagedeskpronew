@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type PageContent, pageContentSchema, pendingAcceptances } from "@stagedesk/core";
+import { deskRoles, type PageContent, pageContentSchema, pendingAcceptances } from "@stagedesk/core";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 
@@ -124,7 +124,7 @@ export async function pendingLegal(userId: string) {
       select: { id: true, acceptance: true, publishedVersionId: true, slugNl: true, slugEn: true, publishedVersion: { select: { content: true, publishedAt: true } } },
     }),
     prisma.legalAcceptance.findMany({ where: { userId }, select: { versionId: true } }),
-    prisma.member.count({ where: { userId, role: { in: ["agency_owner", "agency_admin", "agency_staff"] } } }),
+    prisma.member.count({ where: { userId, role: { in: [...deskRoles] } } }),
   ]);
   return pendingAcceptances(pages, new Set(accepted.map((a) => a.versionId)), membership > 0) as typeof pages;
 }

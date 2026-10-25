@@ -46,8 +46,8 @@ const openStatuses = ["new", "offered"];
 
 /**
  * Sends a lead to every provider that serves it: not suspended, taking
- * requests, with a working subscription, and covering the city (by region or
- * radius) and event type. Returns the organizations newly offered.
+ * requests, with a working subscription (independent artists answer for
+ * free), and covering the city (by region or radius) and event type. Returns the organizations newly offered.
  */
 export async function broadcastLead(leadId: string, now = new Date()) {
   const lead = await prisma.lead.findUnique({ where: { id: leadId } });
@@ -72,6 +72,7 @@ export async function broadcastLead(leadId: string, now = new Date()) {
       select: {
         id: true,
         city: true,
+        kind: true,
         serviceRegions: true,
         serviceRadiusKm: true,
         serviceEventTypes: true,
@@ -83,7 +84,7 @@ export async function broadcastLead(leadId: string, now = new Date()) {
     getSetting("billing.defaults"),
   ]);
   const request = { places: [lead.venueCity, ...(city ?? "").split("|"), ...(region ?? "").split("|")].filter((p): p is string => Boolean(p)), location, eventType: lead.eventType };
-  const matching = orgs.filter((o) => subscriptionAccess(o.subscription, now, graceDays).level === "full" && servesRequest(areaOf(o), request)).map((o) => o.id);
+  const matching = orgs.filter((o) => (o.kind === "solo" || subscriptionAccess(o.subscription, now, graceDays).level === "full") && servesRequest(areaOf(o), request)).map((o) => o.id);
 
   const existing = await prisma.leadOffer.findMany({ where: { leadId, agencyId: { in: matching } }, select: { agencyId: true } });
   const fresh = matching.filter((id) => !existing.some((e) => e.agencyId === id));

@@ -8,10 +8,16 @@
  * and some permissions can only be given to admins, never to staff.
  */
 export const platformRoles = ["platform_admin", "affiliate"] as const;
-export const organizationRoles = ["agency_owner", "agency_admin", "agency_staff", "artist", "customer"] as const;
+export const organizationRoles = ["agency_owner", "agency_admin", "agency_staff", "artist", "customer", "solo_artist"] as const;
 export const roles = [...platformRoles, ...organizationRoles] as const;
 
 export type Role = (typeof roles)[number];
+
+/**
+ * The people who run a business's bookings and get its requests, payments and
+ * messages: an agency's owner, admins and staff, or an independent artist.
+ */
+export const deskRoles = ["agency_owner", "agency_admin", "agency_staff", "solo_artist"] as const satisfies readonly Role[];
 
 /** What an agency owner can hand out, grouped as on the permissions screen. */
 export const agencyPermissionGroups = {
@@ -48,6 +54,9 @@ export const permissions = [
   "artist.gigs",
   "artist.availability",
   "artist.earnings",
+  /** An independent artist's public profile and the gigs they offer. */
+  "artist.profile",
+  "solo.listings",
   "customer.event",
   "customer.payments",
   "affiliate.dashboard",
@@ -99,6 +108,34 @@ const grants: Record<Role, readonly Permission[]> = {
   agency_staff: [...defaultAgencyGrants.agency_staff, ...always],
   artist: ["artist.gigs", "artist.availability", "artist.earnings", ...always],
   customer: ["customer.event", "customer.payments", ...always],
+  // Runs their own bookings like a one-person agency, without a team, other artists or a website.
+  solo_artist: [
+    "agency.bookings",
+    "agency.bookings.create",
+    "agency.bookings.edit",
+    "agency.bookings.status",
+    "agency.leads",
+    "agency.quotes",
+    "agency.quotes.send",
+    "agency.quotes.accept",
+    "agency.services",
+    "agency.calendar",
+    "agency.customers",
+    "agency.customers.manage",
+    "agency.reviews",
+    "agency.payments",
+    "agency.payments.record",
+    "agency.payments.confirm",
+    "agency.payments.refund",
+    "agency.invoices",
+    "agency.reports",
+    "agency.settings",
+    "agency.billing",
+    "artist.availability",
+    "artist.profile",
+    "solo.listings",
+    ...always,
+  ],
   affiliate: ["affiliate.dashboard", "affiliate.links", "affiliate.payouts", "support"],
 };
 

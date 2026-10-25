@@ -1,3 +1,4 @@
+import { deskRoles } from "@stagedesk/core";
 import { randomUUID } from "node:crypto";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
@@ -19,7 +20,7 @@ function filterWhere(filter: UserFilter): Prisma.UserWhereInput {
     case "affiliate":
       return { platformRole: filter };
     case "agency":
-      return { members: { some: { role: { in: ["agency_owner", "agency_admin", "agency_staff"] } } } };
+      return { members: { some: { role: { in: [...deskRoles] } } } };
     case "artist":
     case "customer":
       return { members: { some: { role: filter } } };

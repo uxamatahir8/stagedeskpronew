@@ -1,10 +1,8 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import type { EventType } from "@stagedesk/core";
+import { deskRoles, type EventType } from "@stagedesk/core";
 import { broadcastLead, notify, prisma } from "@stagedesk/db";
 import { absoluteUrl, deliver, userLocale } from "./mail";
-
-const deskRoles = ["agency_owner", "agency_admin", "agency_staff"];
 
 const longDate = (locale: "nl" | "en", date: Date | null) =>
   date ? new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date) : "—";
@@ -13,7 +11,7 @@ const longDate = (locale: "nl" | "en", date: Date | null) =>
 async function providerStaff(organizationIds: string[]) {
   if (organizationIds.length === 0) return [];
   return prisma.member.findMany({
-    where: { organizationId: { in: organizationIds }, role: { in: deskRoles } },
+    where: { organizationId: { in: organizationIds }, role: { in: [...deskRoles] } },
     include: { user: { select: { email: true, locale: true } }, organization: { select: { name: true } } },
   });
 }

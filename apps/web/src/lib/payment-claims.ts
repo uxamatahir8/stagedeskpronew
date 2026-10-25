@@ -1,6 +1,6 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import { formatIban } from "@stagedesk/core";
+import { deskRoles, formatIban } from "@stagedesk/core";
 import { getSetting, notify, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { absoluteUrl, deliver, userLocale } from "./mail";
@@ -47,7 +47,7 @@ async function methodName(locale: "nl" | "en", method: string) {
 export async function announceClaim(claim: { organizationId: string; bookingId: string; amountCents: number; method: string }, customerName: string) {
   const booking = await prisma.booking.findUniqueOrThrow({ where: { id: claim.bookingId }, select: { trackingCode: true, currency: true } });
   const staff = await prisma.member.findMany({
-    where: { organizationId: claim.organizationId, role: { in: ["agency_owner", "agency_admin", "agency_staff"] } },
+    where: { organizationId: claim.organizationId, role: { in: [...deskRoles] } },
     include: { user: { select: { email: true, locale: true } } },
   });
   for (const m of staff) {

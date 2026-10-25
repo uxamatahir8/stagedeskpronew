@@ -83,7 +83,8 @@ function slugify(name: string) {
   );
 }
 
-async function freeSlug(name: string) {
+/** A slug for a new business that no other one uses. */
+export async function freeSlug(name: string) {
   const base = slugify(name);
   for (let i = 1; i < 50; i++) {
     const slug = i === 1 ? base : `${base}-${i}`;

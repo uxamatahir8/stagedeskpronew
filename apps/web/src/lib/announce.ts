@@ -1,6 +1,6 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import type { EventType } from "@stagedesk/core";
+import { deskRoles, type EventType } from "@stagedesk/core";
 import { notify, platformAdminIds, prisma } from "@stagedesk/db";
 import { absoluteUrl, deliver, userLocale } from "./mail";
 
@@ -16,7 +16,7 @@ export async function announceNewBooking(
   exceptUserId?: string | null,
 ) {
   const staff = await prisma.member.findMany({
-    where: { organizationId, role: { in: ["agency_owner", "agency_admin", "agency_staff"] } },
+    where: { organizationId, role: { in: [...deskRoles] } },
     include: { user: { select: { email: true, locale: true } } },
   });
   const date = booking.eventDate ? new Date(typeof booking.eventDate === "string" ? `${booking.eventDate}T12:00:00Z` : booking.eventDate) : null;

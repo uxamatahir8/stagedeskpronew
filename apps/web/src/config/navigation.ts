@@ -30,6 +30,7 @@ import {
   SlidersHorizontalIcon,
   StarIcon,
   TagIcon,
+  TicketIcon,
   TypeIcon,
   UserRoundIcon,
   UsersIcon,
@@ -38,7 +39,7 @@ import {
   UsersRoundIcon,
   MailPlusIcon,
 } from "lucide-react";
-import type { Permission } from "@stagedesk/core";
+import type { Permission, Role } from "@stagedesk/core";
 import type { Messages } from "next-intl";
 
 export type NavKey = keyof Messages["nav"];
@@ -105,6 +106,8 @@ export const navigation: NavGroup[] = [
       { key: "gigs", href: "/app/gigs", icon: ClipboardListIcon, permission: "artist.gigs" },
       { key: "availability", href: "/app/availability", icon: CalendarDaysIcon, permission: "artist.availability" },
       { key: "earnings", href: "/app/earnings", icon: HandCoinsIcon, permission: "artist.earnings" },
+      { key: "artistProfile", href: "/app/artist-profile", icon: UserRoundIcon, permission: "artist.profile" },
+      { key: "listings", href: "/app/listings", icon: TicketIcon, permission: "solo.listings" },
     ],
   },
   {
@@ -147,9 +150,19 @@ function allowed(item: NavItem, permissions: readonly Permission[]) {
   return item.permission === undefined || permissions.includes(item.permission);
 }
 
-export function navigationFor(permissions: readonly Permission[]): NavGroup[] {
+/** An independent artist sees the agency pages as their own business. */
+const soloLabels: { groups: Partial<Record<NavGroupKey, NavGroupKey>>; items: Partial<Record<NavKey, NavKey>> } = {
+  groups: { agency: "business" },
+  items: { agencySettings: "soloSettings" },
+};
+
+export function navigationFor(permissions: readonly Permission[], role?: Role | null): NavGroup[] {
+  const solo = role === "solo_artist";
   return navigation
-    .map((group) => ({ ...group, items: group.items.filter((item) => allowed(item, permissions)) }))
+    .map((group) => ({
+      key: (solo && soloLabels.groups[group.key]) || group.key,
+      items: group.items.filter((item) => allowed(item, permissions)).map((item) => ({ ...item, key: (solo && soloLabels.items[item.key]) || item.key })),
+    }))
     .filter((group) => group.items.length > 0);
 }
 
