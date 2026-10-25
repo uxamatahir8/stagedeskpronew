@@ -207,7 +207,10 @@
       "checkInboxBody": "We hebben een link naar {email} gestuurd. Klik erop om je adres te bevestigen en verder te gaan.",
       "emailTaken": "Er bestaat al een account met dit e-mailadres. Log in plaats daarvan in.",
       "invitedTo": "Je maakt een account aan om lid te worden van {agency}.",
-      "termsNotice": "Door een account aan te maken ga je akkoord met onze <terms>algemene voorwaarden</terms> en <privacy>privacyverklaring</privacy>."
+      "termsNotice": "Door een account aan te maken ga je akkoord met onze <terms>algemene voorwaarden</terms> en <privacy>privacyverklaring</privacy>.",
+      "waitlistTitle": "We zijn nog niet open",
+      "waitlistBody": "StageDesk opent binnenkort. Zet je op de wachtlijst, dan laten we het je als eerste weten. Uitgenodigd door een bureau? Open de link in je uitnodiging.",
+      "waitlistButton": "Op de wachtlijst"
     },
     "forgot": {
       "title": "Wachtwoord herstellen",

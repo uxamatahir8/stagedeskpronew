@@ -19,6 +19,7 @@ const byCode: Record<string, AuthMessageKey> = {
   INVALID_CODE: "auth.twoFactor.invalid",
   INVALID_BACKUP_CODE: "auth.twoFactor.invalid",
   ACCOUNT_DISABLED: "auth.signIn.disabled",
+  WAITLIST_ONLY: "auth.signUp.waitlistBody",
   PASSWORD_SHORT: "auth.passwordShort",
   PASSWORD_TOO_SHORT: "auth.passwordShort",
   PASSWORD_LONG: "auth.passwordLong",

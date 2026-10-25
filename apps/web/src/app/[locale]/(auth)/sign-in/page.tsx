@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { AuthCard } from "@/components/auth/auth-card";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { siteSettings } from "@/lib/site";
 import { SignInForm } from "./sign-in-form";
 import { SignedInRedirect } from "@/components/auth/signed-in-redirect";
 
@@ -14,7 +15,7 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/sign-in"
 
 export default async function SignInPage({ params }: PageProps<"/[locale]/sign-in">) {
   setRequestLocale((await params).locale as Locale);
-  const t = await getTranslations("auth.signIn");
+  const [t, tu, { site }] = await Promise.all([getTranslations("auth.signIn"), getTranslations("auth.signUp"), siteSettings()]);
 
   return (
     <>
@@ -25,8 +26,9 @@ export default async function SignInPage({ params }: PageProps<"/[locale]/sign-i
       footer={
         <>
           {t("noAccount")}{" "}
-          <Link href="/sign-up" className="font-medium text-primary underline-offset-4 hover:underline">
-            {t("signUpLink")}
+          {/* Before launch new people join the waitlist instead of signing up. */}
+          <Link href={site.waitlistMode ? "/#waitlist" : "/sign-up"} className="font-medium text-primary underline-offset-4 hover:underline">
+            {site.waitlistMode ? tu("waitlistButton") : t("signUpLink")}
           </Link>
         </>
       }

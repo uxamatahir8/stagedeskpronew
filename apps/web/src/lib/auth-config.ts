@@ -7,7 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { passwordProblem, passwordRules, withinLimit } from "@stagedesk/core";
-import { agencyBilling, agencyDeskUserIds, agencyUsage, notify, prisma } from "@stagedesk/db";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, getSetting, notify, prisma } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
@@ -44,6 +44,15 @@ export const auth = betterAuth({
   // The same password rules as the forms, for every way a password is set.
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      // Before launch only invited people sign up through the form; server-side calls
+      // (a partner application) have no request and are allowed.
+      if (ctx.path === "/sign-up/email" && ctx.request) {
+        const { waitlistMode } = await getSetting("site.general");
+        const email = String((ctx.body as Record<string, unknown> | undefined)?.["email"] ?? "").trim().toLowerCase();
+        if (waitlistMode && !(await prisma.invitation.findFirst({ where: { email, status: "pending", expiresAt: { gt: new Date() } }, select: { id: true } }))) {
+          throw new APIError("FORBIDDEN", { code: "WAITLIST_ONLY", message: "Sign-up is closed while the waitlist is open." });
+        }
+      }
       const field = ctx.path === "/sign-up/email" ? "password" : ctx.path === "/reset-password" || ctx.path === "/change-password" ? "newPassword" : null;
       if (!field) return;
       const value = (ctx.body as Record<string, unknown> | undefined)?.[field];
