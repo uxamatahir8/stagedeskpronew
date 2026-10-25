@@ -69,7 +69,8 @@
     "artistProfile": "Artist profile",
     "listings": "Gigs I offer",
     "soloSettings": "Business settings",
-    "artistRequests": "Artist requests"
+    "artistRequests": "Artist requests",
+    "independentArtists": "Independent artists"
   },
   "shell": {
     "search": "Search…",
@@ -1761,7 +1762,7 @@
     "filter_platform_admin": "Platform admins",
     "filter_affiliate": "Partners",
     "filter_agency": "Agency teams",
-    "filter_artist": "Artists",
+    "filter_artist": "Agency artists",
     "filter_customer": "Customers",
     "filter_disabled": "Disabled",
     "filter_unverified": "Email not confirmed",
@@ -1793,7 +1794,8 @@
     "error_email_taken": "That email address already belongs to another account.",
     "error_not_found": "Account not found.",
     "error_has_history": "This account has history (bookings, an agency, messages or a partner account). Disable it instead.",
-    "error_is_self": "You can't delete your own account."
+    "error_is_self": "You can't delete your own account.",
+    "filter_independent": "Independent artists"
   },
   "audit": {
     "title": "Audit log",
@@ -4457,7 +4459,8 @@
     "nav_artistProfile": "Your photo, bio, videos and prices, and where you play. This is what customers see.",
     "nav_listings": "Gigs you offer at a fixed price. With the Artist plan customers order them from your public profile.",
     "nav_soloSettings": "Your business details, currency, date and time, and how customers can pay you.",
-    "nav_artistRequests": "Book artists from other agencies for your bookings, and answer when they ask for yours. You agree on a fee; it's paid to the artist's agency after the event."
+    "nav_artistRequests": "Book artists from other agencies for your bookings, and answer when they ask for yours. You agree on a fee; it's paid to the artist's agency after the event.",
+    "nav_independentArtists": "DJs, bands and acts who work for themselves: their plan, whether they're in the public directory, and their bookings and gigs."
   },
   "password": {
     "show": "Show password",
@@ -4978,5 +4981,34 @@
     "error_unavailable": "The artist isn't available on that date any more.",
     "error_duplicate": "You already have an open request for this artist on this booking.",
     "error_invalid_fee": "Enter the fee as an amount, e.g. 600."
+  },
+  "soloAdmin": {
+    "title": "Independent artists",
+    "description": "Artists who work for themselves on StageDesk. With the Artist plan they're in the public directory and can be booked directly.",
+    "total": "Independent artists",
+    "listedCount": "In the directory",
+    "listedHint": "With a working Artist plan",
+    "bookingsCount": "Their bookings",
+    "bookingsHint": "All time, all independent artists",
+    "filter": "Show",
+    "filter_all": "All",
+    "filter_listed": "In the directory",
+    "filter_free": "Free",
+    "filter_suspended": "Suspended",
+    "search": "Name, email or city",
+    "find": "Search",
+    "empty": "No independent artists found",
+    "emptyHint": "Artists sign up from the For artists page and choose \"I'm an independent artist\".",
+    "artist": "Artist",
+    "owner": "Account",
+    "plan": "Plan",
+    "bookings": "Bookings",
+    "gigs": "Gigs offered",
+    "joined": "Joined",
+    "listed": "In the directory",
+    "free": "Free",
+    "suspended": "Suspended",
+    "publicProfile": "Open the public profile",
+    "allArtists": "All independent artists"
   }
 }

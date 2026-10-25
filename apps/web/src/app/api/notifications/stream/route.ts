@@ -20,23 +20,38 @@ export async function GET(request: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       let last = "";
+      let closed = false;
+      const stop = () => {
+        closed = true;
+        clearInterval(timer);
+        clearInterval(heartbeat);
+      };
+      // Writing after the browser went away throws; stop instead of crashing the server.
+      const send = (text: string) => {
+        if (closed) return;
+        try {
+          controller.enqueue(encoder.encode(text));
+        } catch {
+          stop();
+        }
+      };
       const push = async () => {
         try {
           const snapshot = await latestNotifications(userId);
           const signature = `${snapshot.unread}:${snapshot.items[0]?.id ?? ""}:${snapshot.items.filter((n) => n.readAt).length}`;
           if (signature === last) return;
           last = signature;
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(snapshot)}\n\n`));
+          send(`data: ${JSON.stringify(snapshot)}\n\n`);
         } catch (error) {
           console.error("[notifications] stream poll failed", error);
         }
       };
       await push();
+      if (closed) return;
       timer = setInterval(push, POLL_MS);
-      heartbeat = setInterval(() => controller.enqueue(encoder.encode(": ping\n\n")), HEARTBEAT_MS);
+      heartbeat = setInterval(() => send(": ping\n\n"), HEARTBEAT_MS);
       request.signal.addEventListener("abort", () => {
-        clearInterval(timer);
-        clearInterval(heartbeat);
+        stop();
         try {
           controller.close();
         } catch {

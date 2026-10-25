@@ -57,19 +57,20 @@ async function Agency({ params }: Pick<PageProps<"/[locale]/app/agencies/[id]">,
   const planName = (name: unknown, key: string) => String(((name ?? {}) as Record<string, string>)[lang] ?? key);
   const fee = feeRuleSchema.safeParse(org.feeRule);
   const bookingCount = Object.values(stats.bookingsByStatus).reduce((a, b) => a + b, 0);
-  const owner = org.members.find((m) => m.role === "agency_owner")?.user;
+  // An independent artist owns their one-person business as solo_artist.
+  const owner = org.members.find((m) => m.role === "agency_owner" || m.role === "solo_artist")?.user;
   const stripe = org.connectedAccounts[0];
 
   return (
     <div className="grid gap-6">
       <Button asChild variant="ghost" size="sm" className="w-fit">
-        <Link href="/app/agencies">
+        <Link href={kind === "solo" ? "/app/independent-artists" : "/app/agencies"}>
           <ArrowLeftIcon />
-          {t("allAgencies")}
+          {kind === "solo" ? (await getTranslations("soloAdmin"))("allArtists") : t("allAgencies")}
         </Link>
       </Button>
       <PageHeader
-        title={org.name}
+        title={kind === "solo" ? `${org.name} · ${(await getTranslations("roles"))("solo_artist")}` : org.name}
         description={[org.city, owner ? `${owner.name} · ${owner.email}` : null, t("since", { date: format.dateTime(org.createdAt, { day: "numeric", month: "long", year: "numeric" }) })].filter(Boolean).join(" · ")}
         actions={
           <div className="flex flex-wrap gap-2">

@@ -69,7 +69,8 @@
     "artistProfile": "Artiestenprofiel",
     "listings": "Mijn optredens",
     "soloSettings": "Bedrijfsinstellingen",
-    "artistRequests": "Artiestverzoeken"
+    "artistRequests": "Artiestverzoeken",
+    "independentArtists": "Zelfstandige artiesten"
   },
   "shell": {
     "search": "Zoeken…",
@@ -1761,7 +1762,7 @@
     "filter_platform_admin": "Platformbeheerders",
     "filter_affiliate": "Partners",
     "filter_agency": "Bureauteams",
-    "filter_artist": "Artiesten",
+    "filter_artist": "Artiesten bij bureaus",
     "filter_customer": "Klanten",
     "filter_disabled": "Uitgeschakeld",
     "filter_unverified": "E-mail niet bevestigd",
@@ -1793,7 +1794,8 @@
     "error_email_taken": "Dat e-mailadres hoort al bij een ander account.",
     "error_not_found": "Account niet gevonden.",
     "error_has_history": "Dit account heeft geschiedenis (boekingen, een bureau, berichten of een partneraccount). Schakel het uit.",
-    "error_is_self": "Je kunt je eigen account niet verwijderen."
+    "error_is_self": "Je kunt je eigen account niet verwijderen.",
+    "filter_independent": "Zelfstandige artiesten"
   },
   "audit": {
     "title": "Auditlog",
@@ -4457,7 +4459,8 @@
     "nav_artistProfile": "Je foto, bio, video’s en prijzen, en waar je speelt. Dit zien klanten.",
     "nav_listings": "Optredens die je aanbiedt voor een vaste prijs. Met het Artiest-abonnement bestellen klanten ze via je openbare profiel.",
     "nav_soloSettings": "Je bedrijfsgegevens, valuta, datum en tijd, en hoe klanten je kunnen betalen.",
-    "nav_artistRequests": "Boek artiesten van andere bureaus voor je boekingen, en antwoord als zij om de jouwe vragen. Je spreekt een vergoeding af; die gaat na het evenement naar het bureau van de artiest."
+    "nav_artistRequests": "Boek artiesten van andere bureaus voor je boekingen, en antwoord als zij om de jouwe vragen. Je spreekt een vergoeding af; die gaat na het evenement naar het bureau van de artiest.",
+    "nav_independentArtists": "DJ's, bands en acts die voor zichzelf werken: hun abonnement, of ze in de openbare gids staan, en hun boekingen en optredens."
   },
   "password": {
     "show": "Wachtwoord tonen",
@@ -4978,5 +4981,34 @@
     "error_unavailable": "De artiest kan niet meer op die datum.",
     "error_duplicate": "Je hebt al een open verzoek voor deze artiest op deze boeking.",
     "error_invalid_fee": "Vul de vergoeding in als bedrag, bijv. 600."
+  },
+  "soloAdmin": {
+    "title": "Zelfstandige artiesten",
+    "description": "Artiesten die voor zichzelf werken op StageDesk. Met het Artiest-abonnement staan ze in de openbare gids en kunnen ze direct geboekt worden.",
+    "total": "Zelfstandige artiesten",
+    "listedCount": "In de gids",
+    "listedHint": "Met een werkend Artiest-abonnement",
+    "bookingsCount": "Hun boekingen",
+    "bookingsHint": "Altijd, alle zelfstandige artiesten",
+    "filter": "Tonen",
+    "filter_all": "Alle",
+    "filter_listed": "In de gids",
+    "filter_free": "Gratis",
+    "filter_suspended": "Geschorst",
+    "search": "Naam, e-mail of plaats",
+    "find": "Zoeken",
+    "empty": "Geen zelfstandige artiesten gevonden",
+    "emptyHint": "Artiesten melden zich aan via de pagina Voor artiesten en kiezen \"Ik ben een zelfstandige artiest\".",
+    "artist": "Artiest",
+    "owner": "Account",
+    "plan": "Abonnement",
+    "bookings": "Boekingen",
+    "gigs": "Aangeboden optredens",
+    "joined": "Lid sinds",
+    "listed": "In de gids",
+    "free": "Gratis",
+    "suspended": "Geschorst",
+    "publicProfile": "Openbaar profiel openen",
+    "allArtists": "Alle zelfstandige artiesten"
   }
 }

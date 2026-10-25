@@ -11,7 +11,7 @@ export class UserAdminError extends Error {
 }
 
 /** Filters on the platform users list. Roles come from `platformRole` and memberships. */
-export const userFilters = ["all", "platform_admin", "affiliate", "agency", "artist", "customer", "disabled", "unverified"] as const;
+export const userFilters = ["all", "platform_admin", "affiliate", "agency", "independent", "artist", "customer", "disabled", "unverified"] as const;
 export type UserFilter = (typeof userFilters)[number];
 
 function filterWhere(filter: UserFilter): Prisma.UserWhereInput {
@@ -19,8 +19,11 @@ function filterWhere(filter: UserFilter): Prisma.UserWhereInput {
     case "platform_admin":
     case "affiliate":
       return { platformRole: filter };
+    // Agency teams; independent artists have their own filter.
     case "agency":
-      return { members: { some: { role: { in: [...deskRoles] } } } };
+      return { members: { some: { role: { in: deskRoles.filter((r) => r !== "solo_artist") } } } };
+    case "independent":
+      return { members: { some: { role: "solo_artist" } } };
     case "artist":
     case "customer":
       return { members: { some: { role: filter } } };

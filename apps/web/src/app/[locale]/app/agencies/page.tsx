@@ -22,6 +22,7 @@ import { requirePermission } from "@/lib/viewer";
 import { CreateAgencyDialog } from "./agency-dialogs";
 import { FeeDealDialog } from "./fee-deal";
 import { NativeSelect } from "@/components/ui/native-select";
+import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/agencies">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "agencies" });
@@ -98,7 +99,7 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
       </div>
 
       <div className="grid gap-3">
-        <form className="flex flex-wrap gap-2" role="search">
+        <SearchForm className="flex flex-wrap gap-2" role="search">
           <label htmlFor="ag-q" className="sr-only">
             {ta("search")}
           </label>
@@ -121,7 +122,7 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
           <Button type="submit" variant="outline">
             {ta("search")}
           </Button>
-        </form>
+        </SearchForm>
         <FilterChips
           label={ta("filterStatus")}
           options={[null, ...agencyStatusFilters].map((s) => ({

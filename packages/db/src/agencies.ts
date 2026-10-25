@@ -25,11 +25,13 @@ export async function listAgencies(input: {
   pageSize?: number;
   sort?: "created" | "name" | "bookings" | "members";
   dir?: "asc" | "desc";
+  /** Agencies by default; independent artists have their own admin list. */
+  kind?: "agency" | "solo";
 }) {
   const pageSize = input.pageSize ?? 25;
   const page = Math.max(1, input.page ?? 1);
   const q = input.q?.trim();
-  const and: Prisma.OrganizationWhereInput[] = [];
+  const and: Prisma.OrganizationWhereInput[] = [{ kind: input.kind ?? "agency" }];
   if (q) {
     and.push({
       OR: [
@@ -45,7 +47,7 @@ export async function listAgencies(input: {
   else if (input.status === "none") and.push({ subscription: { is: null } });
   else if (input.status) and.push({ suspendedAt: null, subscription: { is: { status: input.status } } });
   if (input.planKey) and.push({ subscription: { is: { plan: { key: input.planKey } } } });
-  const where: Prisma.OrganizationWhereInput = and.length ? { AND: and } : {};
+  const where: Prisma.OrganizationWhereInput = { AND: and };
 
   const [rows, total] = await Promise.all([
     prisma.organization.findMany({

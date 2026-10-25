@@ -14,6 +14,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { euro } from "@/lib/format";
 import { pageMetadata } from "@/lib/seo";
+import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/artists">): Promise<Metadata> {
   const locale = (await params).locale as Locale;
@@ -48,7 +49,7 @@ async function Directory({ searchParams }: Pick<PageProps<"/[locale]/artists">, 
 
   return (
     <div className="grid gap-8">
-      <form className="grid gap-3 rounded-2xl border bg-card p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end" role="search">
+      <SearchForm className="grid gap-3 rounded-2xl border bg-card p-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end" role="search">
         <label className="grid gap-1.5 text-sm font-medium">
           {t("search")}
           <span className="relative">
@@ -72,7 +73,7 @@ async function Directory({ searchParams }: Pick<PageProps<"/[locale]/artists">, 
           </NativeSelect>
         </div>
         <Button type="submit">{t("find")}</Button>
-      </form>
+      </SearchForm>
 
       <p className="text-sm text-muted-foreground">{t("count", { count: artists.length })}</p>
 

@@ -20,6 +20,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { requirePermission } from "@/lib/viewer";
 import { CreateAdminDialog, UserActions } from "./user-menu";
+import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/users">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "users" });
@@ -84,7 +85,7 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
       </div>
 
       <div className="grid gap-3">
-        <form className="flex flex-wrap gap-2" role="search">
+        <SearchForm className="flex flex-wrap gap-2" role="search">
           <label htmlFor="users-q" className="sr-only">
             {t("search")}
           </label>
@@ -96,7 +97,7 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
           <Button type="submit" variant="outline">
             {t("search")}
           </Button>
-        </form>
+        </SearchForm>
         <FilterChips label={t("filter")} options={userFilters.map((f) => ({ key: f, label: t(`filter_${f}`), href: href({ filter: f }), active: f === filter }))} />
       </div>
 

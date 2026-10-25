@@ -21,6 +21,7 @@ import type { Locale } from "@/i18n/routing";
 import { eventDate } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
 import { leadTone } from "./lead-tone";
+import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/leads">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "leads" });
@@ -80,7 +81,7 @@ async function Leads({ searchParams }: Pick<PageProps<"/[locale]/app/leads">, "s
         <StatCard label={t("status_closed")} value={count("closed")} icon={XCircleIcon} tone="pink" hint={t("statClosedHint")} />
       </div>
       <div className="grid gap-3">
-        <form className="flex flex-wrap gap-2" role="search">
+        <SearchForm className="flex flex-wrap gap-2" role="search">
           <label htmlFor="leads-q" className="sr-only">
             {t("search")}
           </label>
@@ -92,7 +93,7 @@ async function Leads({ searchParams }: Pick<PageProps<"/[locale]/app/leads">, "s
           <Button type="submit" variant="outline">
             {t("search")}
           </Button>
-        </form>
+        </SearchForm>
         <FilterChips
           label={t("filterStatus")}
           options={[null, ...leadStatuses].map((s) => ({ key: s ?? "all", label: s ? t(`status_${s}`) : t("all"), href: href({ status: s }), active: s === status }))}

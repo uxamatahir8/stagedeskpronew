@@ -16,6 +16,7 @@ import { requirePermission } from "@/lib/viewer";
 import en from "../../../../../messages/en.json";
 import nl from "../../../../../messages/nl.json";
 import { TextRow, type TextRowData } from "./text-row";
+import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/texts">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "siteTexts" });
@@ -133,7 +134,7 @@ async function Texts({ searchParams }: Pick<PageProps<"/[locale]/app/texts">, "s
         </nav>
 
         <div className="grid min-w-0 content-start gap-4">
-          <form className="flex gap-2">
+          <SearchForm className="flex gap-2">
             <div className="relative flex-1">
               <SearchIcon className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
               <Input name="q" type="search" defaultValue={q} placeholder={t("searchPlaceholder")} aria-label={t("search")} className="pl-9" />
@@ -141,7 +142,7 @@ async function Texts({ searchParams }: Pick<PageProps<"/[locale]/app/texts">, "s
             <Button type="submit" variant="outline">
               {t("search")}
             </Button>
-          </form>
+          </SearchForm>
           <p className="text-sm text-muted-foreground">
             {q ? t("results", { count: keys.length, q }) : changedOnly ? t("changedCount", { count: keys.length }) : t("groupCount", { group: label(ns), count: keys.length })}
             {keys.length > shown.length && ` ${t("firstOnly", { count: shown.length })}`}

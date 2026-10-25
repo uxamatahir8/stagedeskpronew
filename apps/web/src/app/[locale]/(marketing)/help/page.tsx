@@ -10,6 +10,7 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { type ArticleView, contentCategories, contentList } from "@/lib/content";
 import { pageMetadata } from "@/lib/seo";
+import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/help">): Promise<Metadata> {
   const locale = (await params).locale as Locale;
@@ -64,7 +65,7 @@ async function Help({ params, searchParams }: Pick<PageProps<"/[locale]/help">, 
         <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-14 sm:px-6 sm:py-20">
           <p className="text-sm font-medium text-primary">{t("title")}</p>
           <h1 className="max-w-2xl font-editorial text-4xl leading-tight font-bold tracking-tight text-balance sm:text-5xl">{t("heading")}</h1>
-          <form role="search" className="flex max-w-2xl gap-2">
+          <SearchForm role="search" className="flex max-w-2xl gap-2">
             <label htmlFor="help-q" className="sr-only">
               {t("searchLabel")}
             </label>
@@ -75,7 +76,7 @@ async function Help({ params, searchParams }: Pick<PageProps<"/[locale]/help">, 
             <Button type="submit" size="lg" className="h-12">
               {t("search")}
             </Button>
-          </form>
+          </SearchForm>
           {!q && popular.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               {t("popular")}
