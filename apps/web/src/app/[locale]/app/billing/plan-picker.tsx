@@ -82,8 +82,7 @@ export function PlanPicker({
               </ul>
               <Button
                 variant={p.recommended ? "default" : "outline"}
-                disabled={pending || current || !stripeReady || !p.synced}
-                title={!p.synced ? t("planNotSynced") : undefined}
+                disabled={pending || current || !stripeReady}
                 onClick={() => go(() => choosePlanAction(p.id, interval))}
               >
                 {current ? t("current") : switching ? t("switchTo", { plan: p.name }) : trialDays > 0 ? t("startTrial", { days: trialDays }) : t("choose", { plan: p.name })}

@@ -1,8 +1,8 @@
 "use server";
 
 import { getLocale, getTranslations } from "next-intl/server";
-import { audit } from "@stagedesk/db";
-import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, subscriptionCheckout } from "@stagedesk/payments";
+import { audit, prisma } from "@stagedesk/db";
+import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
 import type { RedirectResult } from "@/components/redirect-button";
 import { paymentsErrorMessage } from "@/lib/billing";
 import { absoluteUrl } from "@/lib/mail";
@@ -16,6 +16,10 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
   if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
   const locale = (await getLocale()) === "en" ? "en" : "nl";
   try {
+    // A plan not yet in Stripe (new, or after a reset) is pushed there first, so checkout just works.
+    const plan = await prisma.plan.findUnique({ where: { id: planId }, select: { active: true, stripeMonthlyPriceId: true, stripeYearlyPriceId: true } });
+    if (!plan?.active) return { message: (await getTranslations("billing"))("planNotSynced") };
+    if (!plan.stripeMonthlyPriceId || !plan.stripeYearlyPriceId) await syncPlanToStripe(stripe, planId);
     // A running Stripe subscription is switched in place, never doubled.
     if (await liveStripeSubscription(organization.id)) {
       await audit({ actorId: viewer.user.id, action: "billing.switch_plan", targetType: "plan", targetId: planId });
