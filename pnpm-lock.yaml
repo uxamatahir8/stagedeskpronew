@@ -62,6 +62,9 @@ importers:
       cn:
         specifier: ^0.5.0
         version: 0.5.0
+      flag-icons:
+        specifier: 7.2.3
+        version: 7.2.3
       ioredis:
         specifier: 5.11.1
         version: 5.11.1
@@ -4021,6 +4024,9 @@ packages:
   find-up@5.0.0:
     resolution: {integrity: sha512-78/PXT1wlLLDgTzDs7sjq9hzz0vXD+zn+7wypEe4fXQxCmdmqfGsEPQxmiCSQI3ajFV91bVSsvNtrJRiW6nGng==}
     engines: {node: '>=10'}
+
+  flag-icons@7.2.3:
+    resolution: {integrity: sha512-X2gUdteNuqdNqob2KKTJTS+ZCvyWeLCtDz9Ty8uJP17Y4o82Y+U/Vd4JNrdwTAjagYsRznOn9DZ+E/Q52qbmqg==}
 
   flat-cache@4.0.1:
     resolution: {integrity: sha512-f7ccFPK3SXFHpx15UIGyRJ/FJQctuKZ0zVuN3frBo4HnK3cay9VEW0R6yPYFHC0AgqhukPzKjq22t5DmAyqGyw==}
@@ -10113,6 +10119,8 @@ snapshots:
     dependencies:
       locate-path: 6.0.0
       path-exists: 4.0.0
+
+  flag-icons@7.2.3: {}
 
   flat-cache@4.0.1:
     dependencies:

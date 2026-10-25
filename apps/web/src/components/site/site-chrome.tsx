@@ -5,7 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navigationFor } from "@/config/navigation";
-import { displayCurrency } from "@/lib/display-currency";
+import { displayCurrency, siteCurrencies } from "@/lib/display-currency";
 import { getViewer } from "@/lib/viewer";
 import { CurrencySwitch } from "./currency-switch";
 import { SiteAccountMenu } from "./site-account-menu";
@@ -65,7 +65,7 @@ async function navEntries(): Promise<NavEntry[]> {
 
 async function HeaderActions() {
   await connection();
-  const [t, tn, tr, entries, cta, currency, viewer] = await Promise.all([
+  const [t, tn, tr, entries, cta, currency, viewer, currencyOptions] = await Promise.all([
     getTranslations("site"),
     getTranslations("nav"),
     getTranslations("roles"),
@@ -73,6 +73,7 @@ async function HeaderActions() {
     primaryCta(),
     displayCurrency(),
     getViewer(),
+    siteCurrencies(),
   ]);
   // Signed in: the person's name with their most used pages instead of "Sign in" and the trial button.
   const signedIn = viewer?.role ? viewer : null;
@@ -89,7 +90,7 @@ async function HeaderActions() {
       <NavLinks entries={entries} />
       <div className="ml-auto flex items-center gap-1">
         <LocaleSwitch />
-        <CurrencySwitch current={currency} />
+        <CurrencySwitch current={currency} options={currencyOptions} />
         <ThemeToggle />
         {signedIn ? (
           <>

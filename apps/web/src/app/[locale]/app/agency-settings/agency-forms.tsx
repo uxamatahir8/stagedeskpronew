@@ -9,12 +9,13 @@ import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { currencies, type DatePrefs } from "@stagedesk/core";
+import type { DatePrefs } from "@stagedesk/core";
+import { CurrencyFlag, currencyName } from "@/components/currency-flag";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateTimeFields, type DatePrefsInput } from "@/components/date-time-fields";
 import { useRouter } from "@/i18n/navigation";
 import type { FormState } from "@/lib/validation";
 import { removeLogo, saveAgency, uploadLogo } from "./actions";
-import { NativeSelect } from "@/components/ui/native-select";
 
 type Values = Record<
   "name" | "kvkNumber" | "vatNumber" | "contactEmail" | "phone" | "website" | "addressLine" | "postalCode" | "city" | "brandColor" | "currency",
@@ -95,11 +96,10 @@ export function LogoForm({ name, logo }: { name: string; logo: string | null }) 
   );
 }
 
-export function AgencyForm({ values, dates, platformDates }: { values: Values; dates: DatePrefsInput; platformDates: DatePrefs }) {
+export function AgencyForm({ values, dates, platformDates, currencyOptions }: { values: Values; dates: DatePrefsInput; platformDates: DatePrefs; currencyOptions: string[] }) {
   const td = useTranslations("dateTime");
   const t = useTranslations("agencySettings");
   const locale = useLocale();
-  const currencyName = (code: string) => new Intl.DisplayNames([locale], { type: "currency" }).of(code) ?? code;
   const [state, action, pending] = useToastAction(saveAgency);
   const errors = state.fieldErrors ?? {};
 
@@ -124,14 +124,21 @@ export function AgencyForm({ values, dates, platformDates }: { values: Values; d
           {field("name", { required: true, maxLength: 191, className: "sm:col-span-2" })}
           {field("kvkNumber", { inputMode: "numeric", maxLength: 8, placeholder: "12345678" })}
           {field("vatNumber", { maxLength: 20, placeholder: "NL123456789B01" })}
-          <FormField id="agency-currency" label={t("currency")} hint={t("currencyHint")} className="sm:col-span-2">
-            <NativeSelect id="agency-currency" name="currency" defaultValue={values.currency} className="h-9 w-full rounded-md border bg-background px-3 text-sm sm:w-64">
-              {currencies.map((c) => (
-                <option key={c} value={c}>
-                  {c} · {currencyName(c)}
-                </option>
-              ))}
-            </NativeSelect>
+          <FormField id="agency-currency" label={t("currency")} hint={t("currencyHint")} error={errors.currency} className="sm:col-span-2">
+            <Select name="currency" defaultValue={values.currency}>
+              <SelectTrigger id="agency-currency" className="w-full sm:w-80">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {currencyOptions.map((c) => (
+                  <SelectItem key={c} value={c} textValue={c}>
+                    <CurrencyFlag code={c} />
+                    <span className="w-10 font-medium tabular-nums">{c}</span>
+                    <span className="truncate text-muted-foreground">{currencyName(c, locale)}</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </FormField>
         </CardContent>
       </Card>

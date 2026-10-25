@@ -369,7 +369,8 @@
     "invalidFile": "Upload een PNG-, JPG- of WebP-afbeelding van maximaal 2 MB.",
     "required": "Dit veld is verplicht.",
     "currency": "Valuta",
-    "currencyHint": "Voor offertes, facturen en betalingen. Nieuwe boekingen krijgen deze valuta; bestaande boekingen houden hun valuta."
+    "currencyHint": "Voor offertes, facturen en betalingen. Nieuwe boekingen krijgen deze valuta; bestaande boekingen houden hun valuta.",
+    "currencyUnavailable": "Die valuta is niet beschikbaar. Kies een andere."
   },
   "agencies": {
     "title": "Bureaus",
@@ -4660,5 +4661,22 @@
     "profileHint": "Alleen voor jou. Laat een veld op standaard om je bureau of het platform te volgen.",
     "saved": "Instellingen voor datum en tijd opgeslagen.",
     "invalid": "Kies een geldige tijdzone en notaties."
+  },
+  "currencies": {
+    "title": "Valuta",
+    "hint": "In welke valuta bureaus kunnen werken en bezoekers prijzen kunnen zien. Abonnementen worden altijd in euro’s gefactureerd.",
+    "search": "Valuta zoeken",
+    "currency": "Valuta",
+    "ecbRate": "ECB-koers (1 EUR)",
+    "manualRate": "Eigen koers",
+    "enabled": "Aan",
+    "base": "Basisvaluta",
+    "noEcb": "Niet gepubliceerd door de ECB",
+    "manualRateFor": "Eigen koers voor {currency}",
+    "enableFor": "{currency} aanbieden",
+    "rateHint": "Koersen zijn hoeveel van de valuta je voor één euro krijgt. Een eigen koers vervangt de ECB-koers; laat leeg om de ECB-koers te gebruiken, die elke werkdag wordt bijgewerkt.",
+    "invalidRate": "De koers voor {currency} moet een getal boven 0 zijn.",
+    "needsRate": "Vul een eigen koers in voor {list}: de ECB publiceert die niet.",
+    "save": "Valuta opslaan"
   }
 }

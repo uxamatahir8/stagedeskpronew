@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { formatIban } from "@stagedesk/core";
-import { getSetting, prisma } from "@stagedesk/db";
+import { enabledCurrencies, getSetting, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
@@ -29,11 +29,12 @@ async function AgencySettings() {
   const { organization } = await requireAgency("agency.settings");
   const t = await getTranslations("agencySettings");
   // The id comes from the viewer's own membership, so this reads only their agency.
-  const [agency, allowed, connected, platformDates] = await Promise.all([
+  const [agency, allowed, connected, platformDates, currencyOptions] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: organization.id } }),
     getSetting("payments.methods"),
     prisma.connectedAccount.count({ where: { organizationId: organization.id, artistId: null, chargesEnabled: true } }),
     platformDatePrefs(),
+    enabledCurrencies(),
   ]);
 
   return (
@@ -56,6 +57,7 @@ async function AgencySettings() {
         }}
         dates={{ timeZone: agency.timeZone ?? "", dateFormat: agency.dateFormat ?? "", timeFormat: agency.timeFormat ?? "" }}
         platformDates={platformDates}
+        currencyOptions={currencyOptions.includes(agency.currency as never) ? currencyOptions : [agency.currency, ...currencyOptions]}
       />
       <PaymentMethodsForm
         values={{

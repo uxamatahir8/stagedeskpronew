@@ -8,7 +8,7 @@ import { SITE_TAGS } from "@/lib/site";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 
-const editable: SettingKey[] = ["fees.platform", "bookings.defaults", "billing.defaults", "site.general", "affiliates.program", "payments.methods"];
+const editable: SettingKey[] = ["fees.platform", "bookings.defaults", "billing.defaults", "site.general", "affiliates.program", "payments.methods", "currencies"];
 
 /** Saves one platform setting; the registry schema validates it and the change is logged. */
 export async function saveSettingAction(key: SettingKey, value: unknown): Promise<ActionResult> {

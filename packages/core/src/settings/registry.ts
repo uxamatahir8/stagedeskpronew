@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { platformFeeSettingsSchema } from "./fees";
+import { currencies } from "../currency";
 import { dateFormats, defaultDatePrefs, isTimeZone, timeFormats } from "../datetime";
 
 const tierSchema = z.object({
@@ -82,6 +83,13 @@ export const siteFooterSchema = z.object({
   }),
 });
 
+/** Which currencies agencies and visitors can choose, and rates the admin sets by hand. */
+export const currenciesSettingSchema = z.object({
+  enabled: z.array(z.enum(currencies)).min(1).refine((list) => list.includes("EUR"), "EUR stays enabled: plans are billed in euros"),
+  /** One euro in that currency; wins over the ECB rate. Needed for PKR, AED and SAR. */
+  manualRates: z.partialRecord(z.enum(currencies), z.number().positive().max(1_000_000)),
+});
+
 /** Which ways of paying agencies may offer. Each agency then chooses within these. */
 export const paymentMethodsSchema = z.object({
   online: z.boolean(),
@@ -108,6 +116,13 @@ export const settingsRegistry = {
       maintenanceMode: false,
       waitlistMode: false,
       ...defaultDatePrefs,
+    },
+  },
+  currencies: {
+    schema: currenciesSettingSchema,
+    defaults: {
+      enabled: ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "CAD", "AUD", "PKR"],
+      manualRates: {},
     },
   },
   "site.footer": {

@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { isCurrency, parseViaCookie, viaCookie } from "@stagedesk/core";
-import { notify, platformAdminIds, prisma, publishedArticle } from "@stagedesk/db";
+import { enabledCurrencies, notify, platformAdminIds, prisma, publishedArticle } from "@stagedesk/db";
 import { DISPLAY_CURRENCY_COOKIE } from "@/lib/display-currency";
 import { deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -113,6 +113,6 @@ export async function commentAction(form: FormData): Promise<FormResult> {
 
 /** Remembers the currency a visitor wants to see prices in, for a year. */
 export async function setDisplayCurrencyAction(currency: string) {
-  if (!isCurrency(currency)) return;
+  if (!isCurrency(currency) || !(await enabledCurrencies()).includes(currency)) return;
   (await cookies()).set(DISPLAY_CURRENCY_COOKIE, currency, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 }

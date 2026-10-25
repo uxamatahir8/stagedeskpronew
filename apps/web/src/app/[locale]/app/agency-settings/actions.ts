@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { currencies, dateFormats, isTimeZone, isValidIban, normalizeIban, timeFormats } from "@stagedesk/core";
-import { getSetting, prisma } from "@stagedesk/db";
+import { enabledCurrencies, getSetting, prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { auth } from "@/lib/auth";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
@@ -60,6 +60,10 @@ export async function saveAgency(_prev: FormState, form: FormData): Promise<Form
   }
 
   const { currency, timeZone, dateFormat, timeFormat, ...details } = parsed.data;
+  // Only currencies the platform offers; an agency may keep one that was switched off later.
+  if (currency !== organization.currency && !(await enabledCurrencies()).includes(currency)) {
+    return { fieldErrors: { currency: t("currencyUnavailable") } };
+  }
   await updateOrganization(organization.id, details);
   // The currency isn't one of Better Auth's organization fields; existing bookings keep theirs.
   await prisma.organization.update({ where: { id: organization.id }, data: { currency, timeZone: timeZone || null, dateFormat: dateFormat || null, timeFormat: timeFormat || null } });

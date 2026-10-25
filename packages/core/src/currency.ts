@@ -4,8 +4,17 @@ import type { Cents } from "./money";
  * Currencies an agency can work in, and visitors can view prices in. All use
  * two decimals, so amounts stay integer cents (minor units) everywhere.
  */
-export const currencies = ["EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "CAD", "AUD"] as const;
+export const currencies = [
+  "EUR", "USD", "GBP", "CHF", "SEK", "NOK", "DKK", "PLN", "CZK", "CAD", "AUD",
+  "PKR", "INR", "AED", "SAR", "TRY", "NZD", "ZAR", "SGD", "HKD", "MXN", "BRL",
+] as const;
 export type Currency = (typeof currencies)[number];
+
+/** The country whose flag stands for a currency (ISO 3166 alpha-2, lowercase; "eu" for the euro). */
+export const currencyFlags: Record<Currency, string> = {
+  EUR: "eu", USD: "us", GBP: "gb", CHF: "ch", SEK: "se", NOK: "no", DKK: "dk", PLN: "pl", CZK: "cz", CAD: "ca", AUD: "au",
+  PKR: "pk", INR: "in", AED: "ae", SAR: "sa", TRY: "tr", NZD: "nz", ZAR: "za", SGD: "sg", HKD: "hk", MXN: "mx", BRL: "br",
+};
 
 export function isCurrency(value: unknown): value is Currency {
   return typeof value === "string" && (currencies as readonly string[]).includes(value);
@@ -24,6 +33,16 @@ export function convertCents(amount: Cents, from: Currency, to: Currency, rates:
   const toRate = to === "EUR" ? 1 : rates[to];
   if (!fromRate || !toRate) return null;
   return Math.round((amount / fromRate) * toRate);
+}
+
+/**
+ * ECB rates with the admin's manual rates on top. Manual rates cover
+ * currencies the ECB doesn't publish (PKR, AED, SAR) and can pin any other.
+ */
+export function mergeRates(ecb: RateTable, manual: RateTable): RateTable {
+  const out: RateTable = { ...ecb };
+  for (const [code, rate] of Object.entries(manual)) if (isCurrency(code) && rate && rate > 0) out[code] = rate;
+  return out;
 }
 
 /** Stripe wants lowercase ISO codes. */

@@ -1,8 +1,9 @@
 import "server-only";
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { cookies } from "next/headers";
 import { type Currency, convertCents, isCurrency } from "@stagedesk/core";
-import { exchangeRates } from "@stagedesk/db";
+import { enabledCurrencies, exchangeRates } from "@stagedesk/db";
+import { SITE_TAGS } from "./site";
 
 /**
  * The currency a visitor chose to see prices in (a cookie, set from the site
@@ -13,11 +14,20 @@ export const DISPLAY_CURRENCY_COOKIE = "display_currency";
 
 export async function displayCurrency(): Promise<Currency> {
   const value = (await cookies()).get(DISPLAY_CURRENCY_COOKIE)?.value;
-  return isCurrency(value) ? value : "EUR";
+  return isCurrency(value) && (await siteCurrencies()).includes(value) ? value : "EUR";
+}
+
+/** The currencies the admin enabled; changes call updateTag(SITE_TAGS.settings). */
+export async function siteCurrencies() {
+  "use cache";
+  cacheTag(SITE_TAGS.settings);
+  cacheLife("hours");
+  return enabledCurrencies();
 }
 
 export async function siteRates() {
   "use cache";
+  cacheTag(SITE_TAGS.settings);
   cacheLife("hours");
   const { rates, date } = await exchangeRates();
   return { rates, date: date?.toISOString().slice(0, 10) ?? null };

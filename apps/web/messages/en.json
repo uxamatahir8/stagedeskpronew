@@ -369,7 +369,8 @@
     "invalidFile": "Upload a PNG, JPG or WebP image of at most 2 MB.",
     "required": "This field is required.",
     "currency": "Currency",
-    "currencyHint": "For quotes, invoices and payments. New bookings get this currency; existing bookings keep theirs."
+    "currencyHint": "For quotes, invoices and payments. New bookings get this currency; existing bookings keep theirs.",
+    "currencyUnavailable": "That currency isn’t available. Choose another one."
   },
   "agencies": {
     "title": "Agencies",
@@ -4660,5 +4661,22 @@
     "profileHint": "Only for you. Leave a field on default to follow your agency or the platform.",
     "saved": "Date and time settings saved.",
     "invalid": "Choose a valid timezone and formats."
+  },
+  "currencies": {
+    "title": "Currencies",
+    "hint": "Which currencies agencies can work in and visitors can see prices in. Plans are always billed in euros.",
+    "search": "Search currencies",
+    "currency": "Currency",
+    "ecbRate": "ECB rate (1 EUR)",
+    "manualRate": "Manual rate",
+    "enabled": "On",
+    "base": "Base currency",
+    "noEcb": "Not published by the ECB",
+    "manualRateFor": "Manual rate for {currency}",
+    "enableFor": "Offer {currency}",
+    "rateHint": "Rates are how much of the currency one euro buys. A manual rate replaces the ECB rate; leave it empty to use the ECB rate, updated every working day.",
+    "invalidRate": "The rate for {currency} must be a number above 0.",
+    "needsRate": "Add a manual rate for {list}: the ECB doesn’t publish it.",
+    "save": "Save currencies"
   }
 }

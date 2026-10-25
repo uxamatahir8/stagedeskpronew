@@ -1,48 +1,47 @@
 "use client";
 
-import { CheckIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { currencies } from "@stagedesk/core";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CurrencyFlag, currencyName } from "@/components/currency-flag";
+import { Select, SelectContent, SelectItem, SelectLabel, SelectTrigger } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
 import { setDisplayCurrencyAction } from "@/lib/site-actions";
 
-/** Lets visitors see prices in their own currency; billing stays in euros. */
-export function CurrencySwitch({ current }: { current: string }) {
+/** Lets visitors see prices in their own currency (searchable, with flags); billing stays in euros. */
+export function CurrencySwitch({ current, options }: { current: string; options: string[] }) {
   const t = useTranslations("site");
   const locale = useLocale();
   const router = useRouter();
   const [pending, start] = useTransition();
-  const name = (code: string) => new Intl.DisplayNames([locale], { type: "currency" }).of(code) ?? code;
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" disabled={pending} aria-label={t("currencyCurrent", { currency: name(current) })} className="tabular-nums">
-          {current}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">{t("currencyHint")}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {currencies.map((c) => (
-          <DropdownMenuItem
-            key={c}
-            onSelect={() =>
-              c !== current &&
-              start(async () => {
-                await setDisplayCurrencyAction(c);
-                router.refresh();
-              })
-            }
-          >
-            <span className="w-9 font-medium tabular-nums">{c}</span>
-            <span className="text-muted-foreground">{name(c)}</span>
-            {c === current && <CheckIcon className="ml-auto" aria-hidden />}
-          </DropdownMenuItem>
+    <Select
+      value={current}
+      disabled={pending}
+      onValueChange={(c) =>
+        c !== current &&
+        start(async () => {
+          await setDisplayCurrencyAction(c);
+          router.refresh();
+        })
+      }
+    >
+      <SelectTrigger
+        aria-label={t("currencyCurrent", { currency: currencyName(current, locale) })}
+        className="h-8 gap-1.5 border-transparent bg-transparent px-2 font-medium tabular-nums shadow-none hover:bg-accent dark:bg-transparent"
+      >
+        <CurrencyFlag code={current} />
+        {current}
+      </SelectTrigger>
+      <SelectContent align="end" className="w-80">
+        <SelectLabel>{t("currencyHint")}</SelectLabel>
+        {options.map((c) => (
+          <SelectItem key={c} value={c} textValue={c}>
+            <CurrencyFlag code={c} />
+            <span className="w-10 font-medium tabular-nums">{c}</span>
+            <span className="truncate text-muted-foreground">{currencyName(c, locale)}</span>
+          </SelectItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </SelectContent>
+    </Select>
   );
 }
