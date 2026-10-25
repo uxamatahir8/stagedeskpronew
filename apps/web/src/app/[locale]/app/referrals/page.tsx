@@ -1,7 +1,8 @@
 import { CalendarCheckIcon, GiftIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { agencyReferralCode, getSetting, prisma } from "@stagedesk/db";
 import { CopyField } from "@/components/copy-field";
 import { EmptyState } from "@/components/empty-state";

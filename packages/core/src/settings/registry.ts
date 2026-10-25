@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { platformFeeSettingsSchema } from "./fees";
+import { dateFormats, defaultDatePrefs, isTimeZone, timeFormats } from "../datetime";
 
 const tierSchema = z.object({
   name: z.string().min(1),
@@ -54,6 +55,10 @@ export const siteGeneralSchema = z.object({
   maintenanceMode: z.boolean(),
   /** Before launch: the website collects waitlist sign-ups instead of offering a free trial. */
   waitlistMode: z.boolean().default(false),
+  /** Date and time display for everyone; agencies and people can choose their own. */
+  timeZone: z.string().refine(isTimeZone).default(defaultDatePrefs.timeZone),
+  dateFormat: z.enum(dateFormats).default(defaultDatePrefs.dateFormat),
+  timeFormat: z.enum(timeFormats).default(defaultDatePrefs.timeFormat),
 });
 
 /** What the website footer shows besides its link columns. */
@@ -102,6 +107,7 @@ export const settingsRegistry = {
       supportEmail: "support@stagedesk.pro",
       maintenanceMode: false,
       waitlistMode: false,
+      ...defaultDatePrefs,
     },
   },
   "site.footer": {

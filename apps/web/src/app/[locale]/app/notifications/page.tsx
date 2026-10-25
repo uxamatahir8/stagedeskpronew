@@ -16,7 +16,8 @@ import {
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { listNotifications } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { FilterChips, Pager } from "@/components/list-controls";

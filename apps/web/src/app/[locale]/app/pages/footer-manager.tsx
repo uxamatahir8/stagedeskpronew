@@ -20,6 +20,7 @@ import {
   saveFooterLinkAction,
   saveFooterSettingsAction,
 } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export interface FooterLinkRow {
   id: string;
@@ -217,7 +218,7 @@ export function FooterManager({ columns, settings }: { columns: FooterColumnRow[
               </div>
               {link.kind === "route" ? (
                 <FormField id="fl-route" label={t("page")}>
-                  <select
+                  <NativeSelect
                     id="fl-route"
                     value={siteRoutes.some((r) => r.path === link.target) ? link.target : ""}
                     onChange={(e) => {
@@ -234,7 +235,7 @@ export function FooterManager({ columns, settings }: { columns: FooterColumnRow[
                         {(locale === "en" ? r.en : r.nl) + " · " + r.path}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </FormField>
               ) : (
                 <FormField id="fl-url" label={t("url")}>

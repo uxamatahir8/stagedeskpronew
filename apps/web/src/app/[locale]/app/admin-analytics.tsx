@@ -1,5 +1,6 @@
 import { BuildingIcon, CalendarCheckIcon, MailCheckIcon, ReceiptIcon, UsersIcon } from "lucide-react";
-import { getFormatter, getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import type { BookingStatus } from "@stagedesk/core";
 import { adminDashboard } from "@stagedesk/db";
 import { AreaTrend } from "@/components/charts/area-trend";

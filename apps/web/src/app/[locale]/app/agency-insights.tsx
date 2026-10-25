@@ -1,5 +1,6 @@
 import { ArrowRightIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type Permission, todayInNetherlands } from "@stagedesk/core";
 import { agencyBilling, agencyRevenueByMonth, agencyUsage, type TenantDb } from "@stagedesk/db";
 import { ColumnChart } from "@/components/charts/column-chart";

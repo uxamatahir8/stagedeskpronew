@@ -1,7 +1,8 @@
 "use client";
 
 import { ArchiveIcon, PencilIcon, PlusIcon } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useFormatter } from "@/components/date-prefs";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/form-field";

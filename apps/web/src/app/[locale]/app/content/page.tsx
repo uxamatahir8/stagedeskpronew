@@ -1,7 +1,8 @@
 import { ExternalLinkIcon, NewspaperIcon, PlusIcon, StarIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type ArticleLocale, type ContentKind, readingMinutes, localePrefix } from "@stagedesk/core";
 import { listContentArticlesAdmin, listContentCategories } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";

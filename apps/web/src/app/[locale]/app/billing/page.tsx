@@ -1,7 +1,8 @@
 import { CheckIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { countLimits, featureFlags, feeRuleSchema, parseLimits } from "@stagedesk/core";
 import { activePlans, agencyBilling, agencyUsage, effectiveFeeSnapshot, planTrialDays, prisma, trialEligible } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";

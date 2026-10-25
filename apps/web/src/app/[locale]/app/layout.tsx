@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getLocale, setRequestLocale } from "next-intl/server";
+import { DatePrefsProvider } from "@/components/date-prefs";
 import { Guide } from "@/components/shell/guide";
 
 import { pendingLegal, prisma } from "@stagedesk/db";
@@ -12,6 +13,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { viewerDatePrefs } from "@/lib/date-prefs";
 import { requireViewer } from "@/lib/viewer";
 
 export default async function DashboardLayout({ children, params }: LayoutProps<"/[locale]/app">) {
@@ -31,22 +33,25 @@ async function Shell({ children }: { children: React.ReactNode }) {
   if ((await pendingLegal(user.id)).length > 0) redirect({ href: "/accept-terms", locale: (await getLocale()) as Locale });
   // A suspended agency is closed to its team and customers; they can still switch agency or sign out.
   const suspended = organization ? await prisma.organization.findUnique({ where: { id: organization.id }, select: { suspendedAt: true, suspendReason: true } }) : null;
+  const datePrefs = await viewerDatePrefs();
   return (
-    <SidebarProvider>
-      <AppSidebar viewer={{ user, role, organization, memberships, permissions }} />
-      <SidebarInset>
-        <TopBar permissions={permissions} />
-        <Suspense fallback={null}>
-          <Guide userId={user.id} permissions={permissions} />
-        </Suspense>
-        {support && <SupportBanner agency={support.name} />}
-        {organization && permissions.includes("agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} canBill={permissions.includes("agency.billing")} />}
-        <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
-          {/* Support can still look inside a suspended agency; writes stay blocked by writeBlocked. */}
-          {suspended?.suspendedAt && !support ? <SuspendedNotice agency={organization!.name} reason={suspended.suspendReason} /> : children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <DatePrefsProvider prefs={datePrefs}>
+      <SidebarProvider>
+        <AppSidebar viewer={{ user, role, organization, memberships, permissions }} />
+        <SidebarInset>
+          <TopBar permissions={permissions} />
+          <Suspense fallback={null}>
+            <Guide userId={user.id} permissions={permissions} />
+          </Suspense>
+          {support && <SupportBanner agency={support.name} />}
+          {organization && permissions.includes("agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} canBill={permissions.includes("agency.billing")} />}
+          <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">
+            {/* Support can still look inside a suspended agency; writes stay blocked by writeBlocked. */}
+            {suspended?.suspendedAt && !support ? <SuspendedNotice agency={organization!.name} reason={suspended.suspendReason} /> : children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </DatePrefsProvider>
   );
 }
 

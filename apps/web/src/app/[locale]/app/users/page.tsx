@@ -2,7 +2,8 @@ import { MailWarningIcon, SearchIcon, ShieldCheckIcon, UsersRoundIcon, UserXIcon
 import type { Metadata } from "next";
 import { parseListQuery } from "@stagedesk/core";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { listUsers, prisma, userFilters, type UserFilter } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { FilterChips } from "@/components/list-controls";

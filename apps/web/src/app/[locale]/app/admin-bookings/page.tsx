@@ -1,7 +1,8 @@
 import { ArrowRightIcon, CalendarCheckIcon, CircleCheckIcon, SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { bookingStatuses, type BookingStatus, parseListQuery } from "@stagedesk/core";
 import { bookingSources, type BookingSource, listAllBookings, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
@@ -20,6 +21,7 @@ import { euro, eventDate } from "@/lib/format";
 import { startSupportAction } from "@/lib/support-actions";
 import { requirePermission } from "@/lib/viewer";
 import { NewBookingPicker } from "./pick-agency";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/admin-bookings">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "adminBookings" });
@@ -112,14 +114,14 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
           <label htmlFor="pb-agency-filter" className="sr-only">
             {t("agency")}
           </label>
-          <select id="pb-agency-filter" name="agency" defaultValue={agencyId ?? ""} className="h-9 rounded-md border bg-background px-3 text-sm">
+          <NativeSelect id="pb-agency-filter" name="agency" defaultValue={agencyId ?? ""} className="h-9 rounded-md border bg-background px-3 text-sm">
             <option value="">{t("allAgencies")}</option>
             {agencies.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <Button type="submit" variant="outline">
             {t("search")}
           </Button>

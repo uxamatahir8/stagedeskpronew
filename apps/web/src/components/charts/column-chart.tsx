@@ -1,7 +1,8 @@
 "use client";
 
 import { TableIcon } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useFormatter } from "@/components/date-prefs";
 import { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 

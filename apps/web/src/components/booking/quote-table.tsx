@@ -1,4 +1,5 @@
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import type { VatGroup } from "@stagedesk/core";
 import { euro, percent } from "@/lib/format";
 

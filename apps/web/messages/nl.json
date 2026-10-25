@@ -4639,5 +4639,26 @@
   "languages": {
     "nl": "Nederlands",
     "en": "Engels"
+  },
+  "select": {
+    "search": "Zoeken…",
+    "empty": "Niets gevonden."
+  },
+  "dateTime": {
+    "title": "Datum en tijd",
+    "timeZone": "Tijdzone",
+    "timeZoneHint": "Tijden van boekingen, berichten en betalingen worden in deze tijdzone getoond.",
+    "dateFormat": "Datumnotatie",
+    "timeFormat": "Tijdnotatie",
+    "useDefault": "Standaard gebruiken ({value})",
+    "languageDefault": "Standaard voor de taal",
+    "clock_24h": "24-uurs",
+    "clock_12h": "12-uurs",
+    "preview": "Voorbeeld:",
+    "platformHint": "De standaard voor iedereen. Bureaus en personen kunnen hun eigen keuze maken.",
+    "agencyHint": "Voor iedereen bij je bureau en je klanten, tenzij ze zelf iets kiezen.",
+    "profileHint": "Alleen voor jou. Laat een veld op standaard om je bureau of het platform te volgen.",
+    "saved": "Instellingen voor datum en tijd opgeslagen.",
+    "invalid": "Kies een geldige tijdzone en notaties."
   }
 }

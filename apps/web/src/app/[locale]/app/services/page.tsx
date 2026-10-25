@@ -1,7 +1,8 @@
 import { TagIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { getSetting } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";

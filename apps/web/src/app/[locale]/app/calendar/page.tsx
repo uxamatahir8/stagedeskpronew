@@ -1,7 +1,8 @@
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, todayInNetherlands } from "@stagedesk/core";
 import { toDateOnly } from "@stagedesk/db";
 import { MonthGrid, monthDays, shiftMonth, weekdayNames } from "@/components/month-grid";

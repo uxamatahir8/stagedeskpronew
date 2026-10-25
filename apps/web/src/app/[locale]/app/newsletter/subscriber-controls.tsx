@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { useRouter } from "@/i18n/navigation";
 import { addSubscriberAction, deleteSubscriberAction, unsubscribeSubscriberAction } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export function AddSubscriberDialog() {
   const t = useTranslations("newsletter");
@@ -52,10 +53,10 @@ export function AddSubscriberDialog() {
             <Input id="ns-name" name="name" maxLength={191} />
           </FormField>
           <FormField id="ns-locale" label={t("language")}>
-            <select id="ns-locale" name="locale" required defaultValue="nl" className="h-9 rounded-md border bg-background px-2.5 text-sm">
+            <NativeSelect id="ns-locale" name="locale" required defaultValue="nl" className="h-9 rounded-md border bg-background px-2.5 text-sm">
               <option value="nl">{tl("nl")}</option>
               <option value="en">{tl("en")}</option>
-            </select>
+            </NativeSelect>
           </FormField>
           <DialogFooter>
             <DialogClose asChild>

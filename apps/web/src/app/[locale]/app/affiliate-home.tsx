@@ -1,5 +1,6 @@
 import { CalendarClockIcon, CoinsIcon, HourglassIcon, MousePointerClickIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { affiliateOverview } from "@stagedesk/db";
 import { FormMessage } from "@/components/auth/auth-card";
 import { StatCard } from "@/components/stat-card";

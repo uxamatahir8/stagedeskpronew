@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { type ListFilter, ListPager, ListToolbar, SortHead } from "./list-controls";
 import { useListQuery } from "./use-list-query";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export interface DataColumn {
   label: React.ReactNode;
@@ -148,7 +149,7 @@ export function CardList({
     <div className="grid gap-4">
       <ListToolbar spec={spec} placeholder={placeholder} filters={filters}>
         {sorts.length > 1 && (
-          <select
+          <NativeSelect
             aria-label={t("sortLabel")}
             value={`${query.sort}:${query.dir}`}
             onChange={(e) => {
@@ -165,7 +166,7 @@ export function CardList({
                 {t("sortDesc", { column: s.label })}
               </option>,
             ])}
-          </select>
+          </NativeSelect>
         )}
       </ListToolbar>
       {visible.length === 0 ? (

@@ -2,7 +2,8 @@ import { ArrowRightIcon, BadgeCheckIcon, HourglassIcon, Loader2Icon, WalletIcon 
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { formatIban } from "@stagedesk/core";
 import { affiliateBalance, getSetting, payoutMethods, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";

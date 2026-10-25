@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { TableHead } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useListQuery } from "./use-list-query";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export interface ListFilter {
   key: string;
@@ -49,7 +50,7 @@ export function ListToolbar({ spec, placeholder, filters = [], children }: { spe
         <Input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder={placeholder ?? t("search")} aria-label={placeholder ?? t("search")} className="pl-9" />
       </div>
       {filters.map((f) => (
-        <select
+        <NativeSelect
           key={f.key}
           aria-label={f.label}
           value={(query.filters as Record<string, string>)[f.key] ?? ""}
@@ -62,7 +63,7 @@ export function ListToolbar({ spec, placeholder, filters = [], children }: { spe
               {o.label}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       ))}
       {children}
       {active && (
@@ -117,13 +118,13 @@ export function ListPager({ spec, total }: { spec: ListSpec; total: number }) {
     <nav className="flex flex-wrap items-center justify-between gap-3 text-sm" aria-label={t("pagination")}>
       <div className="flex items-center gap-2 text-muted-foreground">
         <span>{t("pageOf", { page, pages, total })}</span>
-        <select aria-label={t("perPage")} value={query.size} onChange={(e) => set({ size: Number(e.target.value) })} className={cn(selectClass, "h-8")}>
+        <NativeSelect aria-label={t("perPage")} value={query.size} onChange={(e) => set({ size: Number(e.target.value) })} className={cn(selectClass, "h-8")}>
           {pageSizes.map((s) => (
             <option key={s} value={s}>
               {t("perPageOption", { count: s })}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </div>
       {pages > 1 && (
         <div className="flex items-center gap-1">

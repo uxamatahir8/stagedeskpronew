@@ -1,5 +1,6 @@
 import { CalendarRangeIcon, EuroIcon, HandshakeIcon, InboxIcon, PercentIcon, ReceiptIcon, StarIcon, WalletIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import type { EventType, Permission } from "@stagedesk/core";
 import { agencyDashboard } from "@stagedesk/db";
 import { AreaTrend } from "@/components/charts/area-trend";

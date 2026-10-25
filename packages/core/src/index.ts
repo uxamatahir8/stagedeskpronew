@@ -15,3 +15,4 @@ export * from "./content";
 export * from "./listing";
 export * from "./passwords";
 export * from "./locale";
+export * from "./datetime";

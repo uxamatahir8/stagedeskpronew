@@ -1,7 +1,8 @@
 import { CreditCardIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type EventType, paymentStatus } from "@stagedesk/core";
 import { FormMessage } from "@/components/auth/auth-card";
 import { PayPanel } from "@/components/booking/pay-panel";

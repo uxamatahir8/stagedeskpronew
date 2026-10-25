@@ -2,7 +2,8 @@ import { ArrowLeftIcon, CalendarCheckIcon, CalendarPlusIcon, CreditCardIcon, Ext
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, type EventType, feeRuleSchema } from "@stagedesk/core";
 import { activePlans, agencyOverview } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";

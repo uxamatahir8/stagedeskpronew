@@ -1,5 +1,6 @@
 import { BanknoteIcon, ClockIcon, CreditCardIcon, TriangleAlertIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { todayInNetherlands } from "@stagedesk/core";
 import { customerPaymentClaims } from "@stagedesk/db";
 import { amountDue } from "@stagedesk/payments";

@@ -1,7 +1,8 @@
 "use client";
 
 import { BellIcon, CheckCheckIcon } from "lucide-react";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useNow, useTranslations } from "next-intl";
+import { useFormatter } from "@/components/date-prefs";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { NOTIFICATION_EVENT } from "@/components/messages/composer";

@@ -4639,5 +4639,26 @@
   "languages": {
     "nl": "Dutch",
     "en": "English"
+  },
+  "select": {
+    "search": "Search…",
+    "empty": "No matches."
+  },
+  "dateTime": {
+    "title": "Date and time",
+    "timeZone": "Timezone",
+    "timeZoneHint": "Times of bookings, messages and payments are shown in this timezone.",
+    "dateFormat": "Date format",
+    "timeFormat": "Time format",
+    "useDefault": "Use default ({value})",
+    "languageDefault": "Language default",
+    "clock_24h": "24-hour",
+    "clock_12h": "12-hour",
+    "preview": "Example:",
+    "platformHint": "The default for everyone. Agencies and people can choose their own.",
+    "agencyHint": "For everyone at your agency and your customers, unless they choose their own.",
+    "profileHint": "Only for you. Leave a field on default to follow your agency or the platform.",
+    "saved": "Date and time settings saved.",
+    "invalid": "Choose a valid timezone and formats."
   }
 }

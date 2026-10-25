@@ -1,7 +1,8 @@
 import { CalendarIcon, FileDownIcon, MapPinIcon, PartyPopperIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, type EventType, paymentStatus, todayInNetherlands, localePrefix } from "@stagedesk/core";
 import { PayPanel } from "@/components/booking/pay-panel";
 import { MessageThread } from "@/components/messages/message-thread";

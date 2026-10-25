@@ -1,5 +1,6 @@
 import { CalendarHeartIcon, CheckCircle2Icon, MessagesSquareIcon, Music2Icon, PartyPopperIcon, WalletIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, type EventType, todayInNetherlands } from "@stagedesk/core";
 import type { TenantDb } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";

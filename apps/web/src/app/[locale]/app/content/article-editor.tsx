@@ -17,6 +17,7 @@ import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { deleteArticleAction, saveArticleAction, uploadContentImageAction } from "./actions";
 import type { ArticleValues, LocaleText } from "./article-values";
+import { NativeSelect } from "@/components/ui/native-select";
 
 
 const slugify = (s: string) =>
@@ -342,14 +343,14 @@ export function ArticleEditor({
             </FormField>
             {kind !== "changelog" && (
               <FormField id="category" label={t("category")}>
-                <select id="category" value={v.categoryId} onChange={(e) => setV({ ...v, categoryId: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
+                <NativeSelect id="category" value={v.categoryId} onChange={(e) => setV({ ...v, categoryId: e.target.value })} className="h-9 w-full rounded-md border bg-background px-3 text-sm">
                   <option value="">{t("noCategory")}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </FormField>
             )}
             {kind === "blog" && (

@@ -1,7 +1,8 @@
 import { BanknoteIcon, PercentIcon, RepeatIcon, Undo2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { pageWindow, parseListQuery } from "@stagedesk/core";
 import { type Prisma, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";

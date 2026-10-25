@@ -1,7 +1,8 @@
 import { MailCheckIcon, MailPlusIcon, MailXIcon, PlusIcon, SendIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { campaignStatuses, listSubscribers, type Prisma, prisma, subscriberSources, subscriberStatuses } from "@stagedesk/db";
 import { pageWindow, parseListQuery } from "@stagedesk/core";
 import { EmptyState } from "@/components/empty-state";

@@ -1,5 +1,6 @@
 import { MessagesSquareIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type MessageChannel, markThreadRead, threadMessages } from "@stagedesk/db";
 import { cn } from "@/lib/utils";
 import { Composer, LiveThread } from "./composer";

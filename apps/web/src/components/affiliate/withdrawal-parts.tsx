@@ -1,5 +1,6 @@
 import { CheckIcon, CircleDotIcon, XIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import type { withdrawalDetail } from "@stagedesk/db";
 import { CommissionStatusBadge, Pill } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

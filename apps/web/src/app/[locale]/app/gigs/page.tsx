@@ -1,7 +1,8 @@
 import { ClipboardListIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type EventType, todayInNetherlands } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";

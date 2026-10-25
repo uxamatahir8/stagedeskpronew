@@ -1,7 +1,8 @@
 "use client";
 
 import { PlusIcon, SendIcon, Trash2Icon } from "lucide-react";
-import { useFormatter, useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useFormatter } from "@/components/date-prefs";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { computeQuote, parseEuros, parseQuantity } from "@stagedesk/core";

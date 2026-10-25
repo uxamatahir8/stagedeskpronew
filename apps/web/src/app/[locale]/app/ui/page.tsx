@@ -1,7 +1,8 @@
 import { CalendarCheckIcon, EuroIcon, InboxIcon, PlusIcon, ReceiptIcon, TimerIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { bookingStatuses, type BookingStatus } from "@stagedesk/core";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";

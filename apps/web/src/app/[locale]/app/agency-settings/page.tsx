@@ -6,6 +6,7 @@ import { getSetting, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
+import { platformDatePrefs } from "@/lib/date-prefs";
 import { requireAgency } from "@/lib/viewer";
 import { AgencyForm, LogoForm } from "./agency-forms";
 import { PaymentMethodsForm } from "./payment-methods-form";
@@ -28,10 +29,11 @@ async function AgencySettings() {
   const { organization } = await requireAgency("agency.settings");
   const t = await getTranslations("agencySettings");
   // The id comes from the viewer's own membership, so this reads only their agency.
-  const [agency, allowed, connected] = await Promise.all([
+  const [agency, allowed, connected, platformDates] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: organization.id } }),
     getSetting("payments.methods"),
     prisma.connectedAccount.count({ where: { organizationId: organization.id, artistId: null, chargesEnabled: true } }),
+    platformDatePrefs(),
   ]);
 
   return (
@@ -52,6 +54,8 @@ async function AgencySettings() {
           brandColor: agency.brandColor ?? "",
           currency: agency.currency,
         }}
+        dates={{ timeZone: agency.timeZone ?? "", dateFormat: agency.dateFormat ?? "", timeFormat: agency.timeFormat ?? "" }}
+        platformDates={platformDates}
       />
       <PaymentMethodsForm
         values={{

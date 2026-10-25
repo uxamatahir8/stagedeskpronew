@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { parseEuros, type SettingKey, type SettingValue } from "@stagedesk/core";
 import { draftToFeeRule, FeeRuleFields, feeRuleToDraft } from "@/components/fee-rule-fields";
+import { DateTimeFields } from "@/components/date-time-fields";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ export function SettingsForms({
   plans: { key: string; name: string }[];
 }) {
   const t = useTranslations("platformSettings");
+  const td = useTranslations("dateTime");
   const tl = useTranslations("languages");
   const locale = useLocale();
   const [pending, save] = useSave();
@@ -208,6 +210,13 @@ export function SettingsForms({
               <span className="block text-xs text-muted-foreground">{t("waitlistModeHint")}</span>
             </label>
             <Switch id="set-waitlist" checked={s.waitlistMode} onCheckedChange={(c) => setS({ ...s, waitlistMode: c })} />
+          </div>
+          <div className="grid gap-3 border-t pt-4 sm:col-span-2">
+            <div>
+              <h3 className="text-sm font-medium">{td("title")}</h3>
+              <p className="text-xs text-muted-foreground">{td("platformHint")}</p>
+            </div>
+            <DateTimeFields idPrefix="set-dt" initial={{ timeZone: s.timeZone, dateFormat: s.dateFormat, timeFormat: s.timeFormat }} onChange={(v) => setS({ ...s, ...(v as Pick<typeof s, "timeZone" | "dateFormat" | "timeFormat">) })} />
           </div>
           <div className="sm:col-span-2">
             <Button disabled={pending} onClick={() => save("site.general", s, t("invalid"))}>

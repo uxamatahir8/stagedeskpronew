@@ -1,7 +1,8 @@
 import { CalendarOffIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { todayInNetherlands } from "@stagedesk/core";
 import { prisma, toDateOnly } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";

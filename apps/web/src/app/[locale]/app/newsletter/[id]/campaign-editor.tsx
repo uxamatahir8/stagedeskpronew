@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowDownIcon, ArrowLeftIcon, ArrowUpIcon, CalendarClockIcon, EyeIcon, PlusIcon, SendIcon, TestTubeIcon, XIcon } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
+import { useFormatter } from "@/components/date-prefs";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { matchesSearch } from "@stagedesk/core";
@@ -14,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cancelAction, type CampaignForm, previewCampaignAction, saveCampaignAction, scheduleAction, sendNowAction, sendTestAction } from "../actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 interface Campaign extends CampaignForm {
   id: string;
@@ -161,13 +163,13 @@ export function CampaignEditor({
                   <Textarea id="nc-body-en" rows={7} value={v.bodyEn} onChange={(e) => set({ bodyEn: e.target.value })} />
                 </FormField>
                 <FormField id="nc-audience" label={t("audience")} required>
-                  <select id="nc-audience" className={selectClass} value={v.audience} onChange={(e) => set({ audience: e.target.value as "all" })}>
+                  <NativeSelect id="nc-audience" className={selectClass} value={v.audience} onChange={(e) => set({ audience: e.target.value as "all" })}>
                     {(["all", "nl", "en"] as const).map((a) => (
                       <option key={a} value={a}>
                         {t(`audience_${a}`)} · {t("audienceCount", { count: audienceSizes[a] })}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 </FormField>
               </fieldset>
             </CardContent>
@@ -296,10 +298,10 @@ export function CampaignEditor({
               <EyeIcon className="size-4 text-primary" aria-hidden />
               {t("preview")}
             </CardTitle>
-            <select aria-label={t("previewLocale")} className={selectClass} value={previewLocale} onChange={(e) => setPreviewLocale(e.target.value as "nl")}>
+            <NativeSelect aria-label={t("previewLocale")} className={selectClass} value={previewLocale} onChange={(e) => setPreviewLocale(e.target.value as "nl")}>
               <option value="nl">{tl("nl")}</option>
               <option value="en">{tl("en")}</option>
-            </select>
+            </NativeSelect>
           </CardHeader>
           <CardContent>
             {preview ? (

@@ -28,6 +28,10 @@ model User {
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
   platformRole     String?           @db.VarChar(32)
   locale           String?           @default("en") @db.VarChar(8)
+  /// Personal date and time display; null follows the agency, then the platform.
+  timeZone         String?           @db.VarChar(64)
+  dateFormat       String?           @db.VarChar(16)
+  timeFormat       String?           @db.VarChar(4)
   /// Set by the platform admin: the user can't sign in.
   disabledAt       DateTime?
   phone            String?           @db.VarChar(32)
@@ -113,6 +117,10 @@ model Organization {
   rolePermissions    Json?
   /// ISO 4217 code for quotes, invoices and payments; new bookings copy it.
   currency           String                 @default("EUR") @db.VarChar(3)
+  /// Date and time display for the agency; null follows the platform default.
+  timeZone           String?                @db.VarChar(64)
+  dateFormat         String?                @db.VarChar(16)
+  timeFormat         String?                @db.VarChar(4)
   vatNumber          String?                @db.VarChar(20)
   contactEmail       String?                @db.VarChar(191)
   phone              String?                @db.VarChar(32)

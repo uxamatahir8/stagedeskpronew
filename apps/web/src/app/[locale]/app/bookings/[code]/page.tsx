@@ -2,7 +2,8 @@ import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, Messa
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import {
   availableActions,
   type BookingStatus,

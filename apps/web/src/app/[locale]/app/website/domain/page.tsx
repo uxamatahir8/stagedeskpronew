@@ -1,7 +1,8 @@
 import { ArrowLeftIcon, ExternalLinkIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { agencyBilling, agencyDomains, siteEditorData } from "@stagedesk/db";
 import { CopyField } from "@/components/copy-field";
 import { PageHeader } from "@/components/page-header";

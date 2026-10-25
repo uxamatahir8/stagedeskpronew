@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { getSetting, prisma, secretHints } from "@stagedesk/db";
 import { handledStripeEvents, stripeConfig } from "@stagedesk/payments";
 import { PageHeader } from "@/components/page-header";

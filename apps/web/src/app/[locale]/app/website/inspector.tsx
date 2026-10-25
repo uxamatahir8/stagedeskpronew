@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadSiteImageAction } from "./actions";
+import { NativeSelect } from "@/components/ui/native-select";
 
 /**
  * What each section type lets the agency change. One list per type drives the
@@ -105,13 +106,13 @@ function FieldInput({ field, id, value, onChange }: { field: Field; id: string; 
         <div className="grid gap-1.5">
           <Label htmlFor={id}>{label}</Label>
           {/* A native select keeps the inspector light and works with the keyboard. */}
-          <select id={id} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm">
+          <NativeSelect id={id} value={String(value ?? "")} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-md border bg-background px-3 text-sm">
             {field.options.map((o) => (
               <option key={o} value={o}>
                 {t(`opt_${field.key}_${o}` as "opt_align_center")}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       );
     case "image":

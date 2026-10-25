@@ -1,4 +1,5 @@
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 
 import { agencyBilling } from "@stagedesk/db";
 import { Link } from "@/i18n/navigation";

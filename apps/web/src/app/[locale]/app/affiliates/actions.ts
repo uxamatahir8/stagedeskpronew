@@ -2,7 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { z } from "zod";
 import { affiliateCodePattern, promoCodePattern } from "@stagedesk/core";
 import { AffiliateAdminError, approveWithdrawal, audit, createAffiliateByAdmin, deleteAffiliateByAdmin, markWithdrawalPaid, prisma, rejectWithdrawal, requestWithdrawal, reviewCommission, setAffiliateStatus, updateAffiliateByAdmin, WithdrawalError } from "@stagedesk/db";

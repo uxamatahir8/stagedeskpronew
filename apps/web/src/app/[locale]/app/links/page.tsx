@@ -1,7 +1,8 @@
 import { DownloadIcon, FileImageIcon, FileTextIcon, ImageIcon, MailIcon, VideoIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { getSetting, prisma } from "@stagedesk/db";
 import { FormMessage } from "@/components/auth/auth-card";
 import { PageHeader } from "@/components/page-header";

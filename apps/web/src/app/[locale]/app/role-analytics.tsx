@@ -1,5 +1,6 @@
 import { CheckCircle2Icon, CircleIcon, PercentIcon, StarIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import type { EventType } from "@stagedesk/core";
 import { affiliateDashboard, artistDashboard, type TenantDb } from "@stagedesk/db";
 import { AreaTrend } from "@/components/charts/area-trend";

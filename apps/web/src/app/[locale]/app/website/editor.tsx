@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { createPageAction, deletePageAction, publishAction, reorderPagesAction, saveDraftAction, saveThemeAction, setLiveAction, updatePageSettingsAction } from "./actions";
 import { SectionInspector } from "./inspector";
 import { cloneSection, newSection } from "./new-section";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export type EditorPage = { id: string; slug: string; inNav: boolean; draft: SitePageContent; changed: boolean };
 type Lang = "nl" | "en";
@@ -223,7 +224,7 @@ export function SiteEditor({
         <label htmlFor="ed-page" className="sr-only">
           {t("pages")}
         </label>
-        <select
+        <NativeSelect
           id="ed-page"
           value={page.id}
           onChange={(e) => {
@@ -238,7 +239,7 @@ export function SiteEditor({
               {p.slug ? ` (/${p.slug})` : ""}
             </option>
           ))}
-        </select>
+        </NativeSelect>
         <NewPageDialog
           onCreate={(input) =>
             pageAction(async () => {
@@ -465,30 +466,30 @@ export function SiteEditor({
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="th-font">{t("font")}</Label>
-                <select id="th-font" value={theme.font} onChange={(e) => changeTheme({ font: e.target.value as SiteTheme["font"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
+                <NativeSelect id="th-font" value={theme.font} onChange={(e) => changeTheme({ font: e.target.value as SiteTheme["font"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
                   {siteFonts.map((f) => (
                     <option key={f} value={f}>
                       {t(`font_${f}`)}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="th-radius">{t("corners")}</Label>
-                <select id="th-radius" value={theme.radius} onChange={(e) => changeTheme({ radius: e.target.value as SiteTheme["radius"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
+                <NativeSelect id="th-radius" value={theme.radius} onChange={(e) => changeTheme({ radius: e.target.value as SiteTheme["radius"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
                   {(["sharp", "soft", "round"] as const).map((r) => (
                     <option key={r} value={r}>
                       {t(`radius_${r}`)}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
               </div>
               <div className="grid gap-1.5">
                 <Label htmlFor="th-mode">{t("header")}</Label>
-                <select id="th-mode" value={theme.mode} onChange={(e) => changeTheme({ mode: e.target.value as SiteTheme["mode"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
+                <NativeSelect id="th-mode" value={theme.mode} onChange={(e) => changeTheme({ mode: e.target.value as SiteTheme["mode"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
                   <option value="light">{t("mode_light")}</option>
                   <option value="dark">{t("mode_dark")}</option>
-                </select>
+                </NativeSelect>
               </div>
               <div className="flex items-center justify-between gap-3 border-t pt-4">
                 <Label htmlFor="th-english" className="grid gap-0.5">

@@ -1,5 +1,6 @@
 import { AlertTriangleIcon, BadgeEuroIcon, BuildingIcon, HandshakeIcon, LifeBuoyIcon, RepeatIcon, TimerIcon, WebhookIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { inquiriesByMonth, newAgenciesByMonth, platformVolumeByMonth, prisma } from "@stagedesk/db";
 import { ColumnChart } from "@/components/charts/column-chart";
 import { EmptyState } from "@/components/empty-state";

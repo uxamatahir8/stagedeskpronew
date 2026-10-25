@@ -1,7 +1,8 @@
 import { BadgeCheckIcon, BuildingIcon, HourglassIcon, PauseCircleIcon, SearchIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getFormatter, getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { feeRuleSchema, parseListQuery } from "@stagedesk/core";
 import { activePlans, type AgencyStatusFilter, agencyStatusFilters, listAgencies, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
@@ -20,6 +21,7 @@ import type { Locale } from "@/i18n/routing";
 import { requirePermission } from "@/lib/viewer";
 import { CreateAgencyDialog } from "./agency-dialogs";
 import { FeeDealDialog } from "./fee-deal";
+import { NativeSelect } from "@/components/ui/native-select";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/agencies">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "agencies" });
@@ -108,14 +110,14 @@ async function Agencies({ searchParams }: Pick<PageProps<"/[locale]/app/agencies
           <label htmlFor="ag-plan" className="sr-only">
             {ta("plan")}
           </label>
-          <select id="ag-plan" name="plan" defaultValue={planKey ?? ""} className="h-9 rounded-md border bg-background px-3 text-sm">
+          <NativeSelect id="ag-plan" name="plan" defaultValue={planKey ?? ""} className="h-9 rounded-md border bg-background px-3 text-sm">
             <option value="">{ta("allPlans")}</option>
             {plans.map((p) => (
               <option key={p.id} value={p.key}>
                 {planName(p.name, p.key)}
               </option>
             ))}
-          </select>
+          </NativeSelect>
           <Button type="submit" variant="outline">
             {ta("search")}
           </Button>

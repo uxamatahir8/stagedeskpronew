@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getFormatter, getLocale, getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { parseEuros } from "@stagedesk/core";
 import { audit } from "@stagedesk/db";
 import { connectDashboardLink, connectOnboardingLink, getStripe, refundPayment } from "@stagedesk/payments";

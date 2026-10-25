@@ -1,5 +1,6 @@
 import { CalendarClockIcon, CalendarIcon, HandCoinsIcon, InboxIcon, MapPinIcon, WalletIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { type EventType, percentOf, todayInNetherlands } from "@stagedesk/core";
 import { prisma, toDateOnly } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";

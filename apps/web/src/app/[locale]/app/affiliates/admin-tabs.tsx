@@ -1,5 +1,6 @@
 import { BanknoteIcon, ClockIcon, HourglassIcon, MousePointerClickIcon, TrendingUpIcon, UsersIcon, WalletIcon } from "lucide-react";
-import { getFormatter, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
+import { getFormatter } from "@/lib/formatter";
 import { todayInNetherlands } from "@stagedesk/core";
 import { affiliateReport, listWithdrawals, prisma } from "@stagedesk/db";
 import { WithdrawalStatus } from "@/components/affiliate/withdrawal-parts";
