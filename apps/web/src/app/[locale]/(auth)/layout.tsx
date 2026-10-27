@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, CheckIcon } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Suspense } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Screenshot } from "@/components/site/screenshot";
 import { LocaleSwitch } from "@/components/site/site-nav";
@@ -51,7 +52,9 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
             <Logo className="h-8 sm:hidden" />
           </Link>
           <div className="flex items-center gap-1">
-            <LocaleSwitch />
+            <Suspense fallback={<div className="h-8 w-12" />}>
+              <LocaleSwitch />
+            </Suspense>
             <ThemeToggle />
           </div>
         </div>
