@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
 import { bookingStatuses, type BookingStatus } from "@stagedesk/core";
+import { DatePicker } from "@/components/date-picker";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -92,6 +93,16 @@ export default async function DesignSystemPage({ params }: PageProps<"/[locale]/
                   <SelectItem value="birthday">{t("birthday")}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="ui-date">{t("eventDate")}</Label>
+                <DatePicker id="ui-date" />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="ui-time">{t("startTime")}</Label>
+                <DatePicker id="ui-time" mode="time" />
+              </div>
             </div>
             <div className="flex items-center justify-between gap-4">
               <Label htmlFor="ui-notify">{t("notify")}</Label>

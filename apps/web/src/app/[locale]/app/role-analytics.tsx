@@ -100,9 +100,19 @@ export async function CustomerProgress({ db, userId }: { db: TenantDb; userId: s
     { key: "paid", done: next.totalCents > 0 && next.paidCents >= next.totalCents },
   ] as const;
   const done = checks.filter((c) => c.done).length;
+  // Everything this customer has booked here, in the currency most of it is in.
+  const currency = bookings[0]?.currency ?? "EUR";
+  const same = bookings.filter((b) => b.currency === currency);
+  const booked = same.reduce((s, b) => s + b.totalCents, 0);
+  const paid = same.reduce((s, b) => s + Math.min(b.paidCents, b.totalCents), 0);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3 lg:col-span-2">
+        <StatCard index={0} tone="violet" label={t("customerBooked")} value={euro(format, booked, currency)} hint={t("customerBookings", { count: bookings.length })} />
+        <StatCard index={1} tone="teal" label={t("customerPaid")} value={euro(format, paid, currency)} hint={booked ? `${Math.round((paid / booked) * 100)}%` : undefined} />
+        <StatCard index={2} tone="amber" label={t("customerDue")} value={euro(format, Math.max(0, booked - paid), currency)} />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>{t("readiness")}</CardTitle>
@@ -178,6 +188,14 @@ export async function AffiliateAnalytics({ affiliateId }: { affiliateId: string 
           </CardHeader>
           <CardContent>
             <AreaTrend label={t("clicksTrend")} unit="count" data={d.clicksByMonth} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("signupsTrendPartner")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AreaTrend label={t("signupsTrendPartner")} unit="count" data={d.signupsByMonth} />
           </CardContent>
         </Card>
         <Card>

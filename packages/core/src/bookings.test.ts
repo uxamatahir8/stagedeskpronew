@@ -7,6 +7,8 @@ import {
   formatInvoiceNumber,
   generateTrackingCode,
   paymentStatus,
+  isPastInNetherlands,
+  timeInNetherlands,
   todayInNetherlands,
   transition,
 } from "./bookings";
@@ -117,6 +119,19 @@ describe("booking helpers", () => {
   it("uses the Dutch date, not the server's", () => {
     // 23:30 UTC on 31 Dec is already New Year in Amsterdam.
     expect(todayInNetherlands(new Date("2026-12-31T23:30:00Z"))).toBe("2027-01-01");
+  });
+
+  it("tells whether an event date and start time have passed in the Netherlands", () => {
+    // 13:30 UTC is 14:30 in Amsterdam (winter time).
+    const now = new Date("2026-11-10T13:30:00Z");
+    expect(timeInNetherlands(now)).toBe("14:30");
+    expect(isPastInNetherlands("2026-11-09", null, now)).toBe(true);
+    expect(isPastInNetherlands("2026-11-09", "23:00", now)).toBe(true);
+    expect(isPastInNetherlands("2026-11-10", null, now)).toBe(false);
+    expect(isPastInNetherlands("2026-11-10", "14:00", now)).toBe(true);
+    expect(isPastInNetherlands("2026-11-10", "14:30", now)).toBe(false);
+    expect(isPastInNetherlands("2026-11-10", "20:00", now)).toBe(false);
+    expect(isPastInNetherlands("2026-11-11", "09:00", now)).toBe(false);
   });
 
   it("makes readable tracking codes", () => {

@@ -27,7 +27,7 @@ export function CurrencySwitch({ current, options }: { current: string; options:
     >
       <SelectTrigger
         aria-label={t("currencyCurrent", { currency: currencyName(current, locale) })}
-        className="h-8 gap-1.5 border-transparent bg-transparent px-2 font-medium tabular-nums shadow-none hover:bg-accent dark:bg-transparent"
+        className="h-8 gap-1 border-transparent bg-transparent px-1.5 font-medium tabular-nums shadow-none hover:bg-accent sm:gap-1.5 sm:px-2 dark:bg-transparent"
       >
         <CurrencyFlag code={current} />
         {current}

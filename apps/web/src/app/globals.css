@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "flatpickr/dist/flatpickr.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -319,4 +320,96 @@ label[data-slot="label"][data-required]::after {
   content: " *" / "";
   color: var(--destructive);
   font-weight: 600;
+}
+
+/*
+ * flatpickr (components/date-picker.tsx) in StageDesk colours, light and dark.
+ * Each rule is prefixed with .flatpickr-calendar to outrank the library's own.
+ */
+.flatpickr-calendar {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 1px var(--border), 0 8px 24px -8px oklch(0 0 0 / 25%);
+  font-family: inherit;
+}
+.flatpickr-calendar::before,
+.flatpickr-calendar::after {
+  display: none;
+}
+.flatpickr-calendar .flatpickr-months .flatpickr-month,
+.flatpickr-calendar .flatpickr-months .flatpickr-prev-month,
+.flatpickr-calendar .flatpickr-months .flatpickr-next-month {
+  color: inherit;
+  fill: currentColor;
+}
+.flatpickr-calendar .flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-calendar .flatpickr-months .flatpickr-next-month:hover svg {
+  fill: var(--primary);
+}
+.flatpickr-calendar .flatpickr-current-month {
+  font-size: 1rem;
+}
+.flatpickr-calendar .flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-calendar .flatpickr-current-month input.cur-year {
+  font-weight: 600;
+}
+.flatpickr-calendar .flatpickr-current-month .flatpickr-monthDropdown-months:hover,
+.flatpickr-calendar .numInputWrapper:hover {
+  background: var(--accent);
+}
+.flatpickr-calendar .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month {
+  background: var(--popover);
+  color: var(--popover-foreground);
+}
+.flatpickr-calendar .numInputWrapper span.arrowUp::after {
+  border-bottom-color: currentColor;
+}
+.flatpickr-calendar .numInputWrapper span.arrowDown::after {
+  border-top-color: currentColor;
+}
+.flatpickr-calendar span.flatpickr-weekday {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.flatpickr-calendar .flatpickr-day {
+  color: inherit;
+  border-radius: var(--radius-md);
+}
+.flatpickr-calendar .flatpickr-day:is(:hover, :focus):not(.flatpickr-disabled, .selected) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-foreground);
+}
+.flatpickr-calendar .flatpickr-day.today {
+  border-color: var(--ring);
+}
+.flatpickr-calendar .flatpickr-day:is(.prevMonthDay, .nextMonthDay) {
+  color: var(--muted-foreground);
+}
+.flatpickr-calendar .flatpickr-day.flatpickr-disabled {
+  color: var(--muted-foreground);
+  opacity: 0.4;
+}
+.flatpickr-calendar .flatpickr-day.selected {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+.flatpickr-calendar.hasTime .flatpickr-time {
+  border-top: 1px solid var(--border);
+}
+.flatpickr-calendar.noCalendar.hasTime .flatpickr-time {
+  border-top: 0;
+}
+.flatpickr-calendar .flatpickr-time :is(input, .flatpickr-am-pm, .flatpickr-time-separator) {
+  color: inherit;
+}
+.flatpickr-calendar .flatpickr-time :is(input, .flatpickr-am-pm):is(:hover, :focus) {
+  background: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .flatpickr-calendar.animate.open {
+    animation: none;
+  }
 }

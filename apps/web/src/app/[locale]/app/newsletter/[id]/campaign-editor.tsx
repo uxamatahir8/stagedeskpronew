@@ -11,6 +11,7 @@ import { Pill, type Tone } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
@@ -30,7 +31,7 @@ interface Campaign extends CampaignForm {
 const tone: Record<string, Tone> = { draft: "neutral", scheduled: "info", sending: "warning", sent: "success", cancelled: "danger" };
 const selectClass = "h-9 rounded-md border bg-background px-2.5 text-sm";
 
-/** Local date-time for <input type="datetime-local">, a minute ahead by default. */
+/** Local date-time for the DatePicker (yyyy-mm-ddTHH:mm), an hour ahead by default. */
 function localInput(iso: string | null) {
   const d = iso ? new Date(iso) : new Date(Date.now() + 60 * 60_000);
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
@@ -247,7 +248,7 @@ export function CampaignEditor({
                     {t("schedule")}
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} aria-label={t("scheduleAt")} className="w-fit" />
+                    <DatePicker mode="datetime" value={when} onChange={setWhen} aria-label={t("scheduleAt")} className="w-56" />
                     <Button variant="outline" disabled={pending} onClick={() => withSaved((id) => scheduleAction(id, new Date(when).toISOString()))}>
                       {t("schedule")}
                     </Button>

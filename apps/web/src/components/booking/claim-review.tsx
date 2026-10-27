@@ -8,6 +8,7 @@ import { confirmClaimAction, rejectClaimAction } from "@/app/[locale]/app/paymen
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
@@ -42,7 +43,7 @@ export function ClaimReview({ claimId, paidOn }: { claimId: string; paidOn: stri
             <DialogDescription>{t("confirmHint")}</DialogDescription>
           </DialogHeader>
           <FormField required id={`cr-date-${claimId}`} label={t("receivedOn")}>
-            <Input required id={`cr-date-${claimId}`} type="date" value={receivedOn} onChange={(e) => setReceivedOn(e.target.value)} />
+            <DatePicker required id={`cr-date-${claimId}`} value={receivedOn} onChange={setReceivedOn} />
           </FormField>
           <DialogFooter>
             <DialogClose asChild>

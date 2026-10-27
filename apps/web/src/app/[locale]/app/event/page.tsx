@@ -182,7 +182,13 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
                 <p>{t("customerEvent.paidOf", { paid: euro(format, booking.paidCents, booking.currency), total: euro(format, booking.totalCents, booking.currency) })}</p>
-                <PayPanel booking={booking} pay={payBookingAction.bind(null, booking.id, "event")} report={reportPaymentAction.bind(null, booking.id)} paid={query["paid"]} />
+                <PayPanel
+                  booking={booking}
+                  pay={payBookingAction.bind(null, booking.id, "event")}
+                  report={reportPaymentAction.bind(null, booking.id)}
+                  paid={query["paid"]}
+                  allowRequestDetails
+                />
                 {booking.invoices.map((inv) => (
                   <Button key={inv.id} variant="outline" size="sm" asChild className="w-fit">
                     <a href={`/api/pdf/invoice/${inv.id}?lang=${locale}`} target="_blank" rel="noopener">

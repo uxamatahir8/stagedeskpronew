@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
@@ -86,7 +87,7 @@ export function WithdrawalActions({ payoutId, status, method, today }: { payoutI
                 <Input id="wd-ref" maxLength={120} value={ref} onChange={(e) => setRef(e.target.value)} />
               </FormField>
               <FormField id="wd-date" label={t("paidOn")}>
-                <Input id="wd-date" type="date" max={today} value={paidOn} onChange={(e) => setPaidOn(e.target.value)} />
+                <DatePicker id="wd-date" max={today} value={paidOn} onChange={setPaidOn} />
               </FormField>
             </div>
           )}

@@ -2,13 +2,14 @@
 
 import { PartyPopperIcon, ShoppingBagIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { type EventType, eventTypes } from "@stagedesk/core";
+import { type FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { type EventType, eventTypes, timeInNetherlands } from "@stagedesk/core";
 import { FormMessage } from "@/components/auth/auth-card";
 import { FormField } from "@/components/form-field";
 import { Turnstile } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,22 +34,29 @@ export function OrderGigButton({
   const allowed = (listing.eventTypes ?? [...eventTypes]) as EventType[];
   const [open, setOpen] = useState(false);
   const [eventType, setEventType] = useState<EventType>(allowed[0] ?? "party");
+  const [eventDate, setEventDate] = useState("");
   const [result, setResult] = useState<{ code: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [captchaResetCount, setCaptchaResetCount] = useState(0);
   const [pending, start] = useTransition();
   const startedAt = useRef(0);
   useEffect(() => {
     if (open) startedAt.current = Date.now();
   }, [open]);
 
-  function submit(form: FormData) {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
     form.set("eventType", eventType);
     form.set("startedAt", String(startedAt.current));
     setError(null);
     start(async () => {
       const r = await orderGigAction(slug, listing.id, form);
       if (r.ok) setResult({ code: r.code, name: r.name });
-      else setError(r.message);
+      else {
+        setError(r.message);
+        setCaptchaResetCount((count) => count + 1);
+      }
     });
   }
 
@@ -78,7 +86,7 @@ export function OrderGigButton({
             <p className="text-sm text-muted-foreground">{t("artistDirectory.orderSent", { code: result.code })}</p>
           </div>
         ) : (
-          <form action={submit} className="grid gap-4 sm:grid-cols-2">
+          <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
             <FormField required id="og-type" label={t("bookingPage.eventType")}>
               <Select value={eventType} onValueChange={(v) => setEventType(v as EventType)}>
                 <SelectTrigger id="og-type" className="w-full">
@@ -94,10 +102,10 @@ export function OrderGigButton({
               </Select>
             </FormField>
             <FormField required id="og-date" label={t("bookingPage.date")}>
-              <Input id="og-date" name="eventDate" type="date" min={today} required />
+              <DatePicker id="og-date" name="eventDate" min={today} required value={eventDate} onChange={setEventDate} />
             </FormField>
             <FormField id="og-start" label={t("bookingPage.startTime")}>
-              <Input id="og-start" name="startTime" type="time" />
+              <DatePicker id="og-start" name="startTime" mode="time" min={eventDate === today ? timeInNetherlands() : undefined} />
             </FormField>
             <FormField id="og-guests" label={t("bookingPage.guests")}>
               <Input id="og-guests" name="guestCount" type="number" min={1} max={100000} inputMode="numeric" />
@@ -127,7 +135,7 @@ export function OrderGigButton({
               </label>
             </div>
             <div className="grid gap-3 sm:col-span-2">
-              {siteKey && <Turnstile siteKey={siteKey} language={locale} />}
+              {siteKey && <Turnstile siteKey={siteKey} language={locale} resetCount={captchaResetCount} />}
               <FormMessage>{error}</FormMessage>
               <Button type="submit" disabled={pending} className="w-full sm:w-fit">
                 <ShoppingBagIcon />

@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, generateTrackingCode, todayInNetherlands } from "@stagedesk/core";
+import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
 import { notify, platformAdminIds, submitLead } from "@stagedesk/db";
 import type { InquiryResult } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { runLeadBroadcast } from "@/lib/lead-market";
@@ -13,7 +13,7 @@ import { allow, clientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 const text = (max: number) =>
-  z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v), z.string().max(max).nullable());
+  z.preprocess((v) => (v == null || (typeof v === "string" && v.trim() === "") ? null : typeof v === "string" ? v.trim() : v), z.string().max(max).nullable());
 
 const schema = z.object({
   name: z.string().trim().min(2).max(191),
@@ -55,7 +55,7 @@ export async function submitLeadAction(form: FormData): Promise<InquiryResult> {
   const parsed = schema.safeParse(fields);
   if (!parsed.success) return { ok: false, message: t("errorRequired") };
   const d = parsed.data;
-  if (d.eventDate < todayInNetherlands()) return { ok: false, message: t("errorDate") };
+  if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`lead:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
 
   const locale = userLocale(await getLocale());

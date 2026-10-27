@@ -26,7 +26,6 @@ export default async function TourPage({ params }: PageProps<"/[locale]/tour">) 
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t.rich("title", { hl: (c) => <span className="text-brand-gradient">{c}</span> })}</h1>
           <p className="max-w-2xl text-lg text-muted-foreground">{t("intro")}</p>
           <Screenshot name="hero-collage" priority className="mt-6 rounded-3xl shadow-2xl shadow-primary/20" />
-          <p className="text-sm text-muted-foreground">{t("demoData")}</p>
         </div>
       </section>
 

@@ -2,13 +2,14 @@
 
 import { CalendarXIcon, PartyPopperIcon, SendIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { budgetRanges, eventTypes, type EventType } from "@stagedesk/core";
+import { type FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { budgetRanges, eventTypes, timeInNetherlands, type EventType } from "@stagedesk/core";
 import { type InquiryResult, submitInquiryAction } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { FormMessage } from "@/components/auth/auth-card";
 import { FormField } from "@/components/form-field";
 import { Turnstile } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,6 +46,7 @@ export function InquiryForm({
   const [date, setDate] = useState("");
   const [result, setResult] = useState<{ code: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [captchaResetCount, setCaptchaResetCount] = useState(0);
   const [formKey, setFormKey] = useState(0);
   // Set once the form is on screen; submissions faster than a human can type are treated as bots.
   const startedAt = useRef(0);
@@ -73,7 +75,9 @@ export function InquiryForm({
     );
   }
 
-  function submit(form: FormData) {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
     form.set("eventType", eventType);
     form.set("budgetRange", budget === NONE ? "" : budget);
     form.set("preferredArtistId", artist === NONE ? "" : artist);
@@ -82,14 +86,18 @@ export function InquiryForm({
     startTransition(async () => {
       const response = submitAction ? await submitAction(form) : await submitInquiryAction(slug, form);
       if (response.ok) setResult({ code: response.code, name: response.name });
-      else setError(response.message);
+      else {
+        setError(response.message);
+        setCaptchaResetCount((count) => count + 1);
+      }
     });
   }
 
   const booked = date !== "" && fullyBooked.includes(date);
+  const earliestStart = date === today ? timeInNetherlands() : undefined;
 
   return (
-    <form key={formKey} action={submit} className="grid gap-6">
+    <form key={formKey} onSubmit={submit} className="grid gap-6">
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-3 text-sm font-semibold">{t("bookingPage.eventDetails")}</legend>
         <FormField required id="inq-type" label={t("bookingPage.eventType")}>
@@ -107,7 +115,7 @@ export function InquiryForm({
           </Select>
         </FormField>
         <FormField id="inq-date" label={t("bookingPage.date")}>
-          <Input id="inq-date" name="eventDate" type="date" min={today} required value={date} onChange={(e) => setDate(e.target.value)} />
+          <DatePicker id="inq-date" name="eventDate" min={today} required value={date} onChange={setDate} />
         </FormField>
         {booked && (
           <p className="flex items-start gap-2 rounded-lg bg-warning/18 p-3 text-sm sm:col-span-2" role="status">
@@ -116,7 +124,7 @@ export function InquiryForm({
           </p>
         )}
         <FormField id="inq-start" label={t("bookingPage.startTime")}>
-          <Input id="inq-start" name="startTime" type="time" />
+          <DatePicker id="inq-start" name="startTime" mode="time" min={earliestStart} />
         </FormField>
         <FormField id="inq-guests" label={t("bookingPage.guests")}>
           <Input id="inq-guests" name="guestCount" type="number" min={1} max={100000} inputMode="numeric" />
@@ -203,7 +211,7 @@ export function InquiryForm({
         </label>
       </div>
 
-      {siteKey && <Turnstile siteKey={siteKey} language={locale} />}
+      {siteKey && <Turnstile siteKey={siteKey} language={locale} resetCount={captchaResetCount} />}
       <FormMessage>{error}</FormMessage>
       <p className="text-xs text-muted-foreground">{t("bookingPage.privacy")}</p>
       <Button type="submit" size="lg" disabled={pending} className="w-full sm:w-fit">

@@ -6,7 +6,7 @@ import type { Locale } from "@/i18n/routing";
 export default async function MarketingLayout({ children, params }: LayoutProps<"/[locale]">) {
   setRequestLocale((await params).locale as Locale);
   return (
-    <div className="site-motion flex min-h-svh flex-col bg-background">
+    <div className="site-motion flex min-h-svh min-w-0 flex-col overflow-x-clip bg-background">
       <SiteHeader />
       <div className="flex-1">{children}</div>
       <SiteFooter />

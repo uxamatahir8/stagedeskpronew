@@ -4,6 +4,7 @@ import { getFormatter } from "@/lib/formatter";
 import { type Permission, todayInNetherlands } from "@stagedesk/core";
 import { getSetting, type TenantDb, toDateOnly } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
+import { Pager } from "@/components/list-controls";
 import { StatCard } from "@/components/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
@@ -25,8 +26,10 @@ interface AttentionItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+const attentionPageSize = 5;
+
 /** The agency's home: four headline figures and the queue of bookings that need someone to act. */
-export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; permissions: readonly Permission[]; currency: string }) {
+export async function AgencyHome({ db, permissions, currency, attentionPage = 1 }: { db: TenantDb; permissions: readonly Permission[]; currency: string; attentionPage?: number }) {
   const [t, ta, format, defaults] = await Promise.all([
     getTranslations("home"),
     getTranslations("attention"),
@@ -47,12 +50,11 @@ export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; 
     db.booking.count({ where: { status: "quoted", quoteExpiresAt: { lte: addDays(today, 7) } } }),
     db.booking.count({ where: { status: { in: ["booked", "confirmed"] }, eventDate: { gte: toDateOnly(today), lte: weekEnd } } }),
     showMoney ? db.payment.aggregate({ where: { receivedAt: { gte: monthStart } }, _sum: { amountCents: true } }) : null,
-    db.booking.findMany({ where: { status: "inquiry" }, orderBy: { createdAt: "desc" }, take: 8, include: customer }),
-    db.booking.findMany({ where: { status: "quoted", quoteExpiresAt: { lte: soon } }, orderBy: { quoteExpiresAt: "asc" }, take: 5, include: customer }),
+    db.booking.findMany({ where: { status: "inquiry" }, orderBy: { createdAt: "desc" }, include: customer }),
+    db.booking.findMany({ where: { status: "quoted", quoteExpiresAt: { lte: soon } }, orderBy: { quoteExpiresAt: "asc" }, include: customer }),
     db.booking.findMany({
       where: { status: "booked" },
       orderBy: { eventDate: "asc" },
-      take: 8,
       include: { ...customer, assignments: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true } } },
     }),
     showMoney
@@ -62,12 +64,11 @@ export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; 
             eventDate: { lte: addDays(today, defaults.balanceDueDaysBeforeEvent) },
           },
           orderBy: { eventDate: "asc" },
-          take: 8,
           include: customer,
         })
       : [],
     // Payments customers reported (bank transfer, cash) that wait for someone to confirm receipt.
-    showMoney ? db.paymentClaim.findMany({ where: { status: "pending" }, orderBy: { createdAt: "asc" }, take: 8, include: { booking: { select: { trackingCode: true, ...customer } } } }) : [],
+    showMoney ? db.paymentClaim.findMany({ where: { status: "pending" }, orderBy: { createdAt: "asc" }, include: { booking: { select: { trackingCode: true, ...customer } } } }) : [],
   ]);
 
   const name = (b: { customer: { name: string } | null; trackingCode: string }) => b.customer?.name ?? b.trackingCode;
@@ -117,6 +118,9 @@ export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; 
       })),
   ];
 
+  const attentionPages = Math.max(1, Math.ceil(items.length / attentionPageSize));
+  const currentAttentionPage = Math.min(Math.max(1, attentionPage), attentionPages);
+  const visibleItems = items.slice((currentAttentionPage - 1) * attentionPageSize, currentAttentionPage * attentionPageSize);
   const toneClass = { info: "bg-info/12 text-info", warning: "bg-warning/18 text-foreground", danger: "bg-destructive/12 text-destructive" };
 
   return (
@@ -128,7 +132,7 @@ export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; 
         <StatCard index={3} label={t("stats.collected")} value={collected ? euro(format, collected._sum.amountCents ?? 0, currency) : "—"} icon={EuroIcon} />
       </section>
 
-      <Card>
+      <Card id="needs-attention" className="scroll-mt-20">
         <CardHeader>
           <CardTitle>{t("attentionTitle")}</CardTitle>
         </CardHeader>
@@ -136,21 +140,29 @@ export async function AgencyHome({ db, permissions, currency }: { db: TenantDb; 
           {items.length === 0 ? (
             <EmptyState icon={AlertTriangleIcon} title={t("attentionEmpty")} />
           ) : (
-            <ul className="divide-y">
-              {items.map((item) => (
-                <li key={item.key}>
-                  <Link href={item.href} className="flex items-center gap-3 py-3 hover:bg-accent/40">
-                    <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", toneClass[item.tone])}>
-                      <item.icon className="size-4" />
-                    </span>
-                    <span className="grid min-w-0">
-                      <span className="truncate font-medium">{item.text}</span>
-                      {item.detail && <span className="truncate text-sm text-muted-foreground">{item.detail}</span>}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="grid gap-4">
+              <ul className="divide-y">
+                {visibleItems.map((item) => (
+                  <li key={item.key}>
+                    <Link href={item.href} className="flex items-center gap-3 py-3 hover:bg-accent/40">
+                      <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full", toneClass[item.tone])}>
+                        <item.icon className="size-4" />
+                      </span>
+                      <span className="grid min-w-0">
+                        <span className="truncate font-medium">{item.text}</span>
+                        {item.detail && <span className="truncate text-sm text-muted-foreground">{item.detail}</span>}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <Pager
+                page={currentAttentionPage}
+                pages={attentionPages}
+                total={items.length}
+                href={(page) => `?attentionPage=${Math.min(Math.max(1, page), attentionPages)}#needs-attention`}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

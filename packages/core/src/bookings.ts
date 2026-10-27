@@ -144,6 +144,18 @@ export function todayInNetherlands(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Amsterdam" }).format(now);
 }
 
+/** The time in the Netherlands as "HH:mm" (24-hour), regardless of server timezone. */
+export function timeInNetherlands(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(now);
+}
+
+/** Whether a "YYYY-MM-DD" date, and its "HH:mm" start time if given, has already passed in the Netherlands. */
+export function isPastInNetherlands(date: string, time: string | null, now = new Date()): boolean {
+  const today = todayInNetherlands(now);
+  if (date !== today) return date < today;
+  return time !== null && time < timeInNetherlands(now);
+}
+
 export type PaymentStatus = "unpaid" | "partially_paid" | "deposit_paid" | "paid";
 
 export function paymentStatus(paid: Cents, total: Cents, deposit: Cents): PaymentStatus {

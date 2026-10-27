@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,6 +74,11 @@ export function SignInForm() {
     done(data && "twoFactorRedirect" in data && Boolean(data.twoFactorRedirect));
   }
 
+  const submit = (action: (form: FormData) => Promise<void>) => (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void action(new FormData(event.currentTarget));
+  };
+
   return (
     <Tabs defaultValue="password" onValueChange={() => setError(null)}>
       <TabsList className="w-full">
@@ -82,7 +87,7 @@ export function SignInForm() {
       </TabsList>
 
       <TabsContent value="password" className="mt-4">
-        <form action={signInWithPassword} className="grid gap-4">
+        <form onSubmit={submit(signInWithPassword)} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="signin-email">{t("auth.email")}</Label>
             <Input
@@ -114,7 +119,7 @@ export function SignInForm() {
 
       <TabsContent value="code" className="mt-4">
         {codeSentTo ? (
-          <form action={signInWithCode} className="grid gap-4">
+          <form onSubmit={submit(signInWithCode)} className="grid gap-4">
             <FormMessage tone="success">{t("auth.signIn.codeSent", { email: codeSentTo })}</FormMessage>
             <div className="grid gap-2">
               <Label htmlFor="signin-code">{t("auth.code")}</Label>
@@ -138,7 +143,7 @@ export function SignInForm() {
             </Button>
           </form>
         ) : (
-          <form action={sendCode} className="grid gap-4">
+          <form onSubmit={submit(sendCode)} className="grid gap-4">
             <p className="text-sm text-muted-foreground">{t("auth.signIn.codeIntro")}</p>
             <div className="grid gap-2">
               <Label htmlFor="signin-code-email">{t("auth.email")}</Label>

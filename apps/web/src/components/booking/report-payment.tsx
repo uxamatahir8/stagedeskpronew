@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
@@ -77,7 +78,7 @@ export function ReportPaymentDialog({
             <Input required id="rp-amount" inputMode="decimal" value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} />
           </FormField>
           <FormField required id="rp-date" label={t("pay.reportDate")}>
-            <Input required id="rp-date" type="date" max={today} value={v.paidOn} onChange={(e) => setV({ ...v, paidOn: e.target.value })} />
+            <DatePicker required id="rp-date" max={today} value={v.paidOn} onChange={(paidOn) => setV({ ...v, paidOn })} />
           </FormField>
           {v.method === "bank_transfer" && (
             <FormField id="rp-reference" label={t("pay.reportReference")} hint={t("pay.reportReferenceHint")} className="sm:col-span-2">

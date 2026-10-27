@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { eventTypes, type EventType } from "@stagedesk/core";
+import { DatePicker, type DatePickerMode } from "@/components/date-picker";
 import { FormField } from "@/components/form-field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,6 +44,11 @@ export function EventFields({ values, errors, idPrefix }: { values: EventValues;
       <Input id={id(name)} name={name} defaultValue={values[name]} aria-invalid={Boolean(errors[name])} {...props} />
     </FormField>
   );
+  const picker = (name: "eventDate" | "startTime" | "endTime", label: string, mode: DatePickerMode) => (
+    <FormField id={id(name)} label={label} error={errors[name]}>
+      <DatePicker id={id(name)} name={name} mode={mode} defaultValue={values[name]} aria-invalid={Boolean(errors[name])} />
+    </FormField>
+  );
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -61,9 +67,9 @@ export function EventFields({ values, errors, idPrefix }: { values: EventValues;
           </SelectContent>
         </Select>
       </FormField>
-      {text("eventDate", t("newBooking.eventDate"), { type: "date" })}
-      {text("startTime", t("newBooking.startTime"), { type: "time" })}
-      {text("endTime", t("newBooking.endTime"), { type: "time" })}
+      {picker("eventDate", t("newBooking.eventDate"), "date")}
+      {picker("startTime", t("newBooking.startTime"), "time")}
+      {picker("endTime", t("newBooking.endTime"), "time")}
       {text("venueName", t("newBooking.venueName"), { maxLength: 191 })}
       {text("venueCity", t("newBooking.venueCity"), { maxLength: 96 })}
       {text("venueAddress", t("newBooking.venueAddress"), { maxLength: 191, className: "sm:col-span-2" })}

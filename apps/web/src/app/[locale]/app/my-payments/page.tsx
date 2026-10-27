@@ -78,7 +78,12 @@ async function MyPayments({ searchParams }: Pick<PageProps<"/[locale]/app/my-pay
               </CardHeader>
               <CardContent className="grid gap-3 text-sm">
                 <p>{t("customerEvent.paidOf", { paid: euro(format, b.paidCents, b.currency), total: euro(format, b.totalCents, b.currency) })}</p>
-                <PayPanel booking={b} pay={payBookingAction.bind(null, b.id, "payments")} report={reportPaymentAction.bind(null, b.id)} />
+                <PayPanel
+                  booking={b}
+                  pay={payBookingAction.bind(null, b.id, "payments")}
+                  report={reportPaymentAction.bind(null, b.id)}
+                  allowRequestDetails
+                />
               </CardContent>
             </Card>
           ))}

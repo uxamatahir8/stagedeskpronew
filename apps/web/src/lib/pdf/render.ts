@@ -19,6 +19,10 @@ export async function canOpenBooking(request: Request, booking: { organizationId
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session) return false;
   if (session.user.id === booking.customerId) return true;
+  // Platform administrators act as agency admins while support mode is active.
+  // They can issue an invoice from the booking page, so the PDF route must
+  // recognize the same scoped access even though they are not agency members.
+  if (session.user.platformRole === "platform_admin" && session.session.supportOrganizationId === booking.organizationId) return true;
   const member = await prisma.member.findFirst({
     where: { userId: session.user.id, organizationId: booking.organizationId },
     select: { role: true },

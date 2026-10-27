@@ -9,6 +9,7 @@ import { Markdown } from "@/components/content/markdown";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -288,7 +289,7 @@ export function ArticleEditor({
               {t("currentStatus")}: <span className="font-medium">{t(`status_${v.status}`)}</span>
             </p>
             <FormField id="published-at" label={t("publishedAt")} hint={t("publishedAtHint")}>
-              <Input id="published-at" type="datetime-local" suppressHydrationWarning value={v.publishedAt} onChange={(e) => setV({ ...v, publishedAt: e.target.value })} />
+              <DatePicker id="published-at" mode="datetime" suppressHydrationWarning value={v.publishedAt} onChange={(publishedAt) => setV({ ...v, publishedAt })} />
             </FormField>
             <div className="grid gap-2">
               <Button onClick={() => save(true)} disabled={pending || uploading}>

@@ -7,6 +7,7 @@ declare global {
     turnstile?: {
       render: (el: HTMLElement, options: { sitekey: string; language?: string; callback?: (token: string) => void }) => string;
       remove: (id: string) => void;
+      reset: (id: string) => void;
     };
     onTurnstileLoad?: () => void;
   }
@@ -28,20 +29,25 @@ function loadScript() {
 }
 
 /** Cloudflare Turnstile widget. Adds a hidden `cf-turnstile-response` field to the surrounding form. */
-export function Turnstile({ siteKey, language }: { siteKey: string; language: string }) {
+export function Turnstile({ siteKey, language, resetCount = 0 }: { siteKey: string; language: string; resetCount?: number }) {
   const ref = useRef<HTMLDivElement>(null);
+  const widget = useRef<string>(undefined);
 
   useEffect(() => {
-    let id: string | undefined;
     let cancelled = false;
     void loadScript().then(() => {
-      if (!cancelled && ref.current && window.turnstile) id = window.turnstile.render(ref.current, { sitekey: siteKey, language });
+      if (!cancelled && ref.current && window.turnstile) widget.current = window.turnstile.render(ref.current, { sitekey: siteKey, language });
     });
     return () => {
       cancelled = true;
-      if (id) window.turnstile?.remove(id);
+      if (widget.current) window.turnstile?.remove(widget.current);
+      widget.current = undefined;
     };
   }, [siteKey, language]);
+
+  useEffect(() => {
+    if (resetCount > 0 && widget.current) window.turnstile?.reset(widget.current);
+  }, [resetCount]);
 
   return <div ref={ref} className="min-h-[65px]" />;
 }

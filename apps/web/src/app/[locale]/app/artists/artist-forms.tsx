@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -208,7 +209,7 @@ export function UnavailableDates({ artistId, dates, today }: { artistId: string;
           if (date) run(() => setUnavailableAction(artistId, date, true), () => setDate(""));
         }}
       >
-        <Input type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} className="w-44" aria-label={t("addDate")} />
+        <DatePicker min={today} value={date} onChange={setDate} className="w-44" aria-label={t("addDate")} />
         <Button type="submit" variant="outline" disabled={pending || !date}>
           {t("addDate")}
         </Button>

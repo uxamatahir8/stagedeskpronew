@@ -151,8 +151,8 @@ export function LocaleSwitch() {
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" disabled={pending} aria-label={t("languageCurrent", { language: current.label })}>
-          <GlobeIcon />
+        <Button variant="ghost" size="sm" className="px-1.5 sm:px-2.5" disabled={pending} aria-label={t("languageCurrent", { language: current.label })}>
+          <GlobeIcon className="hidden sm:block" />
           {current.code.toUpperCase()}
         </Button>
       </DropdownMenuTrigger>
@@ -180,11 +180,11 @@ export function MobileNav({ entries, signIn, cta }: { entries: NavEntry[]; signI
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("openMenu")}>
+        <Button variant="ghost" size="icon-sm" className="lg:hidden" aria-label={t("openMenu")}>
           <MenuIcon />
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-80 overflow-y-auto">
+      <SheetContent side="right" className="w-[min(20rem,100vw)] max-w-full overflow-x-hidden overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
             <Logo className="h-9 w-auto" />

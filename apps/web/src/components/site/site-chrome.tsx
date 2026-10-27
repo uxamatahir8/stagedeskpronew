@@ -89,7 +89,7 @@ async function HeaderActions() {
   return (
     <>
       <NavLinks entries={entries} />
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex min-w-0 items-center gap-0 sm:gap-1">
         <LocaleSwitch />
         <CurrencySwitch current={currency} options={currencyOptions} />
         <ThemeToggle />
@@ -119,9 +119,9 @@ async function HeaderActions() {
 export function SiteHeader() {
   return (
     <header className="site-header sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[88rem] items-center gap-4 px-5 sm:px-8 lg:px-12">
+      <div className="mx-auto flex h-16 w-full max-w-[88rem] min-w-0 items-center gap-2 px-3 sm:gap-4 sm:px-8 lg:px-12">
         <Link href="/" className="shrink-0" aria-label="StageDesk Pro">
-          <Logo className="h-9" priority />
+          <Logo className="h-7 sm:h-9" priority />
         </Link>
         <Suspense fallback={<div className="ml-auto h-8 w-40" />}>
           <HeaderActions />

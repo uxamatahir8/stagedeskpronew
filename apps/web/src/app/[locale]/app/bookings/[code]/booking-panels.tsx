@@ -18,6 +18,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -360,7 +361,7 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
             <Input id="pay-amount" name="amount" inputMode="decimal" required placeholder="0,00" />
           </FormField>
           <FormField id="pay-date" label={t("booking.receivedAt")}>
-            <Input id="pay-date" name="receivedAt" type="date" defaultValue={today} required />
+            <DatePicker id="pay-date" name="receivedAt" defaultValue={today} required />
           </FormField>
           <FormField required id="pay-kind" label={t("booking.kind")}>
             <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>

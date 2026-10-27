@@ -341,7 +341,6 @@ async function LookInside() {
             <ArrowRightIcon />
           </Link>
         </Button>
-        <p className="text-sm text-muted-foreground">{t("demoData")}</p>
       </div>
     </section>
   );

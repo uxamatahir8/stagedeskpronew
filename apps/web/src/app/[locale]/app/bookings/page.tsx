@@ -68,8 +68,8 @@ export default async function BookingsPage({ params, searchParams }: PageProps<"
 
 const spec = {
   sorts: ["date", "created", "customer", "status", "total"],
-  // Newest first, so a fresh inquiry without a date is never buried at the end.
-  defaultSort: "created",
+  // The event furthest forward in the calendar is shown first by default.
+  defaultSort: "date",
   defaultDir: "desc" as const,
   filters: { tab: ["open", "upcoming", "done", "closed"], status: [...bookingStatuses], type: [...eventTypes], paid: ["unpaid", "partly", "paid"] },
 };

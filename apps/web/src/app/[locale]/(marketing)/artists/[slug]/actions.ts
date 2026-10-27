@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, generateTrackingCode, todayInNetherlands } from "@stagedesk/core";
+import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
 import { artistProfile, ListingError, orderListing, submitInquiry } from "@stagedesk/db";
 import type { InquiryResult } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { announceNewBooking } from "@/lib/announce";
@@ -13,7 +13,7 @@ import { allow, clientIp } from "@/lib/rate-limit";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 const text = (max: number) =>
-  z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v), z.string().max(max).nullable());
+  z.preprocess((v) => (v == null || (typeof v === "string" && v.trim() === "") ? null : typeof v === "string" ? v.trim() : v), z.string().max(max).nullable());
 
 const eventFields = {
   name: z.string().trim().min(2).max(191),
@@ -61,7 +61,7 @@ export async function requestArtistPriceAction(slug: string, form: FormData): Pr
   const parsed = requestSchema.safeParse(fields);
   if (!parsed.success) return { ok: false, message: t("errorRequired") };
   const d = parsed.data;
-  if (d.eventDate < todayInNetherlands()) return { ok: false, message: t("errorDate") };
+  if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`artist-request:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
   // Only artists in the directory (with the Artist plan) can be booked directly.
   if (!(await artistProfile(slug))) return { ok: false, message: t("notFound") };
@@ -88,7 +88,7 @@ export async function orderGigAction(slug: string, listingId: string, form: Form
   const parsed = orderSchema.safeParse(fields);
   if (!parsed.success) return { ok: false, message: t("errorRequired") };
   const d = parsed.data;
-  if (d.eventDate < todayInNetherlands()) return { ok: false, message: t("errorDate") };
+  if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`gig-order:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
 
   try {

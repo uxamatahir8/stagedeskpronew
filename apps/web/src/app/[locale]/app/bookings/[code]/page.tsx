@@ -1,6 +1,7 @@
 import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
@@ -37,6 +38,7 @@ import {
 } from "./booking-panels";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/bookings/[code]">): Promise<Metadata> {
+  await connection();
   return { title: (await params).code };
 }
 

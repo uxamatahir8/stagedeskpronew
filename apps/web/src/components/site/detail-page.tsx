@@ -69,7 +69,6 @@ export async function DetailPage({
           <div className="grid max-w-2xl gap-2 text-center">
             <p className="text-sm font-medium text-magenta">{tc("inAppEyebrow")}</p>
             <h2 className="text-3xl font-bold tracking-tight text-balance">{tc("inAppTitle")}</h2>
-            <p className="text-sm text-muted-foreground">{tc("demoData")}</p>
           </div>
           <Screenshot name={screenshot} className={screens[screenshot].kind === "phone" ? "max-w-xs" : undefined} />
         </section>

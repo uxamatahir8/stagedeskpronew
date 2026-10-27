@@ -8,6 +8,7 @@ import type { Locale } from "@/i18n/routing";
 import { requireViewer } from "@/lib/viewer";
 import { AdminAnalytics } from "./admin-analytics";
 import { AdminHome } from "./admin-home";
+import { AdminInsights, ArtistInsights, BusinessInsights } from "./insights";
 import { AffiliateHome } from "./affiliate-home";
 import { AgencyAnalytics } from "./agency-analytics";
 import { AgencyHome } from "./agency-home";
@@ -22,20 +23,20 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app">): 
   return { title: t("home") };
 }
 
-export default async function DashboardHome({ params }: PageProps<"/[locale]/app">) {
+export default async function DashboardHome({ params, searchParams }: PageProps<"/[locale]/app">) {
   const { locale } = await params;
   setRequestLocale(locale as Locale);
 
   return (
     <Suspense fallback={<Skeleton className="h-40 w-full" />}>
-      <RoleHome />
+      <RoleHome searchParams={searchParams} />
     </Suspense>
   );
 }
 
 /** Each role's home page, built from shared cards and charts. */
-async function RoleHome() {
-  const [{ role, user, organization, permissions }, t] = await Promise.all([requireViewer(), getTranslations("home")]);
+async function RoleHome({ searchParams }: Pick<PageProps<"/[locale]/app">, "searchParams">) {
+  const [{ role, user, organization, permissions }, t, query] = await Promise.all([requireViewer(), getTranslations("home"), searchParams]);
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
   const header = <PageHeader hero title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />;
 
@@ -44,10 +45,13 @@ async function RoleHome() {
     const db = tenantDb(organization.id);
     body = (
       <>
-        <AgencyHome db={db} permissions={permissions} currency={organization.currency} />
+        <AgencyHome db={db} permissions={permissions} currency={organization.currency} attentionPage={positivePage(query["attentionPage"])} />
         <AgencyInsights organizationId={organization.id} db={db} permissions={permissions} currency={organization.currency} />
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <AgencyAnalytics organizationId={organization.id} permissions={permissions} currency={organization.currency} />
+        </Suspense>
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <BusinessInsights organizationId={organization.id} permissions={permissions} currency={organization.currency} solo={role === "solo_artist"} />
         </Suspense>
       </>
     );
@@ -58,6 +62,9 @@ async function RoleHome() {
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <AdminAnalytics />
         </Suspense>
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+          <AdminInsights />
+        </Suspense>
       </>
     );
   } else if (role === "artist") {
@@ -66,6 +73,9 @@ async function RoleHome() {
         <ArtistHome userId={user.id} />
         <Suspense fallback={<Skeleton className="h-96 w-full" />}>
           <ArtistAnalytics userId={user.id} />
+        </Suspense>
+        <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+          <ArtistInsights userId={user.id} />
         </Suspense>
       </>
     );
@@ -96,4 +106,9 @@ async function RoleHome() {
       {body}
     </div>
   );
+}
+
+function positivePage(value: string | string[] | undefined) {
+  const page = Number(Array.isArray(value) ? value[0] : value);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
 }

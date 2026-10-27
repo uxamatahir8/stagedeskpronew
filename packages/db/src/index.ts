@@ -10,6 +10,7 @@ export * from "./marketplace";
 export * from "./solo";
 export * from "./listings";
 export * from "./artist-requests";
+export * from "./insights";
 export * from "./geo";
 export * from "./messages";
 export * from "./notifications";

@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, generateTrackingCode, todayInNetherlands } from "@stagedesk/core";
+import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
 import { submitInquiry } from "@stagedesk/db";
 import { announceNewBooking } from "@/lib/announce";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
@@ -13,7 +13,7 @@ import { verifyTurnstile } from "@/lib/turnstile";
 export type InquiryResult = { ok: true; code: string; name: string } | { ok: false; message: string };
 
 const text = (max: number) =>
-  z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v), z.string().max(max).nullable());
+  z.preprocess((v) => (v == null || (typeof v === "string" && v.trim() === "") ? null : typeof v === "string" ? v.trim() : v), z.string().max(max).nullable());
 
 const schema = z.object({
   name: z.string().trim().min(2).max(191),
@@ -59,7 +59,7 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
   const parsed = schema.safeParse(fields);
   if (!parsed.success) return { ok: false, message: t("errorRequired") };
   const d = parsed.data;
-  if (d.eventDate < todayInNetherlands()) return { ok: false, message: t("errorDate") };
+  if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`inquiry:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
 
   const locale = userLocale(await getLocale());
