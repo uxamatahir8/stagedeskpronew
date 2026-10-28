@@ -46,7 +46,10 @@ if [[ -e "$RELEASE_DIR" ]]; then
   exit 1
 fi
 
-PREVIOUS_TARGET="$(readlink -f "$CURRENT_LINK" 2>/dev/null || true)"
+PREVIOUS_TARGET=""
+if [[ -L "$CURRENT_LINK" && -e "$CURRENT_LINK" ]]; then
+  PREVIOUS_TARGET="$(readlink -f "$CURRENT_LINK")"
+fi
 if [[ -z "$PREVIOUS_TARGET" ]]; then
   PREVIOUS_TARGET="$ORIGINAL_APP"
 fi
