@@ -187,7 +187,7 @@ env \
   "$NODE" --env-file="$SHARED_ENV" "$PNPM_JS" --dir "$RELEASE_DIR" build
 
 echo "Applying production database migrations."
-run_pnpm --filter @stagedesk/db deploy
+run_pnpm --filter @stagedesk/db run deploy
 
 write_ecosystem
 activate_release "$RELEASE_DIR"
