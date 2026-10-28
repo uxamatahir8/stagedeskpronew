@@ -3387,6 +3387,8 @@
     "kind_loginCodeHint": "When someone signs in with a code",
     "kind_resetPassword": "Reset password",
     "kind_resetPasswordHint": "When someone forgets their password",
+    "kind_artistAccountSetup": "Artist account setup",
+    "kind_artistAccountSetupHint": "When an agency or platform admin creates an artist account",
     "kind_inquiryReceived": "Inquiry received",
     "kind_inquiryReceivedHint": "To the customer, after their inquiry",
     "kind_newInquiry": "New inquiry",

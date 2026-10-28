@@ -26,6 +26,13 @@ export const copy = {
       body: (name: string) => `Hoi ${name}, klik op de knop om een nieuw wachtwoord te kiezen. De link is 1 uur geldig.`,
       button: "Nieuw wachtwoord instellen",
     },
+    artistSetup: {
+      subject: "Activeer je artiestenaccount",
+      preview: "Kies je wachtwoord voor je StageDesk-artiestenaccount.",
+      heading: "Je artiestenaccount staat klaar",
+      body: (name: string) => `Hoi ${name}, je artiestenaccount is aangemaakt. Kies binnen 24 uur je wachtwoord om je optredens, beschikbaarheid en inkomsten te beheren.`,
+      button: "Wachtwoord kiezen",
+    },
     invitation: {
       subject: (agency: string) => `Je bent uitgenodigd voor ${agency} op StageDesk`,
       preview: "Accepteer je uitnodiging voor StageDesk.",
@@ -240,6 +247,13 @@ export const copy = {
       heading: "Set a new password",
       body: (name: string) => `Hi ${name}, click the button to choose a new password. The link is valid for 1 hour.`,
       button: "Set new password",
+    },
+    artistSetup: {
+      subject: "Activate your artist account",
+      preview: "Choose a password for your StageDesk artist account.",
+      heading: "Your artist account is ready",
+      body: (name: string) => `Hi ${name}, your artist account has been created. Choose your password within 24 hours to manage your gigs, availability and earnings.`,
+      button: "Choose password",
     },
     invitation: {
       subject: (agency: string) => `You're invited to ${agency} on StageDesk`,

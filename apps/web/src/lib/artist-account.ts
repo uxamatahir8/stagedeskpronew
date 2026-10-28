@@ -28,7 +28,7 @@ export async function ensureArtistAccount(input: { organizationId: string; email
     const token = randomBytes(32).toString("hex");
     await prisma.verification.create({ data: { id: randomUUID(), identifier: `reset-password:${token}`, value: userId, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
     const locale = userLocale(user.locale ?? input.locale);
-    deliver({ kind: "resetPassword", to: email, params: { locale, name: user.name, url: absoluteUrl(locale, `/reset-password?token=${token}`) } });
+    deliver({ kind: "artistAccountSetup", to: email, params: { locale, name: user.name, url: absoluteUrl(locale, `/reset-password?token=${token}`) } });
   }
   return { userId, email, setupSent: needsPassword };
 }

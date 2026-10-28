@@ -14,6 +14,7 @@ export function emailSamples(locale: EmailLocale, appUrl: string): { [K in Email
     verifyEmail: { locale, name: "Sanne", url: `${appUrl}/api/auth/verify-email?token=example` },
     loginCode: { locale, code: "482913" },
     resetPassword: { locale, name: "Sanne", url: url("/reset-password?token=example") },
+    artistAccountSetup: { locale, name: "DJ Daan", url: url("/reset-password?token=example") },
     inquiryReceived: { locale, name: "Sanne", agency: "Feestband Utrecht", code: "K7Q2M9XA", url: url("/app/event") },
     newInquiry: { locale, customer: "Sanne de Vries", event: nl ? "Bruiloft" : "Wedding", date: nl ? "zaterdag 14 juni 2027" : "Saturday 14 June 2027", url: url("/app/bookings/K7Q2M9XA") },
     quote: { locale, name: "Sanne", agency: "Feestband Utrecht", total: "€ 1.082,95", until: nl ? "28 oktober 2026" : "28 October 2026", url: `${appUrl}/q/example` },

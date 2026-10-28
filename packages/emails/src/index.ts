@@ -14,6 +14,7 @@ import {
   InquiryReceived,
   Invitation,
   ArtistRequest,
+  ArtistAccountSetup,
   LeadLost,
   LeadOffer,
   LeadQuote,
@@ -83,6 +84,10 @@ export function sendLoginCode(to: string, p: { locale: EmailLocale; code: string
 
 export function sendResetPassword(to: string, p: { locale: EmailLocale; name: string; url: string }) {
   return send(to, copy[p.locale].reset.subject, createElement(ResetPassword, p));
+}
+
+export function sendArtistAccountSetup(to: string, p: { locale: EmailLocale; name: string; url: string }) {
+  return send(to, copy[p.locale].artistSetup.subject, createElement(ArtistAccountSetup, p));
 }
 
 export function sendInquiryReceived(to: string, p: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
@@ -212,6 +217,7 @@ const senders = {
   verifyEmail: sendVerifyEmail,
   loginCode: sendLoginCode,
   resetPassword: sendResetPassword,
+  artistAccountSetup: sendArtistAccountSetup,
   inquiryReceived: sendInquiryReceived,
   newInquiry: sendNewInquiry,
   quote: sendQuote,

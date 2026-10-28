@@ -3387,6 +3387,8 @@
     "kind_loginCodeHint": "Als iemand inlogt met een code",
     "kind_resetPassword": "Wachtwoord herstellen",
     "kind_resetPasswordHint": "Als iemand het wachtwoord vergeet",
+    "kind_artistAccountSetup": "Artiestenaccount instellen",
+    "kind_artistAccountSetupHint": "Als een bureau of platformbeheerder een artiestenaccount aanmaakt",
     "kind_inquiryReceived": "Aanvraag ontvangen",
     "kind_inquiryReceivedHint": "Aan de klant, na de aanvraag",
     "kind_newInquiry": "Nieuwe aanvraag",

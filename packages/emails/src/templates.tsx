@@ -52,6 +52,17 @@ export function ResetPassword({ locale, name, url }: { locale: EmailLocale; name
   );
 }
 
+export function ArtistAccountSetup({ locale, name, url }: { locale: EmailLocale; name: string; url: string }) {
+  const c = copy[locale].artistSetup;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
 export function InquiryReceived({ locale, name, agency, code, url }: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
   const c = copy[locale].inquiryReceived;
   return (
