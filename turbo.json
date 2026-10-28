@@ -17,10 +17,10 @@
     },
     "lint": {},
     "typecheck": {
-      "dependsOn": ["^generate"]
+      "dependsOn": ["generate", "^generate"]
     },
     "test": {
-      "dependsOn": ["^generate"]
+      "dependsOn": ["generate", "^generate"]
     }
   }
 }
