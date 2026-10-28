@@ -30,8 +30,7 @@ export function TwoFactorForm() {
       : await authClient.twoFactor.verifyTotp({ code, trustDevice: form.get("trust") === "on" });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
-    router.push(next);
-    router.refresh();
+    router.replace(next);
   }
 
   return (

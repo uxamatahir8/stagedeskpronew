@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
-import { localePath, safeNext } from "@/lib/paths";
+import { safeNext } from "@/lib/paths";
 import { PasswordInput } from "@/components/password-input";
 
 export function SignInForm() {
   const t = useTranslations();
-  const locale = useLocale();
   const router = useRouter();
   const next = safeNext(useSearchParams().get("next"));
 
@@ -28,11 +27,10 @@ export function SignInForm() {
 
   function done(twoFactor?: boolean) {
     if (twoFactor) {
-      router.push(`/two-factor?next=${encodeURIComponent(next)}`);
+      router.replace(`/two-factor?next=${encodeURIComponent(next)}`);
       return;
     }
-    router.push(next);
-    router.refresh();
+    router.replace(next);
   }
 
   async function signInWithPassword(form: FormData) {
@@ -42,7 +40,6 @@ export function SignInForm() {
     const { data, error } = await authClient.signIn.email({
       email: String(form.get("email")),
       password: String(form.get("password")),
-      callbackURL: localePath(locale, next),
     });
     setPending(false);
     if (error) {
