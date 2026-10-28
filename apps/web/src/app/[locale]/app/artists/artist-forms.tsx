@@ -81,6 +81,7 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
           bio: String(form.get("bio") ?? "") || null,
           sharePct: Number(String(form.get("sharePct")).replace(",", ".")),
           userId: userId === NO_ACCOUNT ? null : userId,
+          email: artist ? null : String(form.get("email") ?? ""),
           active,
           showOnBookingPage: onPage,
           mediaLinks: String(form.get("mediaLinks") ?? ""),
@@ -124,7 +125,12 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
           <FormField id="ar-share" label={t("artists.share")} hint={t("artists.shareHint")}>
             <Input id="ar-share" name="sharePct" defaultValue={artist?.sharePct ?? "40"} inputMode="decimal" required />
           </FormField>
-          <FormField id="ar-account" label={t("artists.account")} hint={t("artists.accountHint")}>
+          {!artist && (
+            <FormField required id="ar-email" label={t("artists.email")} hint={t("artists.emailHint")}>
+              <Input id="ar-email" name="email" type="email" autoComplete="off" required maxLength={191} />
+            </FormField>
+          )}
+          {artist && <FormField id="ar-account" label={t("artists.account")} hint={t("artists.accountHint")}>
             <Select value={userId} onValueChange={setUserId}>
               <SelectTrigger id="ar-account" className="w-full">
                 <SelectValue />
@@ -138,7 +144,7 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
                 ))}
               </SelectContent>
             </Select>
-          </FormField>
+          </FormField>}
           <FormField id="ar-media" label={t("artists.media")} hint={t("artists.mediaHint")} className="sm:col-span-2">
             <Textarea id="ar-media" name="mediaLinks" defaultValue={artist?.mediaLinks} rows={3} placeholder="https://www.youtube.com/watch?v=…" />
           </FormField>
