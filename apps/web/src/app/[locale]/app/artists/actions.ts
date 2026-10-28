@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { getLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { mediaEmbed } from "@stagedesk/core";
@@ -10,6 +11,7 @@ import { toggleUnavailable } from "@/lib/availability";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
 import { featureBlocked, limitBlocked, writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
+import { ArtistAccountError, ensureArtistAccount } from "@/lib/artist-account";
 
 const artistSchema = z.object({
   id: z.string().max(64).nullable(),
@@ -18,6 +20,7 @@ const artistSchema = z.object({
   bio: z.string().max(5000).nullable(),
   sharePct: z.number().min(0).max(100),
   userId: z.string().max(64).nullable(),
+  email: z.string().trim().email().max(191).nullable(),
   active: z.boolean(),
   showOnBookingPage: z.boolean(),
   mediaLinks: z.string().max(2000),
@@ -61,9 +64,18 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
     await db.artist.updateMany({ where: { id: d.id }, data });
     return { ok: true, message: t("saved"), id: d.id };
   }
-  const id = randomUUID();
-  await db.artist.create({ data: { ...data, id, organizationId: organization.id } });
-  return { ok: true, message: t("added", { name: d.stageName }), id };
+  const email = d.email?.toLowerCase() ?? null;
+  if (!email) return { ok: false, message: t("emailRequired") };
+
+  try {
+    const account = await ensureArtistAccount({ organizationId: organization.id, email, name: d.stageName, locale: await getLocale() });
+    const id = randomUUID();
+    await db.artist.create({ data: { ...data, userId: account.userId, id, organizationId: organization.id } });
+    return { ok: true, message: account.setupSent ? t("invited", { name: d.stageName, email }) : t("added", { name: d.stageName }), id };
+  } catch (error) {
+    if (error instanceof ArtistAccountError) return { ok: false, message: error.message };
+    throw error;
+  }
 }
 
 export async function uploadArtistPhotoAction(artistId: string, form: FormData): Promise<ActionResult> {

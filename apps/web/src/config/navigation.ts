@@ -73,6 +73,7 @@ export const navigation: NavGroup[] = [
     items: [
       { key: "agencies", href: "/app/agencies", icon: BuildingIcon, permission: "platform.agencies" },
       { key: "independentArtists", href: "/app/independent-artists", icon: MicVocalIcon, permission: "platform.agencies" },
+      { key: "platformArtists", href: "/app/platform-artists", icon: Music2Icon, permission: "platform.agencies" },
       { key: "adminBookings", href: "/app/admin-bookings", icon: CalendarCheckIcon, permission: "platform.agencies" },
       { key: "leads", href: "/app/leads", icon: InboxIcon, permission: "platform.agencies" },
       { key: "plans", href: "/app/plans", icon: LayersIcon, permission: "platform.plans" },
