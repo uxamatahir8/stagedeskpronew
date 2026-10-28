@@ -80,7 +80,7 @@ jobs:
             -i ~/.ssh/staging_deploy_key \
             -p "$STAGING_PORT" \
             -o BatchMode=yes \
-            "root@$STAGING_HOST" \
+            "$STAGING_USER@$STAGING_HOST" \
             "MAILHOG_WEB_PASSWORD=\$(printf '%s' '$password_base64' | base64 -d) bash -s" \
             < scripts/update-mailhog-password.sh
 
