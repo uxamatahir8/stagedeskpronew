@@ -66,6 +66,13 @@ run_pm2() {
     "$PM2" "$@"
 }
 
+restart_services() {
+  # PM2 keeps the old executable path when startOrRestart reuses a process name.
+  # Recreate both processes so every release runs exclusively from CURRENT_LINK.
+  run_pm2 delete stagedesk-web stagedesk-worker >/dev/null 2>&1 || true
+  run_pm2 start "$ECOSYSTEM_FILE" --update-env
+}
+
 activate_release() {
   local target="$1"
   local next_link="$CURRENT_LINK.next"
@@ -135,7 +142,7 @@ on_exit() {
       echo "Deployment failed after activation; restoring $PREVIOUS_TARGET." >&2
       activate_release "$PREVIOUS_TARGET"
       write_ecosystem
-      run_pm2 startOrRestart "$ECOSYSTEM_FILE" --update-env
+      restart_services
       run_pm2 save
       health_check
     fi
@@ -194,7 +201,7 @@ activate_release "$RELEASE_DIR"
 SWITCHED=1
 
 echo "Restarting StageDesk web and worker processes."
-run_pm2 startOrRestart "$ECOSYSTEM_FILE" --update-env
+restart_services
 run_pm2 save
 
 if ! health_check; then
