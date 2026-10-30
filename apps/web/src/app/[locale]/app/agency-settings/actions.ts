@@ -2,13 +2,11 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { cleanRegions, currencies, dateFormats, eventTypes, isTimeZone, isValidIban, normalizeIban, timeFormats } from "@stagedesk/core";
 import { enabledCurrencies, geocode, getSetting, Prisma, prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
-import { auth } from "@/lib/auth";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
 import {
   brandColor,
@@ -44,9 +42,10 @@ const schema = z.object({
 
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
-async function updateOrganization(organizationId: string, data: Record<string, unknown>) {
-  // Better Auth checks that the member may update the organization.
-  await auth.api.updateOrganization({ headers: await headers(), body: { organizationId, data } });
+async function updateOrganization(organizationId: string, data: Prisma.OrganizationUpdateInput) {
+  // Written directly rather than through Better Auth's updateOrganization, which only accepts
+  // members: platform admins in support mode aren't. requireAgency has already checked the permission.
+  await prisma.organization.update({ where: { id: organizationId }, data });
 }
 
 export async function saveAgency(_prev: FormState, form: FormData): Promise<FormState> {

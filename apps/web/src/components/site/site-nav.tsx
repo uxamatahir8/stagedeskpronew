@@ -28,6 +28,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { rememberLocale } from "@/lib/remember-locale";
 
 /** Icons by name: server components pass the name, not the component. */
 const icons = {
@@ -161,7 +162,11 @@ export function LocaleSwitch() {
           <DropdownMenuItem
             key={l.code}
             lang={l.code}
-            onSelect={() => l.code !== locale && startTransition(() => router.replace(pathname, { locale: l.code as (typeof routing.locales)[number] }))}
+            onSelect={() => {
+              if (l.code === locale) return;
+              rememberLocale(l.code);
+              startTransition(() => router.replace(pathname, { locale: l.code as (typeof routing.locales)[number] }));
+            }}
           >
             {l.label}
             {l.code === locale && <CheckIcon className="ml-auto" aria-hidden />}

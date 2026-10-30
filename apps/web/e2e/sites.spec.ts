@@ -21,7 +21,7 @@ test("an agency builds and publishes its website, also on its own domain", async
     await preview.locator("[data-section=hero] h1").click();
     await owner.getByLabel("Titel", { exact: true }).fill(title);
     await owner.getByRole("button", { name: "Onderdeel toevoegen" }).click();
-    await owner.getByRole("menuitem", { name: "Pakketten & prijzen" }).click();
+    await owner.getByRole("dialog").getByRole("button", { name: /^Pakketten & prijzen/ }).click();
     await expect(preview.getByRole("heading", { name: "Pakketten en prijzen" }).last()).toBeVisible();
     await expect(preview.getByText("DJ, per uur").first()).toBeVisible();
     await expect(owner.getByText("Alles opgeslagen")).toBeVisible({ timeout: 15_000 });

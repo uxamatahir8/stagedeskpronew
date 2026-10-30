@@ -1,6 +1,6 @@
 "use client";
 
-import { BanIcon, EllipsisIcon, LogOutIcon, MailCheckIcon, PencilIcon, PlusIcon, ShieldOffIcon, Trash2Icon, UserCheckIcon } from "lucide-react";
+import { BanIcon, EllipsisIcon, LogInIcon, LogOutIcon, MailCheckIcon, PencilIcon, PlusIcon, ShieldOffIcon, Trash2Icon, UserCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
+import { startImpersonationAction } from "@/lib/impersonation-actions";
 import {
   createPlatformAdminAction,
   deleteUserAction,
@@ -71,6 +72,10 @@ export function UserActions({ user, disabled, verified, twoFactor, self }: { use
           )}
           {!self && (
             <>
+              <DropdownMenuItem onSelect={() => run(() => startImpersonationAction(user.id))}>
+                <LogInIcon />
+                {t("impersonate")}
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => run(() => signOutEverywhereAction(user.id))}>
                 <LogOutIcon />
                 {t("signOut")}

@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
-import { todayInNetherlands } from "@stagedesk/core";
+import { parseBookingTheme, todayInNetherlands } from "@stagedesk/core";
 import { agencyBilling, agencyFullyBookedDates, publicAgency, publicArtists } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import type { Locale } from "@/i18n/routing";
-import { brandStyle } from "@/lib/brand";
+import { BookingFrame } from "@/components/booking-page/booking-page-view";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { ReportHeight } from "./report-height";
 
@@ -40,7 +40,7 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
   ]);
 
   return (
-    <div style={brandStyle(agency.brandColor)} className="bg-background p-4">
+    <BookingFrame theme={parseBookingTheme(agency.bookingTheme)} brandColor={agency.brandColor} className="p-4">
       <ReportHeight />
       <InquiryForm
         slug={slug}
@@ -49,6 +49,6 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
         siteKey={turnstileSiteKey()}
         today={today}
       />
-    </div>
+    </BookingFrame>
   );
 }

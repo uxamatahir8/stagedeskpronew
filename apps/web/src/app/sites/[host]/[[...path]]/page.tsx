@@ -65,7 +65,7 @@ async function Site({ params }: Props) {
           <SiteHeader data={data} theme={site.theme} nav={nav} ctaHref={ctaHref} langSwitch={langSwitch} />
           <main className="flex-1">
             {content.sections.map((section) => (
-              <SiteSection key={section.id} section={section} data={data} ctaHref={ctaHref} contactHref={contactHref} />
+              <SiteSection key={section.id} section={section} data={data} theme={site.theme} ctaHref={ctaHref} contactHref={contactHref} />
             ))}
           </main>
           <SiteFooter data={data} branding={branding} />

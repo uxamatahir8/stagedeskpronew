@@ -1,20 +1,22 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
-import { cookies } from "next/headers";
-import { type Currency, convertCents, isCurrency } from "@stagedesk/core";
+import { cookies, headers } from "next/headers";
+import { type Currency, convertCents, isCurrency, visitorCountry, visitorCurrency } from "@stagedesk/core";
 import { enabledCurrencies, exchangeRates } from "@stagedesk/db";
 import { SITE_TAGS } from "./site";
 
 /**
- * The currency a visitor chose to see prices in (a cookie, set from the site
- * header). Plans are billed in euros; other currencies are shown as an
+ * The currency a visitor sees prices in: the one they chose (a cookie, set
+ * from the site header), else their own country's when it's offered, else
+ * euros. Plans are billed in euros; other currencies are shown as an
  * estimate at the ECB reference rate.
  */
 export const DISPLAY_CURRENCY_COOKIE = "display_currency";
 
 export async function displayCurrency(): Promise<Currency> {
-  const value = (await cookies()).get(DISPLAY_CURRENCY_COOKIE)?.value;
-  return isCurrency(value) && (await siteCurrencies()).includes(value) ? value : "EUR";
+  const [value, offered, h] = await Promise.all([cookies().then((c) => c.get(DISPLAY_CURRENCY_COOKIE)?.value), siteCurrencies(), headers()]);
+  if (isCurrency(value) && offered.includes(value)) return value;
+  return visitorCurrency({ country: visitorCountry((name) => h.get(name)), acceptLanguage: h.get("accept-language") }, offered);
 }
 
 /** The currencies the admin enabled; changes call updateTag(SITE_TAGS.settings). */

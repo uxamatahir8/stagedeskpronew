@@ -22,6 +22,7 @@ export async function publicAgency(slug: string) {
       bookingIntro: true,
       faq: true,
       showReviews: true,
+      bookingTheme: true,
       city: true,
       addressLine: true,
       postalCode: true,

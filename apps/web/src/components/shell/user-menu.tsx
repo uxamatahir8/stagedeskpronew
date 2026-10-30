@@ -22,6 +22,8 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { authClient } from "@/lib/auth-client";
+import { stopImpersonationAction } from "@/lib/impersonation-actions";
+import { rememberLocale } from "@/lib/remember-locale";
 import type { ShellViewer } from "./app-sidebar";
 
 
@@ -44,10 +46,13 @@ export function UserMenu({ viewer }: { viewer: ShellViewer }) {
   const [, startTransition] = useTransition();
 
   function changeLocale(next: string) {
+    rememberLocale(next);
     startTransition(() => router.replace(pathname, { locale: next as (typeof routing.locales)[number] }));
   }
 
   async function signOut() {
+    // Logged in as someone else: "sign out" returns the admin to their own account.
+    if (viewer.impersonatedBy) return stopImpersonationAction();
     await authClient.signOut();
     router.push("/sign-in");
     router.refresh();
@@ -133,7 +138,7 @@ export function UserMenu({ viewer }: { viewer: ShellViewer }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={signOut}>
               <LogOutIcon />
-              {t("shell.signOut")}
+              {viewer.impersonatedBy ? t("impersonation.return") : t("shell.signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
