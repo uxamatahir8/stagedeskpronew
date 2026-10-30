@@ -40,7 +40,7 @@ test("a visitor's inquiry lands in the agency's action queue", async ({ page, br
   await test.step("visitor fills in the booking page form", async () => {
     await page.goto("/nl/b/feestband-utrecht");
     await expect(page.getByRole("heading", { name: "Feestband Utrecht", level: 1 })).toBeVisible();
-    await page.getByRole("link", { name: "Vraag een offerte aan" }).click();
+    await page.getByRole("link", { name: "Vraag een offerte aan" }).first().click();
 
     // Wedding is the default type, so the wedding-only fields are shown.
     await expect(page.getByLabel("Naam van je partner")).toBeVisible();

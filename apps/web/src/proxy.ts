@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { type NextFetchEvent, NextResponse, type NextRequest } from "next/server";
 import createMiddleware from "next-intl/middleware";
-import { formatViaCookie, normalizeCampaign, normalizeCode, siteHost, viaCookie, localePrefix, locales } from "@stagedesk/core";
+import { defaultLocale, formatViaCookie, isCrawler, LOCALE_COOKIE, normalizeCampaign, normalizeCode, siteHost, viaCookie, visitorCountry, visitorLocale, localePrefix, locales } from "@stagedesk/core";
 import { routing } from "./i18n/routing";
 
 const intl = createMiddleware(routing);
@@ -43,6 +43,9 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
   const prefix = locales.map((l) => localePrefix(l)).find((p) => p && (pathname === p || pathname.startsWith(`${p}/`))) ?? "";
   const path = pathname.slice(prefix.length) || "/";
 
+  const language = chooseLanguage(request, prefix, path);
+  if (language?.redirect) return language.redirect;
+
   const needsSession = protectedPrefixes.some((p) => path === p || path.startsWith(`${p}/`));
   if (needsSession && !getSessionCookie(request)) {
     const url = new URL(`${prefix}/sign-in`, request.url);
@@ -50,8 +53,52 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
     return NextResponse.redirect(url);
   }
   const response = intl(request);
+  if (language?.remember) rememberLanguage(response, request, language.remember);
   trackReferral(request, response, event, path);
   return response;
+}
+
+/** Never moved to another language: machine endpoints, and the embeddable form (its script picks the language). */
+const fixedLanguage = ["/api", "/embed"];
+
+/**
+ * Dutch for visitors in the Netherlands, English for everyone else, decided
+ * on the first page they open and remembered in a cookie that the language
+ * switchers update. Only full page loads of English (unprefixed) addresses
+ * are redirected; a shared /nl link always opens in Dutch, and search
+ * engines always get the address they asked for.
+ */
+function chooseLanguage(request: NextRequest, prefix: string, path: string) {
+  const h = request.headers;
+  const pageLoad = request.method === "GET" && !h.get("rsc") && !h.get("next-router-prefetch") && (h.get("sec-fetch-dest") === "document" || (h.get("accept") ?? "").includes("text/html"));
+  if (!pageLoad || isCrawler(h.get("user-agent")) || fixedLanguage.some((p) => path === p || path.startsWith(`${p}/`))) return null;
+
+  const saved = request.cookies.get(LOCALE_COOKIE)?.value;
+  const inUrl = locales.find((l) => localePrefix(l) === prefix) ?? defaultLocale;
+  const wanted = (locales as readonly string[]).includes(saved ?? "")
+    ? (saved as (typeof locales)[number])
+    : // A first visit to an addressed language (a shared /nl link) keeps it; otherwise go by where they are.
+      prefix
+      ? inUrl
+      : visitorLocale({ country: visitorCountry((name) => h.get(name)), acceptLanguage: h.get("accept-language") });
+  const remember = saved === wanted ? null : wanted;
+
+  if (prefix === "" && wanted !== defaultLocale) {
+    const url = request.nextUrl.clone();
+    url.pathname = `${localePrefix(wanted)}${path === "/" ? "" : path}`;
+    const redirect = NextResponse.redirect(url, 307);
+    // The answer depends on who asks: never store it in a shared cache.
+    redirect.headers.set("Cache-Control", "private, no-store");
+    redirect.headers.set("Vary", "Cookie, Accept-Language");
+    if (remember) rememberLanguage(redirect, request, remember);
+    return { redirect, remember: null };
+  }
+  return { redirect: null, remember };
+}
+
+function rememberLanguage(response: NextResponse, request: NextRequest, locale: string) {
+  // Readable by the page: the language switchers write the same cookie.
+  response.cookies.set(LOCALE_COOKIE, locale, { maxAge: 365 * 86_400, sameSite: "lax", secure: request.nextUrl.protocol === "https:", path: "/" });
 }
 
 /**

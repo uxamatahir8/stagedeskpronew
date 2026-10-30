@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
+import { rememberLocale } from "@/lib/remember-locale";
 import { authErrorKey } from "@/lib/auth-errors";
 import { PasswordInput } from "@/components/password-input";
 import { passwordProblem } from "@stagedesk/core";
@@ -37,6 +38,7 @@ export function DetailsForm({ values }: { values: { name: string; email: string;
     if (error) return void toast.error(t(authErrorKey(error)));
     toast.success(t("profile.saved"));
     // Switch the interface to the chosen language.
+    rememberLocale(locale);
     router.replace(pathname, { locale });
     router.refresh();
   }

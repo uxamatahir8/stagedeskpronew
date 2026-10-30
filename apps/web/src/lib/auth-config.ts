@@ -12,6 +12,7 @@ import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
 import { ac, organizationRoles } from "./auth-roles";
+import { impersonation } from "./impersonation-plugin";
 import { deliver } from "./deliver";
 
 const appUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
@@ -214,6 +215,7 @@ export const auth = betterAuth({
       },
     }),
     twoFactor({ issuer: "StageDesk" }),
+    impersonation(),
     // Must stay last: lets server actions set auth cookies.
     nextCookies(),
   ],

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { stopImpersonationAction } from "@/lib/impersonation-actions";
 import { getViewer } from "@/lib/viewer";
 import { OnboardingForm, SoloArtistForm } from "./onboarding-form";
 
@@ -48,9 +49,18 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
   const footer = (
     <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
       {t("signedInAs", { email: viewer!.user.email })}
-      <SignOutButton variant="link" className="h-auto p-0">
-        {t("signOut")}
-      </SignOutButton>
+      {viewer!.impersonatedBy ? (
+        // An admin logged in as this person goes back to their own account instead.
+        <form action={stopImpersonationAction}>
+          <Button type="submit" variant="link" className="h-auto p-0">
+            {(await getTranslations("impersonation"))("return")}
+          </Button>
+        </form>
+      ) : (
+        <SignOutButton variant="link" className="h-auto p-0">
+          {t("signOut")}
+        </SignOutButton>
+      )}
     </p>
   );
 

@@ -13,7 +13,8 @@
  * destructive) stay separate from the brand colours. Dark mode is class-based
  * (next-themes), defaulting to the system setting.
  */
-:root {
+:root,
+.light {
   --radius: 0.625rem;
 
   --background: oklch(0.99 0.004 300);

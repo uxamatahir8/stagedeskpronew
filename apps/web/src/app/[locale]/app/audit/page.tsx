@@ -30,7 +30,7 @@ export default async function AuditPage({ params, searchParams }: PageProps<"/[l
 }
 
 /** Filter groups by action prefix. */
-const groups = ["all", "settings", "plan", "agency", "affiliate", "payment", "user", "ticket", "booking", "lead", "support", "site"] as const;
+const groups = ["all", "settings", "plan", "agency", "affiliate", "payment", "user", "ticket", "booking", "lead", "support", "impersonation", "site"] as const;
 
 const spec = { sorts: ["when", "action"], defaultSort: "when", defaultDir: "desc" as const, filters: { group: groups.filter((g) => g !== "all") } };
 
@@ -63,9 +63,9 @@ async function Audit({ searchParams }: Pick<PageProps<"/[locale]/app/audit">, "s
     skip: win.skip,
     take: win.take,
   });
-  const ids = (key: "actorId" | "agencyId") => [...new Set(events.flatMap((e) => (e[key] ? [e[key]!] : [])))];
+  const ids = (...keys: ("actorId" | "agencyId" | "impersonatorId")[]) => [...new Set(events.flatMap((e) => keys.flatMap((k) => (e[k] ? [e[k]!] : []))))];
   const [actors, agencies] = await Promise.all([
-    prisma.user.findMany({ where: { id: { in: ids("actorId") } }, select: { id: true, name: true } }),
+    prisma.user.findMany({ where: { id: { in: ids("actorId", "impersonatorId") } }, select: { id: true, name: true } }),
     prisma.organization.findMany({ where: { id: { in: ids("agencyId") } }, select: { id: true, name: true } }),
   ]);
 
@@ -99,7 +99,11 @@ async function Audit({ searchParams }: Pick<PageProps<"/[locale]/app/audit">, "s
               <TableCell className="whitespace-nowrap tabular-nums">
                 {format.dateTime(e.createdAt, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
               </TableCell>
-              <TableCell>{actors.find((a) => a.id === e.actorId)?.name ?? t("system")}</TableCell>
+              <TableCell>
+                <div>{actors.find((a) => a.id === e.actorId)?.name ?? t("system")}</div>
+                {/* Made while a platform admin was logged in as this person. */}
+                {e.impersonatorId && <div className="text-xs text-muted-foreground">{t("viaAdmin", { name: actors.find((a) => a.id === e.impersonatorId)?.name ?? e.impersonatorId })}</div>}
+              </TableCell>
               <TableCell>
                 <div>{t.has(`action.${e.action}` as "action.user.disable") ? t(`action.${e.action}` as "action.user.disable") : e.action}</div>
                 {e.targetId && <div className="font-mono text-xs text-muted-foreground">{e.targetType}:{e.targetId.slice(0, 12)}</div>}

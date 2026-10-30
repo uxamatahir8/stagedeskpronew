@@ -64,6 +64,8 @@ model Session {
   userId                String   @db.VarChar(64)
   /// Platform admins only: the agency they're working in as support (set by the server, never by the client).
   supportOrganizationId String?  @db.VarChar(64)
+  /// Set on a session a platform admin opened as this user ("log in as"); the admin's user id. Written by the server only.
+  impersonatedBy        String?  @db.VarChar(64)
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeOrganizationId  String?  @db.VarChar(64)
   createdAt             DateTime @default(now())
@@ -149,6 +151,8 @@ model Organization {
   /// { question: string; answer: string }[]
   faq                Json?
   showReviews        Boolean                @default(true)
+  /// Booking page look and section order (BookingTheme in core). null = defaults.
+  bookingTheme       Json?
   stripeCustomerId   String?                @unique @db.VarChar(64)
   /// Set once the agency has had a trial; a trial is offered only once.
   trialUsedAt        DateTime?
@@ -1062,17 +1066,19 @@ model TicketMessage {
  * Who did what: admin, money and access changes. Append-only.
  */
 model AuditEvent {
-  id         BigInt   @id @default(autoincrement())
-  actorId    String?  @db.VarChar(64)
+  id             BigInt   @id @default(autoincrement())
+  actorId        String?  @db.VarChar(64)
   /// The agency affected, if any (platform-level, so not organizationId).
-  agencyId   String?  @db.VarChar(64)
+  agencyId       String?  @db.VarChar(64)
   /// e.g. settings.update, plan.save, agency.fee_deal, affiliate.status, payment.refund, user.disable
-  action     String   @db.VarChar(64)
-  targetType String?  @db.VarChar(32)
-  targetId   String?  @db.VarChar(64)
-  data       Json?
-  ip         String?  @db.VarChar(64)
-  createdAt  DateTime @default(now())
+  action         String   @db.VarChar(64)
+  targetType     String?  @db.VarChar(32)
+  targetId       String?  @db.VarChar(64)
+  data           Json?
+  ip             String?  @db.VarChar(64)
+  /// The platform admin behind the change when it was made while logged in as the actor.
+  impersonatorId String?  @db.VarChar(64)
+  createdAt      DateTime @default(now())
 
   @@index([createdAt])
   @@index([agencyId, createdAt])

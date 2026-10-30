@@ -31,7 +31,7 @@ import type { Viewer } from "@/lib/viewer";
 import { Logo } from "@/components/brand/logo";
 import { UserMenu } from "./user-menu";
 
-export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships" | "permissions"> & { role: Role };
+export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships" | "permissions" | "impersonatedBy"> & { role: Role };
 
 export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
   const t = useTranslations();

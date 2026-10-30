@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // Enables forbidden() for permission checks (403 page).
     authInterrupts: true,
+    // Image uploads go through server actions; the largest action limit is 5 MB, plus multipart overhead.
+    serverActions: { bodySizeLimit: "6mb" },
   },
   transpilePackages: ["@stagedesk/core", "@stagedesk/db", "@stagedesk/payments"],
   serverExternalPackages: ["@prisma/adapter-mariadb", "mariadb", "@react-pdf/renderer", "stripe"],
@@ -31,10 +33,10 @@ const nextConfig: NextConfig = {
     return [
       // Nothing may be framed by other sites (clickjacking), except the embeddable form.
       {
-        source: "/:path((?!embed/|en/embed/).*)",
+        source: "/:path((?!embed/|en/embed/|nl/embed/).*)",
         headers: [...common, { key: "X-Frame-Options", value: "SAMEORIGIN" }, { key: "Content-Security-Policy", value: "frame-ancestors 'self'" }],
       },
-      { source: "/:lang(en)?/embed/:slug", headers: [...common, { key: "Content-Security-Policy", value: "frame-ancestors *" }] },
+      { source: "/:lang(en|nl)?/embed/:slug", headers: [...common, { key: "Content-Security-Policy", value: "frame-ancestors *" }] },
     ];
   },
 };

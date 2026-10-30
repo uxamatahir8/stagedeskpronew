@@ -11,7 +11,8 @@
   var agency = script.getAttribute("data-agency");
   if (!agency || !/^[a-z0-9-]+$/.test(agency)) return;
   var origin = new URL(script.src).origin;
-  var lang = script.getAttribute("data-lang") === "en" ? "/en" : "";
+  // English is the default language (no prefix); Dutch lives under /nl.
+  var lang = script.getAttribute("data-lang") === "nl" ? "/nl" : "";
 
   var frame = document.createElement("iframe");
   frame.src = origin + lang + "/embed/" + agency;

@@ -1,11 +1,11 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { connection } from "next/server";
 import { forbidden } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { cache } from "react";
 import { isRole, type Permission, permissionsFor, type Role, sanitizeRolePermissions } from "@stagedesk/core";
-import { prisma, tenantDb } from "@stagedesk/db";
+import { prisma, setImpersonatorLookup, tenantDb } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "./auth";
 
@@ -35,6 +35,8 @@ export interface Viewer {
    * agency admin there (no billing), behind a banner, until they leave.
    */
   support?: { organizationId: string; name: string };
+  /** The platform admin's user id when an admin is logged in as this user ("log in as"); null otherwise. */
+  impersonatedBy: string | null;
 }
 
 /**
@@ -46,10 +48,30 @@ export const getSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() });
 });
 
+/**
+ * Changes made while an admin is logged in as someone else name the admin in the audit log too.
+ * This reads the session row straight from the cookie: asking Better Auth instead (getSession)
+ * inside the action that swaps sessions would see the request's old, deleted session and clear
+ * the new cookie.
+ */
+setImpersonatorLookup(async () => {
+  const store = await cookies();
+  const signed = store.get("__Secure-better-auth.session_token")?.value ?? store.get("better-auth.session_token")?.value;
+  // The cookie is "<token>.<signature>"; the token alone finds the session.
+  const token = signed ? decodeURIComponent(signed).split(".")[0] : null;
+  if (!token) return null;
+  return (await prisma.session.findUnique({ where: { token }, select: { impersonatedBy: true } }))?.impersonatedBy ?? null;
+});
+
 /** The signed-in user with their active agency and role, or null when signed out. */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
   const session = await getSession();
   if (!session) return null;
+  const viewer = await resolveViewer(session);
+  return { ...viewer, impersonatedBy: session.session.impersonatedBy ?? null };
+});
+
+async function resolveViewer(session: NonNullable<Awaited<ReturnType<typeof getSession>>>): Promise<Omit<Viewer, "impersonatedBy">> {
 
   const rows = await prisma.member.findMany({
     where: { userId: session.user.id },
@@ -85,7 +107,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   if (platformRole === "affiliate") return { user, role: "affiliate", organization: null, memberships, permissions: permissionsFor("affiliate") };
   return { user, role: null, organization: null, memberships, permissions: [] };
-});
+}
 
 async function goTo(href: string): Promise<never> {
   redirect({ href, locale: (await getLocale()) as "nl" | "en" });

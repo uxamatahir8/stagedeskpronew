@@ -6,6 +6,7 @@ import { type FormEvent, useEffect, useRef, useState, useTransition } from "reac
 import { budgetRanges, eventTypes, timeInNetherlands, type EventType } from "@stagedesk/core";
 import { type InquiryResult, submitInquiryAction } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { FormMessage } from "@/components/auth/auth-card";
+import { PREFER_ARTIST_EVENT } from "@/components/booking-page/shared";
 import { FormField } from "@/components/form-field";
 import { Turnstile } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,15 @@ export function InquiryForm({
   useEffect(() => {
     startedAt.current = Date.now();
   }, [formKey]);
+  // "Request this artist" on the booking page fills in the preferred artist.
+  useEffect(() => {
+    const prefer = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (artists.some((a) => a.id === id)) setArtist(id);
+    };
+    window.addEventListener(PREFER_ARTIST_EVENT, prefer);
+    return () => window.removeEventListener(PREFER_ARTIST_EVENT, prefer);
+  }, [artists]);
   const [pending, startTransition] = useTransition();
 
   if (result) {
