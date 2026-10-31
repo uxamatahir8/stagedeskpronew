@@ -152,8 +152,30 @@ const grants: Record<Role, readonly Permission[]> = {
   affiliate: ["affiliate.dashboard", "affiliate.links", "affiliate.payouts", "support"],
 };
 
-/** An agency's own choice for its admins and staff, as stored on the agency. */
-export type RolePermissions = Partial<Record<"agency_admin" | "agency_staff", string[]>>;
+/**
+ * An agency's own choice for its admins and staff, as stored on the agency.
+ * `known` lists the permissions that existed when the owner saved it; ones
+ * added later (none of the owner's decision yet) are worked out by
+ * `roleGrants`. Saved before `known` existed = every permission except
+ * those in `laterPermissions`.
+ */
+export type RolePermissions = Partial<Record<"agency_admin" | "agency_staff", string[]>> & { known?: string[] };
+
+/**
+ * Permissions added after owners could customise roles, with the permission
+ * each builds on. For an agency with its own choices, a role gets such a
+ * permission by default only if it still holds what it builds on, so a role
+ * the owner deliberately kept away from bookings doesn't gain equipment
+ * access. Owners always have everything; admin-only stays admin-only.
+ */
+export const laterPermissions: Partial<Record<AgencyPermission, AgencyPermission>> = {
+  "agency.inventory": "agency.bookings",
+  "agency.inventory.gigs": "agency.bookings.edit",
+  "agency.inventory.manage": "agency.artists.manage",
+  "agency.inventory.admin": "agency.settings",
+};
+
+const isAgencyPermission = (p: unknown): p is AgencyPermission => (agencyPermissions as readonly string[]).includes(p as string);
 
 /**
  * Cleans what an owner chose: only known agency permissions, nothing
@@ -165,18 +187,38 @@ export function sanitizeRolePermissions(input: unknown): RolePermissions {
   for (const role of ["agency_admin", "agency_staff"] as const) {
     const list = (input as Record<string, unknown>)[role];
     if (!Array.isArray(list)) continue;
-    out[role] = [...new Set(list.filter((p): p is AgencyPermission => (agencyPermissions as readonly string[]).includes(p as string)))].filter(
-      (p) => role === "agency_admin" || !adminOnlyPermissions.includes(p),
-    );
+    out[role] = [...new Set(list.filter(isAgencyPermission))].filter((p) => role === "agency_admin" || !adminOnlyPermissions.includes(p));
   }
+  const known = (input as Record<string, unknown>)["known"];
+  if (Array.isArray(known)) out.known = [...new Set(known.filter(isAgencyPermission))];
   return out;
+}
+
+/** What the owner had a say in when they saved their choices. */
+function knownPermissions(custom: RolePermissions): readonly string[] {
+  return custom.known ?? agencyPermissions.filter((p) => !(p in laterPermissions));
+}
+
+/**
+ * The agency permissions an admin or staff member has: the defaults, or the
+ * owner's choices plus, for permissions added since, the default where the
+ * role still holds what that permission builds on.
+ */
+export function roleGrants(role: "agency_admin" | "agency_staff", custom?: RolePermissions | null): AgencyPermission[] {
+  const list = custom?.[role];
+  if (!custom || !list) return [...defaultAgencyGrants[role]];
+  const chosen = (sanitizeRolePermissions({ [role]: list })[role] ?? []) as AgencyPermission[];
+  const known = knownPermissions(custom);
+  const added = (Object.entries(laterPermissions) as [AgencyPermission, AgencyPermission][])
+    .filter(([p, basis]) => !known.includes(p) && defaultAgencyGrants[role].includes(p) && chosen.includes(basis))
+    .map(([p]) => p);
+  return [...new Set([...chosen, ...added])].filter((p) => role === "agency_admin" || !adminOnlyPermissions.includes(p));
 }
 
 /** Everything a role may do, taking the agency's own settings into account. */
 export function permissionsFor(role: Role, custom?: RolePermissions | null): Permission[] {
   if ((role === "agency_admin" || role === "agency_staff") && custom?.[role]) {
-    const chosen = (sanitizeRolePermissions({ [role]: custom[role] })[role] ?? []) as AgencyPermission[];
-    return [...chosen, ...always];
+    return [...roleGrants(role, custom), ...always];
   }
   return [...grants[role]];
 }

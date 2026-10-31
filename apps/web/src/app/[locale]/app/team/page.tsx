@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { defaultAgencyGrants, isRole, sanitizeRolePermissions } from "@stagedesk/core";
+import { agencyPermissions, defaultAgencyGrants, isRole, roleGrants, sanitizeRolePermissions } from "@stagedesk/core";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
@@ -45,10 +45,12 @@ async function Team({ searchParams }: Pick<PageProps<"/[locale]/app/team">, "sea
 
   const date = (d: Date) => format.dateTime(d, { day: "numeric", month: "short", year: "numeric" });
   const custom = organization.rolePermissions;
+  // What admins and staff have now: the owner's choices plus defaults for permissions added since (shown so saving keeps them).
   const grants = {
-    agency_admin: [...(custom?.agency_admin ?? defaultAgencyGrants.agency_admin)],
-    agency_staff: [...(custom?.agency_staff ?? defaultAgencyGrants.agency_staff)],
+    agency_admin: roleGrants("agency_admin", custom),
+    agency_staff: roleGrants("agency_staff", custom),
   } as Parameters<typeof PermissionsEditor>[0]["initial"];
+  const unseen = custom ? agencyPermissions.filter((perm) => !(custom.known ?? []).includes(perm) && perm.startsWith("agency.inventory")).length > 0 : false;
 
   return (
     <div className="grid gap-8">
@@ -72,6 +74,7 @@ async function Team({ searchParams }: Pick<PageProps<"/[locale]/app/team">, "sea
           initial={sanitizeRolePermissions(grants) as typeof grants}
           defaults={{ agency_admin: [...defaultAgencyGrants.agency_admin], agency_staff: [...defaultAgencyGrants.agency_staff] }}
           custom={Boolean(custom)}
+          unseen={unseen}
         />
       ) : (
         <TeamTables
