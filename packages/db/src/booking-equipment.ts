@@ -444,7 +444,8 @@ export async function checkEquipmentReschedule(tx: Tx, organizationId: string, b
       continue;
     }
     const check = checkReserve(item, availabilityOn(item, claims.get(item.id) ?? [], newDate, todayInNetherlands(now), bookingId), line.quantity);
-    if (!check.ok && !line.overrideReason) {
+    // An override only excuses another booking's same-day reservation, never equipment that isn't there.
+    if (!check.ok && !(line.overrideReason && check.overridable)) {
       conflicts.push({ itemId: item.id, code: item.code, name: item.name, requested: line.quantity, free: check.free, shortage: check.shortage, overridable: check.overridable });
     }
   }

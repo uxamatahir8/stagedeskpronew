@@ -4559,7 +4559,8 @@
     "p_agency_inventory_gigs": "Apparatuur voor optredens",
     "p_agency_inventory_gigsHint": "Paklijsten maken, apparatuur laden en weer inchecken.",
     "p_agency_inventory_admin": "Apparatuur: uitzonderingen en verlies",
-    "p_agency_inventory_adminHint": "Conflicten op dezelfde dag toestaan en apparatuur als verloren bevestigen. Wordt vastgelegd."
+    "p_agency_inventory_adminHint": "Conflicten op dezelfde dag toestaan en apparatuur als verloren bevestigen. Wordt vastgelegd.",
+    "newPermissionsNotice": "Na het instellen van je eigen rechten zijn er rechten voor apparatuur bijgekomen. Beheerders en medewerkers kregen ze waar ze het verwante werk al doen (boekingen, artiesten, instellingen); controleer ze hieronder en sla op om te bevestigen."
   },
   "withdrawals": {
     "status_requested": "Aangevraagd",
@@ -5715,7 +5716,7 @@
     "stage_out": "Onderweg",
     "stage_returning": "Inchecken",
     "stage_missing": "Apparatuur ontbreekt",
-    "stage_complete": "Alles terug",
+    "stage_complete": "Inchecken voltooid",
     "stage_unused": "Niet gebruikt",
     "summary": "{planned} gepland · {loaded} geladen · {out} onderweg",
     "unreservedShort": "{count} niet gereserveerd",

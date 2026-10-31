@@ -32,6 +32,7 @@ export * from "./bookings";
 export * from "./inventory";
 export * from "./booking-equipment";
 export * from "./shared-inventory";
+export * from "./equipment-access";
 export * from "./inquiries";
 export * from "./generated/prisma/client";
 export * from "./newsletter";

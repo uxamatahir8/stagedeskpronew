@@ -526,3 +526,53 @@ describe("shared inventory", () => {
     expect((await sharedInventory(orgB, { q: "Shared top" })).items).toEqual([]);
   });
 });
+
+describe("deleting an agency with equipment", () => {
+  it("the plain cascade is refused by cases with contents; deleteAgency purges equipment first", async () => {
+    const { deleteAgency } = await import("./agencies");
+    const org = `${run}-del`;
+    await prisma.organization.create({ data: { id: org, name: "Del", slug: org } });
+    const box = await createItem(org, item({ code: "D-CASE", name: "Case", kind: "case" }), owner);
+    await createItem(org, item({ code: "D-MIC", name: "Mic", containerId: box }), owner);
+    await createCategory(org, "Del cat");
+    await expect(prisma.organization.delete({ where: { id: org } })).rejects.toThrow();
+    await deleteAgency(org);
+    expect(await prisma.organization.count({ where: { id: org } })).toBe(0);
+    expect(await prisma.equipmentItem.count({ where: { organizationId: org } })).toBe(0);
+  });
+});
+
+describe("hardening", () => {
+  it("found stock can't exceed what was lost", async () => {
+    const { markItemLost } = await import("./inventory");
+    const xlr = await createItem(orgA, item({ code: code("FND"), name: "XLR", tracking: "bulk", quantity: 5 }), owner);
+    await expect(markItemFound(orgA, xlr, 1, owner, null)).rejects.toMatchObject({ code: "below_use" });
+    await markItemLost(orgA, xlr, 2, owner, "gone");
+    await expect(markItemFound(orgA, xlr, 3, owner, null)).rejects.toMatchObject({ code: "below_use" });
+    await markItemFound(orgA, xlr, 2, owner, null);
+    expect((await prisma.equipmentItem.findUniqueOrThrow({ where: { id: xlr } })).quantity).toBe(5);
+    await expect(markItemFound(orgA, xlr, 1, owner, null)).rejects.toMatchObject({ code: "below_use" });
+  });
+
+  it("an override doesn't let a booking move onto a date where the equipment is physically out", async () => {
+    const speaker = await createItem(orgA, item({ code: code("OVD"), name: "Speaker" }), owner);
+    const morning = await booked();
+    const evening = await booked();
+    await addToPackingList(orgA, morning.id, { itemId: speaker, quantity: 1 }, ownerActor, null, may1);
+    await addToPackingList(orgA, evening.id, { itemId: speaker, quantity: 1 }, ownerActor, "two gigs", may1);
+    // The speaker goes out for a gig on 2027-06-20 and isn't back.
+    const away = await booked(orgA, "2027-06-20");
+    await removeLine(orgA, (await lineOf(morning.id, speaker)).id, ownerActor);
+    await addToPackingList(orgA, away.id, { itemId: speaker, quantity: 1 }, ownerActor, null, may1);
+    await loadLine(orgA, (await lineOf(away.id, speaker)).id, 1, owner, may1);
+    await expect(updateBookingDetails(orgA, evening.id, { eventDate: new Date("2027-06-19T00:00:00Z") }, owner)).rejects.toMatchObject({ code: "reschedule_conflict" });
+  });
+
+  it("retiring an item that sits in a case records it leaving the case", async () => {
+    const box = await createItem(orgA, item({ code: code("RBX"), name: "Case", kind: "case" }), owner);
+    const mic = await createItem(orgA, item({ code: code("RMC"), name: "Mic", containerId: box }), owner);
+    await retireItem(orgA, mic, owner, null, may1);
+    const events = await prisma.equipmentEvent.findMany({ where: { itemId: mic }, orderBy: { id: "asc" } });
+    expect(events.map((e) => e.type)).toEqual(["created", "moved_in", "moved_out", "retired"]);
+  });
+});

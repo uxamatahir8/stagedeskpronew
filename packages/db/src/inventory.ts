@@ -357,7 +357,11 @@ export async function markItemFound(organizationId: string, itemId: string, quan
       if (item.status !== "lost") throw new InventoryError("invalid_status");
       await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { status: "available" } });
     } else {
-      if (quantity < 1 || quantity > 100_000) throw new InventoryError("below_use");
+      // Only what was lost can come back: units written off minus units already found, from the item's own history.
+      const events = await tx.equipmentEvent.findMany({ where: { itemId, type: { in: ["lost", "found"] } }, select: { type: true, data: true } });
+      const count = (type: string) => events.filter((e) => e.type === type).reduce((sum, e) => sum + Number((e.data as { quantity?: number } | null)?.quantity ?? 0), 0);
+      const missing = count("lost") - count("found");
+      if (quantity < 1 || quantity > missing) throw new InventoryError("below_use", { maximum: Math.max(0, missing) });
       await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { quantity: item.quantity + quantity } });
     }
     const n = item.tracking === "unit" ? 1 : quantity;
@@ -383,7 +387,7 @@ async function useOf(tx: Tx, itemId: string, today: string) {
 export async function retireItem(organizationId: string, itemId: string, actorId: string, note: string | null, now = new Date()) {
   await tenantDb(organizationId).$transaction(async (tx) => {
     await lockItems(tx, organizationId, [itemId]);
-    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: { status: true, _count: { select: { contents: { where: { status: { not: "retired" } } } } } } });
+    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: { status: true, containerId: true, _count: { select: { contents: { where: { status: { not: "retired" } } } } } } });
     if (!item) throw new InventoryError("not_found");
     if (item.status === "retired") return;
     if (item._count.contents > 0) throw new InventoryError("not_empty");
@@ -391,6 +395,7 @@ export async function retireItem(organizationId: string, itemId: string, actorId
     if (use.out > 0) throw new InventoryError("out");
     if (use.reserved > 0) throw new InventoryError("reserved", { bookings: use.reserved });
     await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { status: "retired", containerId: null } });
+    if (item.containerId) await logItemEvent(tx, itemId, "moved_out", actorId, { containerId: item.containerId });
     await logItemEvent(tx, itemId, "retired", actorId, { from: item.status, ...(note ? { note } : {}) });
   });
 }

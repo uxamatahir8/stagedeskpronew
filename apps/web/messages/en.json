@@ -4559,7 +4559,8 @@
     "p_agency_inventory_gigs": "Gig equipment",
     "p_agency_inventory_gigsHint": "Make packing lists, load equipment and check it back in.",
     "p_agency_inventory_admin": "Equipment overrides and losses",
-    "p_agency_inventory_adminHint": "Override same-day conflicts and confirm equipment as lost. Audited."
+    "p_agency_inventory_adminHint": "Override same-day conflicts and confirm equipment as lost. Audited.",
+    "newPermissionsNotice": "Equipment permissions were added after you set your own permissions. Admins and staff got them where they already handle the related work (bookings, artists, settings); check them below and save to confirm."
   },
   "withdrawals": {
     "status_requested": "Requested",
@@ -5715,7 +5716,7 @@
     "stage_out": "Out",
     "stage_returning": "Checking in",
     "stage_missing": "Missing equipment",
-    "stage_complete": "All back",
+    "stage_complete": "Check-in complete",
     "stage_unused": "Not used",
     "summary": "{planned} planned · {loaded} loaded · {out} out",
     "unreservedShort": "{count} not reserved",

@@ -105,7 +105,7 @@ async function Inventory({ searchParams }: Pick<PageProps<"/[locale]/app/invento
             { key: "kind", label: t("kind"), options: equipmentKinds.map((k) => ({ value: k, label: t(`kind_${k}`) })) },
             ...(categories.length ? [{ key: "category", label: t("category"), options: categories.map((c) => ({ value: c.id, label: c.name })) }] : []),
           ]}
-          columns={[{ label: t("code"), sort: "code" }, { label: t("name") }, { label: t("category") }, { label: t("stock"), align: "right" }, { label: t("status") }]}
+          columns={[{ label: t("code"), sort: "code" }, { label: t("name") }, { label: t("category"), className: "hidden lg:table-cell" }, { label: t("stock"), align: "right" }, { label: t("status") }]}
         >
           {list.items.map((item) => (
             <TableRow key={item.id}>
@@ -128,7 +128,8 @@ async function Inventory({ searchParams }: Pick<PageProps<"/[locale]/app/invento
                   </span>
                 </div>
               </TableCell>
-              <TableCell>{item.category?.name ?? "—"}</TableCell>
+              {/* Hidden below desktop width so stock and status stay in view on tablets. */}
+              <TableCell className="hidden lg:table-cell">{item.category?.name ?? "—"}</TableCell>
               <TableCell className="text-right tabular-nums whitespace-nowrap">
                 {item.tracking === "bulk" ? t("stockOf", { quantity: item.quantity, defective: item.defectiveQty }) : item.kind === "set" ? "—" : 1}
               </TableCell>
