@@ -21,6 +21,9 @@
     },
     "test": {
       "dependsOn": ["generate", "^generate"]
+    },
+    "@stagedesk/payments#test": {
+      "dependsOn": ["generate", "^generate", "@stagedesk/db#test"]
     }
   }
 }
