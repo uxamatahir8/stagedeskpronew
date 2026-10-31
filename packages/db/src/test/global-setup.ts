@@ -14,10 +14,17 @@ export default function setup() {
   process.env["DATABASE_URL"] = url.toString();
 
   const cwd = fileURLToPath(new URL("../..", import.meta.url));
-  execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
-    cwd,
-    env: process.env,
-    stdio: "pipe",
-    shell: process.platform === "win32",
-  });
+  try {
+    execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], {
+      cwd,
+      env: process.env,
+      stdio: "pipe",
+      shell: process.platform === "win32",
+    });
+  } catch (error) {
+    // Rethrow with Prisma's own output as text: vitest can't print the raw error (its output is a Buffer).
+    const e = error as { stdout?: Buffer; stderr?: Buffer; message?: string };
+    const output = [e.stdout?.toString(), e.stderr?.toString()].filter(Boolean).join("\n").trim();
+    throw new Error(`Migrating the test database failed:\n${output || e.message}`);
+  }
 }
