@@ -48,3 +48,25 @@ describe("agency permissions chosen by the owner", () => {
     expect(can("agency_owner", "agency.permissions", custom)).toBe(true);
   });
 });
+
+describe("inventory permissions", () => {
+  it("gives the matrix from the inventory plan", () => {
+    for (const p of ["agency.inventory", "agency.inventory.manage", "agency.inventory.gigs", "agency.inventory.admin"] as const) {
+      expect(can("agency_owner", p)).toBe(true);
+      expect(can("agency_admin", p)).toBe(true);
+      expect(can("solo_artist", p)).toBe(true);
+      expect(can("artist", p)).toBe(false);
+      expect(can("customer", p)).toBe(false);
+    }
+    expect(can("agency_staff", "agency.inventory")).toBe(true);
+    expect(can("agency_staff", "agency.inventory.gigs")).toBe(true);
+    expect(can("agency_staff", "agency.inventory.manage")).toBe(false);
+    expect(can("agency_staff", "agency.inventory.admin")).toBe(false);
+  });
+
+  it("lets owners grant staff inventory management, never the admin-only actions", () => {
+    const custom = { agency_staff: ["agency.inventory", "agency.inventory.manage", "agency.inventory.admin"] };
+    expect(can("agency_staff", "agency.inventory.manage", custom)).toBe(true);
+    expect(can("agency_staff", "agency.inventory.admin", custom)).toBe(false);
+  });
+});

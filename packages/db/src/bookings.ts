@@ -14,6 +14,7 @@ import {
   type TransitionError,
 } from "@stagedesk/core";
 import { effectiveFeeSnapshot } from "./billing";
+import { checkEquipmentReschedule, equipmentAfterTransition, equipmentTx, notifyUnreservedEquipment } from "./booking-equipment";
 import { prisma } from "./client";
 import { agencyDeskUserIds, notify } from "./notifications";
 import { Prisma } from "./generated/prisma/client";
@@ -91,6 +92,8 @@ async function applyTransition(
     data: { ...extra, status: result.to, ...(stamp ? { [stamp]: now } : {}) },
   });
   await logEvent(tx, booking.id, action, actorId, { from: booking.status, to: result.to, ...(eventData as object) });
+  // Entering booked or confirmed reserves the packing list (never fails for a shortage).
+  await equipmentAfterTransition(tx, booking.organizationId, booking.id, booking.status, result.to, now);
   return result.to;
 }
 
@@ -271,12 +274,14 @@ export async function acceptQuote(
     );
     await tx.quote.updateMany({ where: { id: quote.id }, data: { status: "accepted", acceptedAt: now, acceptedByName: by.name } });
     return booking;
-  });
+    // READ COMMITTED: the equipment reservation runs in here and must see other bookings' committed reservations.
+  }, equipmentTx);
   await notify(
     await agencyDeskUserIds(organizationId),
     { type: "quote_accepted", data: { name: by.name, code: booking.trackingCode }, url: `/app/bookings/${booking.trackingCode}` },
     by.actorId,
   );
+  await notifyUnreservedEquipment(organizationId, booking.id, by.actorId);
   await confirmSoloBooking(organizationId, booking.id, now);
 }
 
@@ -418,6 +423,25 @@ export async function changeBookingStatus(
     }
     return to;
   });
+}
+
+/**
+ * Saves edited event details on an open booking. Moving a booked or confirmed
+ * booking to another date is refused (EquipmentError "reschedule_conflict")
+ * when its reserved equipment doesn't fit on the new date.
+ */
+export async function updateBookingDetails(
+  organizationId: string,
+  bookingId: string,
+  data: Omit<Prisma.BookingUpdateManyMutationInput, "eventDate" | "status"> & { eventDate: Date | null },
+  actorId: string,
+) {
+  return tenantDb(organizationId).$transaction(async (tx) => {
+    await checkEquipmentReschedule(tx, organizationId, bookingId, data.eventDate ? data.eventDate.toISOString().slice(0, 10) : null);
+    const updated = await tx.booking.updateMany({ where: { id: bookingId, status: { in: ["inquiry", "quoted", "booked", "confirmed", "expired"] } }, data });
+    if (updated.count === 0) throw new BookingError("invalid_status");
+    await logEvent(tx, bookingId, "details_updated", actorId);
+  }, equipmentTx);
 }
 
 export interface PaymentInput {

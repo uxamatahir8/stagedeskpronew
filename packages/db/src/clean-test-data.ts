@@ -14,6 +14,7 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 if (process.env["NODE_ENV"] === "production") throw new Error("Refusing to clean a production database.");
 
 const { prisma } = await import("./client");
+const { purgeInventory } = await import("./inventory");
 
 /** Email domains used only by tests (see apps/web/e2e and scripts/smoke-*.sh). */
 const testDomains = ["test.local", "e2e-partners.nl", "e2e-bureau.nl", "e2e-beheer.nl"];
@@ -65,6 +66,9 @@ if (!apply) {
       await tx.invoice.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { organizationId: { in: orgIds } }] } });
       await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
       await tx.bookingAssignment.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { artistId: { in: artistIds } }] } });
+      // Packing lines point at bookings with Restrict; the agencies' own equipment goes too.
+      await tx.bookingEquipment.deleteMany({ where: { bookingId: { in: bookingIds } } });
+      await purgeInventory(tx, orgIds);
       await tx.booking.deleteMany({ where: { id: { in: bookingIds } } });
       // Partner records: commissions and payouts before their referrals and partner.
       await tx.commission.deleteMany({ where: { OR: [{ affiliateId: { in: affiliateIds } }, { referral: { agencyId: { in: orgIds } } }] } });

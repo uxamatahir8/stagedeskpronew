@@ -24,6 +24,7 @@ export const agencyPermissionGroups = {
   bookings: ["agency.bookings", "agency.bookings.create", "agency.bookings.edit", "agency.bookings.status", "agency.leads"],
   quotes: ["agency.quotes", "agency.quotes.send", "agency.quotes.accept", "agency.services"],
   planning: ["agency.calendar", "agency.artists", "agency.artists.manage"],
+  inventory: ["agency.inventory", "agency.inventory.manage", "agency.inventory.gigs", "agency.inventory.admin"],
   customers: ["agency.customers", "agency.customers.manage", "agency.reviews"],
   money: ["agency.payments", "agency.payments.record", "agency.payments.confirm", "agency.payments.refund", "agency.invoices", "agency.reports"],
   agency: ["agency.team", "agency.team.manage", "agency.settings", "agency.website", "agency.referrals"],
@@ -36,7 +37,13 @@ export type AgencyPermission = (typeof agencyPermissions)[number];
 export const ownerOnlyPermissions = ["agency.billing", "agency.permissions"] as const;
 
 /** Things only an admin may be given, never staff (they reach outside day-to-day work). */
-export const adminOnlyPermissions: readonly AgencyPermission[] = ["agency.team.manage", "agency.settings", "agency.payments.refund"];
+export const adminOnlyPermissions: readonly AgencyPermission[] = [
+  "agency.team.manage",
+  "agency.settings",
+  "agency.payments.refund",
+  // Overriding equipment conflicts and writing equipment off as lost.
+  "agency.inventory.admin",
+];
 
 export const permissions = [
   "platform.agencies",
@@ -84,6 +91,8 @@ export const defaultAgencyGrants: Record<"agency_admin" | "agency_staff", readon
     "agency.customers",
     "agency.customers.manage",
     "agency.team",
+    "agency.inventory",
+    "agency.inventory.gigs",
   ],
 };
 
@@ -131,6 +140,10 @@ const grants: Record<Role, readonly Permission[]> = {
     "agency.reports",
     "agency.settings",
     "agency.billing",
+    "agency.inventory",
+    "agency.inventory.manage",
+    "agency.inventory.gigs",
+    "agency.inventory.admin",
     "artist.availability",
     "artist.profile",
     "solo.listings",

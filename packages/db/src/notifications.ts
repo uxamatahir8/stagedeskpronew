@@ -27,7 +27,10 @@ export type NotificationType =
   | "withdrawal_rejected"
   | "artist_joined"
   | "artist_request"
-  | "artist_request_answer";
+  | "artist_request_answer"
+  | "equipment_unreserved"
+  | "equipment_missing"
+  | "equipment_damaged";
 
 export interface NotificationInput {
   type: NotificationType;
