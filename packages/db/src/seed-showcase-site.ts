@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Section, SitePageContent, SiteTheme } from "@stagedesk/core";
+import { type Section, type SitePageContent, type SiteTheme, siteThemeSchema } from "@stagedesk/core";
 import { prisma } from "./client";
 import { publishSite } from "./sites";
 
@@ -12,7 +12,7 @@ const page = (title: string, seoTitle: string, seoDescription: string, sections:
  * site had and publishes it.
  */
 export async function seedShowcaseSite(organizationId: string) {
-  const theme: SiteTheme = { primary: "#3b1748", accent: "#e0457b", font: "modern", radius: "round", mode: "dark" };
+  const theme: SiteTheme = siteThemeSchema.parse({ primary: "#3b1748", accent: "#e0457b", font: "modern", radius: "round", mode: "dark" });
   const home = page("Home", "Feestband Utrecht · DJ's en live-acts voor bruiloften en feesten", "Feestband Utrecht verzorgt al ruim tien jaar de muziek op bruiloften, bedrijfsfeesten en verjaardagen in Midden-Nederland. Vraag vrijblijvend een offerte aan.", [
     { id: id("hero"), type: "hero", background: "brand", title: "Muziek die van jullie feest een avond maakt om nooit te vergeten", subtitle: "Dj's, saxofonisten en live-acts voor bruiloften, bedrijfsfeesten en verjaardagen in Utrecht en heel Midden-Nederland.", image: "", align: "center", ctaLabel: "Vraag een offerte aan", ctaTarget: "booking", ctaUrl: "" },
     {
