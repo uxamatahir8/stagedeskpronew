@@ -30,7 +30,7 @@ export default async function AuditPage({ params, searchParams }: PageProps<"/[l
 }
 
 /** Filter groups by action prefix. */
-const groups = ["all", "settings", "plan", "agency", "affiliate", "payment", "user", "ticket", "booking", "lead", "support", "impersonation", "site"] as const;
+const groups = ["all", "settings", "plan", "agency", "affiliate", "payment", "user", "ticket", "booking", "lead", "support", "impersonation", "site", "inventory"] as const;
 
 const spec = { sorts: ["when", "action"], defaultSort: "when", defaultDir: "desc" as const, filters: { group: groups.filter((g) => g !== "all") } };
 

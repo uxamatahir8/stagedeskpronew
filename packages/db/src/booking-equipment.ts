@@ -250,7 +250,10 @@ export async function applyPackage(organizationId: string, bookingId: string, pa
     const pkg = await tx.equipmentPackage.findFirst({ where: { id: packageId }, select: { name: true } });
     if (!pkg) throw new EquipmentError("not_found");
     if (picks.length === 0) return { added: 0, warnings: [] };
-    const result = await addLines(tx, organizationId, booking, picks.map((p) => ({ itemId: p.itemId, quantity: p.quantity })), actor, override, now);
+    // A case in a package brings its contents, as when it's added by hand.
+    const entries: NewLine[] = [];
+    for (const p of picks) entries.push(...(await expand(tx, p.itemId, p.quantity)));
+    const result = await addLines(tx, organizationId, booking, entries, actor, override, now);
     await logBookingEvent(tx, booking.id, "package_applied", actor.id, { name: pkg.name, count: result.added });
     return result;
   }, equipmentTx);

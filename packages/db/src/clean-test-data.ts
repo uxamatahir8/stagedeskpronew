@@ -69,6 +69,17 @@ if (!apply) {
       // Packing lines point at bookings with Restrict; the agencies' own equipment goes too.
       await tx.bookingEquipment.deleteMany({ where: { bookingId: { in: bookingIds } } });
       await purgeInventory(tx, orgIds);
+      // Equipment the inventory spec adds to the demo agency (codes start with E2E-), once its bookings are gone.
+      const e2eItems = await tx.equipmentItem.findMany({ where: { code: { startsWith: "E2E-" } }, select: { id: true } });
+      const e2eIds = e2eItems.map((i) => i.id);
+      if ((await tx.bookingEquipment.count({ where: { itemId: { in: e2eIds } } })) === 0) {
+        await tx.equipmentEvent.deleteMany({ where: { itemId: { in: e2eIds } } });
+        await tx.equipmentPackageLine.deleteMany({ where: { OR: [{ itemId: { in: e2eIds } }, { package: { name: { startsWith: "E2E " } } }, { category: { name: { startsWith: "E2E " } } }] } });
+        await tx.equipmentPackage.deleteMany({ where: { name: { startsWith: "E2E " } } });
+        await tx.equipmentItem.updateMany({ where: { id: { in: e2eIds } }, data: { containerId: null } });
+        await tx.equipmentItem.deleteMany({ where: { id: { in: e2eIds } } });
+        await tx.equipmentCategory.deleteMany({ where: { name: { startsWith: "E2E " }, items: { none: {} } } });
+      }
       await tx.booking.deleteMany({ where: { id: { in: bookingIds } } });
       // Partner records: commissions and payouts before their referrals and partner.
       await tx.commission.deleteMany({ where: { OR: [{ affiliateId: { in: affiliateIds } }, { referral: { agencyId: { in: orgIds } } }] } });

@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { cleanRegions, currencies, dateFormats, eventTypes, isTimeZone, isValidIban, normalizeIban, timeFormats } from "@stagedesk/core";
-import { enabledCurrencies, geocode, getSetting, Prisma, prisma } from "@stagedesk/db";
+import { audit, enabledCurrencies, geocode, getSetting, Prisma, prisma } from "@stagedesk/db";
+import { writeBlocked } from "@/lib/billing";
 import type { ActionResult } from "@/lib/actions";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
 import {
@@ -155,4 +156,27 @@ export async function saveServiceAreaAction(input: z.input<typeof serviceAreaSch
   });
   revalidatePath("/[locale]/app/agency-settings", "page");
   return { ok: true, message: parsed.data.radiusKm && !spot ? t("savedNoMap") : t("saved") };
+}
+
+const inventorySettingsSchema = z.object({ inventorySharing: z.boolean(), artistsHandleEquipment: z.boolean() });
+
+/**
+ * Inventory sharing (other agencies may browse public fields, read-only) and
+ * whether assigned artists may record loading and returns. Sharing is an
+ * access change, so turning it on or off is audited.
+ */
+export async function saveInventorySettingsAction(input: z.input<typeof inventorySettingsSchema>): Promise<ActionResult> {
+  const { viewer, organization } = await requireAgency("agency.settings");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
+  const data = inventorySettingsSchema.parse(input);
+  const before = await prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { inventorySharing: true, artistsHandleEquipment: true } });
+  await prisma.organization.update({ where: { id: organization.id }, data });
+  if (before.inventorySharing !== data.inventorySharing) {
+    await audit({ actorId: viewer.user.id, action: "inventory.sharing", agencyId: organization.id, targetType: "agency", targetId: organization.id, data: { on: data.inventorySharing } });
+  }
+  if (before.artistsHandleEquipment !== data.artistsHandleEquipment) {
+    await audit({ actorId: viewer.user.id, action: "inventory.artist_access", agencyId: organization.id, targetType: "agency", targetId: organization.id, data: { on: data.artistsHandleEquipment } });
+  }
+  return { ok: true, message: (await getTranslations("agencySettings"))("saved") };
 }
