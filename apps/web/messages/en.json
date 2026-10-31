@@ -667,7 +667,8 @@
     "equipment_loaded": "All equipment loaded",
     "equipment_returned": "Equipment check-in complete: {returned} back, {damaged} damaged, {lost} lost",
     "equipment_checked_in": "Equipment checked in{missing, plural, =0 {} other {, # missing: {codes}}}",
-    "equipment_lost": "Confirmed lost: {codes} ({count})"
+    "equipment_lost": "Confirmed lost: {codes} ({count})",
+    "equipment_released": "Equipment reservation released ({codes}): {reason, select, damaged {damaged} lost {lost} maintenance {in maintenance} defective {defective} stock {stock corrected} other {no longer available}}"
   },
   "quotes": {
     "title": "Quotes",
@@ -5519,7 +5520,10 @@
     "container_kind": "Only cases and sets can hold items.",
     "nested": "Cases and sets can't go inside another case or set.",
     "not_unit_item": "Only numbered items can go in a case or set (not counted stock, cases or sets).",
-    "freeOf": "{free} of {requested} free"
+    "freeOf": "{free} of {requested} free",
+    "breaks_reservations": "Upcoming gigs have this equipment reserved; this change would leave them short:",
+    "checked_in": "Check-in for this gig is finished. Record late returns or confirm losses instead of loading.",
+    "invalid_package": "Those picks don't match the package (or are already on the list). Refresh the preview and try again."
   },
   "inventory": {
     "title": "Inventory",
@@ -5697,7 +5701,9 @@
     "packageHint": "\"Any …\" picks free numbered items from that category when the package is applied. Cases bring their contents.",
     "deletePackageConfirm": "Delete the package {name}? Packing lists that used it stay as they are.",
     "packageEditorHint": "Applying a package copies its equipment onto a packing list; editing the package later doesn't change those lists.",
-    "packageDescription": "Description"
+    "packageDescription": "Description",
+    "releaseConfirm": "{message}\n\nRelease those reservations and continue? The gigs are flagged and the desk is told; their equipment can be reserved again later.",
+    "savedReleased": "Saved. Reservations released for: {codes}."
   },
   "equipment": {
     "title": "Equipment",

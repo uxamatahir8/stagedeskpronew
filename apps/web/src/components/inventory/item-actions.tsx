@@ -42,7 +42,8 @@ function NoteAction({
   quantity?: number;
   variant?: "outline" | "destructive";
   requireNote?: boolean;
-  run: (quantity: number, note: string | null) => Promise<ActionResult>;
+  /** `release` is true when the user confirmed releasing reservations the change breaks. */
+  run: (quantity: number, note: string | null, release: boolean) => Promise<ActionResult & { releasable?: boolean }>;
 }) {
   const t = useTranslations("inventory");
   const router = useRouter();
@@ -53,7 +54,9 @@ function NoteAction({
     const note = String(form.get("note") ?? "").trim() || null;
     const n = quantity ? Number(form.get("quantity") || 1) : 1;
     start(async () => {
-      const result = await run(n, note);
+      let result = await run(n, note, false);
+      // Upcoming gigs have it reserved: only on explicit confirmation are those reservations released.
+      if (!result.ok && result.releasable && window.confirm(t("releaseConfirm", { message: result.message ?? "" }))) result = await run(n, note, true);
       if (!result.ok) return void toast.error(result.message);
       if (result.message) toast.success(result.message);
       setOpen(false);
@@ -155,8 +158,8 @@ export function ItemActions(p: ItemActionsProps) {
     <div className="flex flex-wrap gap-2">
       {p.kind !== "set" && !bulk && p.status === "available" && (
         <>
-          <NoteAction label={t("toMaintenance")} title={t("toMaintenance")} icon={WrenchIcon} run={(_, note) => setStatusAction(p.id, "maintenance", note)} />
-          <NoteAction label={t("toDefective")} title={t("toDefective")} icon={TriangleAlertIcon} run={(_, note) => setStatusAction(p.id, "defective", note)} />
+          <NoteAction label={t("toMaintenance")} title={t("toMaintenance")} icon={WrenchIcon} run={(_, note, release) => setStatusAction(p.id, "maintenance", note, release)} />
+          <NoteAction label={t("toDefective")} title={t("toDefective")} icon={TriangleAlertIcon} run={(_, note, release) => setStatusAction(p.id, "defective", note, release)} />
         </>
       )}
       {p.kind !== "set" && (p.status === "maintenance" || p.status === "defective") && (
@@ -164,7 +167,7 @@ export function ItemActions(p: ItemActionsProps) {
       )}
       {bulk && p.status === "available" && (
         <>
-          {inStock > 0 && <NoteAction label={t("unitsDamaged")} title={t("unitsDamaged")} description={t("unitsDamagedHint")} quantity={inStock} icon={TriangleAlertIcon} run={(n, note) => changeDefectiveAction(p.id, n, note)} />}
+          {inStock > 0 && <NoteAction label={t("unitsDamaged")} title={t("unitsDamaged")} description={t("unitsDamagedHint")} quantity={inStock} icon={TriangleAlertIcon} run={(n, note, release) => changeDefectiveAction(p.id, n, note, release)} />}
           {p.defectiveQty > 0 && <NoteAction label={t("unitsRepaired")} title={t("unitsRepaired")} quantity={p.defectiveQty} icon={CircleCheckIcon} run={(n, note) => changeDefectiveAction(p.id, -n, note)} />}
         </>
       )}
@@ -177,7 +180,7 @@ export function ItemActions(p: ItemActionsProps) {
           icon={PackageMinusIcon}
           variant="destructive"
           requireNote
-          run={(n, note) => markLostAction(p.id, n, note)}
+          run={(n, note, release) => markLostAction(p.id, n, note, release)}
         />
       )}
       {p.kind !== "set" && (bulk || p.status === "lost") && (

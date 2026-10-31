@@ -11,6 +11,7 @@ import {
   loadError,
   lostError,
   outstandingOf,
+  packagePickError,
   plannedQuantityError,
   powerTotal,
   resolvePackage,
@@ -19,9 +20,9 @@ import {
   todayInNetherlands,
   usableStock,
 } from "@stagedesk/core";
-import { audit } from "./audit";
+import { auditTx } from "./audit";
 import { Prisma } from "./generated/prisma/client";
-import { claimLinesOf, lockItems, logItemEvent, toClaimLine, type Tx } from "./inventory";
+import { claimLinesOf, lockItems, logItemEvent, notifyReleased, readCommitted, reconcileReservations, type ReleasedReservations, toClaimLine, type Tx } from "./inventory";
 import { agencyDeskUserIds, notify } from "./notifications";
 import { tenantDb } from "./tenant";
 
@@ -37,7 +38,7 @@ import { tenantDb } from "./tenant";
  * reserves what fits and flags the rest (it never blocks the acceptance).
  */
 
-export const equipmentTx = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 20_000 } as const;
+export const equipmentTx = readCommitted;
 
 export type EquipmentErrorCode =
   | "not_found"
@@ -52,7 +53,9 @@ export type EquipmentErrorCode =
   | "loaded"
   | "reschedule_conflict"
   | "not_reserved"
-  | "not_overridable";
+  | "not_overridable"
+  | "checked_in"
+  | "invalid_package";
 
 export interface EquipmentConflict {
   itemId: string;
@@ -186,7 +189,7 @@ async function addLines(tx: Tx, organizationId: string, booking: BookingRow, ent
   if (overrides.length) {
     const codes = overrides.map((w) => w.item.code);
     await logBookingEvent(tx, booking.id, "equipment_override", actor.id, { codes: codes.join(", "), reason: override });
-    await audit({ actorId: actor.id, action: "inventory.override", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode, items: codes, reason: override } });
+    await auditTx(tx, { actorId: actor.id, action: "inventory.override", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode, items: codes, reason: override } });
   }
   return { added: writes.length, warnings };
 }
@@ -247,9 +250,16 @@ export async function previewPackage(organizationId: string, bookingId: string, 
 export async function applyPackage(organizationId: string, bookingId: string, packageId: string, picks: readonly NewLine[], actor: EquipmentActor, override: string | null = null, now = new Date()) {
   return tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
-    const pkg = await tx.equipmentPackage.findFirst({ where: { id: packageId }, select: { name: true } });
+    const pkg = await tx.equipmentPackage.findFirst({ where: { id: packageId }, select: { name: true, lines: { select: { itemId: true, categoryId: true, quantity: true } } } });
     if (!pkg) throw new EquipmentError("not_found");
     if (picks.length === 0) return { added: 0, warnings: [] };
+    // The picks come from the client: they must be what this package allows, and not on the list already.
+    const pickIds = picks.map((p) => p.itemId);
+    const [pickItems, planned] = await Promise.all([
+      tx.equipmentItem.findMany({ where: { id: { in: pickIds }, status: { not: "retired" } }, select: { id: true, kind: true, tracking: true, categoryId: true, containerId: true } }),
+      tx.bookingEquipment.count({ where: { bookingId, itemId: { in: pickIds } } }),
+    ]);
+    if (planned > 0 || packagePickError(pkg.lines, picks, new Map(pickItems.map((i) => [i.id, i])))) throw new EquipmentError("invalid_package");
     // A case in a package brings its contents, as when it's added by hand.
     const entries: NewLine[] = [];
     for (const p of picks) entries.push(...(await expand(tx, p.itemId, p.quantity)));
@@ -293,7 +303,7 @@ export async function setLineQuantity(organizationId: string, lineId: string, qu
     await logItemEvent(tx, item.id, "allocated", actor.id, { quantity, from: current.quantity }, booking.id);
     if (overridden) {
       await logBookingEvent(tx, booking.id, "equipment_override", actor.id, { codes: item.code, reason: override });
-      await audit({ actorId: actor.id, action: "inventory.override", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode, items: [item.code], reason: override } });
+      await auditTx(tx, { actorId: actor.id, action: "inventory.override", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode, items: [item.code], reason: override } });
     }
   }, equipmentTx);
 }
@@ -418,7 +428,7 @@ export async function overrideLine(organizationId: string, lineId: string, reaso
     await tx.bookingEquipment.updateMany({ where: { id: lineId, reservedAt: null }, data: { reservedAt: now, overrideReason: check.ok ? null : trimmed, overriddenById: check.ok ? null : actor.id } });
     if (!check.ok) {
       await logBookingEvent(tx, booking.id, "equipment_override", actor.id, { codes: item.code, reason: trimmed });
-      await audit({ actorId: actor.id, action: "inventory.override", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode, items: [item.code], reason: trimmed } });
+      await auditTx(tx, { actorId: actor.id, action: "inventory.override", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode, items: [item.code], reason: trimmed } });
     }
   }, equipmentTx);
 }
@@ -484,6 +494,8 @@ async function loadLinesTx(tx: Tx, organizationId: string, changes: { lineId: st
     const item = items.find((i) => i.id === line.itemId)!;
     const own = toClaimLine(line);
     let delta = change.delta;
+    // After check-in the counts are settled: what's out is missing, resolved by returning it or confirming it lost.
+    if (line.booking.equipmentCheckedInAt) throw new EquipmentError("checked_in");
     if (delta > 0) {
       if (!isReservingStatus(line.booking.status)) {
         if (strict) throw new EquipmentError("invalid_status");
@@ -560,6 +572,7 @@ export async function returnLine(organizationId: string, lineId: string, input: 
     return returnLinesTx(tx, organizationId, [{ lineId, ...input }], actorId);
   }, equipmentTx);
   await notifyDamage(organizationId, result, actorId);
+  await notifyReleased(organizationId, result.released, actorId);
   return result;
 }
 
@@ -574,6 +587,7 @@ async function notifyDamage(organizationId: string, result: { damaged: number; b
 async function returnLinesTx(tx: Tx, organizationId: string, entries: { lineId: string; ok: number; damaged: number; note?: string | null }[], actorId: string) {
   const lines = await tx.bookingEquipment.findMany({ where: { id: { in: entries.map((e) => e.lineId) } }, include: { item: { select: itemStock } } });
   let damagedTotal = 0;
+  const released: ReleasedReservations = [];
   for (const entry of entries) {
     const line = lines.find((l) => l.id === entry.lineId)!;
     const error = returnError(line, entry.ok, entry.damaged);
@@ -588,6 +602,10 @@ async function returnLinesTx(tx: Tx, organizationId: string, entries: { lineId: 
     if (entry.ok > 0) await logItemEvent(tx, line.itemId, "returned", actorId, { quantity: entry.ok }, line.bookingId);
     if (entry.damaged > 0) {
       damagedTotal += entry.damaged;
+      const item = (await tx.equipmentItem.findFirst({ where: { id: line.itemId }, select: itemStock }))!;
+      const after = line.item.tracking === "unit" ? { ...item, status: ["retired", "lost"].includes(item.status) ? item.status : "defective" } : { ...item, defectiveQty: item.defectiveQty + entry.damaged };
+      // Upcoming gigs that counted on it lose their reservation, flagged and notified.
+      released.push(...(await reconcileReservations(tx, line.itemId, item, after, { release: true, actorId, reason: "damaged" })));
       if (line.item.tracking === "unit") {
         await tx.equipmentItem.updateMany({ where: { id: line.itemId, status: { notIn: ["retired", "lost"] } }, data: { status: "defective" } });
       } else {
@@ -598,7 +616,7 @@ async function returnLinesTx(tx: Tx, organizationId: string, entries: { lineId: 
   }
   const bookingId = lines[0]?.bookingId;
   if (bookingId) await maybeLogMilestone(tx, bookingId, actorId, "returned");
-  return { damaged: damagedTotal, bookingId };
+  return { damaged: damagedTotal, bookingId, released };
 }
 
 /**
@@ -618,7 +636,7 @@ export async function returnGroup(
     const ids = new Set(group.map((g) => g.id));
     const chosen = [...new Set([...input.present, ...input.damaged])];
     if (chosen.some((id) => !ids.has(id))) throw new EquipmentError("not_found");
-    if (chosen.length === 0) return { damaged: 0, bookingId };
+    if (chosen.length === 0) return { damaged: 0, bookingId, released: [] as ReleasedReservations };
     await lineContext(tx, organizationId, chosen);
     const fresh = await tx.bookingEquipment.findMany({ where: { id: { in: chosen } } });
     const damaged = new Set(input.damaged);
@@ -628,6 +646,7 @@ export async function returnGroup(
     return returnLinesTx(tx, organizationId, entries, actorId);
   }, equipmentTx);
   await notifyDamage(organizationId, result, actorId);
+  await notifyReleased(organizationId, result.released, actorId);
   return result;
 }
 
@@ -638,16 +657,21 @@ export async function returnGroup(
  */
 export async function finishCheckIn(organizationId: string, bookingId: string, actorId: string, now = new Date()) {
   const result = await tenantDb(organizationId).$transaction(async (tx) => {
+    // Same item locks as loading and returns, so check-in can't interleave with them.
+    const itemIds = (await tx.bookingEquipment.findMany({ where: { bookingId }, select: { itemId: true } })).map((l) => l.itemId);
+    await lockItems(tx, organizationId, itemIds);
     const booking = await loadBooking(tx, bookingId);
     const lines = await tx.bookingEquipment.findMany({ where: { bookingId }, include: { item: { select: { code: true } } } });
     const t = equipmentTotals(lines);
     if (t.loaded === 0) throw new EquipmentError("not_loaded");
+    // Finishing again changes nothing (no new timestamp, timeline entry or notification).
+    if (booking.equipmentCheckedInAt) return { missing: t.outstanding, code: booking.trackingCode, repeated: true };
     await tx.booking.updateMany({ where: { id: bookingId }, data: { equipmentCheckedInAt: now } });
     const missing = lines.filter((l) => outstandingOf(l) > 0).map((l) => `${l.item.code}${outstandingOf(l) > 1 ? ` ×${outstandingOf(l)}` : ""}`);
     await logBookingEvent(tx, bookingId, "equipment_checked_in", actorId, { missing: t.outstanding, codes: missing.join(", ") });
-    return { missing: t.outstanding, code: booking.trackingCode };
+    return { missing: t.outstanding, code: booking.trackingCode, repeated: false };
   }, equipmentTx);
-  if (result.missing > 0) {
+  if (result.missing > 0 && !result.repeated) {
     await notify(await agencyDeskUserIds(organizationId), { type: "equipment_missing", data: { code: result.code, count: result.missing }, url: `/app/bookings/${result.code}/equipment` }, actorId);
   }
   return result;
@@ -659,7 +683,7 @@ export async function finishCheckIn(organizationId: string, bookingId: string, a
  */
 export async function confirmLost(organizationId: string, lineId: string, quantity: number, actor: EquipmentActor, note: string | null) {
   if (!actor.canOverride) throw new EquipmentError("not_allowed");
-  return tenantDb(organizationId).$transaction(async (tx) => {
+  const released = await tenantDb(organizationId).$transaction(async (tx) => {
     await lineContext(tx, organizationId, [lineId]);
     const line = await tx.bookingEquipment.findFirst({ where: { id: lineId }, include: { item: { select: itemStock }, booking: { select: bookingSelect } } });
     if (!line) throw new EquipmentError("not_found");
@@ -668,6 +692,9 @@ export async function confirmLost(organizationId: string, lineId: string, quanti
     if (error) throw new EquipmentError(error);
     const updated = await tx.bookingEquipment.updateMany({ where: { id: lineId, lostQty: line.lostQty, returnedQty: line.returnedQty, damagedQty: line.damagedQty }, data: { lostQty: line.lostQty + n } });
     if (updated.count === 0) throw new EquipmentError("conflict");
+    const item = (await tx.equipmentItem.findFirst({ where: { id: line.itemId }, select: itemStock }))!;
+    const after = line.item.tracking === "unit" ? { ...item, status: "lost" } : { ...item, quantity: item.quantity - n };
+    const released = await reconcileReservations(tx, line.itemId, item, after, { release: true, actorId: actor.id, reason: "lost" });
     if (line.item.tracking === "unit") {
       await tx.equipmentItem.updateMany({ where: { id: line.itemId }, data: { status: "lost" } });
     } else {
@@ -676,9 +703,11 @@ export async function confirmLost(organizationId: string, lineId: string, quanti
     const clean = note?.trim().slice(0, 500) || null;
     await logItemEvent(tx, line.itemId, "lost", actor.id, { quantity: n, ...(clean ? { note: clean } : {}) }, line.bookingId);
     await logBookingEvent(tx, line.bookingId, "equipment_lost", actor.id, { codes: line.item.code, count: n });
-    await audit({ actorId: actor.id, action: "inventory.lost", agencyId: organizationId, targetType: "equipment", targetId: line.itemId, data: { code: line.item.code, quantity: n, booking: line.booking.trackingCode } });
+    await auditTx(tx, { actorId: actor.id, action: "inventory.lost", agencyId: organizationId, targetType: "equipment", targetId: line.itemId, data: { code: line.item.code, quantity: n, booking: line.booking.trackingCode, releasedBookings: released.map((r) => r.trackingCode) } });
     await maybeLogMilestone(tx, line.bookingId, actor.id, "returned");
+    return released;
   }, equipmentTx);
+  await notifyReleased(organizationId, released, actor.id);
 }
 
 // ─── Reading ────────────────────────────────────────────────────────────

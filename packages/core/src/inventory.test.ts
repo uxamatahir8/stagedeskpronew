@@ -12,6 +12,8 @@ import {
   lostError,
   membershipError,
   normalizeEquipmentCode,
+  packagePickError,
+  reservationsBrokenBy,
   outstandingOf,
   packageLineSchema,
   plannedQuantityError,
@@ -338,5 +340,58 @@ describe("packages", () => {
   it("doesn't pick items inside cases or sets for category lines", () => {
     const picks = resolvePackage([{ itemId: null, categoryId: "spk", quantity: 1 }], [cand({ id: "in", containerId: "case" })], new Set());
     expect(picks[0]).toMatchObject({ status: "unavailable" });
+  });
+});
+
+describe("stock changes against reservations", () => {
+  const res = (id: string, quantity: number, reservedAt: number, over: Partial<ClaimLine> = {}) => ({ ...line({ quantity, reservedAt: new Date(reservedAt), bookingId: id, ...over }), id });
+
+  it("keeps reservations that still fit", () => {
+    expect(reservationsBrokenBy(cables, { ...cables, quantity: 8 }, [res("a", 4, 1), res("b", 4, 2)], today)).toEqual([]);
+  });
+  it("releases the latest reservations until the date fits again (10 → 3 with 10 reserved)", () => {
+    const lines = [res("a", 4, 1), res("b", 6, 2)];
+    expect(reservationsBrokenBy(cables, { ...cables, quantity: 3 }, lines, today).map((l) => l.id)).toEqual(["b", "a"]);
+    expect(reservationsBrokenBy(cables, { ...cables, quantity: 4 }, lines, today).map((l) => l.id)).toEqual(["b"]);
+  });
+  it("counts defective units and status changes", () => {
+    expect(reservationsBrokenBy(cables, { ...cables, defectiveQty: 3 }, [res("a", 8, 1)], today).map((l) => l.id)).toEqual(["a"]);
+    expect(reservationsBrokenBy(speaker, { ...speaker, status: "maintenance" }, [{ ...res("a", 1, 1) }], today).map((l) => l.id)).toEqual(["a"]);
+  });
+  it("ignores past dates, unreserved lines, quotes and loaded lines", () => {
+    const lines = [res("past", 4, 1, { eventDate: "2027-06-01" }), res("plan", 4, 2, { reservedAt: null }), res("quote", 4, 3, { bookingStatus: "quoted" }), res("out", 4, 4, { loadedQty: 4 })];
+    expect(reservationsBrokenBy(speaker, { ...speaker, status: "defective" }, lines, today)).toEqual([]);
+  });
+  it("doesn't count an existing same-day override as broken", () => {
+    const lines = [res("morning", 1, 1), res("evening", 1, 2, { overrideReason: "two gigs" })];
+    expect(reservationsBrokenBy(speaker, speaker, lines, today)).toEqual([]);
+  });
+});
+
+describe("package picks against the template", () => {
+  const items = new Map([
+    ["s1", { kind: "item", tracking: "unit", categoryId: "spk", containerId: null }],
+    ["s2", { kind: "item", tracking: "unit", categoryId: "spk", containerId: null }],
+    ["s3", { kind: "item", tracking: "unit", categoryId: "spk", containerId: null }],
+    ["in", { kind: "item", tracking: "unit", categoryId: "spk", containerId: "case" }],
+    ["l1", { kind: "item", tracking: "unit", categoryId: "light", containerId: null }],
+    ["xlr", { kind: "item", tracking: "bulk", categoryId: "cab", containerId: null }],
+  ]);
+  const lines = [
+    { itemId: null, categoryId: "spk", quantity: 2 },
+    { itemId: "xlr", categoryId: null, quantity: 6 },
+  ];
+  it("accepts what the package allows, including fewer than asked", () => {
+    expect(packagePickError(lines, [{ itemId: "s1", quantity: 1 }, { itemId: "s2", quantity: 1 }, { itemId: "xlr", quantity: 6 }], items)).toBeNull();
+    expect(packagePickError(lines, [{ itemId: "xlr", quantity: 2 }], items)).toBeNull();
+  });
+  it("refuses manipulated picks", () => {
+    expect(packagePickError(lines, [{ itemId: "s1", quantity: 1 }, { itemId: "s1", quantity: 1 }], items)).toBe("duplicate");
+    expect(packagePickError(lines, [{ itemId: "s1", quantity: 1 }, { itemId: "s2", quantity: 1 }, { itemId: "s3", quantity: 1 }], items)).toBe("too_many");
+    expect(packagePickError(lines, [{ itemId: "xlr", quantity: 7 }], items)).toBe("too_many");
+    expect(packagePickError(lines, [{ itemId: "l1", quantity: 1 }], items)).toBe("wrong_category");
+    expect(packagePickError(lines, [{ itemId: "in", quantity: 1 }], items)).toBe("wrong_category");
+    expect(packagePickError(lines, [{ itemId: "s1", quantity: 3 }], items)).toBe("wrong_category");
+    expect(packagePickError(lines, [{ itemId: "unknown", quantity: 1 }], items)).toBe("not_in_package");
   });
 });

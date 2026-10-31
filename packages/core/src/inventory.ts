@@ -422,3 +422,75 @@ export function resolvePackage(
   });
   return picks;
 }
+
+// ─── Stock changes against reservations ─────────────────────────────────
+
+/** A line with what's needed to release it (latest reservations go first). */
+export interface ReservedLine extends ClaimLine {
+  id: string;
+}
+
+/**
+ * Which reservations a stock change breaks. For each upcoming date with
+ * reservations, compares the shortfall before and after the change (a same-day
+ * override may already run short; that isn't made worse). Returns the lines to
+ * release, latest reserved first (pass lines oldest first), until no date is shorter than before; an
+ * empty list means the change keeps every reservation whole.
+ */
+export function reservationsBrokenBy(before: StockItem, after: StockItem, lines: readonly ReservedLine[], today: string): ReservedLine[] {
+  const dates = [...new Set(lines.filter((l) => l.reservedAt && isReservingStatus(l.bookingStatus) && l.eventDate !== null && l.eventDate >= today).map((l) => l.eventDate!))];
+  const release: ReservedLine[] = [];
+  for (const date of dates) {
+    const shortBefore = Math.max(0, -availabilityOn(before, lines, date, today, null).free);
+    let remaining = lines.filter((l) => !release.includes(l));
+    const candidates = remaining
+      .filter((l) => holdsOn(l, date) && outstandingOf(l) === 0)
+      // Latest reservation first; equal times go by position (lines come oldest first), so the newest line goes first.
+      .sort((a, b) => b.reservedAt!.getTime() - a.reservedAt!.getTime() || lines.indexOf(b) - lines.indexOf(a));
+    for (const line of candidates) {
+      if (Math.max(0, -availabilityOn(after, remaining, date, today, null).free) <= shortBefore) break;
+      release.push(line);
+      remaining = remaining.filter((l) => l !== line);
+    }
+  }
+  return release;
+}
+
+// ─── Package picks against the template ─────────────────────────────────
+
+export type PackagePickError = "duplicate" | "not_in_package" | "wrong_category" | "too_many";
+
+/**
+ * Checks picks sent back from a package preview against the package itself:
+ * each item at most once; specific items only as listed and up to their
+ * quantity; category picks only loose numbered items of that category, no more
+ * than the category lines ask for. Fewer than asked is fine (partial packages).
+ */
+export function packagePickError(
+  lines: readonly { itemId: string | null; categoryId: string | null; quantity: number }[],
+  picks: readonly { itemId: string; quantity: number }[],
+  items: ReadonlyMap<string, { kind: string; tracking: string; categoryId: string | null; containerId: string | null }>,
+): PackagePickError | null {
+  const seen = new Set<string>();
+  const perCategory = new Map<string, number>();
+  for (const pick of picks) {
+    if (seen.has(pick.itemId)) return "duplicate";
+    seen.add(pick.itemId);
+    const specific = lines.filter((l) => l.itemId === pick.itemId);
+    if (specific.length > 0) {
+      const item = items.get(pick.itemId);
+      const allowed = item?.tracking === "bulk" ? specific.reduce((s, l) => s + l.quantity, 0) : 1;
+      if (pick.quantity < 1 || pick.quantity > allowed) return "too_many";
+      continue;
+    }
+    const item = items.get(pick.itemId);
+    if (!item) return "not_in_package";
+    const categoryLines = lines.filter((l) => l.categoryId !== null && l.categoryId === item.categoryId);
+    if (categoryLines.length === 0) return lines.some((l) => l.categoryId !== null) ? "wrong_category" : "not_in_package";
+    if (item.kind !== "item" || item.tracking !== "unit" || item.containerId !== null || pick.quantity !== 1) return "wrong_category";
+    const used = (perCategory.get(item.categoryId!) ?? 0) + 1;
+    if (used > categoryLines.reduce((s, l) => s + l.quantity, 0)) return "too_many";
+    perCategory.set(item.categoryId!, used);
+  }
+  return null;
+}

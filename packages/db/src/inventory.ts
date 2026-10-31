@@ -9,9 +9,12 @@ import {
   type MembershipError,
   outstandingOf,
   parseEquipmentSpecs,
+  reservationsBrokenBy,
+  type StockItem,
   todayInNetherlands,
 } from "@stagedesk/core";
-import { audit } from "./audit";
+import { auditTx } from "./audit";
+import { agencyDeskUserIds, notify } from "./notifications";
 import { prisma } from "./client";
 import { Prisma } from "./generated/prisma/client";
 import { tenantDb, type TenantDb } from "./tenant";
@@ -35,6 +38,7 @@ export type InventoryErrorCode =
   | "invalid_status"
   | "below_use"
   | "kind_locked"
+  | "breaks_reservations"
   | MembershipError;
 
 export class InventoryError extends Error {
@@ -48,6 +52,12 @@ export class InventoryError extends Error {
 }
 
 export type Tx = Parameters<Parameters<TenantDb["$transaction"]>[0]>[0];
+
+/**
+ * Item writes lock the item rows first and run at READ COMMITTED, so after
+ * waiting for a lock they read what the other transaction committed.
+ */
+export const readCommitted = { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 20_000 } as const;
 
 const isUniqueViolation = (error: unknown) => error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 
@@ -213,7 +223,7 @@ export async function createItem(organizationId: string, input: EquipmentItemInp
       await logItemEvent(tx, id, "created", actorId, { code: input.code, quantity: input.quantity });
       if (input.containerId) await logItemEvent(tx, id, "moved_in", actorId, { containerId: input.containerId });
       return id;
-    });
+    }, readCommitted);
   } catch (error) {
     if (isUniqueViolation(error)) throw new InventoryError("code_taken");
     throw error;
@@ -243,6 +253,8 @@ export async function updateItem(organizationId: string, itemId: string, input: 
         const lines = (await claimLinesOf(tx, [itemId])).get(itemId) ?? [];
         const out = lines.reduce((sum, l) => sum + Math.max(0, outstandingOf(l)), 0);
         if (input.quantity < item.defectiveQty + out) throw new InventoryError("below_use", { minimum: item.defectiveQty + out });
+        // A correction is never allowed to leave upcoming reservations short.
+        if (input.quantity < item.quantity) await reconcileReservations(tx, itemId, item, { ...item, quantity: input.quantity }, { release: false, actorId, reason: "stock" });
         quantity = input.quantity;
       } else if (input.tracking === "unit") {
         quantity = 1;
@@ -260,9 +272,9 @@ export async function updateItem(organizationId: string, itemId: string, input: 
       }
       if (quantity !== item.quantity) {
         await logItemEvent(tx, itemId, "stock", actorId, { from: item.quantity, to: quantity });
-        await audit({ actorId, action: "inventory.stock", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: input.code, from: item.quantity, to: quantity } });
+        await auditTx(tx, { actorId, action: "inventory.stock", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: input.code, from: item.quantity, to: quantity } });
       }
-    });
+    }, readCommitted);
   } catch (error) {
     if (isUniqueViolation(error)) throw new InventoryError("code_taken");
     throw error;
@@ -287,28 +299,98 @@ export async function setContainer(organizationId: string, itemIds: readonly str
       if (item.containerId) await logItemEvent(tx, item.id, "moved_out", actorId, { containerId: item.containerId });
       if (containerId) await logItemEvent(tx, item.id, "moved_in", actorId, { containerId });
     }
-  });
+  }, readCommitted);
 }
 
-/** Maintenance, back in service, or defective, for things that aren't lost or retired. */
-export async function setItemStatus(organizationId: string, itemId: string, status: Extract<EquipmentStatus, "available" | "maintenance" | "defective">, actorId: string, note: string | null) {
-  await tenantDb(organizationId).$transaction(async (tx) => {
+/** Bookings whose reservations of an item were released because the item can no longer cover them. */
+export type ReleasedReservations = { bookingId: string; trackingCode: string; lines: number }[];
+
+const stockSelect = { code: true, kind: true, tracking: true, status: true, quantity: true, defectiveQty: true } as const;
+
+/**
+ * Before stock goes down (correction, defective, maintenance, lost), checks
+ * the item's upcoming reservations. With `release` false the change is
+ * refused ("breaks_reservations", naming the bookings); with `release` true
+ * the reservations that no longer fit are released (latest first): the lines
+ * become unreserved, so they can't be loaded until retried, and each booking's
+ * timeline says why. Runs in the caller's transaction, under its item lock.
+ */
+export async function reconcileReservations(
+  tx: Tx,
+  itemId: string,
+  before: StockItem & { code: string },
+  after: StockItem,
+  opts: { release: boolean; actorId: string | null; reason: "stock" | "maintenance" | "defective" | "damaged" | "lost" },
+  now = new Date(),
+): Promise<ReleasedReservations> {
+  const rows = await tx.bookingEquipment.findMany({
+    where: { itemId },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    include: { booking: { select: { status: true, eventDate: true, equipmentCheckedInAt: true, trackingCode: true } } },
+  });
+  const broken = reservationsBrokenBy(before, after, rows.map(toClaimLine), todayInNetherlands(now));
+  if (broken.length === 0) return [];
+  const byBooking = new Map<string, { bookingId: string; trackingCode: string; lines: number }>();
+  for (const line of broken) {
+    const row = rows.find((r) => r.id === line.id)!;
+    const entry = byBooking.get(row.bookingId) ?? { bookingId: row.bookingId, trackingCode: row.booking.trackingCode, lines: 0 };
+    entry.lines += 1;
+    byBooking.set(row.bookingId, entry);
+  }
+  const released = [...byBooking.values()];
+  if (!opts.release) throw new InventoryError("breaks_reservations", { codes: released.map((r) => r.trackingCode) });
+  await tx.bookingEquipment.updateMany({ where: { id: { in: broken.map((l) => l.id) } }, data: { reservedAt: null, overrideReason: null, overriddenById: null } });
+  for (const r of released) {
+    await tx.bookingEvent.create({
+      data: { bookingId: r.bookingId, type: "equipment_released", actorId: opts.actorId, data: { codes: before.code, reason: opts.reason } as Prisma.InputJsonValue, organizationId: "" },
+    });
+  }
+  return released;
+}
+
+/** Tells the desk which bookings lost an equipment reservation (after the transaction committed). */
+export async function notifyReleased(organizationId: string, released: ReleasedReservations, exceptUserId: string | null) {
+  if (released.length === 0) return;
+  const desk = await agencyDeskUserIds(organizationId);
+  for (const r of released) {
+    await notify(desk, { type: "equipment_unreserved", data: { code: r.trackingCode, count: r.lines }, url: `/app/bookings/${r.trackingCode}/equipment` }, exceptUserId);
+  }
+}
+
+/**
+ * Maintenance, back in service, or defective, for things that aren't lost or
+ * retired. Taking equipment out of service that upcoming gigs have reserved
+ * is refused unless `release` is set (then those reservations are released).
+ */
+export async function setItemStatus(
+  organizationId: string,
+  itemId: string,
+  status: Extract<EquipmentStatus, "available" | "maintenance" | "defective">,
+  actorId: string,
+  note: string | null,
+  opts: { release?: boolean } = {},
+) {
+  const released = await tenantDb(organizationId).$transaction(async (tx) => {
     await lockItems(tx, organizationId, [itemId]);
-    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: { status: true, kind: true } });
+    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: stockSelect });
     if (!item) throw new InventoryError("not_found");
     if (item.kind === "set" || item.status === "lost" || item.status === "retired") throw new InventoryError("invalid_status");
-    if (item.status === status) return;
+    if (item.status === status) return [];
+    const released = await reconcileReservations(tx, itemId, item, { ...item, status }, { release: Boolean(opts.release), actorId, reason: status === "defective" ? "defective" : "maintenance" });
     await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { status } });
     const type = item.status === "defective" && status === "available" ? "repaired" : "status";
     await logItemEvent(tx, itemId, type, actorId, { from: item.status, to: status, ...(note ? { note } : {}) });
-  });
+    return released;
+  }, readCommitted);
+  await notifyReleased(organizationId, released, actorId);
+  return released;
 }
 
-/** Counted stock: mark units damaged (defective) or repaired. */
-export async function changeDefectiveStock(organizationId: string, itemId: string, delta: number, actorId: string, note: string | null) {
-  await tenantDb(organizationId).$transaction(async (tx) => {
+/** Counted stock: mark units damaged (defective) or repaired. Damage that leaves upcoming reservations short needs `release`. */
+export async function changeDefectiveStock(organizationId: string, itemId: string, delta: number, actorId: string, note: string | null, opts: { release?: boolean } = {}) {
+  const released = await tenantDb(organizationId).$transaction(async (tx) => {
     await lockItems(tx, organizationId, [itemId]);
-    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: { tracking: true, quantity: true, defectiveQty: true } });
+    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: stockSelect });
     if (!item) throw new InventoryError("not_found");
     if (item.tracking !== "bulk" || delta === 0) throw new InventoryError("invalid_status");
     const lines = (await claimLinesOf(tx, [itemId])).get(itemId) ?? [];
@@ -316,35 +398,46 @@ export async function changeDefectiveStock(organizationId: string, itemId: strin
     const next = item.defectiveQty + delta;
     // Damaged units must be in the warehouse: not more than what isn't out.
     if (next < 0 || next > item.quantity - out) throw new InventoryError("below_use", { maximum: item.quantity - out - item.defectiveQty });
+    const released = delta > 0 ? await reconcileReservations(tx, itemId, item, { ...item, defectiveQty: next }, { release: Boolean(opts.release), actorId, reason: "damaged" }) : [];
     await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { defectiveQty: next } });
     await logItemEvent(tx, itemId, delta > 0 ? "damaged" : "repaired", actorId, { quantity: Math.abs(delta), ...(note ? { note } : {}) });
-  });
+    return released;
+  }, readCommitted);
+  await notifyReleased(organizationId, released, actorId);
+  return released;
 }
 
 /**
  * Writes equipment off as lost outside a gig (lost on a gig goes through the
- * packing list). Owners and admins only; audited.
+ * packing list). Owners and admins only; audited in the same transaction.
+ * A write-off that leaves upcoming reservations short needs `release`.
  */
-export async function markItemLost(organizationId: string, itemId: string, quantity: number, actorId: string, note: string | null) {
-  await tenantDb(organizationId).$transaction(async (tx) => {
+export async function markItemLost(organizationId: string, itemId: string, quantity: number, actorId: string, note: string | null, opts: { release?: boolean } = {}) {
+  const released = await tenantDb(organizationId).$transaction(async (tx) => {
     await lockItems(tx, organizationId, [itemId]);
-    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: { code: true, kind: true, tracking: true, status: true, quantity: true, defectiveQty: true } });
+    const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, select: stockSelect });
     if (!item) throw new InventoryError("not_found");
     if (item.kind === "set" || item.status === "retired" || item.status === "lost") throw new InventoryError("invalid_status");
     const lines = (await claimLinesOf(tx, [itemId])).get(itemId) ?? [];
     const out = lines.reduce((sum, l) => sum + Math.max(0, outstandingOf(l)), 0);
+    let released: ReleasedReservations;
     if (item.tracking === "unit") {
       if (out > 0) throw new InventoryError("out");
+      released = await reconcileReservations(tx, itemId, item, { ...item, status: "lost" }, { release: Boolean(opts.release), actorId, reason: "lost" });
       await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { status: "lost" } });
     } else {
       // Only units in the warehouse; units out on a gig are resolved on that gig.
       if (quantity < 1 || quantity > item.quantity - item.defectiveQty - out) throw new InventoryError("below_use", { maximum: item.quantity - item.defectiveQty - out });
+      released = await reconcileReservations(tx, itemId, item, { ...item, quantity: item.quantity - quantity }, { release: Boolean(opts.release), actorId, reason: "lost" });
       await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { quantity: item.quantity - quantity } });
     }
     const n = item.tracking === "unit" ? 1 : quantity;
     await logItemEvent(tx, itemId, "lost", actorId, { quantity: n, ...(note ? { note } : {}) });
-    await audit({ actorId, action: "inventory.lost", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: item.code, quantity: n } });
-  });
+    await auditTx(tx, { actorId, action: "inventory.lost", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: item.code, quantity: n, releasedBookings: released.map((r) => r.trackingCode) } });
+    return released;
+  }, readCommitted);
+  await notifyReleased(organizationId, released, actorId);
+  return released;
 }
 
 /** Lost equipment turned up again: back in stock. Audited. */
@@ -366,8 +459,8 @@ export async function markItemFound(organizationId: string, itemId: string, quan
     }
     const n = item.tracking === "unit" ? 1 : quantity;
     await logItemEvent(tx, itemId, "found", actorId, { quantity: n, ...(note ? { note } : {}) });
-    await audit({ actorId, action: "inventory.found", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: item.code, quantity: n } });
-  });
+    await auditTx(tx, { actorId, action: "inventory.found", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: item.code, quantity: n } });
+  }, readCommitted);
 }
 
 /** Upcoming reservations and everything out, per item (for retiring and deleting). */
@@ -397,7 +490,7 @@ export async function retireItem(organizationId: string, itemId: string, actorId
     await tx.equipmentItem.updateMany({ where: { id: itemId }, data: { status: "retired", containerId: null } });
     if (item.containerId) await logItemEvent(tx, itemId, "moved_out", actorId, { containerId: item.containerId });
     await logItemEvent(tx, itemId, "retired", actorId, { from: item.status, ...(note ? { note } : {}) });
-  });
+  }, readCommitted);
 }
 
 export async function restoreItem(organizationId: string, itemId: string, actorId: string) {
@@ -406,7 +499,7 @@ export async function restoreItem(organizationId: string, itemId: string, actorI
     const updated = await tx.equipmentItem.updateMany({ where: { id: itemId, status: "retired" }, data: { status: "available" } });
     if (updated.count === 0) throw new InventoryError("invalid_status");
     await logItemEvent(tx, itemId, "status", actorId, { from: "retired", to: "available" });
-  });
+  }, readCommitted);
 }
 
 /**
@@ -424,8 +517,8 @@ export async function deleteItem(organizationId: string, itemId: string, actorId
     await tx.equipmentEvent.deleteMany({ where: { itemId } });
     await tx.equipmentPackageLine.deleteMany({ where: { itemId } });
     await tx.equipmentItem.deleteMany({ where: { id: itemId } });
-    await audit({ actorId, action: "inventory.item_delete", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: item.code, name: item.name } });
-  });
+    await auditTx(tx, { actorId, action: "inventory.item_delete", agencyId: organizationId, targetType: "equipment", targetId: itemId, data: { code: item.code, name: item.name } });
+  }, readCommitted);
 }
 
 /** The next free number for a prefix, e.g. "SPK" → "SPK-7" when SPK-1…SPK-6 exist. */

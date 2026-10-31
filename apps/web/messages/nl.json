@@ -667,7 +667,8 @@
     "equipment_loaded": "Alle apparatuur geladen",
     "equipment_returned": "Apparatuur ingecheckt: {returned} terug, {damaged} beschadigd, {lost} verloren",
     "equipment_checked_in": "Apparatuur ingecheckt{missing, plural, =0 {} other {, # ontbreekt: {codes}}}",
-    "equipment_lost": "Als verloren bevestigd: {codes} ({count})"
+    "equipment_lost": "Als verloren bevestigd: {codes} ({count})",
+    "equipment_released": "Reservering apparatuur vrijgegeven ({codes}): {reason, select, damaged {beschadigd} lost {verloren} maintenance {in onderhoud} defective {defect} stock {voorraad gecorrigeerd} other {niet meer beschikbaar}}"
   },
   "quotes": {
     "title": "Offertes",
@@ -5519,7 +5520,10 @@
     "container_kind": "Alleen cases en sets kunnen items bevatten.",
     "nested": "Cases en sets kunnen niet in een andere case of set.",
     "not_unit_item": "Alleen genummerde items kunnen in een case of set (geen getelde voorraad, cases of sets).",
-    "freeOf": "{free} van {requested} vrij"
+    "freeOf": "{free} van {requested} vrij",
+    "breaks_reservations": "Komende optredens hebben deze apparatuur gereserveerd; door deze wijziging komen ze tekort:",
+    "checked_in": "Het inchecken voor dit optreden is afgerond. Registreer een late retour of bevestig verlies in plaats van te laden.",
+    "invalid_package": "Die keuze past niet bij het pakket (of staat al op de lijst). Vernieuw het overzicht en probeer het opnieuw."
   },
   "inventory": {
     "title": "Apparatuur",
@@ -5697,7 +5701,9 @@
     "packageHint": "Bij \"Willekeurig\" worden vrije genummerde items uit die categorie gekozen als het pakket wordt toegevoegd. Cases nemen hun inhoud mee.",
     "deletePackageConfirm": "Het pakket {name} verwijderen? Paklijsten die het gebruikten blijven zoals ze zijn.",
     "packageEditorHint": "Een pakket toevoegen kopieert de apparatuur naar een paklijst; het pakket later wijzigen verandert die paklijsten niet.",
-    "packageDescription": "Omschrijving"
+    "packageDescription": "Omschrijving",
+    "releaseConfirm": "{message}\n\nDie reserveringen vrijgeven en doorgaan? De optredens worden gemarkeerd en de planning krijgt bericht; hun apparatuur kan later opnieuw worden gereserveerd.",
+    "savedReleased": "Opgeslagen. Reserveringen vrijgegeven voor: {codes}."
   },
   "equipment": {
     "title": "Apparatuur",

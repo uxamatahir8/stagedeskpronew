@@ -10,6 +10,7 @@ import {
   deleteCategory,
   deleteItem,
   deletePackage,
+  InventoryError,
   markItemFound,
   markItemLost,
   renameCategory,
@@ -44,6 +45,25 @@ export interface ItemResult extends ActionResult {
   id?: string;
 }
 
+/** A refused stock change that upcoming gigs depend on; the user may confirm releasing their reservations. */
+export interface StockResult extends ActionResult {
+  releasable?: boolean;
+}
+
+/** runAction, flagging refusals that releasing reservations would resolve. */
+async function stockChange(task: () => Promise<string | void>): Promise<StockResult> {
+  let releasable = false;
+  const result = await runAction(async () => {
+    try {
+      return await task();
+    } catch (error) {
+      if (error instanceof InventoryError && error.code === "breaks_reservations") releasable = true;
+      throw error;
+    }
+  });
+  return releasable ? { ...result, releasable } : result;
+}
+
 export async function saveItemAction(itemId: string | null, input: unknown): Promise<ItemResult> {
   const { userId, organizationId, blocked } = await agency("agency.inventory.manage");
   if (blocked) return { ok: false, message: blocked };
@@ -67,33 +87,33 @@ export async function suggestCodeAction(prefix: string): Promise<string> {
   return suggestCode(organizationId, z.string().max(32).parse(prefix));
 }
 
-export async function setStatusAction(itemId: string, status: "available" | "maintenance" | "defective", why?: string | null): Promise<ActionResult> {
+export async function setStatusAction(itemId: string, status: "available" | "maintenance" | "defective", why?: string | null, release = false): Promise<StockResult> {
   const { userId, organizationId, blocked } = await agency("agency.inventory.manage");
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("inventory");
-  return runAction(async () => {
-    await setItemStatus(organizationId, id.parse(itemId), z.enum(["available", "maintenance", "defective"]).parse(status), userId, note.parse(why));
-    return t("saved");
+  return stockChange(async () => {
+    const released = await setItemStatus(organizationId, id.parse(itemId), z.enum(["available", "maintenance", "defective"]).parse(status), userId, note.parse(why), { release: release === true });
+    return released.length ? t("savedReleased", { codes: released.map((r) => r.trackingCode).join(", ") }) : t("saved");
   });
 }
 
-export async function changeDefectiveAction(itemId: string, delta: number, why?: string | null): Promise<ActionResult> {
+export async function changeDefectiveAction(itemId: string, delta: number, why?: string | null, release = false): Promise<StockResult> {
   const { userId, organizationId, blocked } = await agency("agency.inventory.manage");
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("inventory");
-  return runAction(async () => {
-    await changeDefectiveStock(organizationId, id.parse(itemId), z.number().int().min(-100_000).max(100_000).parse(delta), userId, note.parse(why));
-    return t("saved");
+  return stockChange(async () => {
+    const released = await changeDefectiveStock(organizationId, id.parse(itemId), z.number().int().min(-100_000).max(100_000).parse(delta), userId, note.parse(why), { release: release === true });
+    return released.length ? t("savedReleased", { codes: released.map((r) => r.trackingCode).join(", ") }) : t("saved");
   });
 }
 
-export async function markLostAction(itemId: string, quantity: number, why?: string | null): Promise<ActionResult> {
+export async function markLostAction(itemId: string, quantity: number, why?: string | null, release = false): Promise<StockResult> {
   const { userId, organizationId, blocked } = await agency("agency.inventory.admin");
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("inventory");
-  return runAction(async () => {
-    await markItemLost(organizationId, id.parse(itemId), z.number().int().min(1).max(100_000).parse(quantity), userId, note.parse(why));
-    return t("markedLost");
+  return stockChange(async () => {
+    const released = await markItemLost(organizationId, id.parse(itemId), z.number().int().min(1).max(100_000).parse(quantity), userId, note.parse(why), { release: release === true });
+    return released.length ? t("savedReleased", { codes: released.map((r) => r.trackingCode).join(", ") }) : t("markedLost");
   });
 }
 
