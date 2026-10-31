@@ -21,10 +21,12 @@
       "dependsOn": ["generate", "^generate"]
     },
     "test": {
-      "dependsOn": ["generate", "^generate"]
+      "dependsOn": ["generate", "^generate"],
+      "env": ["DATABASE_URL", "TEST_DATABASE_URL"]
     },
     "@stagedesk/payments#test": {
-      "dependsOn": ["generate", "^generate", "@stagedesk/db#test"]
+      "dependsOn": ["generate", "^generate", "@stagedesk/db#test"],
+      "env": ["DATABASE_URL", "TEST_DATABASE_URL"]
     }
   }
 }
