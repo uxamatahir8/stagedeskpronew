@@ -2,6 +2,20 @@ import { expect, type Page } from "@playwright/test";
 
 export const DEMO_PASSWORD = "StageDesk-demo-2026";
 
+/**
+ * The platform admin the specs sign in as. Locally the demo admin may have its
+ * own password; point the specs at another admin with E2E_ADMIN_EMAIL and
+ * E2E_ADMIN_PASSWORD instead of changing it.
+ */
+export const ADMIN_EMAIL = process.env["E2E_ADMIN_EMAIL"] ?? "admin@stagedesk.local";
+const ADMIN_PASSWORD = process.env["E2E_ADMIN_PASSWORD"] ?? DEMO_PASSWORD;
+/** That admin's display name, for checks that name who did something. */
+export const ADMIN_NAME = process.env["E2E_ADMIN_NAME"] ?? "Iris Platform";
+
+export function passwordFor(email: string) {
+  return email === ADMIN_EMAIL ? ADMIN_PASSWORD : DEMO_PASSWORD;
+}
+
 export async function signIn(page: Page, email: string) {
   await submitSignIn(page, email);
   await settleOnDashboard(page);
@@ -16,7 +30,7 @@ export async function submitSignIn(page: Page, email: string) {
   for (let attempt = 0; attempt < 2; attempt++) {
     await page.goto("/nl/sign-in");
     await page.locator("#signin-email").fill(email);
-    await page.locator("#signin-password").fill(DEMO_PASSWORD);
+    await page.locator("#signin-password").fill(passwordFor(email));
     await page.getByRole("button", { name: "Inloggen", exact: true }).click();
     const limited = page.getByText("Te veel pogingen", { exact: false });
     await expect(limited.or(page.locator('[data-slot="sidebar"]')).or(page.getByLabel(/Ik ga akkoord/)).first()).toBeVisible({ timeout: 30_000 });

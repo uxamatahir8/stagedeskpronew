@@ -2,6 +2,7 @@
   "$schema": "https://turborepo.com/schema.json",
   "globalEnv": ["NODE_ENV"],
   "globalDependencies": [".env"],
+  "globalPassThroughEnv": ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASSWORD", "MAIL_FROM"],
   "tasks": {
     "generate": {
       "cache": false
