@@ -12,6 +12,8 @@ export default function setup() {
   const url = new URL(base);
   if (!url.pathname.endsWith("_test")) url.pathname = `${url.pathname}_test`;
   process.env["DATABASE_URL"] = url.toString();
+  // Secrets in the test database need a key; CI has no .env. A fixed one is fine for throwaway test data.
+  if (!process.env["SECRETS_KEY"] && !process.env["BETTER_AUTH_SECRET"]) process.env["SECRETS_KEY"] = "stagedesk-test-only-secrets-key";
 
   const cwd = fileURLToPath(new URL("../..", import.meta.url));
   try {
