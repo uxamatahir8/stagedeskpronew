@@ -79,6 +79,12 @@ test("a visitor's inquiry lands in the agency's action queue", async ({ page, br
     const owner = await (await browser.newContext()).newPage();
     await signIn(owner, "eigenaar@feestband.local");
     const item = owner.getByRole("link", { name: new RegExp(`Nieuwe aanvraag van ${name}`) });
+    // The queue is paged (5 per page since 154a063); with demo data the inquiry may be a few pages in.
+    // The home page streams in, so give each page a moment before moving on.
+    const shown = () => item.waitFor({ state: "visible", timeout: 5_000 }).then(() => true, () => false);
+    for (let page = 2; page <= 20 && !(await shown()); page++) {
+      await owner.goto(`/nl/app?attentionPage=${page}`);
+    }
     await expect(item).toBeVisible();
     await expect(item).toContainText("via boekingspagina");
     await item.click();

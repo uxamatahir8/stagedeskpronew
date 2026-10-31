@@ -1,11 +1,12 @@
 import { expect, type Page, test } from "@playwright/test";
-import { acceptTerms, settleOnDashboard, signIn, submitSignIn } from "./helpers";
+import { ADMIN_EMAIL, acceptTerms, settleOnDashboard, signIn, submitSignIn } from "./helpers";
 
 /** Fills a new page in both languages in the page builder. */
 async function fillPage(page: Page, slug: string, title: string, text: string) {
   await page.getByLabel("Adres (Nederlands)").fill(`${slug}-nl`);
   await page.getByLabel("Adres (Engels)").fill(`${slug}-en`);
-  for (const [tab, suffix] of [["Nederlands", ""], ["English", " (EN)"]] as const) {
+  // The language tabs are labelled in Dutch ("Engels"), like the rest of the page.
+  for (const [tab, suffix] of [["Nederlands", ""], ["Engels", " (EN)"]] as const) {
     await page.getByRole("tab", { name: tab }).click();
     await page.getByLabel("Titel", { exact: true }).fill(`${title}${suffix}`);
     await page.getByRole("button", { name: "Blok toevoegen" }).click();
@@ -25,7 +26,7 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
   const run = Date.now().toString(36);
   const admin = await (await browser.newContext()).newPage();
   const visitor = await (await browser.newContext()).newPage();
-  await signIn(admin, "admin@stagedesk.local");
+  await signIn(admin, ADMIN_EMAIL);
 
   await test.step("the admin publishes a page in the footer", async () => {
     await admin.goto("/nl/app/pages/new");
@@ -43,7 +44,9 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
     await visitor.getByRole("contentinfo").getByRole("link", { name: `Werken bij ${run}` }).click();
     await expect(visitor).toHaveURL(new RegExp(`/e2e-${run}-nl$`));
     await expect(visitor.getByText("We zoeken nog een DJ-planner.")).toBeVisible();
-    await visitor.goto(`/nl/en/e2e-${run}-en`);
+    // English has no prefix since 118f67c, and the saved language wins over the address: choose English first.
+    await visitor.context().addCookies([{ name: "visitor_locale", value: "en", url: new URL("/", visitor.url()).href }]);
+    await visitor.goto(`/e2e-${run}-en`);
     await expect(visitor.getByRole("heading", { name: `Werken bij ${run} (EN)` })).toBeVisible();
   });
 
@@ -52,7 +55,8 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
     const visitor = await (await browser.newContext()).newPage();
     await visitor.goto("/nl/blog/offertes-die-worden-geaccepteerd");
     await visitor.getByLabel("Naam").fill(`Lezer ${run}`);
-    await visitor.getByLabel("E-mailadres").fill(`lezer.${run}@test.local`);
+    // The footer has its own (newsletter) e-mail field.
+    await visitor.getByRole("main").getByLabel("E-mailadres").fill(`lezer.${run}@test.local`);
     await visitor.getByLabel("Reactie", { exact: true }).fill(`Handige tips! ${run}`);
     await expect(visitor.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 });
     await visitor.getByRole("button", { name: "Reactie plaatsen" }).click();

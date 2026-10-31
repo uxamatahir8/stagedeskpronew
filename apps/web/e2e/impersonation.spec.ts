@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 // The platform admin who logs in as someone else; override when your local admin has another password.
-const ADMIN = process.env["E2E_ADMIN_EMAIL"] ?? "admin@stagedesk.local";
+const ADMIN = ADMIN_EMAIL;
 
 /**
  * "Log in as": a platform admin opens the agency owner's account, works there

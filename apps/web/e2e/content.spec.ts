@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /**
  * The platform admin writes a blog post in a new category, features it, and
@@ -11,7 +11,7 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
   const run = Date.now().toString(36);
   const admin = await (await browser.newContext()).newPage();
   const reader = await (await browser.newContext()).newPage();
-  await signIn(admin, "admin@stagedesk.local");
+  await signIn(admin, ADMIN_EMAIL);
 
   await test.step("the admin adds a category", async () => {
     await admin.goto("/nl/app/content");
@@ -30,7 +30,9 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
     await admin.getByRole("tab", { name: /Engels/ }).click();
     await admin.locator("#title:visible").fill(`Featured ${run}`);
     await admin.locator("#body:visible").fill("Intro in English.");
-    await admin.locator("#category:visible").selectOption({ label: `Testrubriek ${run}` });
+    // A searchable select since 855cfd0, not a native <select>.
+    await admin.locator("#category:visible").click();
+    await admin.getByRole("option", { name: `Testrubriek ${run}` }).click();
     await admin.getByLabel("Uitgelicht").click();
     await admin.getByRole("button", { name: "Publiceren", exact: true }).click();
     await expect(admin.getByText("Opgeslagen en gepubliceerd.")).toBeVisible();
@@ -45,7 +47,10 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
     await reader.getByRole("link", { name: `Uitgelicht ${run}` }).first().click();
     await expect(reader.getByRole("heading", { level: 1 })).toHaveText(`Uitgelicht ${run}`);
     await expect(reader.getByRole("navigation", { name: "In dit artikel" }).getByRole("link", { name: "Tweede kop" })).toBeVisible();
-    await reader.goto(reader.url().replace("/blog/", "/en/blog/"));
+    // English has no prefix since 118f67c; Dutch lives under /nl. The reader's saved language
+    // (visitor_locale, set while reading in Dutch) wins over the address, so they choose English first.
+    await reader.context().addCookies([{ name: "visitor_locale", value: "en", url: new URL("/", reader.url()).href }]);
+    await reader.goto(reader.url().replace("/nl/blog/", "/blog/"));
     await expect(reader.getByRole("heading", { level: 1 })).toHaveText(`Featured ${run}`);
   });
 
