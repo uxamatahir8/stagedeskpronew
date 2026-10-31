@@ -25,6 +25,8 @@ export default function setup() {
     // Rethrow with Prisma's own output as text: vitest can't print the raw error (its output is a Buffer).
     const e = error as { stdout?: Buffer; stderr?: Buffer; message?: string };
     const output = [e.stdout?.toString(), e.stderr?.toString()].filter(Boolean).join("\n").trim();
+    // Printed as well: vitest's stack-trace formatting of global-setup errors can crash and hide the message.
+    console.error(`Migrating the test database failed:\n${output || e.message}`);
     throw new Error(`Migrating the test database failed:\n${output || e.message}`);
   }
 }
