@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /**
  * The platform admin changes the home page headline: a placeholder the text
@@ -10,7 +10,7 @@ test("website texts from the admin panel", async ({ browser }) => {
   test.setTimeout(120_000);
   const admin = await (await browser.newContext()).newPage();
   const visitor = await (await browser.newContext()).newPage();
-  await signIn(admin, "admin@stagedesk.local");
+  await signIn(admin, ADMIN_EMAIL);
   await admin.goto("/nl/app/texts?ns=landing");
   const field = admin.locator('textarea[id="nl-landing.title"]');
 

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /**
  * Agency websites: an owner edits and publishes their site, a visitor sees
@@ -40,22 +40,28 @@ test("an agency builds and publishes its website, also on its own domain", async
     expect(await visitor.content()).toContain("http://feestband-utrecht.localhost:3000/");
   });
 
-  await test.step("own domains are a Business feature", async () => {
-    await owner.goto("/nl/app/website/domain");
-    await expect(owner.getByText("Een eigen domein hoort bij het Business-abonnement", { exact: false })).toBeVisible();
-  });
-
-  await test.step("on Business, Rotterdam connects its own domain and its site shows there", async () => {
-    await signIn(admin, "admin@stagedesk.local");
+  // The plan is set here rather than assumed: the bulk demo seed puts Feestband on Business.
+  async function grantPlan(plan: "Pro" | "Business") {
     await admin.goto("/nl/app/agencies?q=Rotterdam");
     await admin.getByRole("link", { name: "Rotterdam DJ Collectief" }).click();
     await admin.getByRole("combobox", { name: "Abonnement toekennen" }).click();
-    await admin.getByRole("option", { name: "Business" }).click();
+    await admin.getByRole("option", { name: plan, exact: true }).click();
     await admin.getByRole("button", { name: "Toekennen" }).click();
     await expect(admin.getByText("Abonnement toegekend.")).toBeVisible();
+  }
+
+  await test.step("own domains are a Business feature", async () => {
+    await signIn(admin, ADMIN_EMAIL);
+    await grantPlan("Pro");
+    await signIn(rotterdam, "eigenaar@rotterdamdj.local");
+    await rotterdam.goto("/nl/app/website/domain");
+    await expect(rotterdam.getByText("Een eigen domein hoort bij het Business-abonnement", { exact: false })).toBeVisible();
+  });
+
+  await test.step("on Business, Rotterdam connects its own domain and its site shows there", async () => {
+    await grantPlan("Business");
 
     const domain = `www.rotterdam-${run}.localhost`;
-    await signIn(rotterdam, "eigenaar@rotterdamdj.local");
     await rotterdam.goto("/nl/app/website");
     // An earlier run may already have published it; publish only when there's something new.
     const publish = rotterdam.getByRole("button", { name: /^(Publiceren|Gepubliceerd)$/ });

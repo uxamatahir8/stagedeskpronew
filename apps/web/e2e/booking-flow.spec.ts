@@ -94,12 +94,21 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
   });
 
   await test.step("the customer transfers the balance and reports it through the quote link", async () => {
-    const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:klant.${run}@test.local subject:offerte`)}`)).json();
-    const message = await (await request.get(`${MAILPIT}/message/${search.messages[0].ID}`)).json();
-    const link = (message.Text as string).match(/https?:\/\/\S+\/q\/[\w-]+/)![0];
+    // The customer was created without a language, so emails use the default (English since 118f67c); find the quote by its link.
+    let link = "";
+    await expect(async () => {
+      const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:klant.${run}@test.local`)}`)).json();
+      for (const m of search.messages ?? []) {
+        const message = await (await request.get(`${MAILPIT}/message/${m.ID}`)).json();
+        const found = (message.Text as string).match(/https?:\/\/\S+\/q\/[\w-]+/);
+        if (found) link = found[0];
+      }
+      expect(link).not.toBe("");
+    }).toPass({ timeout: 15_000 });
     await customer.goto(link);
     await expect(customer.getByText("Betaal € 529,37 per bankoverschrijving")).toBeVisible();
-    await expect(customer.getByRole("textbox", { name: "IBAN" })).toHaveValue("NL91 ABNA 0417 1643 00");
+    // Shown as wrapped, copyable text since 154a063.
+    await expect(customer.getByText("NL91 ABNA 0417 1643 00")).toBeVisible();
     await customer.getByRole("button", { name: "Ik heb betaald" }).click();
     await customer.getByRole("dialog").getByRole("button", { name: "Versturen" }).click();
     await expect(customer.getByText("Bedankt! Het bureau bevestigt je betaling.")).toBeVisible();
@@ -110,11 +119,14 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
     await agency.reload();
     await expect(agency.getByText("Klant meldt € 529,37 betaald per Bankoverschrijving")).toBeVisible();
     await agency.getByRole("button", { name: "Ontvangst bevestigen" }).click();
+    // The date field takes focus and its calendar covers the button; click the heading to close it.
+    await agency.getByRole("dialog").getByRole("heading").click();
     await agency.getByRole("dialog").getByRole("button", { name: "Ontvangst bevestigen" }).click();
     await expect(agency.getByText("Betaling bevestigd en betaalbewijs verstuurd.")).toBeVisible();
     await expect(agency.getByText("Betaald", { exact: true }).first()).toBeVisible();
     await expect
-      .poll(async () => (await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:klant.${run}@test.local subject:Betaalbewijs`)}`)).json()).messages_count, { timeout: 15_000 })
+      // The receipt, in either language: "Betaalbewijs van …" or "Receipt from …".
+      .poll(async () => ((await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:klant.${run}@test.local subject:${code}`)}`)).json()).messages ?? []).filter((m: { Subject: string }) => /^(Betaalbewijs van|Receipt from) /.test(m.Subject)).length, { timeout: 15_000 })
       .toBeGreaterThanOrEqual(1);
   });
 

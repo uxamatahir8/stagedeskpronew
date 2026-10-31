@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 const MAILPIT = "http://localhost:8025/api/v1";
 
@@ -28,7 +28,8 @@ test("a platform lead is offered to agencies and the first to accept gets the bo
     await visitor.getByLabel("Plaats").fill("Rotterdam");
     await visitor.getByLabel("Aantal gasten (optioneel)").fill("150");
     await visitor.getByLabel("Naam", { exact: true }).fill(name);
-    await visitor.getByLabel("E-mailadres").fill(email);
+    // The footer has its own (newsletter) e-mail field.
+    await visitor.getByRole("main").getByLabel("E-mailadres").fill(email);
     await visitor.getByLabel("Wil je nog iets kwijt? (optioneel)").fill("Een DJ en een saxofonist, tot 1 uur.");
     await expect(visitor.locator('input[name="cf-turnstile-response"]')).toHaveValue(/.+/, { timeout: 30_000 });
     await visitor.waitForTimeout(3_500);
@@ -42,7 +43,7 @@ test("a platform lead is offered to agencies and the first to accept gets the bo
   });
 
   await test.step("the admin offers the lead to two agencies", async () => {
-    await signIn(admin, "admin@stagedesk.local");
+    await signIn(admin, ADMIN_EMAIL);
     await admin.goto(`/nl/app/leads?q=${reference}`);
     await admin.getByRole("link", { name: /Bruiloft/ }).click();
     await expect(admin.getByText(name)).toBeVisible();

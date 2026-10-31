@@ -49,3 +49,18 @@ describe("email previews", () => {
     }
   });
 });
+
+describe("test addresses", async () => {
+  const { isTestAddress, localMailTransport } = await import("./index");
+  it("recognises test and demo addresses", () => {
+    for (const email of ["a@test.local", "eigenaar@feestband.local", "x@e2e-bureau.nl", "y@foo.test", "z@example.example", "q@host.invalid"]) {
+      expect(isTestAddress(email)).toBe(true);
+    }
+    for (const email of ["sanne@gmail.com", "info@stagedeskpro.com", "a@e2e.nl", "b@bureau-e2e-x.nl"]) expect(isTestAddress(email)).toBe(false);
+  });
+  it("treats only this machine and Mailpit as local", () => {
+    expect(localMailTransport("localhost")).toBe(true);
+    expect(localMailTransport("mailpit")).toBe(true);
+    expect(localMailTransport("smtp.strato.com")).toBe(false);
+  });
+});

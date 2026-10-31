@@ -1,10 +1,11 @@
 import type { Permission } from "@stagedesk/core";
-import { prisma, tenantDb } from "@stagedesk/db";
+import { inventoryExportRows, prisma, tenantDb } from "@stagedesk/db";
 import { getViewer } from "@/lib/viewer";
 
 const kinds: Record<string, Permission> = {
   bookings: "agency.reports",
   customers: "agency.customers",
+  equipment: "agency.inventory",
   payments: "agency.reports",
   waitlist: "platform.pages",
   withdrawals: "platform.affiliates",
@@ -87,6 +88,11 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
         b.assignments[0]?.artist.stageName, euros(b.totalCents), euros(b.paidCents), b.source, b.createdAt,
       ]),
     ];
+  } else if (kind === "equipment") {
+    // The agency's own equipment only (inventoryExportRows reads through tenantDb).
+    const items = await inventoryExportRows(viewer.organization.id);
+    const header = ["code", "name", "kind", "tracking", "quantity", "defective", "status", "condition", "category", "container", "manufacturer", "model", "serialNumber", "powerWatts", "batteryPowered", "shared", "notes"] as const;
+    rows = [[...header], ...items.map((i) => header.map((h) => i[h]))];
   } else if (kind === "customers") {
     const members = await db.member.findMany({ where: { role: "customer" }, include: { user: { select: { name: true, email: true, phone: true, createdAt: true } } } });
     rows = [["name", "email", "phone", "since"], ...members.map((m) => [m.user.name, m.user.email, m.user.phone, day(m.user.createdAt)])];

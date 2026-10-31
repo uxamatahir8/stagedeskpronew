@@ -14,9 +14,10 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { bookableArtists, fromDateOnly, getSetting, isArtistFree, prisma } from "@stagedesk/db";
+import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, prisma } from "@stagedesk/db";
+import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
-import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge } from "@/components/status-badge";
+import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -132,6 +133,9 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       )
     : [];
 
+  // Equipment for this gig: only for people who handle gig equipment.
+  const equipment = viewerCan(viewer, "agency.inventory.gigs") ? await bookingEquipmentSummary(organization.id, booking.id) : null;
+
   const timelineText = (e: (typeof booking.events)[number]) => {
     const data = (e.data ?? {}) as Record<string, unknown>;
     // Event types come from the database; unknown ones fall back to their raw name.
@@ -143,6 +147,15 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       reason: String(data["reason"] ?? ""),
       number: String(data["number"] ?? ""),
       amount: typeof data["amountCents"] === "number" ? euro(format, data["amountCents"], booking.currency) : "",
+      // Equipment events.
+      count: Number(data["count"] ?? 0),
+      codes: String(data["codes"] ?? ""),
+      reserved: Number(data["reserved"] ?? 0),
+      failed: Number(data["failed"] ?? 0),
+      missing: Number(data["missing"] ?? 0),
+      returned: Number(data["returned"] ?? 0),
+      damaged: Number(data["damaged"] ?? 0),
+      lost: Number(data["lost"] ?? 0),
     };
     return t.has(key) ? t(key, params) : e.type;
   };
@@ -483,6 +496,26 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardContent>
           </Card>
+
+          {equipment && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("equipment.title")}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <EquipmentStagePill stage={equipment.stage} />
+                  {equipment.totals.unreserved > 0 && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.unreservedShort", { count: equipment.totals.unreserved })}</Pill>}
+                </div>
+                {equipment.totals.lines > 0 && (
+                  <p className="text-muted-foreground tabular-nums">{t("equipment.summary", { planned: equipment.totals.planned, loaded: equipment.totals.loaded, out: equipment.totals.outstanding })}</p>
+                )}
+                <Button asChild variant="outline" size="sm" className="w-fit">
+                  <Link href={`/app/bookings/${booking.trackingCode}/equipment`}>{equipment.totals.lines > 0 ? t("equipment.open") : t("equipment.start")}</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

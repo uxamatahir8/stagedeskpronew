@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { subscriptionAccess } from "@stagedesk/core";
 import { startTrial } from "./billing";
 import { prisma } from "./client";
+import { purgeInventory } from "./inventory";
 import type { Prisma } from "./generated/prisma/client";
 import { getSetting } from "./settings";
 
@@ -178,10 +179,12 @@ export async function deleteAgency(organizationId: string) {
   if (!org) throw new AgencyAdminError("not_found");
   const c = org._count;
   if (c.bookings + c.payments + c.invoices + c.ledger > 0) throw new AgencyAdminError("has_bookings");
-  await prisma.$transaction([
-    prisma.referral.updateMany({ where: { referringAgencyId: organizationId }, data: { referringAgencyId: null } }),
-    prisma.organization.delete({ where: { id: organizationId } }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.referral.updateMany({ where: { referringAgencyId: organizationId }, data: { referringAgencyId: null } });
+    // Equipment can't be removed by the cascade alone (items in cases block it).
+    await purgeInventory(tx, [organizationId]);
+    await tx.organization.delete({ where: { id: organizationId } });
+  });
 }
 
 /** Everything the admin's agency page shows. */

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { sanitizeRolePermissions } from "@stagedesk/core";
+import { agencyPermissions, sanitizeRolePermissions } from "@stagedesk/core";
 import { audit, Prisma, prisma } from "@stagedesk/db";
 import { auth } from "@/lib/auth";
 import { clientIp } from "@/lib/rate-limit";
@@ -54,7 +54,7 @@ export async function cancelInvitationAction(invitationId: string): Promise<Resu
 export async function savePermissionsAction(input: unknown | null): Promise<{ ok: boolean; message: string }> {
   const { viewer, organization } = await requireAgency("agency.permissions");
   const t = await getTranslations("permissions");
-  const clean = input === null ? null : sanitizeRolePermissions(input);
+  const clean = input === null ? null : { ...sanitizeRolePermissions(input), known: [...agencyPermissions] };
   // DbNull clears the column, so the defaults apply again.
   await prisma.organization.update({ where: { id: organization.id }, data: { rolePermissions: clean ?? Prisma.DbNull } });
   await audit({ actorId: viewer.user.id, action: clean ? "team.permissions" : "team.permissions_reset", agencyId: organization.id, data: clean ?? {}, ip: clientIp(await headers()) });

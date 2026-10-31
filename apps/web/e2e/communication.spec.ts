@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 const MAILPIT = "http://localhost:8025";
 
@@ -73,7 +73,7 @@ test("customer and agency message each other, and support answers a question", a
   });
 
   await test.step("the platform admin answers it", async () => {
-    await signIn(admin, "admin@stagedesk.local");
+    await signIn(admin, ADMIN_EMAIL);
     await admin.goto("/nl/app/support");
     await admin.getByRole("link", { name: `Factuur aanpassen ${run}` }).click();
     await admin.getByLabel("Antwoorden").fill("Zeker, dat hebben we aangepast.");

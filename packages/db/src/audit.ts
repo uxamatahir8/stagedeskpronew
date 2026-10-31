@@ -47,3 +47,30 @@ export async function audit(input: AuditInput) {
     console.error("[audit] could not record", input.action, error);
   }
 }
+
+/** Anything that can write an audit row: the plain client or a transaction (tenant-scoped ones too). */
+interface AuditWriter {
+  auditEvent: { create(args: { data: Prisma.AuditEventUncheckedCreateInput }): PromiseLike<unknown> };
+}
+
+/**
+ * Records a sensitive change inside the transaction that makes it, so the
+ * change and its audit row commit or roll back together. Unlike audit(), a
+ * failed write throws and undoes the change: these actions must not happen
+ * without their record (overrides, losses, stock corrections, sharing).
+ */
+export async function auditTx(tx: AuditWriter, input: AuditInput) {
+  const impersonatorId = await currentImpersonator().catch(() => null);
+  await tx.auditEvent.create({
+    data: {
+      actorId: input.actorId,
+      action: input.action,
+      agencyId: input.agencyId ?? null,
+      targetType: input.targetType ?? null,
+      targetId: input.targetId ?? null,
+      data: (input.data ?? undefined) as Prisma.InputJsonValue | undefined,
+      ip: input.ip ?? null,
+      impersonatorId: impersonatorId === input.actorId ? null : impersonatorId,
+    },
+  });
+}

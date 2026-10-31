@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, test } from "@playwright/test";
-import { acceptTerms, DEMO_PASSWORD, signIn } from "./helpers";
+import { ADMIN_EMAIL, acceptTerms, DEMO_PASSWORD, signIn } from "./helpers";
 
 const MAILPIT = "http://localhost:8025";
 
@@ -34,7 +34,8 @@ test("a partner applies, is approved, and gets credit for an agency from their l
   await test.step("a visitor applies on the partner page and confirms their email", async () => {
     await partner.goto("/nl/partners");
     await partner.getByLabel("Je naam").fill(`Eva E2E ${run}`);
-    await partner.getByLabel("E-mailadres").fill(partnerEmail);
+    // The footer has its own (newsletter) e-mail field.
+    await partner.getByRole("main").getByLabel("E-mailadres").fill(partnerEmail);
     await partner.getByLabel("Wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
     await partner.getByLabel("Herhaal wachtwoord", { exact: true }).fill(DEMO_PASSWORD);
     await partner.getByLabel("Wie bereik je, en hoe?").fill("Ik organiseer bedrijfsfeesten en werk met tien DJ-bureaus.");
@@ -52,7 +53,7 @@ test("a partner applies, is approved, and gets credit for an agency from their l
   });
 
   await test.step("the platform admin approves the application", async () => {
-    await signIn(admin, "admin@stagedesk.local");
+    await signIn(admin, ADMIN_EMAIL);
     await admin.goto("/nl/app/affiliates?tab=partners");
     const application = admin.locator("div").filter({ hasText: partnerEmail }).filter({ has: admin.getByRole("button", { name: "Goedkeuren" }) }).last();
     await application.getByRole("button", { name: "Goedkeuren" }).click();
