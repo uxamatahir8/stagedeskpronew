@@ -145,17 +145,30 @@ test("server actions refuse direct requests from people without the right access
     const lost = await capture(owner, () => owner.getByRole("dialog").getByRole("button", { name: "Afschrijven als verloren" }).click());
     await expect(owner.getByText("Afgeschreven als verloren.")).toBeVisible();
 
-    const firstId = itemUrl.split("/").pop()!;
-    await replay(staff.request, lost, (b) => b.replace(secondId, firstId));
+    // The target is a third, unreserved item: the first one is reserved on the booked gig, and writing
+    // that off is refused for everyone (it would leave the gig short), which would hide the permission check.
+    await owner.goto("/nl/app/inventory");
+    await owner.getByRole("button", { name: "Apparatuur toevoegen" }).click();
+    await owner.getByRole("dialog").getByLabel("Nummer", { exact: true }).fill(`${SPK}-C`);
+    await owner.getByRole("dialog").getByLabel("Naam", { exact: true }).fill("Derde");
+    await owner.getByRole("dialog").getByRole("button", { name: "Opslaan" }).click();
+    await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
+    const thirdId = owner.url().split("/").pop()!;
+
+    await replay(staff.request, lost, (b) => b.replace(secondId, thirdId));
     // Lost equipment, filtered by status: the owner's write-off is there, the staff replay changed nothing.
     await owner.goto(`/nl/app/inventory?q=${SPK}&status=lost`);
     await expect(owner.getByRole("link", { name: `${SPK}-B`, exact: true })).toBeVisible();
-    await expect(owner.getByRole("link", { name: SPK, exact: true })).toHaveCount(0);
-    await owner.goto(itemUrl);
-    await expect(owner.getByRole("button", { name: "Afschrijven als verloren" })).toBeVisible();
-    // Control: the owner's own replay against this item does write it off.
+    await expect(owner.getByRole("link", { name: `${SPK}-C`, exact: true })).toHaveCount(0);
+    // Control: the owner's own replay against the same item does write it off.
+    await replay(owner.request, lost, (b) => b.replace(secondId, thirdId));
+    await owner.goto(`/nl/app/inventory?q=${SPK}&status=lost`);
+    await expect(owner.getByRole("link", { name: `${SPK}-C`, exact: true })).toBeVisible();
+    // And the reserved first item can't be written off, not even by the owner, without releasing its reservation.
+    const firstId = itemUrl.split("/").pop()!;
     await replay(owner.request, lost, (b) => b.replace(secondId, firstId));
     await owner.goto(`/nl/app/inventory?q=${SPK}&status=lost`);
-    await expect(owner.getByRole("link", { name: SPK, exact: true })).toBeVisible();
+    await expect(owner.getByRole("link", { name: `${SPK}-C`, exact: true })).toBeVisible();
+    await expect(owner.getByRole("link", { name: SPK, exact: true })).toHaveCount(0);
   });
 });
