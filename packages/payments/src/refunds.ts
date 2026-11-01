@@ -7,10 +7,12 @@ import {
   failAttempt,
   findTagged,
   isUniqueViolation,
+  LeaseLostError,
   lockPayment,
   type Operation,
   openOperation,
   moneyTx,
+  owned,
   saveOperationData,
 } from "./operations";
 import { PaymentsError } from "./subscriptions";
@@ -143,7 +145,7 @@ export async function executeRefund(stripe: Stripe, operationId: string, now = n
           { idempotencyKey: `refund-op-${op.id}` },
         ));
       data.refundId = refund.id;
-      await saveOperationData(op.id, data);
+      await saveOperationData(op, data);
     }
 
     if (payment.transferredAt && !data.reversal) {
@@ -162,7 +164,7 @@ export async function executeRefund(stripe: Stripe, operationId: string, now = n
         transferIds: { artist: transferId("artist"), agency: transferId("agency") },
         artistId: transfers.find((t) => t.party === "artist")?.artistId ?? null,
       };
-      await saveOperationData(op.id, data);
+      await saveOperationData(op, data);
     }
 
     if (data.reversal) {
@@ -181,7 +183,7 @@ export async function executeRefund(stripe: Stripe, operationId: string, now = n
             { idempotencyKey: `reversal-op-${op.id}-${party}` },
           ));
         data.reversalIds[party] = reversal.id;
-        await saveOperationData(op.id, data);
+        await saveOperationData(op, data);
       }
     }
 
@@ -193,6 +195,8 @@ export async function executeRefund(stripe: Stripe, operationId: string, now = n
     return { refunded: op.amountCents, status: "completed", operationId: op.id };
   } catch (error) {
     const status = await failAttempt(op, error, { moneyMoved: Boolean(data.refundId) }, now);
+    // Taken over by another process: report it as still running.
+    if (status === "busy") return { refunded: 0, status: "pending", operationId: op.id };
     // A refused refund releases its reservation; pick up anything refunded in the dashboard meanwhile.
     if (status === "failed") await reconcileCharge(stripe, (await prisma.payment.findUnique({ where: { id: op.paymentId! } }))?.stripeChargeId ?? null);
     if (status === "failed") throw new PaymentsError("refund_refused");
@@ -222,11 +226,12 @@ function refundLedger(op: Operation, data: RefundData): LedgerLine[] {
 
 /** Books a refund exactly once: the operation flips to completed in the same transaction. */
 async function bookRefund(tx: Prisma.TransactionClient, op: Operation, lines: LedgerLine[], now = new Date()) {
+  // A pending operation is booked by its claim's owner only; one in review by an operator.
   const flipped = await tx.financialOperation.updateMany({
-    where: { id: op.id, status: { in: ["pending", "review"] } },
-    data: { status: "completed", completedAt: now, lockedUntil: null, nextAttemptAt: null, lastError: null },
+    where: op.status === "review" ? { id: op.id, status: "review" } : owned(op),
+    data: { status: "completed", completedAt: now, lockedUntil: null, lockToken: null, nextAttemptAt: null, lastError: null },
   });
-  if (flipped.count !== 1) throw new Error(`Refund ${op.id} was already booked`);
+  if (flipped.count !== 1) throw new LeaseLostError(op.id);
   const base = { organizationId: op.organizationId, bookingId: op.bookingId, paymentId: op.paymentId, operationId: op.id };
   await tx.payment.update({ where: { id: op.paymentId! }, data: { refundedCents: { increment: op.amountCents } } });
   await tx.booking.update({ where: { id: op.bookingId! }, data: { paidCents: { decrement: op.amountCents } } });

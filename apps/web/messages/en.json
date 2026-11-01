@@ -4701,7 +4701,10 @@
     "markPaidHint": "For a bank transfer or PayPal payment you made yourself.",
     "retry": "Try again",
     "searchReference": "Search by reference",
-    "searchPartner": "Search by reference, partner or email"
+    "searchPartner": "Search by reference, partner or email",
+    "error_in_progress": "A transfer for this withdrawal is being made right now. Try again in a few minutes.",
+    "event_uncertain": "Transfer outcome unknown; checking Stripe",
+    "checkAndRetry": "Check Stripe and finish"
   },
   "footerAdmin": {
     "intro": "The columns and links at the bottom of every page of the website. Put pages from the page builder in a column with the ‘Shown in’ setting on the page itself.",

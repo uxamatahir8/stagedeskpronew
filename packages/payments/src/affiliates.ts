@@ -1,7 +1,19 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { commissionFor, commissionWindowOpen } from "@stagedesk/core";
-import { approveWithdrawal, failWithdrawal, getSetting, markWithdrawalPaid, overrideReferralWithPromo, prisma, requestWithdrawal, WithdrawalError } from "@stagedesk/db";
+import {
+  approveWithdrawal,
+  claimStripeWithdrawal,
+  completeStripeWithdrawal,
+  getSetting,
+  overrideReferralWithPromo,
+  prisma,
+  releaseStripeWithdrawal,
+  requestWithdrawal,
+  stuckWithdrawals,
+  WithdrawalError,
+} from "@stagedesk/db";
+import { isDefinitiveStripeError } from "./operations";
 
 const id = (value: string | { id: string } | null | undefined) => (typeof value === "string" ? value : (value?.id ?? null));
 
@@ -229,44 +241,82 @@ export async function adjustCommissionsForCharge(charge: { payment_intent: strin
 }
 
 /**
- * Pays an approved withdrawal by Stripe transfer to the affiliate's connected
- * account. On failure the withdrawal is marked failed and its commissions stay
- * with it, so an admin can retry or pay by hand.
+ * Pays a withdrawal by Stripe transfer to the affiliate's connected account.
+ *
+ * Claimed first with a token and lease (claimStripeWithdrawal), so two
+ * clicks, the monthly run and the recovery worker never pay it twice at once.
+ * Any attempt after the first looks for an earlier transfer tagged with the
+ * withdrawal before sending (Stripe forgets idempotency keys after 24 hours).
+ * Paid is booked only by the claim's owner, and notifications can't undo it.
+ * A refusal marks it failed (retryable); an unknown outcome leaves it
+ * "processing" for the worker (recoverStripeWithdrawals) to settle.
  */
-export async function payWithdrawalByStripe(stripe: Stripe, payoutId: string, actorId: string | null) {
-  const payout = await prisma.affiliatePayout.findUniqueOrThrow({ where: { id: payoutId }, include: { affiliate: true } });
-  if (payout.method !== "stripe" || !["approved", "failed"].includes(payout.status)) throw new WithdrawalError("wrong_status");
-  const destination = payout.affiliate.stripeAccountId;
-  if (!destination || !payout.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
-  // Claimed first, so two clicks (or the monthly run and an admin) can't both pay it.
-  const claimed = await prisma.affiliatePayout.updateMany({ where: { id: payoutId, status: payout.status }, data: { status: "processing" } });
-  if (claimed.count !== 1) throw new WithdrawalError("wrong_status");
+export async function payWithdrawalByStripe(stripe: Stripe, payoutId: string, actorId: string | null, now = new Date()) {
+  const current = await prisma.affiliatePayout.findUnique({ where: { id: payoutId }, include: { affiliate: true } });
+  if (!current) throw new WithdrawalError("not_found");
+  if (current.method !== "stripe") throw new WithdrawalError("wrong_status");
+  const destination = current.affiliate.stripeAccountId;
+  if (!destination || !current.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
+  const { payout, token, retry } = await claimStripeWithdrawal(payoutId, now);
+
+  let transferId: string | null = null;
   try {
-    // A failed earlier attempt may have reached Stripe without us hearing back (or the
-    // database failed afterwards): use that transfer instead of sending the money again.
-    const earlier =
-      payout.status === "failed"
-        ? (await stripe.transfers.list({ destination, limit: 100 })).data.find((t) => t.metadata?.["payoutId"] === payoutId) ?? null
-        : null;
-    const transfer =
+    const earlier = retry ? await findWithdrawalTransfer(stripe, destination, payoutId, payout.createdAt) : null;
+    transferId =
       earlier ??
-      (await stripe.transfers.create(
-        {
-          amount: payout.amountCents,
-          currency: "eur",
-          destination,
-          description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
-          metadata: { affiliateId: payout.affiliateId, payoutId },
-        },
-        { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
-      ));
-    await markWithdrawalPaid(payoutId, actorId ?? "system", { transactionRef: transfer.id, stripeTransferId: transfer.id });
-    return transfer.id;
+      (
+        await stripe.transfers.create(
+          {
+            amount: payout.amountCents,
+            currency: "eur",
+            destination,
+            description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
+            metadata: { affiliateId: payout.affiliateId, payoutId },
+          },
+          { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
+        )
+      ).id;
   } catch (error) {
-    // Back to failed (retryable); the next attempt looks for a transfer first.
-    await failWithdrawal(payoutId, String(error), actorId);
+    // Refused by Stripe: nothing was sent. Anything else: we can't know, so it stays processing.
+    await releaseStripeWithdrawal(payoutId, token, String(error), actorId, { failed: isDefinitiveStripeError(error) });
     throw error;
   }
+  try {
+    if (!(await completeStripeWithdrawal(payoutId, token, transferId, actorId))) {
+      // Our lease was taken over; the new owner finds this transfer and books it.
+      const now2 = await prisma.affiliatePayout.findUnique({ where: { id: payoutId }, select: { status: true, stripeTransferId: true } });
+      if (now2?.status !== "paid") throw new WithdrawalError("in_progress");
+    }
+  } catch (error) {
+    // The money went out but booking it failed: keep it processing; the worker books it from Stripe.
+    if (!(error instanceof WithdrawalError)) await releaseStripeWithdrawal(payoutId, token, `transfer ${transferId} made, booking failed: ${String(error)}`, actorId, { failed: false }).catch(() => undefined);
+    throw error;
+  }
+  return transferId;
+}
+
+/** A transfer made for this withdrawal by any earlier attempt (all pages since it was requested). */
+async function findWithdrawalTransfer(stripe: Stripe, destination: string, payoutId: string, since: Date) {
+  for await (const t of stripe.transfers.list({ destination, created: { gte: Math.floor(since.getTime() / 1000) - 60 }, limit: 100 })) {
+    if (t.metadata?.["payoutId"] === payoutId) return t.id;
+  }
+  return null;
+}
+
+/** Worker: finishes Stripe withdrawals whose process stopped or whose outcome was unknown. */
+export async function recoverStripeWithdrawals(stripe: Stripe, now = new Date()) {
+  let paid = 0;
+  let failed = 0;
+  for (const { id } of await stuckWithdrawals(now)) {
+    try {
+      await payWithdrawalByStripe(stripe, id, null, now);
+      paid++;
+    } catch (error) {
+      failed++;
+      console.error("[affiliates] withdrawal recovery failed", id, error);
+    }
+  }
+  return { paid, failed };
 }
 
 /**

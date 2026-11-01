@@ -7,6 +7,7 @@ export {
   payWithdrawalByStripe,
   recordInvoiceCommission,
   reconcileAffiliatePromos,
+  recoverStripeWithdrawals,
   retireAffiliatePromo,
   runAffiliatePayouts,
   syncAffiliatePromo,

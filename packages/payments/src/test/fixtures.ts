@@ -41,6 +41,8 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
     if (failure?.mode === "after") throw failure.error;
     return result;
   }
+  /** Like the SDK's list result: awaitable for one page, async-iterable for all of them. */
+  const page = <T,>(data: T[]) => Object.assign(Promise.resolve({ data }), { [Symbol.asyncIterator]: async function* () { yield* data; } });
   const metadata = (params: Record<string, unknown>) => (params["metadata"] ?? {}) as Record<string, string>;
 
   const stripe = {
@@ -69,16 +71,15 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
           transfers.push(t);
           return t;
         }),
-      list: async (params: { transfer_group?: string; destination?: string }) => ({
-        data: transfers.filter((t) => (!params.transfer_group || t.transfer_group === params.transfer_group) && (!params.destination || t.destination === params.destination)),
-      }),
+      list: (params: { transfer_group?: string; destination?: string }) =>
+        page(transfers.filter((t) => (!params.transfer_group || t.transfer_group === params.transfer_group) && (!params.destination || t.destination === params.destination))),
       createReversal: async (transferId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
         create("transfers.createReversal", { transferId, ...params }, options, () => {
           const r = { id: id("trr"), transfer: transferId, amount: params["amount"] as number, metadata: metadata(params) };
           reversals.push(r);
           return r;
         }),
-      listReversals: async (transferId: string) => ({ data: reversals.filter((r) => r.transfer === transferId) }),
+      listReversals: (transferId: string) => page(reversals.filter((r) => r.transfer === transferId)),
     },
     refunds: {
       create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
@@ -87,7 +88,7 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
           refunds.push(r);
           return r;
         }),
-      list: async (params: { payment_intent: string }) => ({ data: refunds.filter((r) => r.payment_intent === params.payment_intent) }),
+      list: (params: { payment_intent: string }) => page(refunds.filter((r) => r.payment_intent === params.payment_intent)),
     },
     invoices: {
       retrieve: async (invoiceId: string) => ({

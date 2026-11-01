@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { randomUUID } from "node:crypto";
 import { type FinancialOperation, Prisma, prisma } from "@stagedesk/db";
 
 /**
@@ -18,7 +19,22 @@ import { type FinancialOperation, Prisma, prisma } from "@stagedesk/db";
  * After a retry, Stripe is searched for objects tagged with the operation id
  * before anything new is created, so recovery also works after Stripe's
  * 24-hour idempotency window. Operations that keep failing go to "review".
+ *
+ * Ownership: a claim writes a fresh lockToken (fencing token). Every write
+ * the claimant makes afterwards (progress, failure, booking) is conditional
+ * on that token, so a process whose lease ran out and was taken over can't
+ * overwrite the new owner's state; it gets LeaseLostError instead. Its Stripe
+ * calls are harmless: the new owner uses the same keys and finds the objects
+ * by operation id.
  */
+
+/** This process's claim on an operation was taken over (its lease ran out). */
+export class LeaseLostError extends Error {
+  constructor(readonly operationId: string) {
+    super(`Lease on operation ${operationId} was taken over`);
+    this.name = "LeaseLostError";
+  }
+}
 
 export type OperationStatus = "pending" | "completed" | "failed" | "review";
 
@@ -54,15 +70,19 @@ export function isDefinitiveStripeError(error: unknown) {
 export async function claimOperation(id: string, now = new Date()): Promise<Operation | null> {
   const claimed = await prisma.financialOperation.updateMany({
     where: { id, status: "pending", OR: [{ lockedUntil: null }, { lockedUntil: { lt: now } }] },
-    data: { lockedUntil: new Date(now.getTime() + CLAIM_MS), attempts: { increment: 1 } },
+    data: { lockedUntil: new Date(now.getTime() + CLAIM_MS), lockToken: randomUUID(), attempts: { increment: 1 } },
   });
   if (claimed.count === 0) return null;
   return prisma.financialOperation.findUnique({ where: { id } });
 }
 
-/** Stores what Stripe returned so far; the claim is still held. */
-export async function saveOperationData(id: string, data: object) {
-  await prisma.financialOperation.update({ where: { id }, data: { data: data as Prisma.InputJsonValue } });
+/** Where-clause for a write by the current owner of a claimed operation. */
+export const owned = (op: Pick<Operation, "id" | "lockToken">) => ({ id: op.id, status: "pending", lockToken: op.lockToken });
+
+/** Stores what Stripe returned so far, if this process still owns the claim. */
+export async function saveOperationData(op: Pick<Operation, "id" | "lockToken">, data: object) {
+  const saved = await prisma.financialOperation.updateMany({ where: owned(op), data: { data: data as Prisma.InputJsonValue } });
+  if (saved.count !== 1) throw new LeaseLostError(op.id);
 }
 
 /**
@@ -71,21 +91,25 @@ export async function saveOperationData(id: string, data: object) {
  * retried with backoff, and after MAX_OPERATION_ATTEMPTS waits for review.
  */
 export async function failAttempt(op: Operation, error: unknown, opts: { moneyMoved: boolean }, now = new Date()) {
+  // Taken over by another process: its owner decides what happens now.
+  if (error instanceof LeaseLostError) return "busy" as const;
   const message = String((error as Error)?.message ?? error).slice(0, 5000);
   if (!opts.moneyMoved && isDefinitiveStripeError(error)) {
-    await prisma.financialOperation.update({ where: { id: op.id }, data: { status: "failed", lastError: message, lockedUntil: null, nextAttemptAt: null } });
-    return "failed" as const;
+    const done = await prisma.financialOperation.updateMany({ where: owned(op), data: { status: "failed", lastError: message, lockedUntil: null, lockToken: null, nextAttemptAt: null } });
+    return done.count === 1 ? ("failed" as const) : ("busy" as const);
   }
   const review = op.attempts >= MAX_OPERATION_ATTEMPTS;
-  await prisma.financialOperation.update({
-    where: { id: op.id },
+  const done = await prisma.financialOperation.updateMany({
+    where: owned(op),
     data: {
       status: review ? "review" : "pending",
       lastError: message,
       lockedUntil: null,
+      lockToken: null,
       nextAttemptAt: review ? null : new Date(now.getTime() + retryDelayMs(op.attempts)),
     },
   });
+  if (done.count !== 1) return "busy" as const;
   if (review) console.error(`[finance] ${op.kind} ${op.id} needs review after ${op.attempts} attempts: ${message}`);
   return review ? ("review" as const) : ("pending" as const);
 }
@@ -145,11 +169,18 @@ export function dueOperations(now = new Date(), take = 50) {
   });
 }
 
-/** Operator: run a pending or reviewed operation again now, with a fresh attempt budget. */
-export async function resetOperation(id: string) {
+/**
+ * Operator: run a pending or reviewed operation again now, with a fresh
+ * attempt budget. Never touches an operation a process holds right now
+ * (live lease): that would let two run it at once. Returns false then.
+ */
+export async function resetOperation(id: string, now = new Date()) {
   const reset = await prisma.financialOperation.updateMany({
-    where: { id, status: { in: ["pending", "review"] } },
-    data: { status: "pending", attempts: 0, nextAttemptAt: null, lockedUntil: null },
+    where: {
+      id,
+      OR: [{ status: "review" }, { status: "pending", OR: [{ lockedUntil: null }, { lockedUntil: { lt: now } }] }],
+    },
+    data: { status: "pending", attempts: 0, nextAttemptAt: null },
   });
   return reset.count === 1;
 }

@@ -58,6 +58,12 @@ export function WithdrawalActions({ payoutId, status, method, today }: { payoutI
           </Button>
         </>
       )}
+      {status === "processing" && method === "stripe" && (
+        // A transfer whose outcome is unknown: retrying looks in Stripe first, so it can't pay twice.
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => retryWithdrawalAction(payoutId))}>
+          {t("checkAndRetry")}
+        </Button>
+      )}
       {status === "failed" && (
         <>
           {method === "stripe" && (

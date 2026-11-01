@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { Prisma, prisma } from "@stagedesk/db";
 import { adjustCommissionsForCharge, attributeSubscriptionPromo, recordInvoiceCommission } from "./affiliates";
@@ -38,33 +39,38 @@ export const eventRetryDelayMs = (attempts: number) => Math.min(2 ** Math.max(0,
  * the event is "dead" until replayed.
  */
 export async function processStoredEvent(stripe: Stripe, eventId: string, now = new Date()) {
+  const token = randomUUID();
   const claimed = await prisma.stripeEvent.updateMany({
     where: {
       id: eventId,
       OR: [{ status: { in: ["received", "failed"] } }, { status: "processing", lockedUntil: { lt: now } }],
     },
-    data: { status: "processing", lockedUntil: new Date(now.getTime() + EVENT_CLAIM_MS), attempts: { increment: 1 } },
+    data: { status: "processing", lockedUntil: new Date(now.getTime() + EVENT_CLAIM_MS), lockToken: token, attempts: { increment: 1 } },
   });
   const stored = await prisma.stripeEvent.findUnique({ where: { id: eventId } });
   if (!stored) return "missing";
   if (claimed.count === 0) return stored.status;
+  // Outcomes are recorded only while this claim is still ours: a handler that outlived its lease
+  // (and was taken over) must not overwrite what the new owner records.
+  const mine = { id: eventId, status: "processing", lockToken: token };
   try {
     const handled = await handleEvent(stripe, stored.payload as unknown as Stripe.Event);
     const status = handled ? "processed" : "ignored";
-    await prisma.stripeEvent.update({ where: { id: eventId }, data: { status, processedAt: new Date(), error: null, lockedUntil: null, nextAttemptAt: null } });
-    return status;
+    const done = await prisma.stripeEvent.updateMany({ where: mine, data: { status, processedAt: new Date(), error: null, lockedUntil: null, lockToken: null, nextAttemptAt: null } });
+    return done.count === 1 ? status : "superseded";
   } catch (error) {
     const dead = stored.attempts >= MAX_EVENT_ATTEMPTS;
-    await prisma.stripeEvent.update({
-      where: { id: eventId },
+    const done = await prisma.stripeEvent.updateMany({
+      where: mine,
       data: {
         status: dead ? "dead" : "failed",
         error: String(error).slice(0, 5000),
         lockedUntil: null,
+        lockToken: null,
         nextAttemptAt: dead ? null : new Date(now.getTime() + eventRetryDelayMs(stored.attempts)),
       },
     });
-    if (dead) console.error(`[stripe] event ${eventId} (${stored.type}) gave up after ${stored.attempts} attempts`, error);
+    if (dead && done.count === 1) console.error(`[stripe] event ${eventId} (${stored.type}) gave up after ${stored.attempts} attempts`, error);
     throw error;
   }
 }
@@ -102,7 +108,7 @@ export async function retryStripeEvents(stripe: Stripe, now = new Date()): Promi
 export async function replayStripeEvent(eventId: string) {
   const reset = await prisma.stripeEvent.updateMany({
     where: { id: eventId, status: { in: ["failed", "dead", "ignored", "processed"] } },
-    data: { status: "received", attempts: 0, nextAttemptAt: null, lockedUntil: null },
+    data: { status: "received", attempts: 0, nextAttemptAt: null, lockedUntil: null, lockToken: null },
   });
   return reset.count === 1;
 }

@@ -11,7 +11,9 @@ import {
   lockPayment,
   type Operation,
   openOperation,
+  LeaseLostError,
   moneyTx,
+  owned,
   saveOperationData,
 } from "./operations";
 import { executeRefund } from "./refunds";
@@ -195,16 +197,17 @@ export async function executePayout(stripe: Stripe, operationId: string, now = n
           { idempotencyKey: `payout-${op.paymentId}-${t.party}` },
         ));
       data.ids[t.party] = transfer.id;
-      await saveOperationData(op.id, data);
+      await saveOperationData(op, data);
     }
 
     await prisma.$transaction(async (tx) => {
       await lockPayment(tx, op.paymentId!);
+      // Only the claim's owner books it; a process whose lease was taken over can't.
       const flipped = await tx.financialOperation.updateMany({
-        where: { id: op.id, status: "pending" },
-        data: { status: "completed", completedAt: now, lockedUntil: null, nextAttemptAt: null, lastError: null },
+        where: owned(op),
+        data: { status: "completed", completedAt: now, lockedUntil: null, lockToken: null, nextAttemptAt: null, lastError: null },
       });
-      if (flipped.count !== 1) throw new Error(`Payout ${op.id} was already booked`);
+      if (flipped.count !== 1) throw new LeaseLostError(op.id);
       const base = { organizationId: op.organizationId, bookingId: data.bookingId, paymentId: op.paymentId, operationId: op.id };
       await tx.ledgerEntry.createMany({
         data: [
@@ -225,6 +228,7 @@ export async function executePayout(stripe: Stripe, operationId: string, now = n
   } catch (error) {
     // A payout always retries (a missing balance or a disabled account is usually fixed later); an operator sees it in review.
     const status = await failAttempt(op, error, { moneyMoved: true }, now);
+    if (status === "busy") return { transferred: 0, status: "busy" as const };
     console.error(`[finance] payout ${op.id} attempt ${op.attempts} failed`, error);
     return { transferred: 0, status };
   }

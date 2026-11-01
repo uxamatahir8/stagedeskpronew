@@ -3,7 +3,7 @@ import { Redis } from "ioredis";
 import { checkProductionConfig, localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
 import { approveDueCommissions, expireQuotes, prisma, resumeLeadAcceptances, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
-import { getStripe, reconcileAffiliatePromos, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
+import { getStripe, reconcileAffiliatePromos, recoverStripeWithdrawals, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
 import { sendCampaign, sendDueCampaigns } from "./newsletter";
 import { sendReminders } from "./reminders";
 
@@ -74,6 +74,9 @@ const systemWorker = new Worker(
       case "retry-stripe-events":
         // Events whose processing failed (with backoff), never ran, or whose worker died mid-run.
         return stripe ? retryStripeEvents(stripe) : { skipped: "Stripe not configured" };
+      case "recover-withdrawals":
+        // Stripe withdrawals whose process stopped or whose transfer outcome was unknown.
+        return stripe ? recoverStripeWithdrawals(stripe) : { skipped: "Stripe not configured" };
       case "affiliate-promos":
         // Stripe promotion codes match their partners: on while approved, off otherwise or once deleted.
         return stripe ? reconcileAffiliatePromos(stripe) : { skipped: "Stripe not configured" };
@@ -161,6 +164,7 @@ await systemQueue.upsertJobScheduler("exchange-rates", { every: 6 * 60 * 60_000 
 await systemQueue.add("exchange-rates", {}, { attempts: 3, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: 100 });
 await systemQueue.upsertJobScheduler("newsletter-due", { every: 60_000 }, { name: "newsletter-due" });
 await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 60_000 }, { name: "retry-stripe-events" });
+await systemQueue.upsertJobScheduler("recover-withdrawals", { every: 5 * 60_000 }, { name: "recover-withdrawals" });
 await systemQueue.upsertJobScheduler("affiliate-promos", { every: 24 * 60 * 60_000 }, { name: "affiliate-promos" });
 await systemQueue.upsertJobScheduler("resume-lead-acceptances", { every: 5 * 60_000 }, { name: "resume-lead-acceptances" });
 await systemQueue.upsertJobScheduler("financial-operations", { every: 2 * 60_000 }, { name: "financial-operations" });

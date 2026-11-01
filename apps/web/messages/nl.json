@@ -4701,7 +4701,10 @@
     "markPaidHint": "Voor een bankoverschrijving of PayPal-betaling die je zelf hebt gedaan.",
     "retry": "Opnieuw proberen",
     "searchReference": "Zoek op kenmerk",
-    "searchPartner": "Zoek op kenmerk, partner of e-mail"
+    "searchPartner": "Zoek op kenmerk, partner of e-mail",
+    "error_in_progress": "Er wordt nu een overboeking voor deze uitbetaling gedaan. Probeer het over een paar minuten opnieuw.",
+    "event_uncertain": "Uitkomst van overboeking onbekend; Stripe wordt gecontroleerd",
+    "checkAndRetry": "Stripe controleren en afronden"
   },
   "footerAdmin": {
     "intro": "De kolommen en links onderaan elke pagina van de website. Pagina's uit de paginabouwer zet je in een kolom via de instelling ‘Getoond in’ op de pagina zelf.",
