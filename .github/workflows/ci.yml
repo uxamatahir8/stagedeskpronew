@@ -159,7 +159,8 @@ jobs:
 
   deploy-staging:
     name: Deploy staging
-    needs: [check, security]
+    # A release needs every gate, the browser suite included; none of these jobs may be skipped or allowed to fail.
+    needs: [check, security, e2e]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     environment:

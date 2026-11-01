@@ -48,7 +48,23 @@
         "^generate"
       ],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "APP_URL",
+        "BETTER_AUTH_URL",
+        "BETTER_AUTH_SECRET",
+        "SECRETS_KEY",
+        "S3_*",
+        "STRIPE_*",
+        "TURNSTILE_*",
+        "SITES_*",
+        "TRUSTED_PROXIES",
+        "HEALTH_TOKEN",
+        "GEOCODER_URL",
+        "NODE_ENV"
+      ]
     },
     "lint": {},
     "typecheck": {
