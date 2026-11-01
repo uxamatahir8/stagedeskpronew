@@ -148,7 +148,11 @@ export type CustomerChoice =
  * can't be the agency's customer (e.g. they're on its team).
  */
 export async function resolveBookingCustomer(organizationId: string, input: CustomerChoice) {
-  const db = tenantDb(organizationId);
+  return resolveBookingCustomerTx(tenantDb(organizationId), organizationId, input);
+}
+
+/** resolveBookingCustomer inside a caller's transaction on the agency's tenant client. */
+export async function resolveBookingCustomerTx(db: Tx | TenantDb, organizationId: string, input: CustomerChoice) {
   if (input.mode === "existing") {
     if (!input.id) return null;
     const member = await db.member.findFirst({ where: { userId: input.id, role: "customer" }, select: { userId: true } });
@@ -157,8 +161,8 @@ export async function resolveBookingCustomer(organizationId: string, input: Cust
   if (!input.name || !input.email) return null;
   const email = input.email.trim().toLowerCase();
   const user =
-    (await prisma.user.findUnique({ where: { email }, select: { id: true } })) ??
-    (await prisma.user.create({ data: { id: randomUUID(), email, name: input.name.trim(), phone: input.phone }, select: { id: true } }));
+    (await db.user.findUnique({ where: { email }, select: { id: true } })) ??
+    (await db.user.create({ data: { id: randomUUID(), email, name: input.name.trim(), phone: input.phone }, select: { id: true } }));
   const existing = await db.member.findFirst({ where: { userId: user.id }, select: { role: true } });
   if (existing && existing.role !== "customer") return null;
   if (!existing) await db.member.create({ data: { id: randomUUID(), userId: user.id, role: "customer", organizationId } });
@@ -169,25 +173,7 @@ export async function createBooking(organizationId: string, input: NewBooking, a
   const db = tenantDb(organizationId);
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
-      return await db.$transaction(async (tx) => {
-        const id = randomUUID();
-        const { eventDate, ...rest } = input;
-        // The booking keeps the currency the agency works in today.
-        const org = await tx.organization.findUnique({ where: { id: organizationId }, select: { currency: true } });
-        await tx.booking.create({
-          data: {
-            ...rest,
-            id,
-            organizationId,
-            currency: org?.currency ?? "EUR",
-            trackingCode: generateTrackingCode(),
-            eventDate: eventDate ? toDateOnly(eventDate) : null,
-            createdById: actorId,
-          },
-        });
-        await logEvent(tx, id, "created", actorId, { source: input.source ?? "manual" });
-        return tx.booking.findFirstOrThrow({ where: { id } });
-      });
+      return await db.$transaction((tx) => insertBooking(tx, organizationId, input, actorId));
     } catch (error) {
       // A tracking code collision is astronomically rare; try a new one.
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
@@ -195,6 +181,27 @@ export async function createBooking(organizationId: string, input: NewBooking, a
     }
   }
   throw new Error("Couldn't generate a unique tracking code");
+}
+
+/** Creates a booking inside a caller's transaction on the agency's tenant client (a tracking-code clash throws P2002). */
+export async function insertBooking(tx: Tx, organizationId: string, input: NewBooking, actorId: string | null) {
+  const id = randomUUID();
+  const { eventDate, ...rest } = input;
+  // The booking keeps the currency the agency works in today.
+  const org = await tx.organization.findUnique({ where: { id: organizationId }, select: { currency: true } });
+  await tx.booking.create({
+    data: {
+      ...rest,
+      id,
+      organizationId,
+      currency: org?.currency ?? "EUR",
+      trackingCode: generateTrackingCode(),
+      eventDate: eventDate ? toDateOnly(eventDate) : null,
+      createdById: actorId,
+    },
+  });
+  await logEvent(tx, id, "created", actorId, { source: input.source ?? "manual" });
+  return tx.booking.findFirstOrThrow({ where: { id } });
 }
 
 export interface QuoteInput {

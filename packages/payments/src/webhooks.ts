@@ -88,7 +88,7 @@ export async function dueStripeEvents(now = new Date(), take = 100) {
 }
 
 /** Runs due events (worker). Returns counts per outcome. */
-export async function retryStripeEvents(stripe: Stripe, now = new Date()) {
+export async function retryStripeEvents(stripe: Stripe, now = new Date()): Promise<Record<string, number>> {
   const ids = await dueStripeEvents(now);
   const outcome: Record<string, number> = {};
   for (const id of ids) {

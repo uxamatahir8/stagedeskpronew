@@ -5,7 +5,7 @@ import { acceptQuote, assignArtist, changeBookingStatus, createBooking, prisma, 
 type Failure = { mode: "before" | "after"; error: Error & { type?: string } };
 
 /** A Stripe error as the SDK throws it. Definitive types mean Stripe refused; connection errors leave the outcome unknown. */
-export function stripeError(type: "StripeConnectionError" | "StripeAPIError" | "StripeInvalidRequestError", message = type) {
+export function stripeError(type: "StripeConnectionError" | "StripeAPIError" | "StripeInvalidRequestError", message: string = type) {
   return Object.assign(new Error(message), { type });
 }
 

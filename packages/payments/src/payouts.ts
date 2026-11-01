@@ -274,7 +274,7 @@ export async function runDuePayouts(stripe: Stripe, now = new Date()) {
  * Continues refunds and payouts that didn't finish (timeouts, crashes,
  * Stripe errors), with backoff. Called by the worker every few minutes.
  */
-export async function runFinancialOperations(stripe: Stripe, now = new Date()) {
+export async function runFinancialOperations(stripe: Stripe, now = new Date()): Promise<Record<string, number>> {
   const due = await dueOperations(now);
   const outcome: Record<string, number> = {};
   for (const op of due) {

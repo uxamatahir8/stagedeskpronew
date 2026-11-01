@@ -1,7 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
-import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
+import { approveDueCommissions, expireQuotes, prisma, resumeLeadAcceptances, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
 import { sendCampaign, sendDueCampaigns } from "./newsletter";
@@ -61,6 +61,9 @@ const systemWorker = new Worker(
       case "retry-stripe-events":
         // Events whose processing failed (with backoff), never ran, or whose worker died mid-run.
         return stripe ? retryStripeEvents(stripe) : { skipped: "Stripe not configured" };
+      case "resume-lead-acceptances":
+        // Customer acceptances of a marketplace price that stopped half-way.
+        return resumeLeadAcceptances();
       case "financial-operations":
         // Refunds and payouts that didn't finish (Stripe timeouts, crashes): continued with the same keys.
         return stripe ? runFinancialOperations(stripe) : { skipped: "Stripe not configured" };
@@ -142,6 +145,7 @@ await systemQueue.upsertJobScheduler("exchange-rates", { every: 6 * 60 * 60_000 
 await systemQueue.add("exchange-rates", {}, { attempts: 3, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: 100 });
 await systemQueue.upsertJobScheduler("newsletter-due", { every: 60_000 }, { name: "newsletter-due" });
 await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 60_000 }, { name: "retry-stripe-events" });
+await systemQueue.upsertJobScheduler("resume-lead-acceptances", { every: 5 * 60_000 }, { name: "resume-lead-acceptances" });
 await systemQueue.upsertJobScheduler("financial-operations", { every: 2 * 60_000 }, { name: "financial-operations" });
 console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${(await getStripe()) ? "configured" : "not configured"}.`);
 
