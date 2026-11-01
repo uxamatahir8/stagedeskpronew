@@ -250,6 +250,9 @@ model Invitation {
   expiresAt      DateTime
   inviterId      String       @db.VarChar(64)
   user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  /// When the staff-seat check (under the agency lock) accepted this invitation. Set once; a resend
+  /// finds it set and takes no new seat. Not a Better Auth field: Better Auth never writes it.
+  seatCheckedAt  DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([organizationId, status])
@@ -660,6 +663,8 @@ model FinancialOperation {
   nextAttemptAt  DateTime?
   /// Claimed by a process until then; another may take over after it passes.
   lockedUntil    DateTime?
+  /// The claim's owner (fencing token): writes by a process whose claim was taken over are refused.
+  lockToken      String?   @db.VarChar(64)
   actorId        String?   @db.VarChar(64)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -766,6 +771,8 @@ model StripeEvent {
   nextAttemptAt DateTime?
   /// Claimed by one process until then, so two can't run the same event.
   lockedUntil   DateTime?
+  /// The claim's owner; a process whose lease was taken over can't record an outcome.
+  lockToken     String?   @db.VarChar(64)
   receivedAt    DateTime  @default(now())
   processedAt   DateTime?
 
@@ -989,6 +996,11 @@ model AffiliatePayout {
   /// The bank or PayPal transaction reference entered when paid by hand.
   transactionRef   String?                @db.VarChar(120)
   error            String?                @db.Text
+  /// Stripe transfer attempts so far; after the first, Stripe is searched before sending again.
+  attempts         Int                    @default(0)
+  /// While "processing": the owner's token and lease. Only the owner may finish it; an expired lease can be taken over.
+  lockToken        String?                @db.VarChar(64)
+  lockedUntil      DateTime?
   rejectReason     String?                @db.VarChar(300)
   reviewedById     String?                @db.VarChar(64)
   reviewedAt       DateTime?

@@ -145,14 +145,23 @@ export async function confirmJoinedSeat(organizationId: string, memberId: string
  * Re-counts seats once a staff invitation exists: the check before creating
  * it can't see an invitation or promotion that's being made at the same time.
  * Over the limit, the invitation is canceled and this returns false.
+ *
+ * Runs for every invitation email, new or resent. An invitation that passed
+ * once is marked (seatCheckedAt) under the same lock, so a resend, however
+ * soon and however many at once, finds the mark and takes no new seat, even
+ * when the agency is over its limit after a downgrade.
  */
 export async function confirmInvitationSeat(organizationId: string, invitationId: string, now = new Date()) {
   return withSeatLock(
     organizationId,
     async (tx, used, max) => {
-      const invitation = await tx.invitation.findFirst({ where: { id: invitationId, organizationId }, select: { role: true, status: true } });
+      const invitation = await tx.invitation.findFirst({ where: { id: invitationId, organizationId }, select: { role: true, status: true, seatCheckedAt: true } });
       if (!invitation || invitation.status !== "pending") return false;
-      if (!takesStaffSeat(invitation.role ?? "") || max === null || used <= max) return true;
+      if (invitation.seatCheckedAt) return true;
+      if (!takesStaffSeat(invitation.role ?? "") || max === null || used <= max) {
+        await tx.invitation.update({ where: { id: invitationId }, data: { seatCheckedAt: now } });
+        return true;
+      }
       await tx.invitation.update({ where: { id: invitationId }, data: { status: "canceled" } });
       return false;
     },

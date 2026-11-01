@@ -251,7 +251,7 @@ describe("invitations over the limit", () => {
     await member(a.id, "agency_staff");
     await member(a.id, "agency_staff");
     const email = `${run}-pending${n++}@test.local`;
-    // Invited yesterday, before the downgrade.
+    // Invited yesterday, before the downgrade: its seat was checked then.
     const pending = await prisma.invitation.create({
       data: {
         id: randomUUID(),
@@ -262,6 +262,7 @@ describe("invitations over the limit", () => {
         expiresAt: new Date(Date.now() + 86_400_000),
         inviterId: a.owner.userId,
         createdAt: new Date(Date.now() - 86_400_000),
+        seatCheckedAt: new Date(Date.now() - 86_400_000),
       },
     });
 
@@ -300,5 +301,40 @@ describe("invitations over the limit", () => {
     }
     expect(await prisma.invitation.count({ where: { organizationId: a.id, email, status: "pending" } })).toBe(0);
     expect(vi.mocked(deliver).mock.calls.some(([job]) => job.kind === "invitation" && job.to === email)).toBe(false);
+  });
+
+  it("keeps a just-created invitation when it's resent at once and the agency is now over its limit", async () => {
+    // The old 2-minute createdAt rule treated this resend as new and canceled the invitation.
+    const a = await agency();
+    const email = `${run}-fresh${n++}@test.local`;
+    const created = await invite(a, email);
+    // Over the limit now (as after a downgrade or a direct promotion): owner + invitation + one staff.
+    await member(a.id, "agency_staff");
+    await invite(a, email, true);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: created.id } })).status).toBe("pending");
+    expect(vi.mocked(deliver).mock.calls.filter(([job]) => job.kind === "invitation" && job.to === email)).toHaveLength(2);
+  });
+
+  it("sends two simultaneous resends without taking or freeing a seat", async () => {
+    const a = await agency();
+    const email = `${run}-twice${n++}@test.local`;
+    const created = await invite(a, email);
+    const before = await seatsUsed(a.id);
+    const results = await Promise.allSettled([invite(a, email, true), invite(a, email, true)]);
+    expect(results.every((r) => r.status === "fulfilled")).toBe(true);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: created.id } })).status).toBe("pending");
+    expect(await seatsUsed(a.id)).toBe(before);
+  });
+
+  it("decides from the database alone, so any instance gives the same answer", async () => {
+    // What another app instance would do for the same invitation: no process state is involved.
+    const { confirmInvitationSeat } = await import("@stagedesk/db");
+    const a = await agency();
+    const email = `${run}-inst${n++}@test.local`;
+    const created = await invite(a, email);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: created.id } })).seatCheckedAt).not.toBeNull();
+    await member(a.id, "agency_staff");
+    expect(await confirmInvitationSeat(a.id, created.id)).toBe(true);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: created.id } })).status).toBe("pending");
   });
 });

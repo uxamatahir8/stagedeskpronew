@@ -45,15 +45,6 @@ function seatsFull(max: number, locale: EmailLocale) {
   return new APIError("FORBIDDEN", { message: t("limitReached", { max: String(max), limit: t("limit_maxStaff") }), code: "STAFF_SEATS_FULL", max });
 }
 
-/**
- * Whether sendInvitationEmail is sending a new invitation rather than a resend. Better Auth creates a
- * new invitation in the same request; a resend only extends the stored one (createdAt unchanged).
- * Read from the record, so it holds across processes and for simultaneous requests. A resend within
- * the window is re-checked too, which is harmless: it already counts as a seat.
- */
-const NEW_INVITATION_MS = 2 * 60_000;
-const isNewInvitation = (invitation: { createdAt?: Date | string | null }) =>
-  !invitation.createdAt || Date.now() - new Date(invitation.createdAt).getTime() < NEW_INVITATION_MS;
 
 const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
 
@@ -249,22 +240,20 @@ export const auth = betterAuth({
           },
         },
       },
-      sendInvitationEmail: async ({ id, role, email, organization, inviter, invitation }) => {
+      sendInvitationEmail: async ({ id, role, email, organization, inviter }) => {
         // A new invitation over the seat limit (a race with another invitation or promotion) is
-        // canceled, not sent. A resend takes no new seat, so it's simply sent again.
-        if (isNewInvitation(invitation)) {
-          let kept: boolean;
-          try {
-            kept = await confirmInvitationSeat(organization.id, id);
-          } catch (error) {
-            // Better Auth swallows errors from here, which would leave an unchecked invitation:
-            // cancel it instead (fail closed); afterCreateInvitation then reports the failure.
-            console.error("[team] seat check for invitation failed", id, error);
-            await prisma.invitation.updateMany({ where: { id, status: "pending" }, data: { status: "canceled" } });
-            return;
-          }
-          if (!kept) return;
+        // canceled, not sent. A resend finds its seat already checked (seatCheckedAt) and is sent again.
+        let kept: boolean;
+        try {
+          kept = await confirmInvitationSeat(organization.id, id);
+        } catch (error) {
+          // Better Auth swallows errors from here, which would leave an unchecked invitation:
+          // cancel it instead (fail closed); afterCreateInvitation then reports the failure.
+          console.error("[team] seat check for invitation failed", id, error);
+          await prisma.invitation.updateMany({ where: { id, status: "pending", seatCheckedAt: null }, data: { status: "canceled" } });
+          return;
         }
+        if (!kept) return;
         const locale = localeOf(inviter.user);
         deliver({
           kind: "invitation",
