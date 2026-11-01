@@ -45,6 +45,8 @@ const systemWorker = new Worker(
     switch (job.name) {
       case "heartbeat": {
         const settings = await prisma.platformSetting.count();
+        // Read by /api/health: a stale value means no worker is taking jobs.
+        await connection.set("worker:heartbeat", String(Date.now()), "EX", 600);
         return { at: new Date().toISOString(), settings };
       }
       case "expire-quotes":

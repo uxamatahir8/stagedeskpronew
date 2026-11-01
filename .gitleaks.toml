@@ -1,0 +1,7 @@
+# Secret scanning (CI "security" job). Default rules, plus files known to hold made-up keys only.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake Stripe keys used to test secret encryption and hints"
+paths = ['''packages/db/src/secrets\.test\.ts''']

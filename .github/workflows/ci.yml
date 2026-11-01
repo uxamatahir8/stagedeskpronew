@@ -11,8 +11,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
-      # Database tests (tenant isolation) run against stagedesk_test.
+      # Database tests (tenant isolation, money flows, concurrency) run against stagedesk_test.
       mysql:
         image: mysql:8.4
         env:
@@ -25,8 +26,23 @@ jobs:
         options: >-
           --health-cmd "mysqladmin ping -h localhost -uroot -proot"
           --health-interval 5s --health-timeout 5s --health-retries 20
+      # Rate limits and the staff-seat API tests.
+      redis:
+        image: redis:8.8
+        ports:
+          - 6379:6379
+      # Stripe request shapes (stripe-contract.test.ts); without it those tests are skipped, so CI runs it.
+      stripe-mock:
+        image: stripe/stripe-mock:v0.206.0
+        ports:
+          - 12111:12111
     env:
       DATABASE_URL: mysql://stagedesk:stagedesk@127.0.0.1:3307/stagedesk_test
+      # Migration validation replays every migration into a scratch database.
+      SHADOW_DATABASE_URL: mysql://root:root@127.0.0.1:3307/stagedesk_shadow
+      REDIS_URL: redis://127.0.0.1:6379
+      STRIPE_MOCK_URL: http://127.0.0.1:12111
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,11 +54,111 @@ jobs:
       - run: pnpm db:generate
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: Migrations match the schema
+        run: |
+          mysql -h 127.0.0.1 -P 3307 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS stagedesk_shadow"
+          pnpm --filter @stagedesk/db exec prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
+      - name: Stripe mock is reachable (contract tests must not skip)
+        run: |
+          curl -fsS -o /dev/null -H 'Authorization: Bearer sk_test_123' http://127.0.0.1:12111/v1/customers
       - run: pnpm test
+      - name: Production build
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Known low/moderate advisories (shadcn CLI deps) are reported; high and critical fail the build.
+      - name: Dependency audit
+        run: pnpm audit --prod --audit-level high
+      - name: Secret scan
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.28.0 git /repo --redact --no-banner
+
+  e2e:
+    # Browser journeys against a seeded local stack; needs the same services as development.
+    runs-on: ubuntu-latest
+    needs: check
+    timeout-minutes: 60
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: stagedesk
+          MYSQL_USER: stagedesk
+          MYSQL_PASSWORD: stagedesk
+        ports:
+          - 3307:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -uroot -proot"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:8.8
+        ports:
+          - 6379:6379
+      mailpit:
+        image: axllent/mailpit:v1.31
+        ports:
+          - 1025:1025
+          - 8025:8025
+      storage:
+        image: rustfs/rustfs:1.0.3
+        env:
+          RUSTFS_ACCESS_KEY: stagedesk
+          RUSTFS_SECRET_KEY: stagedesk-secret
+          RUSTFS_VOLUMES: /data
+          RUSTFS_ADDRESS: ":9000"
+        ports:
+          - 9000:9000
+    env:
+      DATABASE_URL: mysql://stagedesk:stagedesk@127.0.0.1:3307/stagedesk
+      REDIS_URL: redis://127.0.0.1:6379
+      APP_URL: http://localhost:3000
+      BETTER_AUTH_URL: http://localhost:3000
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+      S3_ENDPOINT: http://127.0.0.1:9000
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: stagedesk
+      S3_SECRET_KEY: stagedesk-secret
+      S3_BUCKET_PUBLIC: stagedesk-public
+      S3_BUCKET_PRIVATE: stagedesk-private
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm --filter @stagedesk/db deploy
+      - run: pnpm db:seed
+      - run: pnpm --filter @stagedesk/web exec playwright install --with-deps chromium
+      - run: pnpm --filter @stagedesk/web e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-results
+          path: apps/web/test-results
+          retention-days: 7
 
   deploy-staging:
     name: Deploy staging
-    needs: check
+    needs: [check, security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     environment:

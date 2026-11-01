@@ -35,6 +35,9 @@ export default async function PlatformPaymentsPage({ params, searchParams }: Pag
 const eventTone = { received: "info", processing: "info", processed: "success", failed: "warning", dead: "danger", ignored: "neutral" } as const;
 const subTone = { trialing: "info", active: "success", past_due: "warning", unpaid: "danger", canceled: "neutral", incomplete: "warning" } as const;
 
+/** Operations older than this that haven't finished are shown as stuck. */
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+
 const eventStatuses = ["received", "processing", "processed", "failed", "dead", "ignored"];
 const spec = { sorts: ["received", "type"], defaultSort: "received", defaultDir: "desc" as const, filters: { status: eventStatuses } };
 
@@ -49,7 +52,7 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
   const win = pageWindow(query, eventTotal);
   const since = startOfMonth();
   // Platform-wide view: deliberately not tenant-scoped.
-  const stuckBefore = new Date(Date.now() - 10 * 60_000);
+  const stuckBefore = minutesAgo(10);
   const [t, ts, format, volume, ledger, paying, byStatus, events, operations] = await Promise.all([
     getTranslations("platformPayments"),
     getTranslations("subStatus"),
