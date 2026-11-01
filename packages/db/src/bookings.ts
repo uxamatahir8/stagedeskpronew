@@ -479,17 +479,20 @@ export interface PaymentInput {
 }
 
 export async function recordPayment(organizationId: string, bookingId: string, input: PaymentInput, actorId: string) {
+  return tenantDb(organizationId).$transaction((tx) => recordPaymentTx(tx, organizationId, bookingId, input, actorId));
+}
+
+/** recordPayment inside a caller's transaction on the agency's tenant client (locks the booking first). */
+export async function recordPaymentTx(tx: Tx, organizationId: string, bookingId: string, input: PaymentInput, actorId: string) {
   if (!Number.isSafeInteger(input.amountCents) || input.amountCents === 0) throw new BookingError("invalid_amount");
-  return tenantDb(organizationId).$transaction(async (tx) => {
-    const booking = await loadBooking(tx, bookingId);
-    if (booking.status === "inquiry" || booking.status === "declined") throw new BookingError("invalid_status");
-    const payment = await tx.payment.create({
-      data: { ...input, id: randomUUID(), organizationId, bookingId, recordedById: actorId },
-    });
-    await tx.booking.updateMany({ where: { id: bookingId }, data: { paidCents: { increment: input.amountCents } } });
-    await logEvent(tx, bookingId, "payment_recorded", actorId, { amountCents: input.amountCents, method: input.method });
-    return payment;
+  const booking = await loadBooking(tx, bookingId);
+  if (booking.status === "inquiry" || booking.status === "declined") throw new BookingError("invalid_status");
+  const payment = await tx.payment.create({
+    data: { ...input, id: randomUUID(), organizationId, bookingId, recordedById: actorId },
   });
+  await tx.booking.updateMany({ where: { id: bookingId }, data: { paidCents: { increment: input.amountCents } } });
+  await logEvent(tx, bookingId, "payment_recorded", actorId, { amountCents: input.amountCents, method: input.method });
+  return payment;
 }
 
 /** Next value of a per-agency sequence; rows are locked so two invoices can't share a number. */
