@@ -2,15 +2,44 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { acceptQuote, assignArtist, changeBookingStatus, createBooking, prisma, respondToAssignment, sendQuote } from "@stagedesk/db";
 
-/** A fake Stripe that records calls and returns just what our code reads. */
+type Failure = { mode: "before" | "after"; error: Error & { type?: string } };
+
+/** A Stripe error as the SDK throws it. Definitive types mean Stripe refused; connection errors leave the outcome unknown. */
+export function stripeError(type: "StripeConnectionError" | "StripeAPIError" | "StripeInvalidRequestError", message = type) {
+  return Object.assign(new Error(message), { type });
+}
+
+/**
+ * A fake Stripe that records calls and returns just what our code reads. Like
+ * Stripe, a repeated idempotency key returns the first result without doing
+ * anything again. `failNext(method, mode)` makes the next call fail: "before"
+ * it happens, or "after" (it happened, but the response was lost).
+ */
 export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
   const calls: { method: string; params: Record<string, unknown>; idempotencyKey?: string }[] = [];
   let n = 0;
   // Unique per fake, so ids stored by an earlier (interrupted) run never collide with this one.
   const run = Math.random().toString(36).slice(2, 8);
   const id = (prefix: string) => `${prefix}_test_${run}_${++n}`;
-  const record = (method: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
-    calls.push({ method, params, idempotencyKey: options?.idempotencyKey });
+  const byKey = new Map<string, unknown>();
+  const failures = new Map<string, Failure[]>();
+  const refunds: { id: string; payment_intent: string; amount: number; metadata: Record<string, string> }[] = [];
+  const transfers: { id: string; transfer_group?: string; destination: string; amount: number; metadata: Record<string, string> }[] = [];
+  const reversals: { id: string; transfer: string; amount: number; metadata: Record<string, string> }[] = [];
+
+  /** Runs a creating call with idempotency and injected failures. */
+  function create<T>(method: string, params: Record<string, unknown>, options: { idempotencyKey?: string } | undefined, make: () => T): T {
+    const key = options?.idempotencyKey;
+    if (key && byKey.has(`${method}:${key}`)) return byKey.get(`${method}:${key}`) as T;
+    const failure = failures.get(method)?.shift();
+    if (failure?.mode === "before") throw failure.error;
+    calls.push({ method, params, idempotencyKey: key });
+    const result = make();
+    if (key) byKey.set(`${method}:${key}`, result);
+    if (failure?.mode === "after") throw failure.error;
+    return result;
+  }
+  const metadata = (params: Record<string, unknown>) => (params["metadata"] ?? {}) as Record<string, string>;
 
   const stripe = {
     paymentIntents: {
@@ -25,21 +54,38 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
         },
       }),
     },
-    transfers: {
-      create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) => {
-        record("transfers.create", params, options);
-        return { id: id("tr") };
-      },
-      createReversal: async (transferId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) => {
-        record("transfers.createReversal", { transferId, ...params }, options);
-        return { id: id("trr") };
+    charges: {
+      retrieve: async (chargeId: string) => {
+        const intent = chargeId.replace(/^ch_for_/, "");
+        return { id: chargeId, amount_refunded: refunds.filter((r) => r.payment_intent === intent).reduce((s, r) => s + r.amount, 0) };
       },
     },
+    transfers: {
+      create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
+        create("transfers.create", params, options, () => {
+          const t = { id: id("tr"), transfer_group: params["transfer_group"] as string, destination: params["destination"] as string, amount: params["amount"] as number, metadata: metadata(params) };
+          transfers.push(t);
+          return t;
+        }),
+      list: async (params: { transfer_group?: string; destination?: string }) => ({
+        data: transfers.filter((t) => (!params.transfer_group || t.transfer_group === params.transfer_group) && (!params.destination || t.destination === params.destination)),
+      }),
+      createReversal: async (transferId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
+        create("transfers.createReversal", { transferId, ...params }, options, () => {
+          const r = { id: id("trr"), transfer: transferId, amount: params["amount"] as number, metadata: metadata(params) };
+          reversals.push(r);
+          return r;
+        }),
+      listReversals: async (transferId: string) => ({ data: reversals.filter((r) => r.transfer === transferId) }),
+    },
     refunds: {
-      create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) => {
-        record("refunds.create", params, options);
-        return { id: id("re") };
-      },
+      create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
+        create("refunds.create", params, options, () => {
+          const r = { id: id("re"), payment_intent: params["payment_intent"] as string, amount: params["amount"] as number, metadata: metadata(params) };
+          refunds.push(r);
+          return r;
+        }),
+      list: async (params: { payment_intent: string }) => ({ data: refunds.filter((r) => r.payment_intent === params.payment_intent) }),
     },
     invoices: {
       retrieve: async (invoiceId: string) => ({
@@ -48,13 +94,23 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
       }),
     },
     customers: {
-      createBalanceTransaction: async (customerId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) => {
-        record("customers.createBalanceTransaction", { customerId, ...params }, options);
-        return { id: id("cbtxn") };
-      },
+      createBalanceTransaction: async (customerId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
+        create("customers.createBalanceTransaction", { customerId, ...params }, options, () => ({ id: id("cbtxn") })),
     },
   };
-  return { stripe: stripe as unknown as Stripe, calls };
+  return {
+    stripe: stripe as unknown as Stripe,
+    calls,
+    refunds,
+    transfers,
+    reversals,
+    /** Makes the next call of `method` fail. */
+    failNext(method: string, mode: Failure["mode"], error: Failure["error"] = stripeError("StripeConnectionError")) {
+      failures.set(method, [...(failures.get(method) ?? []), { mode, error }]);
+    },
+    /** Forgets idempotency keys, like Stripe does after 24 hours. */
+    expireKeys: () => byKey.clear(),
+  };
 }
 
 export const lines = [{ description: "DJ, per uur", quantityHundredths: 1_000, unitPriceCents: 12_397, vatBps: 2_100 }];
@@ -116,6 +172,7 @@ export async function complete(a: { organizationId: string; owner: string }, boo
 export async function cleanup(run: string) {
   const orgs = (await prisma.organization.findMany({ where: { slug: { startsWith: run } }, select: { id: true } })).map((o) => o.id);
   await prisma.ledgerEntry.deleteMany({ where: { organizationId: { in: orgs } } });
+  await prisma.financialOperation.deleteMany({ where: { organizationId: { in: orgs } } });
   await prisma.payment.deleteMany({ where: { organizationId: { in: orgs } } });
   await prisma.invoice.deleteMany({ where: { organizationId: { in: orgs } } });
   await prisma.bookingAssignment.deleteMany({ where: { organizationId: { in: orgs } } });

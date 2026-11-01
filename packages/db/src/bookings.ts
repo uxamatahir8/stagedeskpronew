@@ -67,7 +67,14 @@ const statusTimestamps: Partial<Record<BookingStatus, string>> = {
   cancelled: "cancelledAt",
 };
 
+/**
+ * Locks the booking row, then reads it. Every status change starts here, so
+ * concurrent operations on one booking queue up instead of each acting on a
+ * stale read (and deadlocking when their shared locks upgrade). Lock order is
+ * always booking, then artist, then equipment items.
+ */
 async function loadBooking(tx: Tx, bookingId: string) {
+  await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
   const booking = await tx.booking.findFirst({ where: { id: bookingId } });
   if (!booking) throw new BookingError("not_found");
   return booking;
@@ -87,10 +94,12 @@ async function applyTransition(
   const result = transition(booking.status as BookingStatus, action, actor, context(booking, now));
   if (!result.ok) throw new BookingError(result.error);
   const stamp = statusTimestamps[result.to];
-  await tx.booking.updateMany({
+  const updated = await tx.booking.updateMany({
     where: { id: booking.id, status: booking.status },
     data: { ...extra, status: result.to, ...(stamp ? { [stamp]: now } : {}) },
   });
+  // The row is locked, so this only happens when the caller passed a stale booking; never act on it.
+  if (updated.count !== 1) throw new BookingError("invalid_status");
   await logEvent(tx, booking.id, action, actorId, { from: booking.status, to: result.to, ...(eventData as object) });
   // Entering booked or confirmed reserves the packing list (never fails for a shortage).
   await equipmentAfterTransition(tx, booking.organizationId, booking.id, booking.status, result.to, now);
@@ -257,10 +266,12 @@ export async function acceptQuote(
   // changes to fee settings only affect new bookings.
   const feeSnapshot = await effectiveFeeSnapshot(organizationId);
   const booking = await tenantDb(organizationId).$transaction(async (tx) => {
-    const quote = await tx.quote.findFirst({ where: { id: quoteId } });
-    if (!quote) throw new BookingError("not_found");
+    const found = await tx.quote.findFirst({ where: { id: quoteId }, select: { bookingId: true } });
+    if (!found) throw new BookingError("not_found");
+    const booking = await loadBooking(tx, found.bookingId);
+    // Read again under the booking lock (READ COMMITTED): a revision or another acceptance may have just committed.
+    const quote = await tx.quote.findFirstOrThrow({ where: { id: quoteId } });
     if (quote.status !== "sent") throw new BookingError("quote_not_current");
-    const booking = await loadBooking(tx, quote.bookingId);
 
     await applyTransition(
       tx,
@@ -299,6 +310,7 @@ export async function confirmSoloBooking(organizationId: string, bookingId: stri
   await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     if (booking.status !== "booked") return;
+    await lockArtist(tx, artist.id);
     if (booking.eventDate && !(await isArtistFree(artist.id, booking.eventDate, booking.id))) return;
     await tx.bookingAssignment.create({ data: { id: randomUUID(), organizationId, bookingId, artistId: artist.id, status: "accepted", shareBps: 0, respondedAt: now } });
     await logEvent(tx, bookingId, "artist_assigned", artist.userId, { artistId: artist.id, stageName: artist.stageName });
@@ -336,6 +348,11 @@ export async function isArtistFree(artistId: string, date: Date, exceptBookingId
   return blocked === 0 && busy === 0;
 }
 
+/** Locks the artist row so two bookings can't both take the same artist for one date. Call after loadBooking. */
+async function lockArtist(tx: Tx, artistId: string) {
+  await tx.$queryRaw`SELECT id FROM artists WHERE id = ${artistId} FOR UPDATE`;
+}
+
 export async function assignArtist(organizationId: string, bookingId: string, artistId: string, actorId: string, now = new Date()) {
   const allowed = (await bookableArtists(organizationId)).find((a) => a.id === artistId);
   if (!allowed) throw new BookingError("artist_not_available_to_agency");
@@ -343,6 +360,7 @@ export async function assignArtist(organizationId: string, bookingId: string, ar
   const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     if (booking.status !== "booked" && booking.status !== "confirmed") throw new BookingError("invalid_status");
+    await lockArtist(tx, artistId);
     if (booking.eventDate && !(await isArtistFree(artistId, booking.eventDate, booking.id))) {
       throw new BookingError("artist_unavailable");
     }
@@ -385,14 +403,15 @@ export async function respondToAssignment(
 
   const booking = await tenantDb(assignment.organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, assignment.bookingId);
+    // Re-checked under the booking lock: the request may have been withdrawn or answered meanwhile.
+    const answered = await tx.bookingAssignment.updateMany({
+      where: { id: assignment.id, status: "pending" },
+      data: answer.accept ? { status: "accepted", respondedAt: now } : { status: "declined", respondedAt: now, declineReason: answer.reason },
+    });
+    if (answered.count !== 1) throw new BookingError("no_open_assignment");
     if (answer.accept) {
       await applyTransition(tx, booking, "artist_accepted", "artist", artistUserId, now);
-      await tx.bookingAssignment.updateMany({ where: { id: assignment.id }, data: { status: "accepted", respondedAt: now } });
     } else {
-      await tx.bookingAssignment.updateMany({
-        where: { id: assignment.id },
-        data: { status: "declined", respondedAt: now, declineReason: answer.reason },
-      });
       await logEvent(tx, booking.id, "artist_declined", artistUserId, { reason: answer.reason });
     }
     return booking;
@@ -478,9 +497,11 @@ async function nextCounter(tx: Tx, organizationId: string, key: string) {
 /** Issues an invoice from the accepted quote. Returns the existing one if already issued. */
 export async function issueInvoice(organizationId: string, bookingId: string, actorId: string, now = new Date()) {
   return tenantDb(organizationId).$transaction(async (tx) => {
+    // Lock first: under REPEATABLE READ an earlier plain read would fix the snapshot before the lock,
+    // and two simultaneous calls would both miss each other's invoice.
+    const booking = await loadBooking(tx, bookingId);
     const existing = await tx.invoice.findFirst({ where: { bookingId } });
     if (existing) return existing;
-    const booking = await loadBooking(tx, bookingId);
     if (!["booked", "confirmed", "completed", "settled"].includes(booking.status)) throw new BookingError("invalid_status");
     const quote = await tx.quote.findFirst({ where: { bookingId, status: "accepted" }, include: { items: { orderBy: { position: "asc" } } } });
     if (!quote) throw new BookingError("quote_not_current");
@@ -541,13 +562,17 @@ export async function expireQuotes(now = new Date()) {
     where: { status: "quoted", quoteExpiresAt: { lte: now } },
     select: { id: true, organizationId: true },
   });
+  let expired = 0;
   for (const b of due) {
-    await tenantDb(b.organizationId).$transaction(async (tx) => {
+    expired += await tenantDb(b.organizationId).$transaction(async (tx) => {
       const booking = await loadBooking(tx, b.id);
+      // Accepted or re-sent since the scan: leave it.
+      if (booking.status !== "quoted" || !booking.quoteExpiresAt || booking.quoteExpiresAt > now) return 0;
       await applyTransition(tx, booking, "expire", "system", null, now);
+      return 1;
     });
   }
-  return due.length;
+  return expired;
 }
 
 /**
@@ -561,6 +586,7 @@ export async function assignLentArtist(organizationId: string, bookingId: string
   const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     if (booking.status !== "booked" && booking.status !== "confirmed") throw new BookingError("invalid_status");
+    await lockArtist(tx, artistId);
     if (booking.eventDate && !(await isArtistFree(artistId, booking.eventDate, booking.id))) throw new BookingError("artist_unavailable");
     if (booking.status === "confirmed") await applyTransition(tx, booking, "release_artist", "agency", actorId, now);
     await tx.bookingAssignment.updateMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, data: { status: "withdrawn", respondedAt: now } });

@@ -63,6 +63,7 @@ if (!apply) {
     async (tx) => {
       // Money records point at bookings and payments with Restrict, so they go first.
       await tx.ledgerEntry.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { paymentId: { in: paymentIds } }, { organizationId: { in: orgIds } }] } });
+      await tx.financialOperation.deleteMany({ where: { organizationId: { in: orgIds } } });
       await tx.invoice.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { organizationId: { in: orgIds } }] } });
       await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
       await tx.bookingAssignment.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { artistId: { in: artistIds } }] } });

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 type Detail = NonNullable<Awaited<ReturnType<typeof withdrawalDetail>>>;
 
-const tones = { requested: "info", approved: "brand", paid: "success", rejected: "danger", failed: "danger", cancelled: "neutral" } as const;
+const tones = { requested: "info", approved: "brand", processing: "warning", paid: "success", rejected: "danger", failed: "danger", cancelled: "neutral" } as const;
 
 export async function WithdrawalStatus({ status }: { status: string }) {
   const t = await getTranslations("withdrawals");

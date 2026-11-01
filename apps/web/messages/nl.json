@@ -1285,6 +1285,9 @@
     "refundBody": "Er kan maximaal {amount} terug. Online betalingen gaan terug naar de kaart of bank van de klant; is het geld al uitbetaald, dan wordt het aandeel van de artiest en jou naar verhouding teruggenomen.",
     "refundOffline": "Dit is offline betaald: betaal het geld zelf terug; dit legt de terugbetaling vast.",
     "refunded_": "{amount} terugbetaald.",
+    "refundPending": "Terugbetaling van {amount} is naar Stripe gestuurd. Ze wordt bevestigd en staat hier zo.",
+    "errors_operation_in_progress": "Er loopt nog een andere terugbetaling of uitbetaling van deze betaling. Probeer het over een paar minuten opnieuw.",
+    "errors_refund_refused": "Stripe heeft de terugbetaling geweigerd. Er is niets terugbetaald.",
     "status_paid": "Ontvangen",
     "status_refunded": "Terugbetaald",
     "status_partly": "Deels terugbetaald",
@@ -1389,7 +1392,23 @@
     "status_ignored": "Niet nodig",
     "subscriptions": "Abonnementen",
     "searchPlaceholder": "Zoek op type, event-ID of fout",
-    "eventStatus": "Status"
+    "eventStatus": "Status",
+    "status_processing": "Bezig",
+    "status_dead": "Opgegeven",
+    "operations": "Terugbetalingen en uitbetalingen die aandacht nodig hebben",
+    "operationsHint": "Bewerkingen die niet vanzelf zijn afgerond. Ze worden automatisch opnieuw geprobeerd met dezelfde Stripe-sleutels; er gaat niets dubbel.",
+    "opKind_refund": "Terugbetaling",
+    "opKind_payout": "Uitbetaling",
+    "opStatus_pending": "Wordt opnieuw geprobeerd",
+    "opStatus_review": "Controle nodig",
+    "opAttempts": "{count, plural, one {# poging} other {# pogingen}}",
+    "opRetry": "Nu opnieuw",
+    "opClose": "Boeken met tekort",
+    "opCloseConfirm": "De terugbetaling aan de klant is gelukt, maar een overboeking kon niet worden teruggeboekt. Nu boeken en het ontbrekende bedrag als kosten van het platform vastleggen?",
+    "opNotOpen": "Deze bewerking staat niet meer open.",
+    "opCompleted": "Klaar: geboekt.",
+    "opStillOpen": "Nog niet gelukt; zie de foutmelding. Er wordt verder geprobeerd.",
+    "noOperations": "Niets blijft hangen. Alle terugbetalingen en uitbetalingen zijn afgerond."
   },
   "partners": {
     "metaTitle": "Partnerprogramma",
@@ -1962,7 +1981,10 @@
       "payment": {
         "refund": "Betaling terugbetaald",
         "claim_confirm": "Gemelde betaling bevestigd",
-        "claim_reject": "Gemelde betaling als niet ontvangen gemarkeerd"
+        "claim_reject": "Gemelde betaling als niet ontvangen gemarkeerd",
+        "event_replayed": "Stripe-gebeurtenis opnieuw verwerkt",
+        "operation_retried": "Terugbetaling of uitbetaling opnieuw geprobeerd",
+        "operation_closed": "Terugbetaling geboekt met tekort op terugboeking"
       },
       "user": {
         "disable": "Account uitgeschakeld",
@@ -4574,6 +4596,7 @@
   "withdrawals": {
     "status_requested": "Aangevraagd",
     "status_approved": "Goedgekeurd",
+    "status_processing": "Overboeking bezig",
     "status_paid": "Uitbetaald",
     "status_rejected": "Afgewezen",
     "status_failed": "Mislukt",

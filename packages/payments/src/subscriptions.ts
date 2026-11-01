@@ -4,7 +4,7 @@ import { markTrialUsed, planTrialDays, prisma, trialEligible } from "@stagedesk/
 import { referralPromotionCode } from "./affiliates";
 
 export class PaymentsError extends Error {
-  constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount") {
+  constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount" | "operation_in_progress" | "refund_refused") {
     super(`Payments: ${code}`);
     this.name = "PaymentsError";
   }

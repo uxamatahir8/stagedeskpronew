@@ -187,22 +187,34 @@ export async function adjustCommissionsForCharge(charge: { payment_intent: strin
 export async function payWithdrawalByStripe(stripe: Stripe, payoutId: string, actorId: string | null) {
   const payout = await prisma.affiliatePayout.findUniqueOrThrow({ where: { id: payoutId }, include: { affiliate: true } });
   if (payout.method !== "stripe" || !["approved", "failed"].includes(payout.status)) throw new WithdrawalError("wrong_status");
-  if (!payout.affiliate.stripeAccountId || !payout.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
+  const destination = payout.affiliate.stripeAccountId;
+  if (!destination || !payout.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
+  // Claimed first, so two clicks (or the monthly run and an admin) can't both pay it.
+  const claimed = await prisma.affiliatePayout.updateMany({ where: { id: payoutId, status: payout.status }, data: { status: "processing" } });
+  if (claimed.count !== 1) throw new WithdrawalError("wrong_status");
   try {
-    const transfer = await stripe.transfers.create(
-      {
-        amount: payout.amountCents,
-        currency: "eur",
-        destination: payout.affiliate.stripeAccountId,
-        description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
-        metadata: { affiliateId: payout.affiliateId, payoutId },
-      },
-      { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
-    );
+    // A failed earlier attempt may have reached Stripe without us hearing back (or the
+    // database failed afterwards): use that transfer instead of sending the money again.
+    const earlier =
+      payout.status === "failed"
+        ? (await stripe.transfers.list({ destination, limit: 100 })).data.find((t) => t.metadata?.["payoutId"] === payoutId) ?? null
+        : null;
+    const transfer =
+      earlier ??
+      (await stripe.transfers.create(
+        {
+          amount: payout.amountCents,
+          currency: "eur",
+          destination,
+          description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
+          metadata: { affiliateId: payout.affiliateId, payoutId },
+        },
+        { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
+      ));
     await markWithdrawalPaid(payoutId, actorId ?? "system", { transactionRef: transfer.id, stripeTransferId: transfer.id });
     return transfer.id;
   } catch (error) {
-    if (error instanceof WithdrawalError) throw error;
+    // Back to failed (retryable); the next attempt looks for a transfer first.
     await failWithdrawal(payoutId, String(error), actorId);
     throw error;
   }

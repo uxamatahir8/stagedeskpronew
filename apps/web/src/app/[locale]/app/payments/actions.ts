@@ -46,18 +46,40 @@ export async function agencyDashboardAction(): Promise<RedirectResult> {
   }
 }
 
-/** Refunds (part of) a payment; `amount` is what the user typed, in euros. */
-export async function refundAction(paymentId: string, amount: string): Promise<ActionResult> {
+/**
+ * Refunds (part of) a payment; `amount` is what the user typed, in euros.
+ * `requestId` is made once per refund dialog: sending it again (double click,
+ * retry after a timeout) continues that refund instead of starting another.
+ */
+export async function refundAction(paymentId: string, amount: string, requestId: string): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.payments.refund");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
+  const t = await getTranslations("payments");
   const cents = parseEuros(amount);
-  if (cents === null || cents <= 0) return { ok: false, message: (await getTranslations("payments"))("errors_invalid_amount") };
+  if (cents === null || cents <= 0) return { ok: false, message: t("errors_invalid_amount") };
+  if (!/^[0-9a-f-]{36}$/i.test(requestId)) return { ok: false, message: t("errors_invalid_amount") };
   try {
-    const { refunded } = await refundPayment(await getStripe(), { organizationId: organization.id, paymentId, amountCents: cents, actorId: viewer.user.id });
-    await audit({ actorId: viewer.user.id, action: "payment.refund", agencyId: organization.id, targetType: "payment", targetId: paymentId, data: { cents: refunded } });
+    const result = await refundPayment(await getStripe(), {
+      organizationId: organization.id,
+      paymentId,
+      amountCents: cents,
+      actorId: viewer.user.id,
+      requestId: `${organization.id}:${requestId}`,
+    });
+    await audit({
+      actorId: viewer.user.id,
+      action: "payment.refund",
+      agencyId: organization.id,
+      targetType: "payment",
+      targetId: paymentId,
+      data: { cents, status: result.status, operationId: result.operationId },
+    });
     revalidatePath("/[locale]/app", "layout");
-    return { ok: true, message: (await getTranslations("payments"))("refunded_", { amount: euro(await getFormatter(), refunded, organization.currency) }) };
+    const money = euro(await getFormatter(), cents, organization.currency);
+    // Stripe didn't answer in time: the refund continues in the background and shows once it's done.
+    if (result.status !== "completed") return { ok: true, message: t("refundPending", { amount: money }) };
+    return { ok: true, message: t("refunded_", { amount: money }) };
   } catch (error) {
     return { ok: false, message: await paymentsErrorMessage(error) };
   }

@@ -1285,6 +1285,9 @@
     "refundBody": "Up to {amount} can be refunded. Online payments go back to the customer's card or bank; if the money was already paid out, the artist's and your share are taken back proportionally.",
     "refundOffline": "This was paid offline: return the money yourself; this records the refund.",
     "refunded_": "Refunded {amount}.",
+    "refundPending": "Refund of {amount} sent to Stripe. It's being confirmed and will show here shortly.",
+    "errors_operation_in_progress": "Another refund or payout of this payment is still being processed. Try again in a few minutes.",
+    "errors_refund_refused": "Stripe refused the refund. Nothing was refunded.",
     "status_paid": "Received",
     "status_refunded": "Refunded",
     "status_partly": "Partly refunded",
@@ -1389,7 +1392,23 @@
     "status_ignored": "Not needed",
     "subscriptions": "Subscriptions",
     "searchPlaceholder": "Search by type, event ID or error",
-    "eventStatus": "Status"
+    "eventStatus": "Status",
+    "status_processing": "Processing",
+    "status_dead": "Gave up",
+    "operations": "Refunds and payouts needing attention",
+    "operationsHint": "Operations that didn't finish on their own. They retry automatically with the same Stripe keys; nothing is sent twice.",
+    "opKind_refund": "Refund",
+    "opKind_payout": "Payout",
+    "opStatus_pending": "Retrying",
+    "opStatus_review": "Needs review",
+    "opAttempts": "{count, plural, one {# attempt} other {# attempts}}",
+    "opRetry": "Retry now",
+    "opClose": "Book with shortfall",
+    "opCloseConfirm": "The customer's refund went through but a transfer couldn't be reversed. Book it now and record the missing amount as carried by the platform?",
+    "opNotOpen": "This operation is no longer open.",
+    "opCompleted": "Done: booked.",
+    "opStillOpen": "Still not finished; see the error. It keeps retrying.",
+    "noOperations": "Nothing stuck. Every refund and payout finished."
   },
   "partners": {
     "metaTitle": "Partner program",
@@ -1962,7 +1981,10 @@
       "payment": {
         "refund": "Refunded a payment",
         "claim_confirm": "Confirmed a reported payment",
-        "claim_reject": "Marked a reported payment as not received"
+        "claim_reject": "Marked a reported payment as not received",
+        "event_replayed": "Replayed a Stripe event",
+        "operation_retried": "Retried a refund or payout",
+        "operation_closed": "Closed a refund with a reversal shortfall"
       },
       "user": {
         "disable": "Disabled an account",
@@ -4574,6 +4596,7 @@
   "withdrawals": {
     "status_requested": "Requested",
     "status_approved": "Approved",
+    "status_processing": "Transfer in progress",
     "status_paid": "Paid",
     "status_rejected": "Rejected",
     "status_failed": "Failed",

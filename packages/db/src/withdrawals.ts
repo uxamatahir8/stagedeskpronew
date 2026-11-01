@@ -149,13 +149,15 @@ export async function rejectWithdrawal(payoutId: string, adminId: string, reason
 
 /** Paid outside Stripe (bank or PayPal): the admin enters the transaction reference. */
 export async function markWithdrawalPaid(payoutId: string, adminId: string, input: { transactionRef: string; paidAt?: Date; stripeTransferId?: string | null }) {
-  const payout = await load(payoutId, ["approved", "failed"]);
+  // "processing": a Stripe transfer is under way (payWithdrawalByStripe); paying by hand meanwhile is refused.
+  const payout = await load(payoutId, input.stripeTransferId ? ["approved", "failed", "processing"] : ["approved", "failed"]);
   const paidAt = input.paidAt ?? new Date();
   await prisma.$transaction(async (tx) => {
-    await tx.affiliatePayout.update({
-      where: { id: payoutId },
+    const updated = await tx.affiliatePayout.updateMany({
+      where: { id: payoutId, status: payout.status },
       data: { status: "paid", paidAt, transactionRef: input.transactionRef.trim().slice(0, 120) || null, stripeTransferId: input.stripeTransferId ?? undefined, error: null },
     });
+    if (updated.count !== 1) throw new WithdrawalError("wrong_status");
     // A failed payout gave its commissions back; take them again.
     await tx.commission.updateMany({ where: { payoutId }, data: { status: "paid" } });
     await event(tx, payoutId, "paid", adminId, input.transactionRef.trim().slice(0, 500) || null);

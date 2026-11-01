@@ -623,12 +623,52 @@ model LedgerEntry {
   amountCents    Int
   artistId       String?      @db.VarChar(64)
   stripeObjectId String?      @db.VarChar(64)
+  /// The FinancialOperation that wrote this row; an operation books each (type, party) once.
+  operationId    String?      @db.VarChar(64)
   createdAt      DateTime     @default(now())
 
+  @@unique([operationId, type, party])
   @@index([organizationId, createdAt])
   @@index([bookingId])
   @@index([artistId, type])
+  @@index([stripeObjectId])
   @@map("ledger_entries")
+}
+
+/// A money movement that calls Stripe (refund, payout). Created and its amount
+/// reserved in one transaction before Stripe is called, so a retry, a second
+/// click or a crashed worker continues the same operation instead of starting
+/// another. Stripe calls use keys derived from the id; results are stored as
+/// they arrive, and the ledger is written once when everything succeeded.
+model FinancialOperation {
+  id             String    @id @db.VarChar(64)
+  /// refund | payout
+  kind           String    @db.VarChar(16)
+  /// Identity of the request: refund:<request id> or payout:<payment id>.
+  key            String    @unique @db.VarChar(120)
+  organizationId String    @db.VarChar(64)
+  bookingId      String?   @db.VarChar(64)
+  paymentId      String?   @db.VarChar(64)
+  amountCents    Int
+  currency       String    @db.VarChar(3)
+  /// pending (reserved, Stripe work outstanding) | completed | failed (nothing moved) | review (needs an operator)
+  status         String    @default("pending") @db.VarChar(16)
+  /// The plan and the Stripe ids received so far (see packages/payments/src/operations.ts).
+  data           Json
+  attempts       Int       @default(0)
+  lastError      String?   @db.Text
+  nextAttemptAt  DateTime?
+  /// Claimed by a process until then; another may take over after it passes.
+  lockedUntil    DateTime?
+  actorId        String?   @db.VarChar(64)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([paymentId, status])
+  @@index([organizationId, createdAt])
+  @@map("financial_operations")
 }
 
 // ─── Subscriptions and Stripe ───────────────────────────────────────────
@@ -715,16 +755,22 @@ model ConnectedAccount {
 
 /// Every Stripe webhook event, stored once by id so it's processed at most once.
 model StripeEvent {
-  id          String    @id @db.VarChar(80)
-  type        String    @db.VarChar(80)
-  /// received | processed | failed | ignored
-  status      String    @default("received") @db.VarChar(16)
-  error       String?   @db.Text
-  payload     Json
-  receivedAt  DateTime  @default(now())
-  processedAt DateTime?
+  id            String    @id @db.VarChar(80)
+  type          String    @db.VarChar(80)
+  /// received | processing | processed | failed (retried with backoff) | dead (gave up; replay by hand) | ignored
+  status        String    @default("received") @db.VarChar(16)
+  error         String?   @db.Text
+  payload       Json
+  attempts      Int       @default(0)
+  /// A failed event is retried from then on.
+  nextAttemptAt DateTime?
+  /// Claimed by one process until then, so two can't run the same event.
+  lockedUntil   DateTime?
+  receivedAt    DateTime  @default(now())
+  processedAt   DateTime?
 
   @@index([status, receivedAt])
+  @@index([status, nextAttemptAt])
   @@map("stripe_events")
 }
 

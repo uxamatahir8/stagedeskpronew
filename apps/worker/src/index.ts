@@ -3,7 +3,7 @@ import { Redis } from "ioredis";
 import { localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
 import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
-import { getStripe, processStoredEvent, runAffiliatePayouts, runDuePayouts } from "@stagedesk/payments";
+import { getStripe, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
 import { sendCampaign, sendDueCampaigns } from "./newsletter";
 import { sendReminders } from "./reminders";
 
@@ -58,17 +58,12 @@ const systemWorker = new Worker(
         return sendCampaign((job.data as { campaignId: string }).campaignId);
       case "newsletter-due":
         return sendDueCampaigns();
-      case "retry-stripe-events": {
-        // Picks up events whose immediate processing failed or never ran.
-        if (!stripe) return { skipped: "Stripe not configured" };
-        const stuck = await prisma.stripeEvent.findMany({
-          where: { status: { in: ["received", "failed"] }, receivedAt: { lt: new Date(Date.now() - 60_000) } },
-          select: { id: true },
-          take: 100,
-        });
-        for (const e of stuck) await processStoredEvent(stripe, e.id).catch(() => undefined);
-        return { retried: stuck.length };
-      }
+      case "retry-stripe-events":
+        // Events whose processing failed (with backoff), never ran, or whose worker died mid-run.
+        return stripe ? retryStripeEvents(stripe) : { skipped: "Stripe not configured" };
+      case "financial-operations":
+        // Refunds and payouts that didn't finish (Stripe timeouts, crashes): continued with the same keys.
+        return stripe ? runFinancialOperations(stripe) : { skipped: "Stripe not configured" };
       default:
         throw new Error(`Unknown system job: ${job.name}`);
     }
@@ -146,7 +141,8 @@ await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }
 await systemQueue.upsertJobScheduler("exchange-rates", { every: 6 * 60 * 60_000 }, { name: "exchange-rates" });
 await systemQueue.add("exchange-rates", {}, { attempts: 3, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: 100 });
 await systemQueue.upsertJobScheduler("newsletter-due", { every: 60_000 }, { name: "newsletter-due" });
-await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 5 * 60_000 }, { name: "retry-stripe-events" });
+await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 60_000 }, { name: "retry-stripe-events" });
+await systemQueue.upsertJobScheduler("financial-operations", { every: 2 * 60_000 }, { name: "financial-operations" });
 console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${(await getStripe()) ? "configured" : "not configured"}.`);
 
 async function shutdown() {

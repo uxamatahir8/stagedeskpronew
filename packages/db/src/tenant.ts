@@ -26,6 +26,7 @@ export const tenantModels = [
   "OrganizationCounter",
   "Review",
   "LedgerEntry",
+  "FinancialOperation",
   "Subscription",
   "ConnectedAccount",
   "AgencySite",

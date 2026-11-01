@@ -18,11 +18,13 @@ export function RefundDialog({ paymentId, refundableCents, refundableLabel, onli
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(centsToInput(refundableCents, locale));
+  // One id per opened dialog: a second click or a retry continues the same refund.
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const [pending, startTransition] = useTransition();
 
   function submit() {
     startTransition(async () => {
-      const r = await refundAction(paymentId, amount);
+      const r = await refundAction(paymentId, amount, requestId);
       if (!r.ok) return void toast.error(r.message);
       toast.success(r.message);
       setOpen(false);
@@ -31,7 +33,13 @@ export function RefundDialog({ paymentId, refundableCents, refundableLabel, onli
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (next) setRequestId(crypto.randomUUID());
+        setOpen(next);
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="ghost" size="sm">
           <Undo2Icon />
