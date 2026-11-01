@@ -1,5 +1,6 @@
 "use server";
 
+import { APIError } from "better-auth";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
@@ -22,6 +23,11 @@ async function run(task: () => Promise<unknown>): Promise<Result> {
     revalidatePath("/[locale]/app/team", "page");
     return { error: null };
   } catch (error) {
+    // Seat limits come from hooks that can't tell who's asking: say it in the viewer's language.
+    if (error instanceof APIError && error.body?.code === "STAFF_SEATS_FULL") {
+      const t = await getTranslations("billing");
+      return { error: { message: t("limitReached", { max: String(error.body["max"]), limit: t("limit_maxStaff") }) } };
+    }
     const message = error instanceof Error && error.message ? error.message : (await getTranslations("auth"))("generic");
     return { error: { message } };
   }

@@ -7,7 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
-import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmPendingForEmail, getSetting, notify, prisma } from "@stagedesk/db";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, changeMemberRoleWithinSeats, confirmInvitationSeat, confirmPendingForEmail, getSetting, notify, prisma, SeatLimitError } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
@@ -35,6 +35,14 @@ function localeOf(user: object | null | undefined): EmailLocale {
 /** Locale-aware app URL: English has no prefix, Dutch lives under /nl. */
 function appPath(locale: EmailLocale, path: string) {
   return `${appUrl}${localePrefix(locale)}${path}`;
+}
+
+const billingText = (locale: EmailLocale) => createTranslator({ locale, messages: locale === "en" ? en : nl, namespace: "billing" });
+
+/** All staff seats of the plan are taken. `code` lets callers show it in the viewer's language. */
+function seatsFull(max: number, locale: EmailLocale) {
+  const t = billingText(locale);
+  return new APIError("FORBIDDEN", { message: t("limitReached", { max: String(max), limit: t("limit_maxStaff") }), code: "STAFF_SEATS_FULL", max });
 }
 
 const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
@@ -161,12 +169,10 @@ export const auth = betterAuth({
         beforeCreateInvitation: async ({ invitation, inviter }) => {
           if (!invitableRoles.has(invitation.role)) throw new APIError("BAD_REQUEST", { message: "This role can't be invited." });
           // Staff seats and read-only access come from the agency's plan.
-          const t = createTranslator({ locale: localeOf(inviter), messages: localeOf(inviter) === "en" ? en : nl, namespace: "billing" });
+          const t = billingText(localeOf(inviter));
           const [{ access, limits }, usage] = await Promise.all([agencyBilling(invitation.organizationId), agencyUsage(invitation.organizationId)]);
           if (access.level === "read_only") throw new APIError("FORBIDDEN", { message: t("readOnly") });
-          if (invitation.role !== "artist" && !withinLimit(limits, "maxStaff", usage.maxStaff)) {
-            throw new APIError("FORBIDDEN", { message: t("limitReached", { max: String(limits.maxStaff), limit: t("limit_maxStaff") }) });
-          }
+          if (invitation.role !== "artist" && !withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, localeOf(inviter));
         },
         // An artist's account is linked to their profile by the agency; tell it someone is waiting.
         afterAcceptInvitation: async ({ member, user, organization }) => {
@@ -174,9 +180,25 @@ export const auth = betterAuth({
           if (await prisma.artist.findFirst({ where: { organizationId: organization.id, userId: user.id }, select: { id: true } })) return;
           await notify(await agencyDeskUserIds(organization.id, ["agency_owner", "agency_admin"]), { type: "artist_joined", data: { name: user.name }, url: "/app/artists" });
         },
-        beforeUpdateMemberRole: async ({ member, newRole }) => {
+        // The check above can't see an invitation or promotion made at the same moment, so
+        // sendInvitationEmail re-counts under a lock once the invitation exists and cancels it
+        // if the seats ran out (Better Auth ignores errors there); this reports that to the caller.
+        afterCreateInvitation: async ({ invitation, inviter }) => {
+          const current = await prisma.invitation.findUnique({ where: { id: invitation.id }, select: { status: true } });
+          if (current?.status === "canceled") throw seatsFull((await agencyBilling(invitation.organizationId)).limits.maxStaff ?? 0, localeOf(inviter));
+        },
+        beforeUpdateMemberRole: async ({ member, newRole, organization }) => {
           if (member.role === "customer" || !assignableRoles.has(newRole)) {
             throw new APIError("BAD_REQUEST", { message: "This role change isn't allowed." });
+          }
+          // Better Auth has checked who may change roles; the seat check and the change happen
+          // together under the agency's lock (an artist becoming staff takes a seat).
+          try {
+            await changeMemberRoleWithinSeats(organization.id, member.id, newRole);
+          } catch (error) {
+            // The hook doesn't know who's asking; the team action translates this by its code.
+            if (error instanceof SeatLimitError) throw seatsFull(error.max, "en");
+            throw error;
           }
         },
       },
@@ -196,6 +218,8 @@ export const auth = betterAuth({
         },
       },
       sendInvitationEmail: async ({ id, role, email, organization, inviter }) => {
+        // Over the seat limit (a race with another invitation or promotion) it's canceled, not sent.
+        if (!(await confirmInvitationSeat(organization.id, id))) return;
         const locale = localeOf(inviter.user);
         deliver({
           kind: "invitation",

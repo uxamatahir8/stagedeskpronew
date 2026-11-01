@@ -1,5 +1,5 @@
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { settleOnDashboard, signIn } from "./helpers";
+import { ADMIN_EMAIL, settleOnDashboard, signIn } from "./helpers";
 
 /**
  * Team invitations through the real emails in Mailpit: a new person signs up
@@ -131,4 +131,107 @@ test("a wrong current password keeps the change-password fields", async ({ page 
   await expect(page.getByText("Je huidige wachtwoord klopt niet.")).toBeVisible();
   await expect(page.locator("#profile-current-password")).toHaveValue("Not-the-password-1");
   await expect(page.locator("#profile-new-password")).toHaveValue("Another-pass-2026");
+});
+
+test("staff seats hold for role changes, also through Better Auth's API directly", async ({ browser, request }) => {
+  test.setTimeout(240_000);
+  const owner = `seats.${run}@test.local`;
+  const artist = `seats-artist.${run}@test.local`;
+  const agencyName = `E2E Seats ${run}`;
+  const PASS = "Seats-e2e-2026";
+
+  const admin = await (await browser.newContext({ locale: "nl-NL" })).newPage();
+  await signIn(admin, ADMIN_EMAIL);
+  let organizationId = "";
+  let setupLink = "";
+  await test.step("the admin sets up an agency on Starter (2 team seats)", async () => {
+    const seen = await mailIds(request, owner);
+    await admin.goto("/nl/app/agencies");
+    await admin.getByRole("button", { name: "Nieuw bureau" }).click();
+    const dialog = admin.getByRole("dialog");
+    await dialog.getByLabel("Naam van het bureau").fill(agencyName);
+    await dialog.getByLabel("Naam eigenaar").fill("Sem Seats");
+    await dialog.getByLabel("E-mailadres eigenaar").fill(owner);
+    await dialog.locator("#na-locale").click();
+    await admin.getByRole("option", { name: "Nederlands" }).click();
+    await dialog.getByRole("button", { name: "Bureau aanmaken" }).click();
+    await expect(admin.getByText(`${agencyName} aangemaakt.`)).toBeVisible();
+    setupLink = await fromMail(request, owner, /(https?:\/\/\S+\/nl\/reset-password\?token=\w+&setup=1)/, seen);
+    await admin.goto(`/nl/app/agencies?q=${encodeURIComponent(agencyName)}`);
+    await admin.getByRole("link", { name: agencyName }).click();
+    await expect(admin).toHaveURL(/\/app\/agencies\/[\w-]+$/);
+    organizationId = admin.url().split("/").pop()!;
+    await admin.locator("#sub-plan").click();
+    await admin.getByRole("option", { name: "Starter" }).click();
+    await admin.getByRole("button", { name: "Toekennen" }).click();
+    await expect(admin.getByText("Abonnement toegekend.")).toBeVisible();
+  });
+
+  const page = await (await browser.newContext({ locale: "nl-NL" })).newPage();
+  await test.step("the owner chooses a password, adds an artist and invites one staff member (seat 2 of 2)", async () => {
+    await page.goto(setupLink);
+    await page.locator("#reset-password").fill(PASS);
+    await page.locator("#reset-confirm").fill(PASS);
+    await page.getByRole("button", { name: "Wachtwoord opslaan" }).click();
+    await expect(page.getByText("Je wachtwoord is ingesteld.", { exact: false })).toBeVisible();
+    await page.goto("/nl/sign-in");
+    await page.locator("#signin-email").fill(owner);
+    await page.locator("#signin-password").fill(PASS);
+    await page.getByRole("button", { name: "Inloggen", exact: true }).click();
+    await settleOnDashboard(page);
+
+    await page.goto("/nl/app/artists");
+    await page.getByRole("button", { name: "Artiest toevoegen" }).click();
+    await page.locator("#ar-name").fill("DJ Seat");
+    await page.locator("#ar-email").fill(artist);
+    await page.getByRole("dialog").getByRole("button", { name: "Opslaan" }).click();
+    await expect(page.getByText(`DJ Seat is toegevoegd.`, { exact: false })).toBeVisible();
+
+    await page.goto("/nl/app/team");
+    await page.getByRole("button", { name: "Lid uitnodigen" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.locator("#invite-email").fill(`seats-staff.${run}@test.local`);
+    await dialog.locator("#invite-role").click();
+    await page.getByRole("option", { name: "Medewerker bureau" }).click();
+    await dialog.getByRole("button", { name: "Uitnodiging versturen" }).click();
+    await expect(page.getByText(`Uitnodiging verstuurd naar seats-staff.${run}@test.local.`)).toBeVisible();
+  });
+
+  await test.step("a direct Better Auth request can't make the artist staff", async () => {
+    const list = await (await page.request.get(`/api/auth/organization/list-members?organizationId=${organizationId}`)).json();
+    const memberId = (list.members as { id: string; user: { email: string } }[]).find((m) => m.user.email === artist)!.id;
+    const response = await page.request.post("/api/auth/organization/update-member-role", {
+      headers: { origin: "http://localhost:3000" },
+      data: { memberId, role: "agency_staff", organizationId },
+    });
+    expect(response.status()).toBe(403);
+    expect((await response.json()).code).toBe("STAFF_SEATS_FULL");
+    const after = await (await page.request.get(`/api/auth/organization/list-members?organizationId=${organizationId}`)).json();
+    expect((after.members as { role: string; user: { email: string } }[]).find((m) => m.user.email === artist)!.role).toBe("artist");
+  });
+
+  const artistRow = page.getByRole("row").filter({ hasText: artist });
+  await test.step("the team page says so in Dutch and keeps the role", async () => {
+    await page.reload();
+    await artistRow.getByRole("combobox", { name: "Rol" }).click();
+    await page.getByRole("option", { name: "Beheerder bureau" }).click();
+    await expect(page.getByText("Je abonnement staat 2 toe voor ‘Teamplaatsen’.", { exact: false })).toBeVisible();
+    await page.reload();
+    await expect(artistRow.getByRole("combobox", { name: "Rol" })).toHaveText("Artiest");
+  });
+
+  await test.step("withdrawing the invitation frees the seat; demoting frees it again", async () => {
+    await page.getByRole("row").filter({ hasText: `seats-staff.${run}@test.local` }).getByRole("button", { name: "Intrekken" }).click();
+    await expect(page.getByText("Uitnodiging ingetrokken.")).toBeVisible();
+    await artistRow.getByRole("combobox", { name: "Rol" }).click();
+    await page.getByRole("option", { name: "Medewerker bureau" }).click();
+    await expect(page.getByText("Rol bijgewerkt.")).toBeVisible();
+    // Wait for the list to show the new role, or picking "Artiest" again changes nothing.
+    await expect(artistRow.getByRole("combobox", { name: "Rol" })).toHaveText("Medewerker bureau");
+    await artistRow.getByRole("combobox", { name: "Rol" }).click();
+    await page.getByRole("option", { name: "Artiest" }).click();
+    await expect(artistRow.getByRole("combobox", { name: "Rol" })).toHaveText("Artiest");
+    await page.reload();
+    await expect(artistRow.getByRole("combobox", { name: "Rol" })).toHaveText("Artiest");
+  });
 });
