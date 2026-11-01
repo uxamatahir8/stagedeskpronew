@@ -59,8 +59,9 @@ jobs:
           mysql -h 127.0.0.1 -P 3307 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS stagedesk_shadow"
           pnpm --filter @stagedesk/db exec prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
       - name: Stripe mock is reachable (contract tests must not skip)
+        # Any HTTP answer (stripe-mock replies 401 without a key) proves it's up; a refused connection fails the step.
         run: |
-          curl -fsS -o /dev/null -H 'Authorization: Bearer sk_test_123' http://127.0.0.1:12111/v1/customers
+          curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:12111/v1/customers
       - run: pnpm test
       - name: Production build
         run: pnpm build
