@@ -1669,7 +1669,8 @@
     "noCommissionsYet": "No commissions yet.",
     "allPartners": "All partners",
     "searchCommissions": "Search by partner, agency, invoice or withdrawal",
-    "searchPartners": "Search by name, email or code"
+    "searchPartners": "Search by name, email or code",
+    "promoNeedsStripe": "This partner has a discount code in Stripe. Connect Stripe first so the code can be switched off before the partner is deleted."
   },
   "programSettings": {
     "title": "Affiliate program",
@@ -2056,6 +2057,9 @@
         "found": "Found lost equipment",
         "stock": "Corrected equipment stock",
         "item_delete": "Deleted unused equipment"
+      },
+      "data": {
+        "export": "Downloaded an export"
       }
     },
     "group_page": "Pages",
@@ -2067,7 +2071,8 @@
     "searchPlaceholder": "Search by person, agency, action, target or IP",
     "group_impersonation": "Log in as",
     "viaAdmin": "via {name}",
-    "group_inventory": "Equipment"
+    "group_inventory": "Equipment",
+    "group_data": "Data"
   },
   "charts": {
     "showChart": "Chart",

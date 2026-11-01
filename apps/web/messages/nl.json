@@ -1669,7 +1669,8 @@
     "noCommissionsYet": "Nog geen commissies.",
     "allPartners": "Alle partners",
     "searchCommissions": "Zoek op partner, bureau, factuur of uitbetaling",
-    "searchPartners": "Zoek op naam, e-mail of code"
+    "searchPartners": "Zoek op naam, e-mail of code",
+    "promoNeedsStripe": "Deze partner heeft een kortingscode in Stripe. Koppel eerst Stripe, zodat de code wordt uitgeschakeld voordat de partner wordt verwijderd."
   },
   "programSettings": {
     "title": "Partnerprogramma",
@@ -2056,6 +2057,9 @@
         "found": "Verloren apparatuur teruggevonden",
         "stock": "Voorraad apparatuur gecorrigeerd",
         "item_delete": "Ongebruikte apparatuur verwijderd"
+      },
+      "data": {
+        "export": "Export gedownload"
       }
     },
     "group_page": "Pagina's",
@@ -2067,7 +2071,8 @@
     "searchPlaceholder": "Zoek op persoon, bureau, actie, doel of IP",
     "group_impersonation": "Inloggen als",
     "viaAdmin": "via {name}",
-    "group_inventory": "Apparatuur"
+    "group_inventory": "Apparatuur",
+    "group_data": "Gegevens"
   },
   "charts": {
     "showChart": "Grafiek",

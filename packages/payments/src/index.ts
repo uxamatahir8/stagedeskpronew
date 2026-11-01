@@ -6,6 +6,8 @@ export {
   attributeSubscriptionPromo,
   payWithdrawalByStripe,
   recordInvoiceCommission,
+  reconcileAffiliatePromos,
+  retireAffiliatePromo,
   runAffiliatePayouts,
   syncAffiliatePromo,
 } from "./affiliates";

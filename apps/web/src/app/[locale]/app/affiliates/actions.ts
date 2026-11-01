@@ -7,7 +7,7 @@ import { getFormatter } from "@/lib/formatter";
 import { z } from "zod";
 import { affiliateCodePattern, promoCodePattern } from "@stagedesk/core";
 import { AffiliateAdminError, approveWithdrawal, audit, createAffiliateByAdmin, deleteAffiliateByAdmin, markWithdrawalPaid, prisma, rejectWithdrawal, requestWithdrawal, reviewCommission, setAffiliateStatus, updateAffiliateByAdmin, WithdrawalError } from "@stagedesk/db";
-import { getStripe, payWithdrawalByStripe, syncAffiliatePromo } from "@stagedesk/payments";
+import { getStripe, payWithdrawalByStripe, retireAffiliatePromo, syncAffiliatePromo } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { referralLink } from "@/lib/affiliate";
 import { paymentsErrorMessage } from "@/lib/billing";
@@ -24,11 +24,13 @@ export async function setAffiliateStatusAction(affiliateId: string, status: "app
   const before = await prisma.affiliate.findUnique({ where: { id: affiliateId }, select: { approvedAt: true } });
   if (!before) return { ok: false, message: t("notFound") };
   const affiliate = await setAffiliateStatus(affiliateId, status);
+  // Approved: the Stripe code is created or switched back on; suspended or rejected: switched off.
+  // Without Stripe the code still works at signup; it's created in Stripe once keys are added. A
+  // failure here is repaired by the daily reconcile job.
+  const stripe = await getStripe();
+  if (stripe) await syncAffiliatePromo(stripe, affiliateId).catch((error) => console.error("[affiliates] promo sync failed", error));
 
   if (status === "approved") {
-    const stripe = await getStripe();
-    // Without Stripe the code still works at signup; it's created in Stripe once keys are added.
-    if (stripe) await syncAffiliatePromo(stripe, affiliateId).catch((error) => console.error("[affiliates] promo sync failed", error));
     if (!before.approvedAt) {
       const locale = userLocale(affiliate.user.locale);
       deliver({
@@ -267,6 +269,13 @@ export async function deletePartnerAction(affiliateId: string): Promise<ActionRe
   const viewer = await requirePermission("platform.affiliates");
   const t = await getTranslations("affiliatesAdmin");
   try {
+    // The Stripe promotion code must stop working first; otherwise the discount outlives the partner.
+    const promo = await prisma.affiliate.findUnique({ where: { id: affiliateId }, select: { stripePromotionCodeId: true } });
+    if (promo?.stripePromotionCodeId) {
+      const stripe = await getStripe();
+      if (!stripe) return { ok: false, message: t("promoNeedsStripe") };
+      await retireAffiliatePromo(stripe, promo.stripePromotionCodeId);
+    }
     const affiliate = await deleteAffiliateByAdmin(affiliateId);
     await audit({ actorId: viewer.user.id, action: "affiliate.delete", targetType: "affiliate", targetId: affiliateId, data: { code: affiliate.code } });
   } catch (error) {

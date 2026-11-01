@@ -369,8 +369,7 @@ export async function updateAffiliateByAdmin(affiliateId: string, input: { code:
       website: input.website,
       pitch: input.pitch,
       commissionBps: input.commissionBps,
-      // The old Stripe promotion code no longer matches; it's created again on the next sync.
-      ...(input.promoCode !== current.promoCode ? { stripePromotionCodeId: null } : {}),
+      // stripePromotionCodeId stays: the next sync sees the code changed, switches the old one off and creates the new one.
     },
   });
 }

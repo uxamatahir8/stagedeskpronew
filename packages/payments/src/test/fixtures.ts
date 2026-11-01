@@ -26,6 +26,8 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
   const refunds: { id: string; payment_intent: string; amount: number; metadata: Record<string, string> }[] = [];
   const transfers: { id: string; transfer_group?: string; destination: string; amount: number; metadata: Record<string, string> }[] = [];
   const reversals: { id: string; transfer: string; amount: number; metadata: Record<string, string> }[] = [];
+  const coupons = new Set<string>();
+  const promos: { id: string; code: string; active: boolean; metadata: Record<string, string> }[] = [];
 
   /** Runs a creating call with idempotency and injected failures. */
   function create<T>(method: string, params: Record<string, unknown>, options: { idempotencyKey?: string } | undefined, make: () => T): T {
@@ -93,6 +95,38 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
         payments: { data: [{ payment: { type: "payment_intent", payment_intent: `pi_for_${invoiceId}` } }] },
       }),
     },
+    coupons: {
+      retrieve: async (couponId: string) => {
+        if (!coupons.has(couponId)) throw stripeError("StripeInvalidRequestError", "No such coupon");
+        return { id: couponId };
+      },
+      create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
+        create("coupons.create", params, options, () => (coupons.add(params["id"] as string), { id: params["id"] })),
+    },
+    promotionCodes: {
+      create: async (params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
+        create("promotionCodes.create", params, options, () => {
+          const code = params["code"] as string;
+          // Like Stripe: a code must be unique among active codes.
+          if (promos.some((p) => p.active && p.code.toUpperCase() === code.toUpperCase())) throw stripeError("StripeInvalidRequestError", "code already exists");
+          const p = { id: id("promo"), code, active: true, metadata: metadata(params) };
+          promos.push(p);
+          return p;
+        }),
+      retrieve: async (promoId: string) => {
+        const p = promos.find((x) => x.id === promoId);
+        if (!p) throw stripeError("StripeInvalidRequestError", "No such promotion code");
+        return { ...p };
+      },
+      update: async (promoId: string, params: { active?: boolean }) => {
+        const p = promos.find((x) => x.id === promoId)!;
+        calls.push({ method: "promotionCodes.update", params: { promoId, ...params } });
+        if (params.active !== undefined) p.active = params.active;
+        return { ...p };
+      },
+      // The SDK's list is async-iterable (auto-pagination); an array is enough here.
+      list: (params: { active?: boolean }) => promos.filter((p) => params.active === undefined || p.active === params.active).map((p) => ({ ...p })),
+    },
     customers: {
       createBalanceTransaction: async (customerId: string, params: Record<string, unknown>, options?: { idempotencyKey?: string }) =>
         create("customers.createBalanceTransaction", { customerId, ...params }, options, () => ({ id: id("cbtxn") })),
@@ -104,6 +138,7 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
     refunds,
     transfers,
     reversals,
+    promos,
     /** Makes the next call of `method` fail. */
     failNext(method: string, mode: Failure["mode"], error: Failure["error"] = stripeError("StripeConnectionError")) {
       failures.set(method, [...(failures.get(method) ?? []), { mode, error }]);
