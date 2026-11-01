@@ -94,6 +94,21 @@ describe("user admin", () => {
     await expect(updateUserByAdmin(u.id, { name: "Edited", email: email("admin") })).rejects.toBeInstanceOf(UserAdminError);
   });
 
+  it("voids open password links when the email changes, not when it stays", async () => {
+    const u = await prisma.user.create({ data: { id: randomUUID(), name: "Link Holder", email: email("links") } });
+    const link = (token: string) => ({ id: randomUUID(), identifier: `reset-password:${run}-${token}`, value: u.id, expiresAt: new Date(Date.now() + 3_600_000) });
+    // Someone else's link stays.
+    const other = { ...link("other"), value: admin };
+    await prisma.verification.createMany({ data: [link("a"), other] });
+    await updateUserByAdmin(u.id, { name: "Link Holder 2", email: email("links") });
+    expect(await prisma.verification.count({ where: { value: u.id } })).toBe(1);
+    // Using a link confirms the account's address; one sent to the old address mustn't confirm the new one.
+    await updateUserByAdmin(u.id, { name: "Link Holder 2", email: email("links-new") });
+    expect(await prisma.verification.count({ where: { value: u.id } })).toBe(0);
+    expect(await prisma.verification.count({ where: { id: other.id } })).toBe(1);
+    await prisma.verification.delete({ where: { id: other.id } });
+  });
+
   it("filters by role and signs out every session", async () => {
     expect((await listUsers({ q: run, filter: "platform_admin" })).rows.every((u) => u.platformRole === "platform_admin")).toBe(true);
     const u = await prisma.user.findUniqueOrThrow({ where: { email: email("edited") } });
