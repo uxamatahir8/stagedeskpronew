@@ -15,7 +15,7 @@ import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
-import { cancelAction, type CampaignForm, previewCampaignAction, saveCampaignAction, scheduleAction, sendNowAction, sendTestAction } from "../actions";
+import { cancelAction, type CampaignForm, previewCampaignAction, retryFailedAction, saveCampaignAction, scheduleAction, sendNowAction, sendTestAction } from "../actions";
 import { NativeSelect } from "@/components/ui/native-select";
 
 interface Campaign extends CampaignForm {
@@ -134,7 +134,26 @@ export function CampaignEditor({
           <CardContent className="grid gap-2">
             <div className="flex flex-wrap justify-between gap-2 text-sm">
               <span className="font-medium">{t("progress", { sent: campaign.sentCount, total: campaign.recipients })}</span>
-              {campaign.failedCount > 0 && <span className="text-destructive">{t("failed", { count: campaign.failedCount })}</span>}
+              {campaign.failedCount > 0 && (
+                <span className="flex items-center gap-2 text-destructive">
+                  {t("failed", { count: campaign.failedCount })}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        const r = await retryFailedAction(campaign.id);
+                        if (r.ok) toast.success(r.message);
+                        else toast.error(r.message);
+                        router.refresh();
+                      })
+                    }
+                  >
+                    {t("retryFailed")}
+                  </Button>
+                </span>
+              )}
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-muted">
               <div className="h-full rounded-full bg-success transition-all" style={{ width: `${campaign.recipients ? Math.round(((campaign.sentCount + campaign.failedCount) / campaign.recipients) * 100) : 0}%` }} />

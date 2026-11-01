@@ -29,6 +29,27 @@ export async function claimReminder(key: string) {
   }
 }
 
+/** Gives a claim back when the reminder couldn't be queued, so the next run tries again. */
+export async function releaseReminder(key: string) {
+  await prisma.reminderLog.deleteMany({ where: { key } });
+}
+
+/**
+ * Claims a reminder, runs `send` (which queues its emails), and gives the
+ * claim back if that fails: a reminder is never marked sent without having
+ * been queued. Returns whether it was sent now.
+ */
+export async function withReminder(key: string, send: () => Promise<void>) {
+  if (!(await claimReminder(key))) return false;
+  try {
+    await send();
+    return true;
+  } catch (error) {
+    await releaseReminder(key).catch(() => undefined);
+    throw error;
+  }
+}
+
 /** Bookings whose event is exactly `days` days away (Dutch date). */
 export function eventsInDays(days: number, now = new Date()) {
   return prisma.booking.findMany({

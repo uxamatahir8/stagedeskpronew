@@ -28,8 +28,9 @@ const systemQueue = new Queue("system", { connection });
 // Every email goes through this queue: the web app and the jobs below add
 // { kind, to, params }; failed sends are retried with backoff.
 const emailQueue = new Queue(EMAIL_QUEUE, { connection });
-const queueEmail = (job: EmailJob) =>
-  emailQueue.add(job.kind, job, { attempts: 5, backoff: { type: "exponential", delay: 30_000 }, removeOnComplete: 1000, removeOnFail: 5000 });
+// jobId (optional) makes a re-add of the same email a no-op while the job is still kept.
+const queueEmail = (job: EmailJob, jobId?: string) =>
+  emailQueue.add(job.kind, job, { attempts: 5, backoff: { type: "exponential", delay: 30_000 }, removeOnComplete: 1000, removeOnFail: 5000, ...(jobId ? { jobId: jobId.replaceAll(":", "_") } : {}) });
 
 const emailWorker = new Worker(EMAIL_QUEUE, async (job) => {
   await sendEmailJob(job.data as EmailJob);

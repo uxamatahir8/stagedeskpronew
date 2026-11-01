@@ -1619,11 +1619,16 @@ model NewsletterDelivery {
   campaign     NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   subscriberId String               @db.VarChar(64)
   subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
-  /// queued | sent | failed
-  status       String               @default("queued") @db.VarChar(16)
-  error        String?              @db.VarChar(500)
-  sentAt       DateTime?
-  createdAt    DateTime             @default(now())
+  /// queued (also while waiting to retry) | sent | failed (permanent, or out of retries)
+  status        String               @default("queued") @db.VarChar(16)
+  error         String?              @db.VarChar(500)
+  sentAt        DateTime?
+  attempts      Int                  @default(0)
+  /// After a temporary failure (SMTP 4xx, connection): not before then.
+  nextAttemptAt DateTime?
+  /// Claimed by one sender until then, so two can't mail the same person.
+  lockedUntil   DateTime?
+  createdAt     DateTime             @default(now())
 
   @@unique([campaignId, subscriberId])
   @@index([campaignId, status])

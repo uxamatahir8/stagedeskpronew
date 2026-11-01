@@ -2041,7 +2041,8 @@
         "send": "Sent a newsletter",
         "schedule": "Scheduled a newsletter",
         "cancel": "Cancelled a newsletter",
-        "subscriber": "Changed a newsletter subscriber"
+        "subscriber": "Changed a newsletter subscriber",
+        "retry": "Retried failed newsletter deliveries"
       },
       "impersonation": {
         "start": "Logged in as a user",
@@ -5061,7 +5062,9 @@
     "deleteAction": "Delete",
     "deleted": "Subscriber deleted.",
     "exportCsv": "Export CSV",
-    "noSubscribers": "No subscribers yet"
+    "noSubscribers": "No subscribers yet",
+    "retryFailed": "Retry failed",
+    "retryQueued": "{count, plural, =0 {Nothing to retry.} one {# delivery queued again.} other {# deliveries queued again.}}"
   },
   "dashboards": {
     "vsLastMonth": "vs last month",

@@ -2041,7 +2041,8 @@
         "send": "Nieuwsbrief verstuurd",
         "schedule": "Nieuwsbrief ingepland",
         "cancel": "Nieuwsbrief geannuleerd",
-        "subscriber": "Nieuwsbriefabonnee gewijzigd"
+        "subscriber": "Nieuwsbriefabonnee gewijzigd",
+        "retry": "Mislukte nieuwsbriefverzendingen opnieuw geprobeerd"
       },
       "impersonation": {
         "start": "Ingelogd als een gebruiker",
@@ -5061,7 +5062,9 @@
     "deleteAction": "Verwijderen",
     "deleted": "Abonnee verwijderd.",
     "exportCsv": "CSV exporteren",
-    "noSubscribers": "Nog geen abonnees"
+    "noSubscribers": "Nog geen abonnees",
+    "retryFailed": "Mislukte opnieuw",
+    "retryQueued": "{count, plural, =0 {Niets om opnieuw te proberen.} one {# verzending opnieuw ingepland.} other {# verzendingen opnieuw ingepland.}}"
   },
   "dashboards": {
     "vsLastMonth": "t.o.v. vorige maand",
