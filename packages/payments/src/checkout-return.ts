@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { recordStripePayment } from "./booking-payments";
-import { applyStripeSubscription } from "./subscriptions";
+import { syncAgencySubscriptions } from "./subscriptions";
 
 /**
  * Someone came back from Stripe Checkout: read the session straight from
@@ -16,7 +16,10 @@ export async function confirmCheckoutSession(stripe: Stripe, sessionId: string, 
   if (session.status !== "complete") return null;
   if (session.mode === "subscription") {
     const id = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
-    return id ? { subscription: await applyStripeSubscription(await stripe.subscriptions.retrieve(id)) } : null;
+    if (!id) return null;
+    const sub = await stripe.subscriptions.retrieve(id);
+    const synced = await syncAgencySubscriptions(stripe, typeof sub.customer === "string" ? sub.customer : sub.customer.id);
+    return { subscription: synced?.record ?? null };
   }
   if (session.mode === "payment") return { paymentId: await recordStripePayment(stripe, session) };
   return null;

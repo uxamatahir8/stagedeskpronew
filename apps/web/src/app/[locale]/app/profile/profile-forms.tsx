@@ -2,7 +2,7 @@
 
 import { ShieldCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import QRCode from "react-qr-code";
 import { toast } from "sonner";
 import { FormMessage } from "@/components/auth/auth-card";
@@ -86,7 +86,13 @@ export function PasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  async function change(form: FormData) {
+  // onSubmit, not a form action: React resets an action's form when it finishes, which wiped
+  // all three fields after a wrong current password. Cleared on success only.
+  async function change(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const next = String(form.get("newPassword"));
     const problem = passwordProblem(next);
     if (problem) return setError(t(`password.problem_${problem}`));
@@ -101,7 +107,7 @@ export function PasswordForm() {
     setPending(false);
     if (error) return setError(error.code === "INVALID_PASSWORD" ? t("profile.wrongPassword") : t(authErrorKey(error)));
     toast.success(t("profile.passwordChanged"));
-    (document.getElementById("password-form") as HTMLFormElement | null)?.reset();
+    formElement.reset();
   }
 
   return (
@@ -110,7 +116,7 @@ export function PasswordForm() {
         <CardTitle>{t("profile.password")}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form id="password-form" action={change} className="grid gap-4 sm:grid-cols-2">
+        <form id="password-form" onSubmit={change} className="grid gap-4 sm:grid-cols-2">
           <FormField id="profile-current-password" label={t("profile.currentPassword")}>
             <PasswordInput id="profile-current-password" name="currentPassword" required autoComplete="current-password" />
           </FormField>

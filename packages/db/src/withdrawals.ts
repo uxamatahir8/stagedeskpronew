@@ -13,13 +13,18 @@ import { getSetting } from "./settings";
  *   requested → approved → paid
  *             ↘ rejected / cancelled (commissions go back to approved)
  *   approved  → failed (Stripe error; commissions go back to approved)
+ *
+ * A Stripe payout runs as approved/failed → processing (claimed with a
+ * token and a lease) → paid. Only the claim's owner can finish it; a claim
+ * whose lease ran out (crashed process) is taken over by the next attempt or
+ * the worker (stuckWithdrawals), which first looks for a transfer in Stripe.
  */
 export const payoutMethods = ["stripe", "bank_transfer", "paypal"] as const;
 export type PayoutMethod = (typeof payoutMethods)[number];
 
 export class WithdrawalError extends Error {
   constructor(
-    readonly code: "not_approved" | "below_minimum" | "nothing_available" | "method_disabled" | "details_missing" | "open_request" | "not_found" | "wrong_status" | "invalid",
+    readonly code: "not_approved" | "below_minimum" | "nothing_available" | "method_disabled" | "details_missing" | "open_request" | "not_found" | "wrong_status" | "invalid" | "in_progress",
   ) {
     super(`Withdrawal: ${code}`);
     this.name = "WithdrawalError";
@@ -103,6 +108,15 @@ export async function requestWithdrawal(affiliateId: string, actorId: string) {
   return payout;
 }
 
+/** Notifications follow a committed change; failing to send one must never undo or fail the change. */
+async function notifyAfter(...args: Parameters<typeof notify>) {
+  try {
+    await notify(...args);
+  } catch (error) {
+    console.error("[withdrawals] notification failed (the change itself stands)", args[1].type, error);
+  }
+}
+
 async function release(tx: Pick<typeof prisma, "commission">, payoutId: string) {
   await tx.commission.updateMany({ where: { payoutId, status: "requested" }, data: { status: "approved", payoutId: null } });
 }
@@ -132,7 +146,7 @@ export async function approveWithdrawal(payoutId: string, adminId: string, note:
     await tx.affiliatePayout.update({ where: { id: payoutId }, data: { status: "approved", reviewedById: adminId, reviewedAt: new Date() } });
     await event(tx, payoutId, "approved", adminId, note);
   });
-  await notify([payout.affiliate.userId], { type: "withdrawal_approved", data: { reference: payout.reference ?? "", cents: payout.amountCents }, url: "/app/payouts" });
+  await notifyAfter([payout.affiliate.userId], { type: "withdrawal_approved", data: { reference: payout.reference ?? "", cents: payout.amountCents }, url: "/app/payouts" });
   return payout;
 }
 
@@ -144,31 +158,95 @@ export async function rejectWithdrawal(payoutId: string, adminId: string, reason
     await release(tx, payoutId);
     await event(tx, payoutId, "rejected", adminId, reason.trim().slice(0, 500));
   });
-  await notify([payout.affiliate.userId], { type: "withdrawal_rejected", data: { reference: payout.reference ?? "", reason: reason.trim() }, url: "/app/payouts" });
+  await notifyAfter([payout.affiliate.userId], { type: "withdrawal_rejected", data: { reference: payout.reference ?? "", reason: reason.trim() }, url: "/app/payouts" });
 }
 
 /** Paid outside Stripe (bank or PayPal): the admin enters the transaction reference. */
-export async function markWithdrawalPaid(payoutId: string, adminId: string, input: { transactionRef: string; paidAt?: Date; stripeTransferId?: string | null }) {
+export async function markWithdrawalPaid(payoutId: string, adminId: string, input: { transactionRef: string; paidAt?: Date }) {
+  // Not while a Stripe transfer is under way ("processing"): that one may still go through.
   const payout = await load(payoutId, ["approved", "failed"]);
   const paidAt = input.paidAt ?? new Date();
   await prisma.$transaction(async (tx) => {
-    await tx.affiliatePayout.update({
-      where: { id: payoutId },
-      data: { status: "paid", paidAt, transactionRef: input.transactionRef.trim().slice(0, 120) || null, stripeTransferId: input.stripeTransferId ?? undefined, error: null },
+    const updated = await tx.affiliatePayout.updateMany({
+      where: { id: payoutId, status: payout.status },
+      data: { status: "paid", paidAt, transactionRef: input.transactionRef.trim().slice(0, 120) || null, error: null },
     });
+    if (updated.count !== 1) throw new WithdrawalError("wrong_status");
     // A failed payout gave its commissions back; take them again.
     await tx.commission.updateMany({ where: { payoutId }, data: { status: "paid" } });
     await event(tx, payoutId, "paid", adminId, input.transactionRef.trim().slice(0, 500) || null);
   });
-  await notify([payout.affiliate.userId], { type: "withdrawal_paid", data: { reference: payout.reference ?? "", cents: payout.amountCents }, url: "/app/payouts" });
+  await notifyAfter([payout.affiliate.userId], { type: "withdrawal_paid", data: { reference: payout.reference ?? "", cents: payout.amountCents }, url: "/app/payouts" });
 }
 
-/** A Stripe transfer failed: the money stays available and the reason is kept. */
-export async function failWithdrawal(payoutId: string, error: string, actorId: string | null) {
-  await prisma.$transaction(async (tx) => {
-    await tx.affiliatePayout.update({ where: { id: payoutId }, data: { status: "failed", error: error.slice(0, 2000) } });
-    await event(tx, payoutId, "failed", actorId, error.slice(0, 500));
+/** How long one process may work on a Stripe withdrawal before another may take over. */
+export const WITHDRAWAL_LEASE_MS = 5 * 60_000;
+
+/**
+ * Claims a Stripe withdrawal for this process: approved or failed ones, or a
+ * "processing" one whose lease ran out (its process died). Returns the token
+ * that later writes must present, and whether an earlier attempt may have
+ * reached Stripe. "in_progress" when someone else holds a live claim.
+ */
+export async function claimStripeWithdrawal(payoutId: string, now = new Date()) {
+  const token = randomUUID();
+  const claimed = await prisma.affiliatePayout.updateMany({
+    where: {
+      id: payoutId,
+      method: "stripe",
+      OR: [{ status: { in: ["approved", "failed"] } }, { status: "processing", lockedUntil: { lt: now } }],
+    },
+    data: { status: "processing", lockToken: token, lockedUntil: new Date(now.getTime() + WITHDRAWAL_LEASE_MS), attempts: { increment: 1 } },
   });
+  const payout = await prisma.affiliatePayout.findUnique({ where: { id: payoutId }, include: { affiliate: true } });
+  if (!payout) throw new WithdrawalError("not_found");
+  if (claimed.count !== 1) throw new WithdrawalError(payout.status === "processing" ? "in_progress" : "wrong_status");
+  return { payout, token, retry: payout.attempts > 1 };
+}
+
+/**
+ * Books a Stripe withdrawal as paid. Only the claim's owner may (a process
+ * whose lease was taken over gets false, and the new owner books it). The
+ * notification is sent after the commit and can't undo it.
+ */
+export async function completeStripeWithdrawal(payoutId: string, token: string, transferId: string, actorId: string | null) {
+  const paid = await prisma.$transaction(async (tx) => {
+    const updated = await tx.affiliatePayout.updateMany({
+      where: { id: payoutId, status: "processing", lockToken: token },
+      data: { status: "paid", paidAt: new Date(), transactionRef: transferId, stripeTransferId: transferId, error: null, lockToken: null, lockedUntil: null },
+    });
+    if (updated.count !== 1) return null;
+    await tx.commission.updateMany({ where: { payoutId }, data: { status: "paid" } });
+    await event(tx, payoutId, "paid", actorId, transferId);
+    return tx.affiliatePayout.findUniqueOrThrow({ where: { id: payoutId }, include: { affiliate: { select: { userId: true } } } });
+  });
+  if (!paid) return false;
+  await notifyAfter([paid.affiliate.userId], { type: "withdrawal_paid", data: { reference: paid.reference ?? "", cents: paid.amountCents }, url: "/app/payouts" });
+  return true;
+}
+
+/**
+ * Ends this owner's attempt without a payment. `failed`: Stripe refused, so
+ * the withdrawal can be retried (or paid by hand). Otherwise the outcome is
+ * unknown (timeout, database error after the transfer): it stays
+ * "processing" with its lease ended, so only a claim that looks in Stripe
+ * first, never a manual "mark paid", can finish it.
+ */
+export async function releaseStripeWithdrawal(payoutId: string, token: string, error: string, actorId: string | null, opts: { failed: boolean }) {
+  await prisma.$transaction(async (tx) => {
+    const updated = await tx.affiliatePayout.updateMany({
+      where: { id: payoutId, status: "processing", lockToken: token },
+      data: opts.failed
+        ? { status: "failed", error: error.slice(0, 2000), lockToken: null, lockedUntil: null }
+        : { error: error.slice(0, 2000), lockedUntil: new Date() },
+    });
+    if (updated.count === 1) await event(tx, payoutId, opts.failed ? "failed" : "uncertain", actorId, error.slice(0, 500));
+  });
+}
+
+/** Stripe withdrawals whose process stopped (lease ended) or whose outcome is unknown: the worker finishes them. */
+export async function stuckWithdrawals(now = new Date()) {
+  return prisma.affiliatePayout.findMany({ where: { method: "stripe", status: "processing", lockedUntil: { lt: now } }, select: { id: true }, take: 50 });
 }
 
 /** One withdrawal with its commissions (agency, invoice, amounts) and every step. */

@@ -9,6 +9,7 @@ import type { Locale } from "@/i18n/routing";
 import { platformDatePrefs } from "@/lib/date-prefs";
 import { requireAgency } from "@/lib/viewer";
 import { AgencyForm, LogoForm } from "./agency-forms";
+import { InventorySettingsForm } from "./inventory-settings-form";
 import { PaymentMethodsForm } from "./payment-methods-form";
 import { ServiceAreaForm } from "./service-area-form";
 
@@ -82,6 +83,7 @@ async function AgencySettings() {
         allowed={{ online: allowed.online, bankTransfer: allowed.bankTransfer, cash: allowed.cash }}
         stripeConnected={connected > 0}
       />
+      <InventorySettingsForm initial={{ inventorySharing: agency.inventorySharing, artistsHandleEquipment: agency.artistsHandleEquipment }} />
     </div>
   );
 }

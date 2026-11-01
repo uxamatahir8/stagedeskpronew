@@ -33,6 +33,14 @@ export const copy = {
       body: (name: string) => `Hoi ${name}, je artiestenaccount is aangemaakt. Kies binnen 24 uur je wachtwoord om je optredens, beschikbaarheid en inkomsten te beheren.`,
       button: "Wachtwoord kiezen",
     },
+    accountSetup: {
+      subject: "Stel je StageDesk-account in",
+      preview: "Kies een wachtwoord voor je StageDesk-account.",
+      heading: "Je StageDesk-account staat klaar",
+      body: (name: string) =>
+        `Hoi ${name}, er is een StageDesk-account voor je aangemaakt. Kies binnen 24 uur je wachtwoord om in te loggen. Is de link verlopen? Vraag dan op de inlogpagina een nieuwe aan via "Wachtwoord vergeten?".`,
+      button: "Wachtwoord kiezen",
+    },
     invitation: {
       subject: (agency: string) => `Je bent uitgenodigd voor ${agency} op StageDesk`,
       preview: "Accepteer je uitnodiging voor StageDesk.",
@@ -64,6 +72,10 @@ export const copy = {
       body: (name: string, link: string, promo: string) =>
         `Hoi ${name}, je aanmelding is goedgekeurd. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Koppel een Stripe-account in je dashboard om uitbetaald te worden.`,
       button: "Naar je partnerdashboard",
+      // Added by the platform admin with a new account: the button sets the password.
+      bodySetup: (name: string, link: string, promo: string) =>
+        `Hoi ${name}, je bent toegevoegd als StageDesk-partner. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook) en koppel daarna een Stripe-account in je dashboard om uitbetaald te worden.`,
+      buttonSetup: "Wachtwoord kiezen",
     },
     affiliatePayout: {
       subject: (amount: string) => `Uitbetaling van ${amount} onderweg`,
@@ -130,6 +142,10 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Log in met je e-mailadres: je krijgt een code per mail, een wachtwoord is niet nodig. Je proefperiode loopt al.`,
       button: "Inloggen",
+      // A new account: the button sets the password.
+      bodySetup: (name: string, agency: string) =>
+        `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook). Je proefperiode loopt al.`,
+      buttonSetup: "Wachtwoord kiezen",
     },
     leadReceived: {
       subject: (reference: string) => `We hebben je aanvraag ontvangen (${reference})`,
@@ -255,6 +271,14 @@ export const copy = {
       body: (name: string) => `Hi ${name}, your artist account has been created. Choose your password within 24 hours to manage your gigs, availability and earnings.`,
       button: "Choose password",
     },
+    accountSetup: {
+      subject: "Set up your StageDesk account",
+      preview: "Choose a password for your StageDesk account.",
+      heading: "Your StageDesk account is ready",
+      body: (name: string) =>
+        `Hi ${name}, a StageDesk account has been created for you. Choose your password within 24 hours to sign in. Has the link expired? Request a new one on the sign-in page under "Forgot password?".`,
+      button: "Choose password",
+    },
     invitation: {
       subject: (agency: string) => `You're invited to ${agency} on StageDesk`,
       preview: "Accept your StageDesk invitation.",
@@ -286,6 +310,10 @@ export const copy = {
       body: (name: string, link: string, promo: string) =>
         `Hi ${name}, your application was approved. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Connect a Stripe account in your dashboard to get paid.`,
       button: "Open your partner dashboard",
+      // Added by the platform admin with a new account: the button sets the password.
+      bodySetup: (name: string, link: string, promo: string) =>
+        `Hi ${name}, you've been added as a StageDesk partner. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Choose your password within 24 hours to sign in (signing in with an emailed code works too), then connect a Stripe account in your dashboard to get paid.`,
+      buttonSetup: "Choose password",
     },
     affiliatePayout: {
       subject: (amount: string) => `Payout of ${amount} on its way`,
@@ -352,6 +380,10 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hi ${name}, we've set up ${agency} for you on StageDesk. Sign in with your email address: we'll email you a code, no password needed. Your trial has started.`,
       button: "Sign in",
+      // A new account: the button sets the password.
+      bodySetup: (name: string, agency: string) =>
+        `Hi ${name}, we've set up ${agency} for you on StageDesk. Choose your password within 24 hours to sign in (signing in with an emailed code works too). Your trial has started.`,
+      buttonSetup: "Choose password",
     },
     leadReceived: {
       subject: (reference: string) => `We've received your request (${reference})`,

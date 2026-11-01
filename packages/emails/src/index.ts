@@ -4,6 +4,7 @@ import { createTransport, type Transporter } from "nodemailer";
 import { createElement, type ReactElement } from "react";
 import { copy, type EmailLocale } from "./copy";
 import {
+  AccountSetup,
   AffiliateApproved,
   AffiliatePayout,
   AgencyCreated,
@@ -59,10 +60,30 @@ function getTransporter() {
   return transporter;
 }
 
+/** Mail goes to a catcher on this machine (Mailpit), not a real mail server. */
+export function localMailTransport(host = process.env["SMTP_HOST"] ?? "localhost") {
+  return ["localhost", "127.0.0.1", "::1", "mailpit"].includes(host.trim().toLowerCase());
+}
+
+/**
+ * Addresses that exist only in tests and demo data: reserved names (.local,
+ * .test, .example, .invalid, .localhost) and the e2e domains (e2e-*.nl), which
+ * are real-looking but must never receive mail.
+ */
+export function isTestAddress(email: string) {
+  const domain = email.trim().toLowerCase().split("@").pop() ?? "";
+  return /.(local|test|example|invalid|localhost)$/.test(domain) || /^e2e-[a-z0-9-]+.nl$/.test(domain);
+}
+
 async function send(to: string, subject: string, element: ReactElement, replyTo?: string, headers?: Record<string, string>) {
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   const capture = previewing.getStore();
   if (capture) return capture({ subject, html, text });
+  // Test and demo addresses never go out through a real mail server (tests run against Mailpit).
+  if (isTestAddress(to) && !localMailTransport()) {
+    console.warn(`[mail] not sent: ${subject.slice(0, 40)} is for a test address and SMTP is not local`);
+    return;
+  }
   await getTransporter().sendMail({
     from: process.env["MAIL_FROM"] ?? "StageDesk <no-reply@stagedesk.local>",
     to,
@@ -90,6 +111,10 @@ export function sendArtistAccountSetup(to: string, p: { locale: EmailLocale; nam
   return send(to, copy[p.locale].artistSetup.subject, createElement(ArtistAccountSetup, p));
 }
 
+export function sendAccountSetup(to: string, p: { locale: EmailLocale; name: string; url: string }) {
+  return send(to, copy[p.locale].accountSetup.subject, createElement(AccountSetup, p));
+}
+
 export function sendInquiryReceived(to: string, p: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
   return send(to, copy[p.locale].inquiryReceived.subject(p.agency), createElement(InquiryReceived, p));
 }
@@ -112,7 +137,7 @@ export function sendInvitation(
   return send(to, copy[p.locale].invitation.subject(p.agency), createElement(Invitation, p));
 }
 
-export function sendAffiliateApproved(to: string, p: { locale: EmailLocale; name: string; link: string; promo: string; url: string }) {
+export function sendAffiliateApproved(to: string, p: { locale: EmailLocale; name: string; link: string; promo: string; url: string; setup?: boolean }) {
   return send(to, copy[p.locale].affiliateApproved.subject, createElement(AffiliateApproved, p));
 }
 
@@ -151,7 +176,7 @@ export function sendContactMessage(to: string, p: { locale: EmailLocale; name: s
   return send(to, copy[p.locale].contactMessage.subject(p.name), createElement(ContactMessage, p), p.email);
 }
 
-export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: string; agency: string; url: string }) {
+export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: string; agency: string; url: string; setup?: boolean }) {
   return send(to, copy[p.locale].agencyCreated.subject(p.agency), createElement(AgencyCreated, p));
 }
 
@@ -218,6 +243,7 @@ const senders = {
   loginCode: sendLoginCode,
   resetPassword: sendResetPassword,
   artistAccountSetup: sendArtistAccountSetup,
+  accountSetup: sendAccountSetup,
   inquiryReceived: sendInquiryReceived,
   newInquiry: sendNewInquiry,
   quote: sendQuote,

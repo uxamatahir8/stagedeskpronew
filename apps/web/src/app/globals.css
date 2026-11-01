@@ -414,3 +414,28 @@ label[data-slot="label"][data-required]::after {
     animation: none;
   }
 }
+
+/* Printable pages inside the app shell (packing lists): only the sheet is printed, in black on white. */
+@media print {
+  body:has(.print-sheet) [data-slot="sidebar"],
+  body:has(.print-sheet) [data-slot="sidebar-gap"],
+  body:has(.print-sheet) header {
+    display: none !important;
+  }
+  body:has(.print-sheet) * {
+    visibility: hidden;
+  }
+  body:has(.print-sheet) .print-sheet,
+  body:has(.print-sheet) .print-sheet * {
+    visibility: visible;
+  }
+  body:has(.print-sheet) .print-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    background: #fff;
+    color: #000;
+  }
+}

@@ -1,12 +1,14 @@
-import { campaignEmailContent, dueCampaigns, finishCampaignIfDone, markDelivery, nextDeliveries, startCampaign } from "@stagedesk/db";
+import { campaignEmailContent, dueCampaigns, finishCampaignIfDone, isTemporaryMailError, markDelivery, nextDeliveries, startCampaign } from "@stagedesk/db";
 import { sendNewsletter } from "@stagedesk/emails";
 
 const appUrl = process.env["APP_URL"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000";
 
 /**
  * Sends a campaign: freezes the recipient list, then mails the queued
- * deliveries in batches, each in the subscriber's own language. Safe to run
- * again after a crash; a delivery is only ever sent once.
+ * deliveries in batches, each in the subscriber's own language. Each delivery
+ * is claimed before sending, so overlapping runs never mail one person twice;
+ * a crash between sending and recording can still repeat that one email (SMTP
+ * gives no way to make it exactly-once).
  */
 export async function sendCampaign(campaignId: string) {
   const campaign = await startCampaign(campaignId);
@@ -35,7 +37,8 @@ export async function sendCampaign(campaignId: string) {
         await markDelivery(d.id, campaignId, { ok: true });
         sent++;
       } catch (error) {
-        await markDelivery(d.id, campaignId, { ok: false, error: error instanceof Error ? error.message : String(error) });
+        // Temporary failures (connection, SMTP 4xx) go back in the queue with a pause; the campaign stays "sending".
+        await markDelivery(d.id, campaignId, { ok: false, error: error instanceof Error ? error.message : String(error), temporary: isTemporaryMailError(error) });
       }
     }
   }

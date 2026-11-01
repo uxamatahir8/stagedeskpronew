@@ -17,6 +17,7 @@ import {
   recordPayment,
   sendQuote,
   toDateOnly,
+  updateBookingDetails,
 } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -76,19 +77,16 @@ const detailsSchema = z.object({
 });
 
 export async function updateDetailsAction(bookingId: string, _prev: FormState, form: FormData): Promise<FormState> {
-  const { viewer, db } = await requireAgency("agency.bookings.edit");
+  const { viewer, organization } = await requireAgency("agency.bookings.edit");
   const parsed = detailsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const { eventDate, budget, ...rest } = parsed.data;
 
-  const updated = await db.booking.updateMany({
-    where: { id: bookingId, status: { in: ["inquiry", "quoted", "booked", "confirmed", "expired"] } },
-    data: { ...rest, budgetCents: budget, eventDate: eventDate ? toDateOnly(eventDate) : null },
-  });
-  if (updated.count === 0) return { message: (await getTranslations("bookingErrors"))("invalid_status") };
-  await db.bookingEvent.create({
-    data: { bookingId, type: "details_updated", actorId: viewer.user.id, organizationId: "" },
-  });
+  // A new date is refused when the booking's reserved equipment doesn't fit on it.
+  const result = await runAction(() =>
+    updateBookingDetails(organization.id, bookingId, { ...rest, budgetCents: budget, eventDate: eventDate ? toDateOnly(eventDate) : null }, viewer.user.id),
+  );
+  if (!result.ok) return { message: result.message };
   return { ok: true, message: (await getTranslations("booking"))("saved") };
 }
 

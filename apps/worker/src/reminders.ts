@@ -1,5 +1,5 @@
 import { localePrefix } from "@stagedesk/core";
-import { agencyDeskUserIds, balancesDue, claimReminder, eventsInDays, notify, quotesExpiringWithin } from "@stagedesk/db";
+import { agencyDeskUserIds, balancesDue, eventsInDays, notify, quotesExpiringWithin, withReminder } from "@stagedesk/db";
 import type { EmailJob } from "@stagedesk/emails";
 
 type Locale = "nl" | "en";
@@ -19,68 +19,102 @@ const eventNames: Record<Locale, Record<string, string>> = {
 
 /**
  * Event reminders (7 days and 1 day before) to the customer and artist,
- * quote-expiry reminders, and a balance-due reminder. Every reminder is
- * claimed in reminder_logs first, so it's sent at most once.
+ * quote-expiry reminders, and a balance-due reminder. Each is claimed in
+ * reminder_logs and the claim is given back if queuing fails (Redis down), so
+ * it's retried on the next run instead of being lost; its emails carry a job
+ * id per reminder and recipient, so a retry doesn't queue a job twice. One
+ * reminder failing doesn't stop the others.
  */
-export async function sendReminders(queue: (job: EmailJob) => Promise<unknown>, now = new Date()) {
+export async function sendReminders(queue: (job: EmailJob, jobId?: string) => Promise<unknown>, now = new Date()) {
   let sent = 0;
+  let failed = 0;
+  const attempt = async (key: string, send: () => Promise<void>) => {
+    try {
+      if (await withReminder(key, send)) sent++;
+    } catch (error) {
+      failed++;
+      console.error(`[reminders] ${key} not queued; will retry next run`, error);
+    }
+  };
 
   for (const days of [7, 1]) {
     for (const b of await eventsInDays(days, now)) {
-      if (!b.eventDate || !(await claimReminder(`event-${days}:${b.id}`))) continue;
-      const artist = b.assignments[0]?.artist;
-      if (b.customer) {
-        const locale = localeOf(b.customer.locale);
-        await queue({
-          kind: "eventReminder",
-          to: b.customer.email,
-          params: { locale, days, name: firstName(b.customer.name), event: eventNames[locale][b.eventType] ?? b.eventType, date: date(locale, b.eventDate), agency: b.organization.name, url: link(locale, `/app/event?booking=${b.trackingCode}`) },
+      if (!b.eventDate) continue;
+      const eventDate = b.eventDate;
+      const key = `event-${days}:${b.id}`;
+      await attempt(key, async () => {
+        const artist = b.assignments[0]?.artist;
+        if (b.customer) {
+          const locale = localeOf(b.customer.locale);
+          await queue(
+            {
+              kind: "eventReminder",
+              to: b.customer.email,
+              params: { locale, days, name: firstName(b.customer.name), event: eventNames[locale][b.eventType] ?? b.eventType, date: date(locale, eventDate), agency: b.organization.name, url: link(locale, `/app/event?booking=${b.trackingCode}`) },
+            },
+            `${key}:customer`,
+          );
+        }
+        if (artist?.user) {
+          const locale = localeOf(artist.user.locale);
+          await queue(
+            {
+              kind: "gigReminder",
+              to: artist.user.email,
+              params: { locale, name: firstName(artist.user.name), event: eventNames[locale][b.eventType] ?? b.eventType, date: date(locale, eventDate), venue: [b.venueName, b.venueCity].filter(Boolean).join(", "), url: link(locale, `/app/gigs/${b.trackingCode}`) },
+            },
+            `${key}:artist`,
+          );
+        }
+        await notify([b.customer?.id, artist?.user?.id, ...(await agencyDeskUserIds(b.organizationId))], {
+          type: "reminder_event",
+          data: { days, code: b.trackingCode, name: b.customer?.name ?? b.trackingCode },
+          url: `/app/bookings/${b.trackingCode}`,
         });
-      }
-      if (artist?.user) {
-        const locale = localeOf(artist.user.locale);
-        await queue({
-          kind: "gigReminder",
-          to: artist.user.email,
-          params: { locale, name: firstName(artist.user.name), event: eventNames[locale][b.eventType] ?? b.eventType, date: date(locale, b.eventDate), venue: [b.venueName, b.venueCity].filter(Boolean).join(", "), url: link(locale, `/app/gigs/${b.trackingCode}`) },
-        });
-      }
-      await notify([b.customer?.id, artist?.user?.id, ...(await agencyDeskUserIds(b.organizationId))], {
-        type: "reminder_event",
-        data: { days, code: b.trackingCode, name: b.customer?.name ?? b.trackingCode },
-        url: `/app/bookings/${b.trackingCode}`,
       });
-      sent++;
     }
   }
 
   for (const b of await quotesExpiringWithin(48, now)) {
     const quote = b.quotes[0];
-    if (!quote || !b.customer || !(await claimReminder(`quote-expiring:${quote.id}`))) continue;
-    const locale = localeOf(b.customer.locale);
-    await queue({
-      kind: "quoteExpiring",
-      to: b.customer.email,
-      params: {
-        locale,
-        name: firstName(b.customer.name),
-        agency: b.organization.name,
-        until: new Intl.DateTimeFormat(intl(locale), { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" }).format(quote.expiresAt),
-        url: link(locale, `/q/${quote.token}`),
-      },
+    const customer = b.customer;
+    if (!quote || !customer) continue;
+    const key = `quote-expiring:${quote.id}`;
+    await attempt(key, async () => {
+      const locale = localeOf(customer.locale);
+      await queue(
+        {
+          kind: "quoteExpiring",
+          to: customer.email,
+          params: {
+            locale,
+            name: firstName(customer.name),
+            agency: b.organization.name,
+            until: new Intl.DateTimeFormat(intl(locale), { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Amsterdam" }).format(quote.expiresAt),
+            url: link(locale, `/q/${quote.token}`),
+          },
+        },
+        key,
+      );
     });
-    sent++;
   }
 
   for (const b of await balancesDue(now)) {
-    if (!b.customer || !b.eventDate || !(await claimReminder(`balance:${b.id}`))) continue;
-    const locale = localeOf(b.customer.locale);
-    await queue({
-      kind: "balanceDue",
-      to: b.customer.email,
-      params: { locale, name: firstName(b.customer.name), amount: money(locale, b.totalCents - b.paidCents, b.currency), date: date(locale, b.eventDate), agency: b.organization.name, url: link(locale, "/app/my-payments") },
+    const customer = b.customer;
+    if (!customer || !b.eventDate) continue;
+    const eventDate = b.eventDate;
+    const key = `balance:${b.id}`;
+    await attempt(key, async () => {
+      const locale = localeOf(customer.locale);
+      await queue(
+        {
+          kind: "balanceDue",
+          to: customer.email,
+          params: { locale, name: firstName(customer.name), amount: money(locale, b.totalCents - b.paidCents, b.currency), date: date(locale, eventDate), agency: b.organization.name, url: link(locale, "/app/my-payments") },
+        },
+        key,
+      );
     });
-    sent++;
   }
-  return { sent };
+  return { sent, failed };
 }

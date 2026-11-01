@@ -1,10 +1,11 @@
+import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { Prisma, prisma } from "@stagedesk/db";
 import { adjustCommissionsForCharge, attributeSubscriptionPromo, recordInvoiceCommission } from "./affiliates";
 import { recordStripePayment } from "./booking-payments";
 import { applyStripeAccount } from "./connect";
 import { syncChargeRefund } from "./refunds";
-import { applyStripeSubscription } from "./subscriptions";
+import { syncAgencySubscriptions } from "./subscriptions";
 
 /**
  * Verifies a webhook and stores it once by event id. Returns the event id to
@@ -21,18 +22,95 @@ export async function receiveWebhook(stripe: Stripe, rawBody: string, signature:
   return event.id;
 }
 
-/** Processes a stored event. Safe to retry: every handler is idempotent. */
-export async function processStoredEvent(stripe: Stripe, eventId: string) {
+/** Attempts before an event is parked as "dead" for a person to replay. */
+export const MAX_EVENT_ATTEMPTS = 10;
+/** How long one process may work on an event before another may take over (a crash releases it). */
+const EVENT_CLAIM_MS = 5 * 60_000;
+
+/** Backoff after the n-th failure: 1, 2, 4 … minutes, at most 6 hours. */
+export const eventRetryDelayMs = (attempts: number) => Math.min(2 ** Math.max(0, attempts - 1) * 60_000, 6 * 60 * 60_000);
+
+/**
+ * Processes a stored event. One process at a time: the event is claimed with
+ * a conditional update (received/failed, or a claim that ran out), so two
+ * workers or the web app and a worker never run the same event's effects at
+ * once. Handlers are idempotent besides, so a crash after an effect but before
+ * "processed" is safe to repeat. Failures back off; after MAX_EVENT_ATTEMPTS
+ * the event is "dead" until replayed.
+ */
+export async function processStoredEvent(stripe: Stripe, eventId: string, now = new Date()) {
+  const token = randomUUID();
+  const claimed = await prisma.stripeEvent.updateMany({
+    where: {
+      id: eventId,
+      OR: [{ status: { in: ["received", "failed"] } }, { status: "processing", lockedUntil: { lt: now } }],
+    },
+    data: { status: "processing", lockedUntil: new Date(now.getTime() + EVENT_CLAIM_MS), lockToken: token, attempts: { increment: 1 } },
+  });
   const stored = await prisma.stripeEvent.findUnique({ where: { id: eventId } });
-  if (!stored || stored.status === "processed" || stored.status === "ignored") return stored?.status ?? "missing";
+  if (!stored) return "missing";
+  if (claimed.count === 0) return stored.status;
+  // Outcomes are recorded only while this claim is still ours: a handler that outlived its lease
+  // (and was taken over) must not overwrite what the new owner records.
+  const mine = { id: eventId, status: "processing", lockToken: token };
   try {
     const handled = await handleEvent(stripe, stored.payload as unknown as Stripe.Event);
-    await prisma.stripeEvent.update({ where: { id: eventId }, data: { status: handled ? "processed" : "ignored", processedAt: new Date(), error: null } });
-    return handled ? "processed" : "ignored";
+    const status = handled ? "processed" : "ignored";
+    const done = await prisma.stripeEvent.updateMany({ where: mine, data: { status, processedAt: new Date(), error: null, lockedUntil: null, lockToken: null, nextAttemptAt: null } });
+    return done.count === 1 ? status : "superseded";
   } catch (error) {
-    await prisma.stripeEvent.update({ where: { id: eventId }, data: { status: "failed", error: String(error).slice(0, 5000) } });
+    const dead = stored.attempts >= MAX_EVENT_ATTEMPTS;
+    const done = await prisma.stripeEvent.updateMany({
+      where: mine,
+      data: {
+        status: dead ? "dead" : "failed",
+        error: String(error).slice(0, 5000),
+        lockedUntil: null,
+        lockToken: null,
+        nextAttemptAt: dead ? null : new Date(now.getTime() + eventRetryDelayMs(stored.attempts)),
+      },
+    });
+    if (dead && done.count === 1) console.error(`[stripe] event ${eventId} (${stored.type}) gave up after ${stored.attempts} attempts`, error);
     throw error;
   }
+}
+
+/** Events the worker should (re)process now: never run, failed and past their backoff, or abandoned mid-run. */
+export async function dueStripeEvents(now = new Date(), take = 100) {
+  const rows = await prisma.stripeEvent.findMany({
+    where: {
+      OR: [
+        // Received a minute ago and still not run: the web app's attempt never happened.
+        { status: "received", receivedAt: { lt: new Date(now.getTime() - 60_000) } },
+        { status: "failed", OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] },
+        { status: "processing", lockedUntil: { lt: now } },
+      ],
+    },
+    select: { id: true },
+    orderBy: { receivedAt: "asc" },
+    take,
+  });
+  return rows.map((r) => r.id);
+}
+
+/** Runs due events (worker). Returns counts per outcome. */
+export async function retryStripeEvents(stripe: Stripe, now = new Date()): Promise<Record<string, number>> {
+  const ids = await dueStripeEvents(now);
+  const outcome: Record<string, number> = {};
+  for (const id of ids) {
+    const status = await processStoredEvent(stripe, id, now).catch(() => "failed");
+    outcome[status] = (outcome[status] ?? 0) + 1;
+  }
+  return { due: ids.length, ...outcome };
+}
+
+/** Puts a failed, dead or ignored event back in line (platform admin). Handlers are idempotent, so this is safe. */
+export async function replayStripeEvent(eventId: string) {
+  const reset = await prisma.stripeEvent.updateMany({
+    where: { id: eventId, status: { in: ["failed", "dead", "ignored", "processed"] } },
+    data: { status: "received", attempts: 0, nextAttemptAt: null, lockedUntil: null, lockToken: null },
+  });
+  return reset.count === 1;
 }
 
 async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean> {
@@ -40,8 +118,8 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object;
-      if (session.mode === "subscription" && typeof session.subscription === "string") {
-        await applyStripeSubscription(await stripe.subscriptions.retrieve(session.subscription));
+      if (session.mode === "subscription" && session.customer) {
+        await syncAgencySubscriptions(stripe, typeof session.customer === "string" ? session.customer : session.customer.id);
         return true;
       }
       if (session.mode === "payment") {
@@ -51,13 +129,14 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       return false;
     }
     case "customer.subscription.created":
-      await applyStripeSubscription(event.data.object);
-      await attributeSubscriptionPromo(stripe, event.data.object);
-      return true;
     case "customer.subscription.updated":
-    case "customer.subscription.deleted":
-      await applyStripeSubscription(event.data.object);
+    case "customer.subscription.deleted": {
+      // Stripe doesn't promise order: decide from all of the customer's subscriptions as they are now.
+      const object = event.data.object;
+      await syncAgencySubscriptions(stripe, typeof object.customer === "string" ? object.customer : object.customer.id);
+      if (event.type === "customer.subscription.created") await attributeSubscriptionPromo(stripe, await stripe.subscriptions.retrieve(object.id));
       return true;
+    }
     case "invoice.payment_failed":
     case "invoice.paid": {
       // The subscription events carry the status; refresh to pick up past_due / active.
@@ -65,7 +144,7 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       const id = typeof subscriptionId === "string" ? subscriptionId : subscriptionId?.id;
       if (!id) return false;
       const sub = await stripe.subscriptions.retrieve(id);
-      await applyStripeSubscription(sub);
+      await syncAgencySubscriptions(stripe, typeof sub.customer === "string" ? sub.customer : sub.customer.id);
       if (event.type === "invoice.paid") {
         // The promo code decides the referral before the first commission is booked.
         await attributeSubscriptionPromo(stripe, sub);
@@ -94,23 +173,29 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       if (!payment) return adjusted > 0;
       const open = event.type === "charge.dispute.created";
       const lost = !open && dispute.status === "lost";
-      await prisma.$transaction([
-        prisma.booking.update({ where: { id: payment.bookingId }, data: { disputed: open } }),
-        prisma.ledgerEntry.create({
+      const type = open ? "dispute" : lost ? "dispute_lost" : "dispute_won";
+      await prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${payment.bookingId} FOR UPDATE`;
+        // Once per dispute and outcome, however often Stripe sends the event.
+        if (await tx.ledgerEntry.findFirst({ where: { stripeObjectId: dispute.id, type }, select: { id: true } })) return;
+        // Stripe doesn't promise order: an "opened" arriving after the close changes nothing.
+        if (open && (await tx.ledgerEntry.findFirst({ where: { stripeObjectId: dispute.id, type: { in: ["dispute_won", "dispute_lost"] } }, select: { id: true } }))) return;
+        await tx.booking.update({ where: { id: payment.bookingId }, data: { disputed: open } });
+        await tx.ledgerEntry.create({
           data: {
             organizationId: payment.organizationId,
             bookingId: payment.bookingId,
             paymentId: payment.id,
-            type: open ? "dispute" : lost ? "dispute_lost" : "dispute_won",
+            type,
             party: "platform",
             amountCents: open ? -dispute.amount : lost ? 0 : dispute.amount,
             stripeObjectId: dispute.id,
           },
-        }),
-        prisma.bookingEvent.create({
+        });
+        await tx.bookingEvent.create({
           data: { organizationId: payment.organizationId, bookingId: payment.bookingId, type: open ? "dispute_opened" : "dispute_closed", data: { status: dispute.status } },
-        }),
-      ]);
+        });
+      });
       return true;
     }
     default:

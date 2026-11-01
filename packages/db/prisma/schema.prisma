@@ -209,6 +209,17 @@ model Organization {
   artistRequestsMade  ArtistRequest[]  @relation("ArtistRequestBorrower")
   artistRequestsIn    ArtistRequest[]  @relation("ArtistRequestLender")
 
+  /// Other agencies may browse this agency's equipment (read-only, public fields only). Off by default.
+  inventorySharing       Boolean                @default(false)
+  /// Assigned artists may record loading and returns on their gigs.
+  artistsHandleEquipment Boolean                @default(false)
+  equipmentCategories    EquipmentCategory[]
+  equipmentItems         EquipmentItem[]
+  equipmentPackages      EquipmentPackage[]
+  equipmentPackageLines  EquipmentPackageLine[]
+  bookingEquipment       BookingEquipment[]
+  equipmentEvents        EquipmentEvent[]
+
   @@map("organizations")
 }
 
@@ -239,6 +250,9 @@ model Invitation {
   expiresAt      DateTime
   inviterId      String       @db.VarChar(64)
   user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  /// When the staff-seat check (under the agency lock) accepted this invitation. Set once; a resend
+  /// finds it set and takes no new seat. Not a Better Auth field: Better Auth never writes it.
+  seatCheckedAt  DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([organizationId, status])
@@ -351,78 +365,83 @@ model ArtistShare {
 
 /// One event for one customer. Status changes go through transition() in core.
 model Booking {
-  id                String              @id @db.VarChar(64)
-  organizationId    String              @db.VarChar(64)
-  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id                   String              @id @db.VarChar(64)
+  organizationId       String              @db.VarChar(64)
+  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   /// Public reference, e.g. K7Q2M9XA.
-  trackingCode      String              @unique @db.VarChar(8)
+  trackingCode         String              @unique @db.VarChar(8)
   /// The agency's currency when the booking was made; all amounts on it are in this currency.
-  currency          String              @default("EUR") @db.VarChar(3)
-  status            String              @default("inquiry") @db.VarChar(16)
-  customerId        String?             @db.VarChar(64)
-  customer          User?               @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
-  eventType         String              @db.VarChar(24)
-  eventDate         DateTime?           @db.Date
-  startTime         String?             @db.VarChar(5)
-  endTime           String?             @db.VarChar(5)
-  venueName         String?             @db.VarChar(191)
-  venueAddress      String?             @db.VarChar(191)
-  venueCity         String?             @db.VarChar(96)
-  guestCount        Int?
-  budgetCents       Int?
+  currency             String              @default("EUR") @db.VarChar(3)
+  status               String              @default("inquiry") @db.VarChar(16)
+  customerId           String?             @db.VarChar(64)
+  customer             User?               @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  eventType            String              @db.VarChar(24)
+  eventDate            DateTime?           @db.Date
+  startTime            String?             @db.VarChar(5)
+  endTime              String?             @db.VarChar(5)
+  venueName            String?             @db.VarChar(191)
+  venueAddress         String?             @db.VarChar(191)
+  venueCity            String?             @db.VarChar(96)
+  guestCount           Int?
+  budgetCents          Int?
   /// The customer's own words from the inquiry.
-  message           String?             @db.Text
-  partnerName       String?             @db.VarChar(191)
+  message              String?             @db.Text
+  partnerName          String?             @db.VarChar(191)
   /// string[]
-  dos               Json?
+  dos                  Json?
   /// string[]
-  donts             Json?
-  playlistUrl       String?             @db.VarChar(500)
+  donts                Json?
+  playlistUrl          String?             @db.VarChar(500)
   /// From the public inquiry form.
-  preferredArtistId String?             @db.VarChar(64)
-  preferredGenre    String?             @db.VarChar(96)
+  preferredArtistId    String?             @db.VarChar(64)
+  preferredGenre       String?             @db.VarChar(96)
   /// Key from core's budgetRanges, e.g. "750_1500".
-  budgetRange       String?             @db.VarChar(16)
-  ceremony          Boolean?
+  budgetRange          String?             @db.VarChar(16)
+  ceremony             Boolean?
   /// manual | booking_page | lead | gig | profile
-  source            String              @default("manual") @db.VarChar(16)
+  source               String              @default("manual") @db.VarChar(16)
   /// The gig an independent artist offered that the customer ordered (source "gig").
-  listingId         String?             @db.VarChar(64)
-  listing           GigListing?         @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listingId            String?             @db.VarChar(64)
+  listing              GigListing?         @relation(fields: [listingId], references: [id], onDelete: SetNull)
   /// Copied from the accepted quote.
-  totalCents        Int                 @default(0)
-  depositCents      Int                 @default(0)
+  totalCents           Int                 @default(0)
+  depositCents         Int                 @default(0)
   /// Sum of received payments, kept in step by recordPayment().
-  paidCents         Int                 @default(0)
-  quoteExpiresAt    DateTime?
+  paidCents            Int                 @default(0)
+  quoteExpiresAt       DateTime?
   /// { rule: FeeRule; stripeFeePaidBy } frozen when the quote is accepted.
-  feeSnapshot       Json?
+  feeSnapshot          Json?
   /// A customer opened a card dispute; payouts wait until it's resolved.
-  disputed          Boolean             @default(false)
+  disputed             Boolean             @default(false)
   /// When Stripe money was transferred to the agency and artist.
-  paidOutAt         DateTime?
-  cancelReason      String?             @db.Text
-  createdById       String?             @db.VarChar(64)
-  quotedAt          DateTime?
-  bookedAt          DateTime?
-  confirmedAt       DateTime?
-  completedAt       DateTime?
-  settledAt         DateTime?
-  cancelledAt       DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  assignments       BookingAssignment[]
-  events            BookingEvent[]
-  notes             BookingNote[]
-  quotes            Quote[]
-  payments          Payment[]
-  invoices          Invoice[]
-  review            Review?
-  ledger            LedgerEntry[]
-  messages          BookingMessage[]
-  paymentClaims     PaymentClaim[]
-  artistRequests    ArtistRequest[]
+  paidOutAt            DateTime?
+  cancelReason         String?             @db.Text
+  createdById          String?             @db.VarChar(64)
+  quotedAt             DateTime?
+  bookedAt             DateTime?
+  confirmedAt          DateTime?
+  completedAt          DateTime?
+  settledAt            DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  assignments          BookingAssignment[]
+  events               BookingEvent[]
+  notes                BookingNote[]
+  quotes               Quote[]
+  payments             Payment[]
+  invoices             Invoice[]
+  review               Review?
+  ledger               LedgerEntry[]
+  messages             BookingMessage[]
+  paymentClaims        PaymentClaim[]
+  artistRequests       ArtistRequest[]
+  /// Set when the agency finished checking equipment back in; anything still out is then missing.
+  equipmentCheckedInAt DateTime?
+  equipment            BookingEquipment[]
 
+  /// Target of the equipment lines' composite foreign key (same agency).
+  @@unique([organizationId, id])
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
   @@index([customerId])
@@ -607,12 +626,54 @@ model LedgerEntry {
   amountCents    Int
   artistId       String?      @db.VarChar(64)
   stripeObjectId String?      @db.VarChar(64)
+  /// The FinancialOperation that wrote this row; an operation books each (type, party) once.
+  operationId    String?      @db.VarChar(64)
   createdAt      DateTime     @default(now())
 
+  @@unique([operationId, type, party])
   @@index([organizationId, createdAt])
   @@index([bookingId])
   @@index([artistId, type])
+  @@index([stripeObjectId])
   @@map("ledger_entries")
+}
+
+/// A money movement that calls Stripe (refund, payout). Created and its amount
+/// reserved in one transaction before Stripe is called, so a retry, a second
+/// click or a crashed worker continues the same operation instead of starting
+/// another. Stripe calls use keys derived from the id; results are stored as
+/// they arrive, and the ledger is written once when everything succeeded.
+model FinancialOperation {
+  id             String    @id @db.VarChar(64)
+  /// refund | payout
+  kind           String    @db.VarChar(16)
+  /// Identity of the request: refund:<request id> or payout:<payment id>.
+  key            String    @unique @db.VarChar(120)
+  organizationId String    @db.VarChar(64)
+  bookingId      String?   @db.VarChar(64)
+  paymentId      String?   @db.VarChar(64)
+  amountCents    Int
+  currency       String    @db.VarChar(3)
+  /// pending (reserved, Stripe work outstanding) | completed | failed (nothing moved) | review (needs an operator)
+  status         String    @default("pending") @db.VarChar(16)
+  /// The plan and the Stripe ids received so far (see packages/payments/src/operations.ts).
+  data           Json
+  attempts       Int       @default(0)
+  lastError      String?   @db.Text
+  nextAttemptAt  DateTime?
+  /// Claimed by a process until then; another may take over after it passes.
+  lockedUntil    DateTime?
+  /// The claim's owner (fencing token): writes by a process whose claim was taken over are refused.
+  lockToken      String?   @db.VarChar(64)
+  actorId        String?   @db.VarChar(64)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([paymentId, status])
+  @@index([organizationId, createdAt])
+  @@map("financial_operations")
 }
 
 // ─── Subscriptions and Stripe ───────────────────────────────────────────
@@ -678,6 +739,32 @@ model Subscription {
   @@map("subscriptions")
 }
 
+/// Something in an agency's billing that a platform operator must look at,
+/// e.g. two live Stripe subscriptions. Platform-level (agencyId, not
+/// organizationId), so it stays out of tenantDb. Nothing is changed in Stripe
+/// automatically; reconciling re-reads Stripe and resolves it when it's gone.
+model BillingIncident {
+  id           String    @id @db.VarChar(64)
+  agencyId     String    @db.VarChar(64)
+  /// duplicate_subscription
+  kind         String    @db.VarChar(32)
+  /// open | resolved
+  status       String    @default("open") @db.VarChar(16)
+  /// "<agencyId>:<kind>" while open, null once resolved: one open incident per agency and kind.
+  openKey      String?   @unique @db.VarChar(120)
+  /// e.g. { authoritative: "sub_…", duplicates: ["sub_…"], customerId }
+  data         Json
+  detectedAt   DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  resolvedAt   DateTime?
+  resolvedById String?   @db.VarChar(64)
+  note         String?   @db.Text
+
+  @@index([status, detectedAt])
+  @@index([agencyId])
+  @@map("billing_incidents")
+}
+
 /// A Stripe Express account for an agency (receives its share) or an artist.
 model ConnectedAccount {
   id               String       @id @db.VarChar(64)
@@ -699,16 +786,24 @@ model ConnectedAccount {
 
 /// Every Stripe webhook event, stored once by id so it's processed at most once.
 model StripeEvent {
-  id          String    @id @db.VarChar(80)
-  type        String    @db.VarChar(80)
-  /// received | processed | failed | ignored
-  status      String    @default("received") @db.VarChar(16)
-  error       String?   @db.Text
-  payload     Json
-  receivedAt  DateTime  @default(now())
-  processedAt DateTime?
+  id            String    @id @db.VarChar(80)
+  type          String    @db.VarChar(80)
+  /// received | processing | processed | failed (retried with backoff) | dead (gave up; replay by hand) | ignored
+  status        String    @default("received") @db.VarChar(16)
+  error         String?   @db.Text
+  payload       Json
+  attempts      Int       @default(0)
+  /// A failed event is retried from then on.
+  nextAttemptAt DateTime?
+  /// Claimed by one process until then, so two can't run the same event.
+  lockedUntil   DateTime?
+  /// The claim's owner; a process whose lease was taken over can't record an outcome.
+  lockToken     String?   @db.VarChar(64)
+  receivedAt    DateTime  @default(now())
+  processedAt   DateTime?
 
   @@index([status, receivedAt])
+  @@index([status, nextAttemptAt])
   @@map("stripe_events")
 }
 
@@ -927,6 +1022,11 @@ model AffiliatePayout {
   /// The bank or PayPal transaction reference entered when paid by hand.
   transactionRef   String?                @db.VarChar(120)
   error            String?                @db.Text
+  /// Stripe transfer attempts so far; after the first, Stripe is searched before sending again.
+  attempts         Int                    @default(0)
+  /// While "processing": the owner's token and lease. Only the owner may finish it; an expired lease can be taken over.
+  lockToken        String?                @db.VarChar(64)
+  lockedUntil      DateTime?
   rejectReason     String?                @db.VarChar(300)
   reviewedById     String?                @db.VarChar(64)
   reviewedAt       DateTime?
@@ -1557,11 +1657,16 @@ model NewsletterDelivery {
   campaign     NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   subscriberId String               @db.VarChar(64)
   subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
-  /// queued | sent | failed
-  status       String               @default("queued") @db.VarChar(16)
-  error        String?              @db.VarChar(500)
-  sentAt       DateTime?
-  createdAt    DateTime             @default(now())
+  /// queued (also while waiting to retry) | sent | failed (permanent, or out of retries)
+  status        String               @default("queued") @db.VarChar(16)
+  error         String?              @db.VarChar(500)
+  sentAt        DateTime?
+  attempts      Int                  @default(0)
+  /// After a temporary failure (SMTP 4xx, connection): not before then.
+  nextAttemptAt DateTime?
+  /// Claimed by one sender until then, so two can't mail the same person.
+  lockedUntil   DateTime?
+  createdAt     DateTime             @default(now())
 
   @@unique([campaignId, subscriberId])
   @@index([campaignId, status])
@@ -1640,4 +1745,171 @@ model ArtistRequest {
   @@index([lenderId, status])
   @@index([bookingId, status])
   @@map("artist_requests")
+}
+
+// ─── Equipment inventory ────────────────────────────────────────────────
+// Each agency's own gear, the packing lists on its bookings, and reusable
+// packages. Rules (availability, return states) live in core's inventory.ts;
+// writes in packages/db/src/inventory.ts and booking-equipment.ts.
+// References inside the module are composite (organizationId, id) foreign
+// keys, so MySQL itself refuses a link to another agency's rows. Quantity
+// rules are CHECK constraints in the migration SQL (Prisma doesn't model them).
+
+/// An agency's own equipment category (Speakers, Cables, …).
+model EquipmentCategory {
+  id             String                 @id @db.VarChar(64)
+  organizationId String                 @db.VarChar(64)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String                 @db.VarChar(96)
+  position       Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  items          EquipmentItem[]
+  packageLines   EquipmentPackageLine[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("equipment_categories")
+}
+
+/// One piece of equipment (tracking "unit"), counted stock such as cables
+/// (tracking "bulk"), a physical case (kind "case") or a logical set (kind "set").
+/// Unit items can sit in one case or set (containerId), one level deep.
+model EquipmentItem {
+  id                 String                 @id @db.VarChar(64)
+  organizationId     String                 @db.VarChar(64)
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// The agency's own number, upper case. Unique per agency; retired items keep theirs.
+  code               String                 @db.VarChar(32)
+  name               String                 @db.VarChar(191)
+  /// item | case | set
+  kind               String                 @default("item") @db.VarChar(8)
+  /// unit (one physical asset) | bulk (counted stock)
+  tracking           String                 @default("unit") @db.VarChar(8)
+  /// Owned stock: 1 for unit items, cases and sets. Lowered when units are confirmed lost.
+  quantity           Int                    @default(1)
+  /// Bulk only: units in stock that are damaged and can't be used.
+  defectiveQty       Int                    @default(0)
+  /// available | maintenance | defective | lost | retired. Being out on a gig is derived from the packing lists.
+  status             String                 @default("available") @db.VarChar(12)
+  /// good | fair | poor
+  condition          String                 @default("good") @db.VarChar(8)
+  categoryId         String?                @db.VarChar(64)
+  category           EquipmentCategory?     @relation(fields: [organizationId, categoryId], references: [organizationId, id], onDelete: Restrict)
+  containerId        String?                @db.VarChar(64)
+  container          EquipmentItem?         @relation("Contents", fields: [organizationId, containerId], references: [organizationId, id], onDelete: Restrict, onUpdate: Restrict)
+  contents           EquipmentItem[]        @relation("Contents")
+  manufacturer       String?                @db.VarChar(96)
+  model              String?                @db.VarChar(96)
+  /// Internal only, never shared.
+  serialNumber       String?                @db.VarChar(96)
+  powerWatts         Int?
+  batteryPowered     Boolean                @default(false)
+  /// { label: string; value: string }[]. Internal only, never shared.
+  specs              Json?
+  /// Internal only, never shared.
+  notes              String?                @db.Text
+  /// Kept private even when the agency shares its inventory.
+  excludeFromSharing Boolean                @default(false)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  bookingLines       BookingEquipment[]
+  packageLines       EquipmentPackageLine[]
+  events             EquipmentEvent[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@index([organizationId, categoryId])
+  @@index([organizationId, containerId])
+  @@map("equipment_items")
+}
+
+/// A reusable template ("DJ package A") applied to packing lists. Applying copies
+/// items onto the booking; later edits to the package don't change bookings.
+model EquipmentPackage {
+  id             String                 @id @db.VarChar(64)
+  organizationId String                 @db.VarChar(64)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String                 @db.VarChar(120)
+  description    String?                @db.Text
+  position       Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  lines          EquipmentPackageLine[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("equipment_packages")
+}
+
+/// A package line: a specific item (with a quantity for bulk stock), or
+/// "quantity unit items from this category", picked when the package is applied.
+model EquipmentPackageLine {
+  id             String             @id @db.VarChar(64)
+  organizationId String             @db.VarChar(64)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  packageId      String             @db.VarChar(64)
+  package        EquipmentPackage   @relation(fields: [organizationId, packageId], references: [organizationId, id], onDelete: Cascade)
+  itemId         String?            @db.VarChar(64)
+  item           EquipmentItem?     @relation(fields: [organizationId, itemId], references: [organizationId, id], onDelete: Cascade)
+  categoryId     String?            @db.VarChar(64)
+  category       EquipmentCategory? @relation(fields: [organizationId, categoryId], references: [organizationId, id], onDelete: Restrict)
+  quantity       Int                @default(1)
+  position       Int                @default(0)
+
+  @@index([organizationId, packageId, position])
+  @@map("equipment_package_lines")
+}
+
+/// One item on one booking's packing list. All state is counts; outstanding
+/// (loaded and not yet resolved) and the stage are derived in core.
+model BookingEquipment {
+  id             String        @id @db.VarChar(64)
+  organizationId String        @db.VarChar(64)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String        @db.VarChar(64)
+  booking        Booking       @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Restrict)
+  itemId         String        @db.VarChar(64)
+  item           EquipmentItem @relation(fields: [organizationId, itemId], references: [organizationId, id], onDelete: Restrict)
+  /// The case or set it was packed through, for grouping; a snapshot, so later membership changes don't rewrite history.
+  viaContainerId String?       @db.VarChar(64)
+  /// Planned.
+  quantity       Int
+  loadedQty      Int           @default(0)
+  /// Came back fine.
+  returnedQty    Int           @default(0)
+  /// Came back damaged (moved to the item's defective stock).
+  damagedQty     Int           @default(0)
+  /// Confirmed lost by an owner or admin.
+  lostQty        Int           @default(0)
+  /// Holds stock on the booking's date while the booking is booked or confirmed. null = not reserved (yet, or it didn't fit).
+  reservedAt     DateTime?
+  /// A same-day conflict an owner or admin accepted, with their reason.
+  overrideReason String?       @db.VarChar(191)
+  overriddenById String?       @db.VarChar(64)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([bookingId, itemId])
+  @@index([organizationId, itemId])
+  @@map("booking_equipment")
+}
+
+/// Append-only history of one item: created, edited, status, case moves, loaded, returned, damaged, lost, repaired, found.
+model EquipmentEvent {
+  id             BigInt        @id @default(autoincrement())
+  organizationId String        @db.VarChar(64)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  itemId         String        @db.VarChar(64)
+  item           EquipmentItem @relation(fields: [organizationId, itemId], references: [organizationId, id], onDelete: Cascade)
+  /// The booking it happened on, if any (no foreign key: history outlives the link).
+  bookingId      String?       @db.VarChar(64)
+  type           String        @db.VarChar(24)
+  actorId        String?       @db.VarChar(64)
+  data           Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, itemId, createdAt])
+  @@index([organizationId, bookingId])
+  @@map("equipment_events")
 }

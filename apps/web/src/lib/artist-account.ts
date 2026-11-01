@@ -1,8 +1,9 @@
 import "server-only";
 
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@stagedesk/db";
-import { absoluteUrl, deliver, userLocale } from "./mail";
+import { deliver, userLocale } from "./mail";
+import { passwordSetupUrl } from "./password-setup";
 
 export class ArtistAccountError extends Error {}
 
@@ -25,10 +26,8 @@ export async function ensureArtistAccount(input: { organizationId: string; email
 
   const needsPassword = user.accounts.length === 0;
   if (needsPassword) {
-    const token = randomBytes(32).toString("hex");
-    await prisma.verification.create({ data: { id: randomUUID(), identifier: `reset-password:${token}`, value: userId, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) } });
     const locale = userLocale(user.locale ?? input.locale);
-    deliver({ kind: "artistAccountSetup", to: email, params: { locale, name: user.name, url: absoluteUrl(locale, `/reset-password?token=${token}`) } });
+    deliver({ kind: "artistAccountSetup", to: email, params: { locale, name: user.name, url: await passwordSetupUrl(userId, locale) } });
   }
   return { userId, email, setupSent: needsPassword };
 }

@@ -11,6 +11,7 @@ import {
   deleteSubscriber,
   NewsletterError,
   prisma,
+  retryFailedDeliveries,
   saveCampaign,
   scheduleCampaign,
   startCampaign,
@@ -90,6 +91,21 @@ export async function sendNowAction(id: string): Promise<ActionResult> {
     await systemQueue.add("newsletter-send", { campaignId: id }, { removeOnComplete: 100, removeOnFail: 500 }).catch((e) => console.error("[newsletter] queue", e));
     refresh(id);
     return { ok: true, message: t("sendingStarted") };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Queues a campaign's failed deliveries again (e.g. after the SMTP settings were fixed). */
+export async function retryFailedAction(id: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.newsletter");
+  const t = await getTranslations("newsletter");
+  try {
+    const count = await retryFailedDeliveries(id);
+    await audit({ actorId: viewer.user.id, action: "newsletter.retry", targetType: "newsletter", targetId: id, data: { count } });
+    if (count > 0) await systemQueue.add("newsletter-send", { campaignId: id }, { removeOnComplete: 100, removeOnFail: 500 }).catch((e) => console.error("[newsletter] queue", e));
+    refresh(id);
+    return { ok: true, message: t("retryQueued", { count }) };
   } catch (error) {
     return failure(error);
   }

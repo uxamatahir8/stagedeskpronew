@@ -3,6 +3,8 @@ import { defineConfig, devices } from "@playwright/test";
 // End-to-end tests against the local app with demo data (`pnpm db:seed`).
 export default defineConfig({
   testDir: "./e2e",
+  // Refuses to run unless the app is local, mails to Mailpit and uses a local database.
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 120_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
@@ -19,7 +21,8 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm dev",
+    // Mail to Mailpit, whatever SMTP the root .env configures.
+    command: "pnpm --dir ../.. dev:e2e",
     url: "http://localhost:3000",
     reuseExistingServer: true,
     timeout: 120_000,

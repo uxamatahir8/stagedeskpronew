@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { subscriptionAccess } from "@stagedesk/core";
 import { startTrial } from "./billing";
 import { prisma } from "./client";
+import { purgeInventory } from "./inventory";
 import type { Prisma } from "./generated/prisma/client";
 import { getSetting } from "./settings";
 
@@ -97,8 +98,9 @@ export async function freeSlug(name: string) {
 
 /**
  * Creates an agency for someone (the platform admin sets it up for them).
- * The owner gets an account if they don't have one; they sign in with an
- * emailed code and can set a password later. Like any new agency it starts
+ * The owner gets an account if they don't have one (without a password: the
+ * web action emails a one-time link to choose one; an emailed sign-in code
+ * works too). Like any new agency it starts
  * without a plan; the owner chooses one, or the admin grants or extends one.
  */
 export async function createAgencyForOwner(input: { name: string; city: string | null; ownerName: string; ownerEmail: string; locale: "nl" | "en" }) {
@@ -178,10 +180,12 @@ export async function deleteAgency(organizationId: string) {
   if (!org) throw new AgencyAdminError("not_found");
   const c = org._count;
   if (c.bookings + c.payments + c.invoices + c.ledger > 0) throw new AgencyAdminError("has_bookings");
-  await prisma.$transaction([
-    prisma.referral.updateMany({ where: { referringAgencyId: organizationId }, data: { referringAgencyId: null } }),
-    prisma.organization.delete({ where: { id: organizationId } }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.referral.updateMany({ where: { referringAgencyId: organizationId }, data: { referringAgencyId: null } });
+    // Equipment can't be removed by the cascade alone (items in cases block it).
+    await purgeInventory(tx, [organizationId]);
+    await tx.organization.delete({ where: { id: organizationId } });
+  });
 }
 
 /** Everything the admin's agency page shows. */

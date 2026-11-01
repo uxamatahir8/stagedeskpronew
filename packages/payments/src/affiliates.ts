@@ -1,18 +1,44 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { commissionFor, commissionWindowOpen } from "@stagedesk/core";
-import { approveWithdrawal, failWithdrawal, getSetting, markWithdrawalPaid, overrideReferralWithPromo, prisma, requestWithdrawal, WithdrawalError } from "@stagedesk/db";
+import {
+  approveWithdrawal,
+  claimStripeWithdrawal,
+  completeStripeWithdrawal,
+  getSetting,
+  overrideReferralWithPromo,
+  prisma,
+  releaseStripeWithdrawal,
+  requestWithdrawal,
+  stuckWithdrawals,
+  WithdrawalError,
+} from "@stagedesk/db";
+import { isDefinitiveStripeError } from "./operations";
 
 const id = (value: string | { id: string } | null | undefined) => (typeof value === "string" ? value : (value?.id ?? null));
 
 /**
- * Creates the affiliate's promo code in Stripe so agencies can type it at
- * Checkout. All affiliates share one coupon per discount (e.g. 20% for 3 months).
+ * Makes the partner's Stripe promotion code match the partner: active while
+ * approved (and the program gives a discount), inactive otherwise. A code
+ * that no longer matches the partner's promoCode is deactivated and a new one
+ * created. Safe to run any time; the daily reconcile job runs it for all.
  */
 export async function syncAffiliatePromo(stripe: Stripe, affiliateId: string) {
   const program = await getSetting("affiliates.program");
   const affiliate = await prisma.affiliate.findUniqueOrThrow({ where: { id: affiliateId } });
-  if (affiliate.stripePromotionCodeId || program.promoDiscountBps === 0 || affiliate.status !== "approved") return affiliate.stripePromotionCodeId;
+  const wanted = affiliate.status === "approved" && program.promoDiscountBps > 0;
+
+  if (affiliate.stripePromotionCodeId) {
+    const current = await stripe.promotionCodes.retrieve(affiliate.stripePromotionCodeId);
+    if (current.code.toUpperCase() === affiliate.promoCode.toUpperCase()) {
+      if (current.active !== wanted) await stripe.promotionCodes.update(current.id, { active: wanted });
+      return wanted ? current.id : null;
+    }
+    // The code was changed here: the old one must stop working before the new one exists.
+    if (current.active) await stripe.promotionCodes.update(current.id, { active: false });
+    await prisma.affiliate.update({ where: { id: affiliateId }, data: { stripePromotionCodeId: null } });
+  }
+  if (!wanted) return null;
 
   const couponId = `affiliate-${program.promoDiscountBps}-${program.promoDiscountMonths}`;
   try {
@@ -34,6 +60,41 @@ export async function syncAffiliatePromo(stripe: Stripe, affiliateId: string) {
   );
   await prisma.affiliate.update({ where: { id: affiliateId }, data: { stripePromotionCodeId: promo.id } });
   return promo.id;
+}
+
+/** Stops a promotion code from working (before its partner is deleted). */
+export async function retireAffiliatePromo(stripe: Stripe, promotionCodeId: string) {
+  const promo = await stripe.promotionCodes.retrieve(promotionCodeId);
+  if (promo.active) await stripe.promotionCodes.update(promotionCodeId, { active: false });
+}
+
+/**
+ * Daily: every partner's code made to match (see syncAffiliatePromo), and
+ * active partner codes in Stripe whose partner no longer exists switched off.
+ */
+export async function reconcileAffiliatePromos(stripe: Stripe) {
+  let checked = 0;
+  let failed = 0;
+  const affiliates = await prisma.affiliate.findMany({ where: { OR: [{ stripePromotionCodeId: { not: null } }, { status: "approved" }] }, select: { id: true } });
+  for (const a of affiliates) {
+    try {
+      await syncAffiliatePromo(stripe, a.id);
+      checked++;
+    } catch (error) {
+      failed++;
+      console.error("[affiliates] promo reconcile failed", a.id, error);
+    }
+  }
+  let orphans = 0;
+  for await (const promo of stripe.promotionCodes.list({ active: true, limit: 100 })) {
+    const affiliateId = promo.metadata?.["affiliateId"];
+    if (!affiliateId) continue;
+    const owner = await prisma.affiliate.findUnique({ where: { id: affiliateId }, select: { stripePromotionCodeId: true } });
+    if (owner?.stripePromotionCodeId === promo.id) continue;
+    await stripe.promotionCodes.update(promo.id, { active: false });
+    orphans++;
+  }
+  return { checked, failed, orphans };
 }
 
 /** The promotion code a referred agency gets automatically at Checkout. */
@@ -180,32 +241,82 @@ export async function adjustCommissionsForCharge(charge: { payment_intent: strin
 }
 
 /**
- * Pays an approved withdrawal by Stripe transfer to the affiliate's connected
- * account. On failure the withdrawal is marked failed and its commissions stay
- * with it, so an admin can retry or pay by hand.
+ * Pays a withdrawal by Stripe transfer to the affiliate's connected account.
+ *
+ * Claimed first with a token and lease (claimStripeWithdrawal), so two
+ * clicks, the monthly run and the recovery worker never pay it twice at once.
+ * Any attempt after the first looks for an earlier transfer tagged with the
+ * withdrawal before sending (Stripe forgets idempotency keys after 24 hours).
+ * Paid is booked only by the claim's owner, and notifications can't undo it.
+ * A refusal marks it failed (retryable); an unknown outcome leaves it
+ * "processing" for the worker (recoverStripeWithdrawals) to settle.
  */
-export async function payWithdrawalByStripe(stripe: Stripe, payoutId: string, actorId: string | null) {
-  const payout = await prisma.affiliatePayout.findUniqueOrThrow({ where: { id: payoutId }, include: { affiliate: true } });
-  if (payout.method !== "stripe" || !["approved", "failed"].includes(payout.status)) throw new WithdrawalError("wrong_status");
-  if (!payout.affiliate.stripeAccountId || !payout.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
+export async function payWithdrawalByStripe(stripe: Stripe, payoutId: string, actorId: string | null, now = new Date()) {
+  const current = await prisma.affiliatePayout.findUnique({ where: { id: payoutId }, include: { affiliate: true } });
+  if (!current) throw new WithdrawalError("not_found");
+  if (current.method !== "stripe") throw new WithdrawalError("wrong_status");
+  const destination = current.affiliate.stripeAccountId;
+  if (!destination || !current.affiliate.payoutsEnabled) throw new WithdrawalError("details_missing");
+  const { payout, token, retry } = await claimStripeWithdrawal(payoutId, now);
+
+  let transferId: string | null = null;
   try {
-    const transfer = await stripe.transfers.create(
-      {
-        amount: payout.amountCents,
-        currency: "eur",
-        destination: payout.affiliate.stripeAccountId,
-        description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
-        metadata: { affiliateId: payout.affiliateId, payoutId },
-      },
-      { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
-    );
-    await markWithdrawalPaid(payoutId, actorId ?? "system", { transactionRef: transfer.id, stripeTransferId: transfer.id });
-    return transfer.id;
+    const earlier = retry ? await findWithdrawalTransfer(stripe, destination, payoutId, payout.createdAt) : null;
+    transferId =
+      earlier ??
+      (
+        await stripe.transfers.create(
+          {
+            amount: payout.amountCents,
+            currency: "eur",
+            destination,
+            description: `StageDesk partner commission ${payout.reference ?? ""}`.trim(),
+            metadata: { affiliateId: payout.affiliateId, payoutId },
+          },
+          { idempotencyKey: `affiliate-withdrawal-${payoutId}` },
+        )
+      ).id;
   } catch (error) {
-    if (error instanceof WithdrawalError) throw error;
-    await failWithdrawal(payoutId, String(error), actorId);
+    // Refused by Stripe: nothing was sent. Anything else: we can't know, so it stays processing.
+    await releaseStripeWithdrawal(payoutId, token, String(error), actorId, { failed: isDefinitiveStripeError(error) });
     throw error;
   }
+  try {
+    if (!(await completeStripeWithdrawal(payoutId, token, transferId, actorId))) {
+      // Our lease was taken over; the new owner finds this transfer and books it.
+      const now2 = await prisma.affiliatePayout.findUnique({ where: { id: payoutId }, select: { status: true, stripeTransferId: true } });
+      if (now2?.status !== "paid") throw new WithdrawalError("in_progress");
+    }
+  } catch (error) {
+    // The money went out but booking it failed: keep it processing; the worker books it from Stripe.
+    if (!(error instanceof WithdrawalError)) await releaseStripeWithdrawal(payoutId, token, `transfer ${transferId} made, booking failed: ${String(error)}`, actorId, { failed: false }).catch(() => undefined);
+    throw error;
+  }
+  return transferId;
+}
+
+/** A transfer made for this withdrawal by any earlier attempt (all pages since it was requested). */
+async function findWithdrawalTransfer(stripe: Stripe, destination: string, payoutId: string, since: Date) {
+  for await (const t of stripe.transfers.list({ destination, created: { gte: Math.floor(since.getTime() / 1000) - 60 }, limit: 100 })) {
+    if (t.metadata?.["payoutId"] === payoutId) return t.id;
+  }
+  return null;
+}
+
+/** Worker: finishes Stripe withdrawals whose process stopped or whose outcome was unknown. */
+export async function recoverStripeWithdrawals(stripe: Stripe, now = new Date()) {
+  let paid = 0;
+  let failed = 0;
+  for (const { id } of await stuckWithdrawals(now)) {
+    try {
+      await payWithdrawalByStripe(stripe, id, null, now);
+      paid++;
+    } catch (error) {
+      failed++;
+      console.error("[affiliates] withdrawal recovery failed", id, error);
+    }
+  }
+  return { paid, failed };
 }
 
 /**

@@ -17,7 +17,7 @@ type Grants = Record<"agency_admin" | "agency_staff", AgencyPermission[]>;
  * What admins and staff may do in this agency, chosen by the owner. The owner
  * column is always on; admin-only rows can't be given to staff.
  */
-export function PermissionsEditor({ initial, defaults, custom }: { initial: Grants; defaults: Grants; custom: boolean }) {
+export function PermissionsEditor({ initial, defaults, custom, unseen = false }: { initial: Grants; defaults: Grants; custom: boolean; unseen?: boolean }) {
   const t = useTranslations("permissions");
   const router = useRouter();
   const [grants, setGrants] = useState(initial);
@@ -38,7 +38,10 @@ export function PermissionsEditor({ initial, defaults, custom }: { initial: Gran
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm text-muted-foreground">{t("intro")}</p>
+        <div className="grid max-w-2xl gap-2">
+          <p className="text-sm text-muted-foreground">{t("intro")}</p>
+          {unseen && <p className="rounded-lg border border-info/40 bg-info/10 p-3 text-sm">{t("newPermissionsNotice")}</p>}
+        </div>
         <div className="flex gap-2">
           {custom && (
             <Button variant="outline" disabled={pending} onClick={() => window.confirm(t("resetConfirm")) && save(null)}>

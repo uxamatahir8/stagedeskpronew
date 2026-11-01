@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, BoxesIcon, CalendarIcon, ClockIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -43,7 +43,8 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
   if (!assignment) notFound();
   const b = assignment.booking;
 
-  const [t, format] = await Promise.all([getTranslations(), getFormatter()]);
+  // Equipment for this gig, read through the assignment found above (the booking may be another agency's).
+  const [t, format, equipmentLines] = await Promise.all([getTranslations(), getFormatter(), prisma.bookingEquipment.count({ where: { bookingId: b.id } })]);
   const today = todayInNetherlands();
   const eventReached = b.eventDate !== null && b.eventDate.toISOString().slice(0, 10) <= today;
   const dos = listOf(b.dos);
@@ -68,6 +69,14 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
         {assignment.status === "pending" && <RespondGig assignmentId={assignment.id} />}
         <div className="flex flex-wrap gap-2">
           {assignment.status === "accepted" && b.status === "confirmed" && eventReached && <CompleteGig assignmentId={assignment.id} />}
+          {equipmentLines > 0 && (
+            <Button asChild variant="outline" size="sm">
+              <Link href={`/app/gigs/${b.trackingCode}/equipment`}>
+                <BoxesIcon />
+                {t("equipment.title")}
+              </Link>
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm">
             <Link href={`/app/messages/${b.trackingCode}?channel=artist`}>
               <MessagesSquareIcon />

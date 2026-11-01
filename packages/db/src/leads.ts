@@ -1,8 +1,9 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { generateTrackingCode, isBudgetRange, type EventType, type QuoteLineInput } from "@stagedesk/core";
-import { createBooking, resolveBookingCustomer, toDateOnly } from "./bookings";
+import { insertBooking, resolveBookingCustomerTx, toDateOnly } from "./bookings";
 import { prisma } from "./client";
-import type { Prisma } from "./generated/prisma/client";
+import { Prisma } from "./generated/prisma/client";
+import { tenantDb } from "./tenant";
 
 export class LeadError extends Error {
   constructor(readonly code: "not_found" | "taken" | "closed" | "agency_suspended" | "not_offered" | "customer_on_team") {
@@ -125,51 +126,69 @@ export async function offerLead(leadId: string, agencyIds: string[]) {
 
 /**
  * Gives the lead to one agency: it becomes a booking there (source "lead") and
- * the customer an agency customer. Claimed with a conditional update first, so
- * two agencies accepting at the same moment can't both get it.
+ * the customer an agency customer. Everything happens in one transaction: the
+ * claim (a conditional update, so two agencies accepting at the same moment
+ * can't both get it), the customer, the booking, the link and every offer's
+ * outcome. A failure anywhere leaves the lead open as it was, with no booking.
+ *
+ * `chosenOfferId`: the customer picked this provider's price (marketplace);
+ * the other offers are then "lost" rather than "withdrawn".
  */
-export async function assignLead(leadId: string, agencyId: string, actorId: string | null) {
+export async function assignLead(leadId: string, agencyId: string, actorId: string | null, opts: { chosenOfferId?: string } = {}) {
   const agency = await prisma.organization.findUnique({ where: { id: agencyId }, select: { id: true, name: true, suspendedAt: true } });
   if (!agency) throw new LeadError("not_found");
   if (agency.suspendedAt) throw new LeadError("agency_suspended");
-  const claimed = await prisma.lead.updateMany({ where: { id: leadId, status: { in: ["new", "offered"] } }, data: { status: "assigned", assignedAgencyId: agencyId } });
-  if (claimed.count === 0) {
-    const lead = await prisma.lead.findUnique({ where: { id: leadId }, select: { status: true } });
-    throw new LeadError(!lead ? "not_found" : lead.status === "closed" ? "closed" : "taken");
-  }
-  const lead = await prisma.lead.findUniqueOrThrow({ where: { id: leadId } });
-  try {
-    const customerId = await resolveBookingCustomer(agencyId, { mode: "new", name: lead.name, email: lead.email, phone: lead.phone });
-    if (!customerId) throw new LeadError("customer_on_team");
-    const booking = await createBooking(
-      agencyId,
-      {
-        customerId,
-        eventType: lead.eventType as EventType,
-        eventDate: lead.eventDate ? lead.eventDate.toISOString().slice(0, 10) : null,
-        startTime: lead.startTime,
-        venueName: lead.venueName,
-        venueCity: lead.venueCity,
-        guestCount: lead.guestCount,
-        message: lead.message,
-        partnerName: lead.partnerName,
-        ceremony: lead.ceremony,
-        preferredGenre: lead.preferredGenre,
-        budgetRange: lead.budgetRange,
-        source: "lead",
-      },
-      actorId,
-    );
-    await prisma.$transaction([
-      prisma.lead.update({ where: { id: leadId }, data: { bookingId: booking.id } }),
-      prisma.leadOffer.updateMany({ where: { leadId, agencyId, status: "pending" }, data: { status: "accepted", respondedById: actorId, respondedAt: new Date() } }),
-      prisma.leadOffer.updateMany({ where: { leadId, agencyId: { not: agencyId }, status: "pending" }, data: { status: "withdrawn" } }),
-    ]);
-    return { lead, booking, agency };
-  } catch (error) {
-    // Put the lead back so it can go to someone else.
-    await prisma.lead.update({ where: { id: leadId }, data: { status: "offered", assignedAgencyId: null } });
-    throw error;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const { lead, booking, others } = await tenantDb(agencyId).$transaction(async (tx) => {
+        const claimed = await tx.lead.updateMany({ where: { id: leadId, status: { in: ["new", "offered"] } }, data: { status: "assigned", assignedAgencyId: agencyId } });
+        if (claimed.count === 0) {
+          const current = await tx.lead.findUnique({ where: { id: leadId }, select: { status: true } });
+          throw new LeadError(!current ? "not_found" : current.status === "closed" ? "closed" : "taken");
+        }
+        const lead = await tx.lead.findUniqueOrThrow({ where: { id: leadId } });
+        const customerId = await resolveBookingCustomerTx(tx, agencyId, { mode: "new", name: lead.name, email: lead.email, phone: lead.phone });
+        if (!customerId) throw new LeadError("customer_on_team");
+        const booking = await insertBooking(
+          tx,
+          agencyId,
+          {
+            customerId,
+            eventType: lead.eventType as EventType,
+            eventDate: lead.eventDate ? lead.eventDate.toISOString().slice(0, 10) : null,
+            startTime: lead.startTime,
+            venueName: lead.venueName,
+            venueCity: lead.venueCity,
+            guestCount: lead.guestCount,
+            message: lead.message,
+            partnerName: lead.partnerName,
+            ceremony: lead.ceremony,
+            preferredGenre: lead.preferredGenre,
+            budgetRange: lead.budgetRange,
+            source: "lead",
+          },
+          actorId,
+        );
+        const now = new Date();
+        const open = { leadId, agencyId: { not: agencyId }, status: { in: ["pending", "quoted", "withdrawn"] } };
+        const others = (await tx.leadOffer.findMany({ where: open, select: { agencyId: true } })).map((o) => o.agencyId);
+        await tx.lead.update({ where: { id: leadId }, data: { bookingId: booking.id } });
+        if (opts.chosenOfferId) {
+          const chosen = await tx.leadOffer.updateMany({ where: { id: opts.chosenOfferId, leadId, agencyId, status: "quoted" }, data: { status: "accepted" } });
+          if (chosen.count !== 1) throw new LeadError("not_offered");
+          await tx.leadOffer.updateMany({ where: open, data: { status: "lost" } });
+        } else {
+          await tx.leadOffer.updateMany({ where: { leadId, agencyId, status: { in: ["pending", "quoted"] } }, data: { status: "accepted", respondedById: actorId, respondedAt: now } });
+          await tx.leadOffer.updateMany({ where: { ...open, status: { in: ["pending", "quoted"] } }, data: { status: "withdrawn" } });
+        }
+        return { lead, booking, others };
+      });
+      return { lead, booking, agency, lostTo: others };
+    } catch (error) {
+      // A tracking-code clash or a new customer account created at the same moment: try again from the start.
+      if (attempt < 3 && error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") continue;
+      throw error;
+    }
   }
 }
 

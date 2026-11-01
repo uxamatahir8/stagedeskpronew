@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { markTrialUsed, planTrialDays, prisma, trialEligible } from "@stagedesk/db";
+import { markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
 import { referralPromotionCode } from "./affiliates";
 
 export class PaymentsError extends Error {
-  constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount") {
+  constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount" | "operation_in_progress" | "refund_refused") {
     super(`Payments: ${code}`);
     this.name = "PaymentsError";
   }
@@ -111,7 +111,7 @@ export async function billingPortal(stripe: Stripe, organizationId: string, retu
 const knownStatuses = new Set(["trialing", "active", "past_due", "unpaid", "canceled", "incomplete"]);
 
 /** Mirrors a Stripe subscription onto the agency's subscription row. */
-export async function applyStripeSubscription(sub: Stripe.Subscription, now = new Date()) {
+export async function applyStripeSubscription(sub: Stripe.Subscription, now = new Date(), opts: { authoritative?: boolean } = {}) {
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id;
   const organizationId =
     sub.metadata["organizationId"] ??
@@ -123,8 +123,34 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
   const plan = priceId
     ? await prisma.plan.findFirst({ where: { OR: [{ stripeMonthlyPriceId: priceId }, { stripeYearlyPriceId: priceId }] } })
     : null;
-  const existing = await prisma.subscription.findUnique({ where: { organizationId } });
-  const planId = plan?.id ?? sub.metadata["planId"] ?? existing?.planId;
+  // One writer per agency at a time: the agency row is locked, then the record read and written
+  // (READ COMMITTED, so the read sees what a writer before us committed). Two first-time writes
+  // used to both try to create the row.
+  if (sub.trial_end) await markTrialUsed(organizationId, now);
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+      return writeSubscription(tx, organizationId, sub, plan?.id ?? null, now, opts);
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+  );
+}
+
+async function writeSubscription(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  sub: Stripe.Subscription,
+  matchedPlanId: string | null,
+  now: Date,
+  opts: { authoritative?: boolean },
+) {
+  const item = sub.items.data[0];
+  const existing = await tx.subscription.findUnique({ where: { organizationId } });
+  // Only syncAgencySubscriptions (which has looked at all of the customer's subscriptions)
+  // may move the agency to another subscription than the one it has while that one is live.
+  // Any other caller acting on a different subscription leaves the record alone.
+  if (!opts.authoritative && existing?.stripeSubscriptionId && existing.stripeSubscriptionId !== sub.id && isLive(existing.status)) return existing;
+  const planId = matchedPlanId ?? sub.metadata["planId"] ?? existing?.planId;
   if (!planId) return null;
 
   const status = knownStatuses.has(sub.status) ? sub.status : "incomplete";
@@ -141,11 +167,74 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
     // A paid Stripe subscription replaces a plan the admin granted by hand.
     complimentary: false,
   };
-  // A Stripe trial counts as the agency's one trial.
-  if (sub.trial_end) await markTrialUsed(organizationId, now);
-  return prisma.subscription.upsert({
+  return tx.subscription.upsert({
     where: { organizationId },
     create: { id: randomUUID(), organizationId, ...data },
     update: data,
   });
+}
+
+const LIVE_STATUSES = ["active", "trialing", "past_due", "unpaid"];
+const isLive = (status: string | null | undefined) => LIVE_STATUSES.includes(status ?? "");
+
+type SubLike = Pick<Stripe.Subscription, "id" | "status" | "created">;
+
+/**
+ * Which of a customer's subscriptions the agency runs on, decided from all of
+ * them at once, so the answer doesn't depend on the order events arrive in:
+ * the earliest-created live one (ties: smaller id); with none live, the most
+ * recent one. Every other live one is a duplicate (it bills the customer too).
+ */
+export function authoritativeSubscription<T extends SubLike>(subs: readonly T[]): { chosen: T | null; duplicates: T[] } {
+  const live = subs.filter((s) => isLive(s.status)).sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
+  if (live.length > 0) return { chosen: live[0]!, duplicates: live.slice(1) };
+  const latest = [...subs].sort((a, b) => b.created - a.created || b.id.localeCompare(a.id))[0] ?? null;
+  return { chosen: latest, duplicates: [] };
+}
+
+/**
+ * Brings an agency's subscription record in line with Stripe: reads all of the
+ * customer's subscriptions, applies the authoritative one (see above), and
+ * opens a billing incident when more than one is live (resolved again once
+ * only one is). Never cancels anything in Stripe: which one to keep (and any
+ * refund) is the operator's decision. Webhooks, the checkout return and the
+ * admin's "Reconcile" all go through here.
+ */
+export async function syncAgencySubscriptions(stripe: Stripe, customerId: string, now = new Date()) {
+  const org = await prisma.organization.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true } });
+  const subs: Stripe.Subscription[] = [];
+  for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) subs.push(sub);
+  const organizationId = org?.id ?? subs.find((s) => s.metadata?.["organizationId"])?.metadata["organizationId"];
+  if (!organizationId) return null;
+  const mine = subs.filter((s) => !s.metadata?.["organizationId"] || s.metadata["organizationId"] === organizationId);
+  const { chosen, duplicates } = authoritativeSubscription(mine);
+  const record = chosen ? await applyStripeSubscription(chosen, now, { authoritative: true }) : null;
+  await recordDuplicateSubscriptions(organizationId, customerId, chosen?.id ?? null, duplicates.map((d) => d.id), now);
+  return { record, chosen: chosen?.id ?? null, duplicates: duplicates.map((d) => d.id) };
+}
+
+/** Opens (or updates) the agency's duplicate-subscription incident, or resolves it when there are no duplicates. */
+async function recordDuplicateSubscriptions(agencyId: string, customerId: string, authoritative: string | null, duplicates: string[], now: Date) {
+  const openKey = `${agencyId}:duplicate_subscription`;
+  if (duplicates.length === 0) {
+    await prisma.billingIncident.updateMany({ where: { openKey }, data: { status: "resolved", openKey: null, resolvedAt: now, note: "Only one live subscription left in Stripe." } });
+    return;
+  }
+  const data = { authoritative, duplicates, customerId };
+  const updated = await prisma.billingIncident.updateMany({ where: { openKey }, data: { data } });
+  if (updated.count > 0) return;
+  try {
+    await prisma.billingIncident.create({ data: { id: randomUUID(), agencyId, kind: "duplicate_subscription", status: "open", openKey, data } });
+    console.error(`[billing] agency ${agencyId} has ${duplicates.length + 1} live Stripe subscriptions; incident opened (keeping ${authoritative})`);
+  } catch (error) {
+    // Opened by a simultaneous sync: update that one instead.
+    if ((error as { code?: string }).code !== "P2002") throw error;
+    await prisma.billingIncident.updateMany({ where: { openKey }, data: { data } });
+  }
+}
+
+/** Operator: marks an incident handled (e.g. after cancelling the duplicate in Stripe and refunding). A later sync reopens it if duplicates remain. */
+export async function resolveBillingIncident(id: string, actorId: string, note: string | null, now = new Date()) {
+  const done = await prisma.billingIncident.updateMany({ where: { id, status: "open" }, data: { status: "resolved", openKey: null, resolvedAt: now, resolvedById: actorId, note: note?.slice(0, 2000) || null } });
+  return done.count === 1;
 }

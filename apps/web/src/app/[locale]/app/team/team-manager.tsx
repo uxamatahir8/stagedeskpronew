@@ -2,7 +2,7 @@
 
 import { MailPlusIcon, Trash2Icon, UserPlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 import type { Role } from "@stagedesk/core";
 import { FormField } from "@/components/form-field";
@@ -64,8 +64,12 @@ export function InviteDialog() {
   const [role, setRole] = useState<(typeof invitable)[number]>("agency_staff");
   const [pending, setPending] = useState(false);
 
-  async function invite(form: FormData) {
-    const email = String(form.get("email")).trim();
+  // onSubmit, not a form action: React resets an action's form when it finishes, which wiped the
+  // address when an invitation was refused.
+  async function invite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+    const email = String(new FormData(event.currentTarget).get("email")).trim();
     setPending(true);
     const { error } = await inviteMemberAction(email, role);
     setPending(false);
@@ -88,7 +92,7 @@ export function InviteDialog() {
           <DialogTitle>{t("team.inviteTitle")}</DialogTitle>
           <DialogDescription>{t("team.inviteBody")}</DialogDescription>
         </DialogHeader>
-        <form action={invite} className="grid gap-4">
+        <form onSubmit={invite} className="grid gap-4">
           <FormField id="invite-email" label={t("auth.email")}>
             <Input id="invite-email" name="email" type="email" required autoComplete="off" />
           </FormField>

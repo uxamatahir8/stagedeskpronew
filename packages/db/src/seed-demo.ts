@@ -116,6 +116,8 @@ export async function seedDemo(prisma: PrismaClient) {
 
   await seedBookingData(prisma, ids);
   await seedBookingPage(prisma);
+  const { seedInventory } = await import("./seed-inventory");
+  await seedInventory(prisma, { feest: ids.get("eigenaar@feestband.local")!, rot: ids.get("eigenaar@rotterdamdj.local")! });
 }
 
 /** Booking page content and one approved review for Feestband. Fills only what's empty. */

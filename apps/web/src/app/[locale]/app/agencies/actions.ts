@@ -24,6 +24,7 @@ import type { ActionResult } from "@/lib/actions";
 import { announceNewBooking } from "@/lib/announce";
 import { newBookingSchema, translateErrors } from "@/lib/booking-form";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
+import { hasPassword, passwordSetupUrl } from "@/lib/password-setup";
 import { clientIp } from "@/lib/rate-limit";
 import type { FormState } from "@/lib/validation";
 import { requirePermission } from "@/lib/viewer";
@@ -63,10 +64,18 @@ export async function createAgencyAction(input: z.input<typeof createSchema>): P
   try {
     const result = await createAgencyForOwner({ name: d.name, city: d.city, ownerName: d.ownerName, ownerEmail: d.ownerEmail, locale: d.locale });
     if (d.sendEmail) {
+      // An owner without a password gets a one-time link to choose one; the rest sign in as usual.
+      const setup = !(await hasPassword(result.ownerId));
       deliver({
         kind: "agencyCreated",
         to: result.email,
-        params: { locale: d.locale, name: d.ownerName.split(/\s+/)[0] ?? d.ownerName, agency: result.organization.name, url: absoluteUrl(d.locale, "/sign-in") },
+        params: {
+          locale: d.locale,
+          name: d.ownerName.split(/\s+/)[0] ?? d.ownerName,
+          agency: result.organization.name,
+          url: setup ? await passwordSetupUrl(result.ownerId, d.locale) : absoluteUrl(d.locale, "/sign-in"),
+          setup,
+        },
       });
     }
     await audit({ actorId: viewer.user.id, action: "agency.create", agencyId: result.organization.id, data: { owner: result.email, newUser: result.newUser }, ip: clientIp(await headers()) });
