@@ -74,13 +74,19 @@ test("an agency builds and publishes its website, also on its own domain", async
     await rotterdam.getByLabel("Domein", { exact: true }).fill(domain);
     await rotterdam.getByRole("button", { name: "Domein toevoegen" }).click();
     await expect(rotterdam.getByText("Domein toegevoegd.", { exact: false })).toBeVisible();
-    await rotterdam.getByRole("button", { name: "Controleren" }).click();
+    // This run's domain only: a domain left by an interrupted earlier run may be listed too.
+    const row = rotterdam
+      .locator("div")
+      .filter({ hasText: domain })
+      .filter({ has: rotterdam.getByRole("button", { name: "Verwijderen" }) })
+      .last();
+    await row.getByRole("button", { name: "Controleren" }).click();
     await expect(rotterdam.getByText("Domein gekoppeld.")).toBeVisible();
 
     await visitor.goto(`http://${domain}:3000/`);
     await expect(visitor.getByText("Rotterdam DJ Collectief").first()).toBeVisible();
 
-    await rotterdam.getByRole("button", { name: "Verwijderen" }).click();
+    await row.getByRole("button", { name: "Verwijderen" }).click();
     await expect(rotterdam.getByText("Domein verwijderd.")).toBeVisible();
   });
 });
