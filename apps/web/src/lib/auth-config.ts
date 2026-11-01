@@ -7,7 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
-import { agencyBilling, agencyDeskUserIds, agencyUsage, changeMemberRoleWithinSeats, confirmInvitationSeat, confirmPendingForEmail, getSetting, notify, prisma, SeatLimitError } from "@stagedesk/db";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmInvitationSeat, confirmJoinedSeat, confirmMemberSeat, confirmPendingForEmail, getSetting, notify, prisma, takesStaffSeat } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
@@ -43,6 +43,21 @@ const billingText = (locale: EmailLocale) => createTranslator({ locale, messages
 function seatsFull(max: number, locale: EmailLocale) {
   const t = billingText(locale);
   return new APIError("FORBIDDEN", { message: t("limitReached", { max: String(max), limit: t("limit_maxStaff") }), code: "STAFF_SEATS_FULL", max });
+}
+
+/**
+ * Invitations being created right now, by agency and address. Better Auth calls beforeCreateInvitation
+ * only for a new invitation, then sendInvitationEmail for both new ones and resends; this tells them
+ * apart within the same request.
+ */
+const newInvitations = new Map<string, number>();
+const invitationKey = (organizationId: string, email: string) => `${organizationId}:${email.toLowerCase()}`;
+function takeNewInvitation(organizationId: string, email: string) {
+  const key = invitationKey(organizationId, email);
+  const at = newInvitations.get(key);
+  newInvitations.delete(key);
+  for (const [k, t] of newInvitations) if (Date.now() - t > 60_000) newInvitations.delete(k);
+  return at !== undefined && Date.now() - at < 60_000;
 }
 
 const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
@@ -173,9 +188,15 @@ export const auth = betterAuth({
           const [{ access, limits }, usage] = await Promise.all([agencyBilling(invitation.organizationId), agencyUsage(invitation.organizationId)]);
           if (access.level === "read_only") throw new APIError("FORBIDDEN", { message: t("readOnly") });
           if (invitation.role !== "artist" && !withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, localeOf(inviter));
+          newInvitations.set(invitationKey(invitation.organizationId, invitation.email), Date.now());
         },
-        // An artist's account is linked to their profile by the agency; tell it someone is waiting.
-        afterAcceptInvitation: async ({ member, user, organization }) => {
+        afterAcceptInvitation: async ({ invitation, member, user, organization }) => {
+          // Better Auth marks the invitation accepted before creating the member, so for a moment its
+          // seat looks free to other changes; if one took it, this join is undone.
+          if (takesStaffSeat(member.role) && !(await confirmJoinedSeat(organization.id, member.id, invitation.id))) {
+            throw seatsFull((await agencyBilling(organization.id)).limits.maxStaff ?? 0, localeOf(user));
+          }
+          // An artist's account is linked to their profile by the agency; tell it someone is waiting.
           if (member.role !== "artist") return;
           if (await prisma.artist.findFirst({ where: { organizationId: organization.id, userId: user.id }, select: { id: true } })) return;
           await notify(await agencyDeskUserIds(organization.id, ["agency_owner", "agency_admin"]), { type: "artist_joined", data: { name: user.name }, url: "/app/artists" });
@@ -187,19 +208,32 @@ export const auth = betterAuth({
           const current = await prisma.invitation.findUnique({ where: { id: invitation.id }, select: { status: true } });
           if (current?.status === "canceled") throw seatsFull((await agencyBilling(invitation.organizationId)).limits.maxStaff ?? 0, localeOf(inviter));
         },
+        // Better Auth has checked who may change roles by now. It writes the role after this
+        // hook returns, so the check here only refuses early; afterUpdateMemberRole decides.
+        // The hooks don't know who's asking: the team action translates the error by its code.
         beforeUpdateMemberRole: async ({ member, newRole, organization }) => {
           if (member.role === "customer" || !assignableRoles.has(newRole)) {
             throw new APIError("BAD_REQUEST", { message: "This role change isn't allowed." });
           }
-          // Better Auth has checked who may change roles; the seat check and the change happen
-          // together under the agency's lock (an artist becoming staff takes a seat).
+          if (takesStaffSeat(newRole) && !takesStaffSeat(member.role)) {
+            const [{ limits }, usage] = await Promise.all([agencyBilling(organization.id), agencyUsage(organization.id)]);
+            if (!withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, "en");
+          }
+        },
+        // Re-counts under the agency's lock once the role is written and undoes it when the seats
+        // are over (another change got in between), so the request fails with nothing changed.
+        afterUpdateMemberRole: async ({ member, previousRole, organization }) => {
+          let kept: boolean;
           try {
-            await changeMemberRoleWithinSeats(organization.id, member.id, newRole);
+            kept = await confirmMemberSeat(organization.id, member.id, previousRole);
           } catch (error) {
-            // The hook doesn't know who's asking; the team action translates this by its code.
-            if (error instanceof SeatLimitError) throw seatsFull(error.max, "en");
+            // Couldn't check: don't leave an unchecked seat behind a failed request.
+            if (takesStaffSeat(member.role) && !takesStaffSeat(previousRole)) {
+              await prisma.member.updateMany({ where: { id: member.id, role: member.role }, data: { role: previousRole } }).catch(() => undefined);
+            }
             throw error;
           }
+          if (!kept) throw seatsFull((await agencyBilling(organization.id)).limits.maxStaff ?? 0, "en");
         },
       },
       schema: {
@@ -218,8 +252,9 @@ export const auth = betterAuth({
         },
       },
       sendInvitationEmail: async ({ id, role, email, organization, inviter }) => {
-        // Over the seat limit (a race with another invitation or promotion) it's canceled, not sent.
-        if (!(await confirmInvitationSeat(organization.id, id))) return;
+        // A new invitation over the seat limit (a race with another invitation or promotion) is
+        // canceled, not sent. A resend takes no new seat, so it's simply sent again.
+        if (takeNewInvitation(organization.id, email) && !(await confirmInvitationSeat(organization.id, id))) return;
         const locale = localeOf(inviter.user);
         deliver({
           kind: "invitation",

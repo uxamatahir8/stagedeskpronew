@@ -81,18 +81,13 @@ export async function agencyUsage(organizationId: string, now = new Date()) {
   return { maxArtists, maxStaff, maxBookingsPerMonth, storageGb: 0 };
 }
 
-export class SeatLimitError extends Error {
-  constructor(readonly max: number) {
-    super(`Staff seats: all ${max} in use`);
-    this.name = "SeatLimitError";
-  }
-}
-
 /**
- * Seat changes for one agency run one at a time: each locks the agency row,
+ * Seat checks for one agency run one at a time: each locks the agency row,
  * counts at READ COMMITTED (so it sees what the one before it committed) and
- * writes before letting go. Two promotions, or a promotion and an invitation,
- * can't both take the last seat.
+ * undoes its own change before letting go when the seats are over. Every
+ * change that takes a seat is written first and checked after, so whichever
+ * check runs last sees them all: two promotions, a promotion and an
+ * invitation, or either and an acceptance can't all keep a seat.
  */
 async function withSeatLock<T>(organizationId: string, fn: (tx: Prisma.TransactionClient, used: number, max: number | null) => Promise<T>, now = new Date()) {
   const { limits } = await agencyBilling(organizationId, now);
@@ -106,18 +101,41 @@ async function withSeatLock<T>(organizationId: string, fn: (tx: Prisma.Transacti
 }
 
 /**
- * Changes a member's role, checking staff seats when the change takes one
- * (artist to staff, admin or owner). Moving between staff roles keeps the
- * seat; becoming an artist frees it. Throws SeatLimitError when all are in use.
+ * Re-counts seats after a member was given a staff role (Better Auth has
+ * written it by then). Over the limit, the change is undone, back to
+ * `previousRole`, and this returns false. Changes that don't take a seat
+ * (staff to staff, anything to artist) always pass.
  */
-export async function changeMemberRoleWithinSeats(organizationId: string, memberId: string, role: string, now = new Date()) {
+export async function confirmMemberSeat(organizationId: string, memberId: string, previousRole: string, now = new Date()) {
+  if (takesStaffSeat(previousRole)) return true;
   return withSeatLock(
     organizationId,
     async (tx, used, max) => {
       const member = await tx.member.findFirst({ where: { id: memberId, organizationId }, select: { role: true } });
-      if (!member) return null;
-      if (takesStaffSeat(role) && !takesStaffSeat(member.role) && max !== null && used >= max) throw new SeatLimitError(max);
-      return tx.member.update({ where: { id: memberId }, data: { role } });
+      if (!member || !takesStaffSeat(member.role) || max === null || used <= max) return true;
+      await tx.member.update({ where: { id: memberId }, data: { role: previousRole } });
+      return false;
+    },
+    now,
+  );
+}
+
+/**
+ * Re-counts seats after someone joined from a staff invitation. Accepting
+ * marks the invitation accepted before the member exists, so for a moment
+ * its seat looks free; a promotion made then can't be told apart afterwards.
+ * Over the limit, the new member is removed and the invitation canceled, and
+ * this returns false.
+ */
+export async function confirmJoinedSeat(organizationId: string, memberId: string, invitationId: string, now = new Date()) {
+  return withSeatLock(
+    organizationId,
+    async (tx, used, max) => {
+      const member = await tx.member.findFirst({ where: { id: memberId, organizationId }, select: { role: true } });
+      if (!member || !takesStaffSeat(member.role) || max === null || used <= max) return true;
+      await tx.member.delete({ where: { id: memberId } });
+      await tx.invitation.updateMany({ where: { id: invitationId, organizationId }, data: { status: "canceled" } });
+      return false;
     },
     now,
   );

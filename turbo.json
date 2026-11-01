@@ -27,6 +27,10 @@
     "@stagedesk/payments#test": {
       "dependsOn": ["generate", "^generate", "@stagedesk/db#test"],
       "env": ["DATABASE_URL", "TEST_DATABASE_URL"]
+    },
+    "@stagedesk/web#test": {
+      "dependsOn": ["generate", "^generate", "@stagedesk/payments#test"],
+      "env": ["DATABASE_URL", "TEST_DATABASE_URL"]
     }
   }
 }
