@@ -1,4 +1,5 @@
-import { expect, type APIRequestContext, test } from "@playwright/test";
+import { expect, type APIRequestContext } from "@playwright/test";
+import { test } from "./fixtures";
 import { ADMIN_EMAIL, acceptTerms, DEMO_PASSWORD, signIn } from "./helpers";
 
 const MAILPIT = "http://localhost:8025";

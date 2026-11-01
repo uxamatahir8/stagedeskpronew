@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures";
 
 // Chrome asks permission before a website may reach a local address. A real agency
 // site and StageDesk are both public, so that prompt never applies; turn it off here.

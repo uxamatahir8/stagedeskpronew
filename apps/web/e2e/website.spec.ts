@@ -1,4 +1,5 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./fixtures";
 import { ADMIN_EMAIL, acceptTerms, settleOnDashboard, signIn, submitSignIn } from "./helpers";
 
 /** Fills a new page in both languages in the page builder. */

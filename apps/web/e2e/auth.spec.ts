@@ -1,4 +1,5 @@
-import { type APIRequestContext, type Browser, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, type Browser, expect, type Page } from "@playwright/test";
+import { test } from "./fixtures";
 import { ADMIN_EMAIL, passwordFor, settleOnDashboard } from "./helpers";
 
 /**

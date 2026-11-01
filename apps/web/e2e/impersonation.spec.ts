@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures";
 import { ADMIN_EMAIL, signIn } from "./helpers";
 
 // The platform admin who logs in as someone else; override when your local admin has another password.

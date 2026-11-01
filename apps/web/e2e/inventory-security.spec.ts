@@ -1,4 +1,5 @@
-import { type APIRequestContext, expect, type Page, type Request, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, type Request } from "@playwright/test";
+import { test } from "./fixtures";
 import { signIn } from "./helpers";
 
 /**

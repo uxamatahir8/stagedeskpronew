@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures";
 import { signIn } from "./helpers";
 
 const MAILPIT = "http://localhost:8025/api/v1";

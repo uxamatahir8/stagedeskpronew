@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures";
 import { ADMIN_EMAIL, ADMIN_NAME, signIn } from "./helpers";
 
 /** The platform admin manages agencies, partners and accounts by hand. */

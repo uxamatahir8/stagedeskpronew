@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures";
 import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /** Phase 5: the platform admin edits platform rules and a per-agency fee deal. */
