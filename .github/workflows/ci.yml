@@ -145,7 +145,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-      - run: pnpm --filter @stagedesk/db deploy
+      - run: pnpm --filter @stagedesk/db run deploy
       - run: pnpm db:seed
       - run: pnpm --filter @stagedesk/web exec playwright install --with-deps chromium
       - run: pnpm --filter @stagedesk/web e2e
