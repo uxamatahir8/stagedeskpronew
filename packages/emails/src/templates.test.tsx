@@ -1,7 +1,7 @@
 import { render } from "@react-email/render";
 import { describe, expect, it } from "vitest";
 import { emailSamples, type EmailJob, previewEmailJob } from "./index";
-import { AffiliatePayout, Invitation, LoginCode, VerifyEmail } from "./templates";
+import { AffiliateApproved, AffiliatePayout, Invitation, LoginCode, VerifyEmail } from "./templates";
 
 describe("email templates", () => {
   it("renders the verification link in both languages", async () => {
@@ -34,6 +34,18 @@ describe("email templates", () => {
     );
     expect(text).toContain("2 approved commissions");
     expect(text).toContain("Rotterdam DJ Collectief · €37.25");
+  });
+
+  it("sends a partner without a password to the setup link, others to sign in", async () => {
+    const setup = await render(
+      <AffiliateApproved locale="nl" name="Pim" link="http://x/?via=pim" promo="PIM20" url="http://x/nl/reset-password?token=t&setup=1" setup />,
+      { plainText: true },
+    );
+    expect(setup).toContain("Wachtwoord kiezen");
+    expect(setup).toContain("Kies binnen 24 uur je wachtwoord");
+    const signIn = await render(<AffiliateApproved locale="en" name="Pim" link="http://x/?via=pim" promo="PIM20" url="http://x/sign-in" />, { plainText: true });
+    expect(signIn).toContain("Open your partner dashboard");
+    expect(signIn).not.toContain("password");
   });
 });
 

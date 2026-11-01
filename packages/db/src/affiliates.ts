@@ -331,7 +331,8 @@ export class AffiliateAdminError extends Error {
 
 /**
  * The platform admin adds a partner directly (no application needed). An
- * account is created for a new email; they sign in with an emailed code.
+ * account is created for a new email, without a password: the web action
+ * emails a one-time link to choose one (an emailed sign-in code works too).
  */
 export async function createAffiliateByAdmin(input: { name: string; email: string; code: string | null; website: string | null; commissionBps: number | null; locale: "nl" | "en" }) {
   const email = input.email.trim().toLowerCase();

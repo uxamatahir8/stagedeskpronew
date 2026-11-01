@@ -13,6 +13,7 @@ import { referralLink } from "@/lib/affiliate";
 import { paymentsErrorMessage } from "@/lib/billing";
 import { euro } from "@/lib/format";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
+import { hasPassword, passwordSetupUrl } from "@/lib/password-setup";
 import { requirePermission } from "@/lib/viewer";
 
 const done = () => revalidatePath("/[locale]/app", "layout");
@@ -212,10 +213,19 @@ export async function createPartnerAction(input: z.input<typeof partnerSchema>):
     if (stripe) await syncAffiliatePromo(stripe, affiliate.id).catch((error) => console.error("[affiliates] promo sync failed", error));
     if (parsed.data.sendEmail) {
       const locale = parsed.data.locale;
+      // An account without a password (new, or created by a booking) gets a one-time link to choose one.
+      const setup = !(await hasPassword(affiliate.userId));
       deliver({
         kind: "affiliateApproved",
         to: affiliate.user.email,
-        params: { locale, name: parsed.data.name.split(/\s+/)[0] ?? parsed.data.name, link: referralLink(affiliate.code), promo: affiliate.promoCode, url: absoluteUrl(locale, "/sign-in") },
+        params: {
+          locale,
+          name: parsed.data.name.split(/\s+/)[0] ?? parsed.data.name,
+          link: referralLink(affiliate.code),
+          promo: affiliate.promoCode,
+          url: setup ? await passwordSetupUrl(affiliate.userId, locale) : absoluteUrl(locale, "/sign-in"),
+          setup,
+        },
       });
     }
     await audit({ actorId: viewer.user.id, action: "affiliate.create", targetType: "affiliate", targetId: affiliate.id, data: { email: affiliate.user.email } });

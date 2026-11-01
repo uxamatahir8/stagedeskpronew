@@ -137,7 +137,7 @@ export function sendInvitation(
   return send(to, copy[p.locale].invitation.subject(p.agency), createElement(Invitation, p));
 }
 
-export function sendAffiliateApproved(to: string, p: { locale: EmailLocale; name: string; link: string; promo: string; url: string }) {
+export function sendAffiliateApproved(to: string, p: { locale: EmailLocale; name: string; link: string; promo: string; url: string; setup?: boolean }) {
   return send(to, copy[p.locale].affiliateApproved.subject, createElement(AffiliateApproved, p));
 }
 

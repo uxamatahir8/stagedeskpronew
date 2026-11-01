@@ -155,12 +155,13 @@ export function Invitation({
   );
 }
 
-export function AffiliateApproved({ locale, name, link, promo, url }: { locale: EmailLocale; name: string; link: string; promo: string; url: string }) {
+/** `setup`: the partner's account is new and `url` is their one-time password setup link. */
+export function AffiliateApproved({ locale, name, link, promo, url, setup = false }: { locale: EmailLocale; name: string; link: string; promo: string; url: string; setup?: boolean }) {
   const c = copy[locale].affiliateApproved;
   return (
     <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
-      <Paragraph>{c.body(name, link, promo)}</Paragraph>
-      <ActionButton href={url}>{c.button}</ActionButton>
+      <Paragraph>{setup ? c.bodySetup(name, link, promo) : c.body(name, link, promo)}</Paragraph>
+      <ActionButton href={url}>{setup ? c.buttonSetup : c.button}</ActionButton>
       <LinkFallback locale={locale} href={url} />
     </EmailLayout>
   );

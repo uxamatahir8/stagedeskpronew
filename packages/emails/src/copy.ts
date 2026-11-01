@@ -72,6 +72,10 @@ export const copy = {
       body: (name: string, link: string, promo: string) =>
         `Hoi ${name}, je aanmelding is goedgekeurd. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Koppel een Stripe-account in je dashboard om uitbetaald te worden.`,
       button: "Naar je partnerdashboard",
+      // Added by the platform admin with a new account: the button sets the password.
+      bodySetup: (name: string, link: string, promo: string) =>
+        `Hoi ${name}, je bent toegevoegd als StageDesk-partner. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook) en koppel daarna een Stripe-account in je dashboard om uitbetaald te worden.`,
+      buttonSetup: "Wachtwoord kiezen",
     },
     affiliatePayout: {
       subject: (amount: string) => `Uitbetaling van ${amount} onderweg`,
@@ -306,6 +310,10 @@ export const copy = {
       body: (name: string, link: string, promo: string) =>
         `Hi ${name}, your application was approved. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Connect a Stripe account in your dashboard to get paid.`,
       button: "Open your partner dashboard",
+      // Added by the platform admin with a new account: the button sets the password.
+      bodySetup: (name: string, link: string, promo: string) =>
+        `Hi ${name}, you've been added as a StageDesk partner. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Choose your password within 24 hours to sign in (signing in with an emailed code works too), then connect a Stripe account in your dashboard to get paid.`,
+      buttonSetup: "Choose password",
     },
     affiliatePayout: {
       subject: (amount: string) => `Payout of ${amount} on its way`,
