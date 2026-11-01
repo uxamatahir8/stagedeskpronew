@@ -141,3 +141,46 @@ Directory `D:\dev\stagedesk`, branch `feat/inventory`, from `189911a`. Commits: 
 14. Recommendation: NO-GO until the gates in N pass.
 
 **Short copyable summary:** StageDesk `feat/inventory` from `189911a`: 8 commits and docs. Fixed 31 findings: durable reserve → Stripe → book operations for refunds and payouts (idempotent, resumable, operator review); webhook leases, backoff and dead-letter; booking row locks (concurrent `sendQuote` deadlock and artist double-booking reproduced, then fixed); single-transaction lead assignment with resumable marketplace acceptance; staff seats without process memory, failing closed; atomic rate limits with outage fallback; CAPTCHA and production config fail closed; reminders no longer lost; newsletter claims and retries; promo codes follow partners; currency-correct exports; `/api/health`; CI gates. 399/399 tests, build, lint, typecheck and migration drift pass. E2E, GitHub CI, Stripe test mode, backups and monitoring are NOT VERIFIED; inventory, websites, auth flows, subscriptions and UI are not reviewed. Verdict: NO-GO.
+
+---
+
+# Round 2 (2026-11-02): independent review findings
+
+| Finding | Status | Commit | Evidence |
+|---|---|---|---|
+| CI security job failed (gitleaks) | **Fixed.** Harmless stripe-mock dummy key `sk_test_123` in a CI curl header (rule curl-auth-header, `e4d13c5`). Not a credential; no rotation needed. Removed from the workflow; that one historical fingerprint is in `.gitleaksignore` | `31aa315` | local gitleaks over full history: no leaks |
+| CI check job failed (build) | **Fixed.** Turbo strict env hid `DATABASE_URL` from `next build` in CI | `31aa315` | `turbo --dry=json` shows the variable passed through; **CI re-run NOT VERIFIED** (not pushed) |
+| Withdrawal stuck in `processing` after a crash | **Fixed.** Token + lease claim, takeover after expiry, worker `recover-withdrawals`, Stripe search across all pages before sending | `1675c79` | `leases.test.ts` |
+| Paid withdrawal marked failed when the notification failed | **Fixed.** Notifications run after commit and can't fail or undo it | `1675c79` | `leases.test.ts` "notification fails afterwards" |
+| `resetOperation` cleared a live lease | **Fixed.** Refuses live leases; all owner writes fenced by `lockToken` | `1675c79` | `leases.test.ts` |
+| Webhook handler outliving its lease overwrote the new owner | **Fixed.** Outcome writes fenced by token (deterministic test with a held Stripe call) | `1675c79` | `leases.test.ts` |
+| Resend of a fresh invitation canceled while over the limit (2-min rule) | **Fixed and reproduced.** The new test fails on the old logic (`canceled`); now `seatCheckedAt` under the seat lock | `4ba1ab5` | `staff-seats.test.ts` 13/13 |
+| Inviter told "sent" for an invitation never emailed (both seat check and cancel failed) | **Fixed** | `fa2d9e0` | found in e2e |
+| Late event of an old subscription overwrote the current one; out-of-order events | **Fixed.** Applies current Stripe state; ignores a non-live old subscription | `fa2d9e0` | `subscription-sync.test.ts` |
+| Two live subscriptions (parallel checkouts) | **Detected and logged only**; which one to cancel is an operator decision | `fa2d9e0` | — |
+| Payment claim recorded twice if linking failed | **Fixed** | `fa2d9e0` | analysis (no failure injection into the tenant client) |
+| Affiliate commissions already paid before a refund/chargeback | **OPEN: business policy** (claw back from the next payout / write off / invoice the partner) | — | — |
+
+## Module review (round 2)
+- **Inventory:** write paths reviewed. Item locks are taken in id order after the booking lock, which matches the booking lock order from round 1. Updates are conditional and check their counts. The full inventory e2e passes. Maintenance schedules, stock alerts and QR codes don't exist (feature gap).
+- **Auth:** disabling an account deletes its sessions; impersonation blocks password, email and 2FA changes; OTP and 2FA are rate-limited. No defect found.
+- **Websites:** custom domains are verified by a DNS TXT token (no takeover, no SSRF); the sites e2e passes.
+- **Subscriptions:** fixed as above.
+- **Payment claims:** fixed as above.
+- **Still not reviewed:** UI/accessibility page by page, the support module and the content admin (beyond their passing e2e specs).
+
+## E2E (Playwright, 24 tests, local; reused dev server, mail to Mailpit, local DB)
+Full run: **18 passed, 6 failed** (32 min). Every failure was then re-run on its own:
+
+| Spec | Outcome | Cause |
+|---|---|---|
+| inventory-security, sites | **pass** when run alone | load/order timeouts in the full run |
+| leads | **pass** when run alone | in the full run, a person signed in as admin@stagedesk.local (support mode for Feestband) sent a €60.50 price on the test lead during the run (audit `lead.quote`, 19:57:00 UTC), so the page had two prices |
+| admin | **pass** with `E2E_ADMIN_NAME=StageDesk` | the local admin was renamed (data, not code) |
+| invitations (2 tests), booking-flow (refund step) | **fail** | the reused dev server (up since 22:20) holds a Prisma client from before today's columns (`seatCheckedAt`, `lockToken`). The DB has the columns, and the same paths pass with a fresh client (`staff-seats.test.ts`, `financial-recovery.test.ts`). **Needs a dev-server restart and a re-run.** I was not permitted to stop the running server. |
+
+## Unit/integration
+db 147/147; payments 50/50 (+14 this round); web seat tests 13/13; typecheck clean. CI on GitHub is not re-run (nothing pushed).
+
+## Verdict
+**NO-GO** until: these three specs pass on a restarted server, CI passes on GitHub, and the owner-side gates from round 1 are done (Stripe test mode, backups, monitoring, incident owner, commission policy).
