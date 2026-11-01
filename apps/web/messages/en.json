@@ -5522,7 +5522,7 @@
     "not_unit_item": "Only numbered items can go in a case or set (not counted stock, cases or sets).",
     "freeOf": "{free} of {requested} free",
     "breaks_reservations": "Upcoming gigs have this equipment reserved; this change would leave them short:",
-    "checked_in": "Check-in for this gig is finished. Record late returns or confirm losses instead of loading.",
+    "checked_in": "Check-in for this gig is finished, so its packing list is closed. Record late returns or confirm losses instead.",
     "invalid_package": "Those picks don't match the package (or are already on the list). Refresh the preview and try again."
   },
   "inventory": {

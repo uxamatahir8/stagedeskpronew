@@ -118,16 +118,20 @@ describe("availability: 10 cables, booking A reserves 4 on D", () => {
   });
 
   it("3 back fine, 1 missing: missing blocks every date", () => {
+    // Not checked in yet: the booking still holds its 4 on D; the missing one blocks later dates.
+    const open = [line({ loadedQty: 4, returnedQty: 3 })];
+    expect(availabilityOn(cables, open, D, today, other).free).toBe(6);
+    // Checked in: the list is closed, the 3 back are free again; only the missing one counts, on every date.
     const l = [line({ loadedQty: 4, returnedQty: 3, checkedIn: true })];
     expect(outstandingOf(l[0]!)).toBe(1);
-    expect(availabilityOn(cables, l, D, today, other).free).toBe(6);
+    expect(availabilityOn(cables, l, D, today, other).free).toBe(9);
     expect(availabilityOn(cables, l, "2027-07-01", today, other).free).toBe(9);
   });
 
   it("…then the missing one confirmed lost (stock 9)", () => {
     const item = { ...cables, quantity: 9 };
     const l = [line({ loadedQty: 4, returnedQty: 3, lostQty: 1, checkedIn: true })];
-    expect(availabilityOn(item, l, D, today, other).free).toBe(6);
+    expect(availabilityOn(item, l, D, today, other).free).toBe(9);
     expect(availabilityOn(item, l, "2027-07-01", today, other).free).toBe(9);
   });
 
@@ -393,5 +397,14 @@ describe("package picks against the template", () => {
     expect(packagePickError(lines, [{ itemId: "in", quantity: 1 }], items)).toBe("wrong_category");
     expect(packagePickError(lines, [{ itemId: "s1", quantity: 3 }], items)).toBe("wrong_category");
     expect(packagePickError(lines, [{ itemId: "unknown", quantity: 1 }], items)).toBe("not_in_package");
+  });
+});
+
+describe("after check-in", () => {
+  it("a line reserves nothing more; only what's physically missing still counts", () => {
+    const l = [line({ quantity: 6, loadedQty: 2, returnedQty: 1, checkedIn: true })];
+    // 1 missing blocks every date; the 4 never loaded no longer hold the day.
+    expect(availabilityOn(cables, l, D, today, "B").free).toBe(9);
+    expect(availabilityOn(cables, l, "2027-08-01", today, "B").free).toBe(9);
   });
 });

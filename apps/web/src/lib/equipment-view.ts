@@ -18,7 +18,8 @@ export async function equipmentWorkspace(access: EquipmentAccess, labels: { kind
     code: access.trackingCode,
     stage: view.stage,
     reserving: view.reserving,
-    editable: view.editable,
+    // A finished check-in closes the packing list (the server refuses changes too).
+    editable: view.editable && view.booking.equipmentCheckedInAt === null,
     checkedIn: view.booking.equipmentCheckedInAt !== null,
     power: view.power,
     containers: view.containers,

@@ -5522,7 +5522,7 @@
     "not_unit_item": "Alleen genummerde items kunnen in een case of set (geen getelde voorraad, cases of sets).",
     "freeOf": "{free} van {requested} vrij",
     "breaks_reservations": "Komende optredens hebben deze apparatuur gereserveerd; door deze wijziging komen ze tekort:",
-    "checked_in": "Het inchecken voor dit optreden is afgerond. Registreer een late retour of bevestig verlies in plaats van te laden.",
+    "checked_in": "Het inchecken voor dit optreden is afgerond, dus de paklijst is gesloten. Registreer een late retour of bevestig verlies.",
     "invalid_package": "Die keuze past niet bij het pakket (of staat al op de lijst). Vernieuw het overzicht en probeer het opnieuw."
   },
   "inventory": {

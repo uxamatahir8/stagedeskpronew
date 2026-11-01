@@ -184,7 +184,7 @@ export function EquipmentWorkspace(p: WorkspaceProps) {
         </div>
       </div>
 
-      {p.reserving && totals.unreserved > 0 && (
+      {p.reserving && p.editable && totals.unreserved > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
           <span className="flex items-center gap-2">
             <TriangleAlertIcon className="size-4 shrink-0" />
@@ -430,7 +430,7 @@ function Packing(p: Section & { onOverride: (s: { message: string; retry: (reaso
                   ) : (
                     <span className="text-sm tabular-nums">{line.quantity}×</span>
                   )}
-                  {p.canPlan && p.canOverride && p.reserving && !line.reserved && (
+                  {p.canPlan && p.canOverride && p.editable && p.reserving && !line.reserved && (
                     <Button size="sm" variant="outline" disabled={p.pending} onClick={() => p.onOverride({ message: t("overrideLineHint", { code: line.code }), retry: (reason) => overrideLineAction(p.code, line.id, reason) })}>
                       {t("override")}
                     </Button>

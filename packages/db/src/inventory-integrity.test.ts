@@ -284,3 +284,76 @@ describe("audit rows commit with the change", () => {
     expect(await prisma.auditEvent.count({ where: { agencyId: org, targetId: speaker } })).toBe(0);
   });
 });
+
+describe("a finished check-in closes the packing list", () => {
+  async function checkedIn() {
+    const xlr = await createItem(org, item({ code: code("CI"), name: "XLR", tracking: "bulk", quantity: 10 }), owner);
+    const extra = await createItem(org, item({ code: code("CI"), name: "Extra speaker" }), owner);
+    const unloaded = await createItem(org, item({ code: code("CI"), name: "Never loaded" }), owner);
+    const b = await booked();
+    await addToPackingList(org, b.id, { itemId: xlr, quantity: 4 }, ownerActor, null, may1);
+    await addToPackingList(org, b.id, { itemId: unloaded, quantity: 1 }, ownerActor, null, may1);
+    await loadLine(org, (await lineOf(b.id, xlr)).id, 3, owner, may1);
+    await finishCheckIn(org, b.id, owner, may1);
+    return { b, xlr, extra, unloaded };
+  }
+
+  it("refuses adding items, packages, quantity changes, removals, retries and overrides", async () => {
+    const { b, xlr, extra, unloaded } = await checkedIn();
+    const cat = await createCategory(org, `Closed ${run}`);
+    const s = await createItem(org, item({ code: code("CI"), name: "Top", categoryId: cat.id }), owner);
+    const pkg = await savePackage(org, null, { name: `Closed ${run}`, description: null, lines: [{ itemId: null, categoryId: cat.id, quantity: 1 }] });
+    const { retryReservations, overrideLine, removeLine, setLineQuantity } = await import("./booking-equipment");
+
+    await expect(addToPackingList(org, b.id, { itemId: extra, quantity: 1 }, ownerActor, null, may1)).rejects.toMatchObject({ code: "checked_in" });
+    await expect(applyPackage(org, b.id, pkg, [{ itemId: s, quantity: 1 }], ownerActor, null, may1)).rejects.toMatchObject({ code: "checked_in" });
+    await expect(setLineQuantity(org, (await lineOf(b.id, xlr)).id, 6, ownerActor, null, may1)).rejects.toMatchObject({ code: "checked_in" });
+    await expect(setLineQuantity(org, (await lineOf(b.id, xlr)).id, 3, ownerActor, null, may1)).rejects.toMatchObject({ code: "checked_in" });
+    await expect(removeLine(org, (await lineOf(b.id, unloaded)).id, ownerActor)).rejects.toMatchObject({ code: "checked_in" });
+    await expect(retryReservations(org, b.id, ownerActor, may1)).rejects.toMatchObject({ code: "checked_in" });
+    await prisma.bookingEquipment.updateMany({ where: { bookingId: b.id, itemId: unloaded }, data: { reservedAt: null } });
+    await expect(overrideLine(org, (await lineOf(b.id, unloaded)).id, "late add", ownerActor, may1)).rejects.toMatchObject({ code: "checked_in" });
+
+    const lines = await prisma.bookingEquipment.findMany({ where: { bookingId: b.id }, orderBy: { createdAt: "asc" } });
+    expect(lines.map((l) => [l.itemId, l.quantity])).toEqual([[xlr, 4], [unloaded, 1]]);
+  });
+
+  it("still takes late returns, damage and confirmed losses", async () => {
+    const { b, xlr } = await checkedIn();
+    const line = await lineOf(b.id, xlr);
+    await returnLine(org, line.id, { ok: 1, damaged: 1 }, owner);
+    await confirmLost(org, line.id, 1, ownerActor, "gone");
+    expect(await lineOf(b.id, xlr)).toMatchObject({ loadedQty: 3, returnedQty: 1, damagedQty: 1, lostQty: 1 });
+  });
+
+  it("never-loaded lines stop holding stock, so another gig that day can reserve it", async () => {
+    const { b, unloaded } = await checkedIn();
+    expect((await lineOf(b.id, unloaded)).loadedQty).toBe(0);
+    const other = await booked();
+    await addToPackingList(org, other.id, { itemId: unloaded, quantity: 1 }, ownerActor, null, may1);
+    expect((await lineOf(other.id, unloaded)).reservedAt).not.toBeNull();
+  });
+
+  it("changes racing check-in either land before it or are refused", async () => {
+    const xlr = await createItem(org, item({ code: code("CR"), name: "XLR", tracking: "bulk", quantity: 20 }), owner);
+    const spare = await createItem(org, item({ code: code("CR"), name: "Spare" }), owner);
+    const b = await booked();
+    await addToPackingList(org, b.id, { itemId: xlr, quantity: 4 }, ownerActor, null, may1);
+    await loadLine(org, (await lineOf(b.id, xlr)).id, 2, owner, may1);
+    const { setLineQuantity } = await import("./booking-equipment");
+    const line = await lineOf(b.id, xlr);
+    await Promise.allSettled([
+      finishCheckIn(org, b.id, owner, may1),
+      addToPackingList(org, b.id, { itemId: spare, quantity: 1 }, ownerActor, null, may1),
+      setLineQuantity(org, line.id, 8, ownerActor, null, may1),
+      loadLine(org, line.id, 1, owner, may1),
+    ]);
+    const checkedInEvent = await prisma.bookingEvent.findFirstOrThrow({ where: { bookingId: b.id, type: "equipment_checked_in" } });
+    // Every packing-list change committed before the check-in event, none after.
+    const changes = await prisma.equipmentEvent.findMany({ where: { bookingId: b.id, type: { in: ["allocated", "loaded"] } } });
+    expect(changes.every((e) => e.createdAt <= checkedInEvent.createdAt)).toBe(true);
+    // And check-in reported exactly what was out at that moment.
+    const lines = await prisma.bookingEquipment.findMany({ where: { bookingId: b.id } });
+    expect((checkedInEvent.data as { missing: number }).missing).toBe(lines.reduce((s, l) => s + l.loadedQty - l.returnedQty - l.damagedQty - l.lostQty, 0));
+  });
+});

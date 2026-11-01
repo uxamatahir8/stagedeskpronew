@@ -88,6 +88,21 @@ const dateOf = (b: { eventDate: Date | null }) => (b.eventDate ? b.eventDate.toI
 const bookingSelect = { id: true, status: true, eventDate: true, trackingCode: true, equipmentCheckedInAt: true } as const;
 type BookingRow = { id: string; status: string; eventDate: Date | null; trackingCode: string; equipmentCheckedInAt: Date | null };
 
+/**
+ * Locks the booking row, then reads it. Every packing-list change, loading and
+ * check-in takes this lock before any item locks (always booking, then items),
+ * so a change can't interleave with check-in, and reads see what it committed.
+ */
+async function lockedBooking(tx: Tx, organizationId: string, bookingId: string): Promise<BookingRow> {
+  await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} AND organizationId = ${organizationId} FOR UPDATE`;
+  return loadBooking(tx, bookingId);
+}
+
+/** After check-in the packing list is closed: nothing is added, changed, removed or reserved. */
+function assertOpen(booking: BookingRow) {
+  if (booking.equipmentCheckedInAt) throw new EquipmentError("checked_in");
+}
+
 async function loadBooking(tx: Tx, bookingId: string): Promise<BookingRow> {
   const booking = await tx.booking.findFirst({ where: { id: bookingId }, select: bookingSelect });
   if (!booking) throw new EquipmentError("not_found");
@@ -125,6 +140,7 @@ async function expand(tx: Tx, itemId: string, quantity: number): Promise<NewLine
  * come back as warnings.
  */
 async function addLines(tx: Tx, organizationId: string, booking: BookingRow, entries: NewLine[], actor: EquipmentActor, override: string | null, now: Date) {
+  assertOpen(booking);
   if (!isPackingStatus(booking.status)) throw new EquipmentError("invalid_status");
   const date = dateOf(booking);
   if (!date) throw new EquipmentError("no_event_date");
@@ -197,7 +213,7 @@ async function addLines(tx: Tx, organizationId: string, booking: BookingRow, ent
 /** Adds an item, a case with its contents, or a set's members. */
 export async function addToPackingList(organizationId: string, bookingId: string, input: { itemId: string; quantity: number }, actor: EquipmentActor, override: string | null = null, now = new Date()) {
   return tenantDb(organizationId).$transaction(async (tx) => {
-    const booking = await loadBooking(tx, bookingId);
+    const booking = await lockedBooking(tx, organizationId, bookingId);
     const entries = await expand(tx, input.itemId, Math.max(1, Math.floor(input.quantity)));
     if (entries.length === 0) throw new EquipmentError("not_found");
     return addLines(tx, organizationId, booking, entries, actor, override, now);
@@ -249,7 +265,8 @@ export async function previewPackage(organizationId: string, bookingId: string, 
  */
 export async function applyPackage(organizationId: string, bookingId: string, packageId: string, picks: readonly NewLine[], actor: EquipmentActor, override: string | null = null, now = new Date()) {
   return tenantDb(organizationId).$transaction(async (tx) => {
-    const booking = await loadBooking(tx, bookingId);
+    const booking = await lockedBooking(tx, organizationId, bookingId);
+    assertOpen(booking);
     const pkg = await tx.equipmentPackage.findFirst({ where: { id: packageId }, select: { name: true, lines: { select: { itemId: true, categoryId: true, quantity: true } } } });
     if (!pkg) throw new EquipmentError("not_found");
     if (picks.length === 0) return { added: 0, warnings: [] };
@@ -274,8 +291,9 @@ export async function setLineQuantity(organizationId: string, lineId: string, qu
   return tenantDb(organizationId).$transaction(async (tx) => {
     const line = await tx.bookingEquipment.findFirst({ where: { id: lineId }, select: { itemId: true, bookingId: true } });
     if (!line) throw new EquipmentError("not_found");
+    const booking = await lockedBooking(tx, organizationId, line.bookingId);
+    assertOpen(booking);
     await lockItems(tx, organizationId, [line.itemId]);
-    const booking = await loadBooking(tx, line.bookingId);
     if (!isPackingStatus(booking.status)) throw new EquipmentError("invalid_status");
     const current = await tx.bookingEquipment.findFirst({ where: { id: lineId } });
     const item = await tx.equipmentItem.findFirst({ where: { id: line.itemId }, select: itemStock });
@@ -316,7 +334,9 @@ export async function removeLine(organizationId: string, lineId: string, actor: 
   return tenantDb(organizationId).$transaction(async (tx) => {
     const line = await tx.bookingEquipment.findFirst({ where: { id: lineId }, include: { item: { select: { kind: true } } } });
     if (!line) throw new EquipmentError("not_found");
-    const booking = await loadBooking(tx, line.bookingId);
+    const booking = await lockedBooking(tx, organizationId, line.bookingId);
+    // Planned-but-not-taken lines stay as the record of the gig once it's checked in.
+    assertOpen(booking);
     if (!isPackingStatus(booking.status)) throw new EquipmentError("invalid_status");
     const group =
       line.item.kind === "case"
@@ -335,6 +355,7 @@ export async function removeLine(organizationId: string, lineId: string, actor: 
 
 /** Tries to reserve every unreserved line of a booked or confirmed booking; returns what didn't fit. */
 async function reserveOpenLines(tx: Tx, organizationId: string, booking: BookingRow, now: Date) {
+  if (booking.equipmentCheckedInAt) return { reserved: 0, failed: [] as EquipmentConflict[] };
   const lines = await tx.bookingEquipment.findMany({ where: { bookingId: booking.id, reservedAt: null }, orderBy: { createdAt: "asc" } });
   if (lines.length === 0) return { reserved: 0, failed: [] as EquipmentConflict[] };
   const ids = lines.map((l) => l.itemId);
@@ -372,7 +393,7 @@ async function reserveOpenLines(tx: Tx, organizationId: string, booking: Booking
 export async function equipmentAfterTransition(tx: Tx, organizationId: string, bookingId: string, from: string, to: string, now: Date) {
   if (!isReservingStatus(to) || isReservingStatus(from)) return;
   const booking = await loadBooking(tx, bookingId);
-  if ((await tx.bookingEquipment.count({ where: { bookingId } })) === 0) return;
+  if (booking.equipmentCheckedInAt || (await tx.bookingEquipment.count({ where: { bookingId } })) === 0) return;
   const result = await reserveOpenLines(tx, organizationId, booking, now);
   await logBookingEvent(tx, bookingId, "equipment_reserved", null, { reserved: result.reserved, failed: result.failed.length });
 }
@@ -394,7 +415,8 @@ export async function notifyUnreservedEquipment(organizationId: string, bookingI
 /** Tries the unreserved lines again (after equipment came back, was repaired, or plans changed). */
 export async function retryReservations(organizationId: string, bookingId: string, actor: EquipmentActor, now = new Date()) {
   return tenantDb(organizationId).$transaction(async (tx) => {
-    const booking = await loadBooking(tx, bookingId);
+    const booking = await lockedBooking(tx, organizationId, bookingId);
+    assertOpen(booking);
     if (!isReservingStatus(booking.status)) throw new EquipmentError("invalid_status");
     const result = await reserveOpenLines(tx, organizationId, booking, now);
     if (result.reserved > 0 || result.failed.length > 0) await logBookingEvent(tx, bookingId, "equipment_reserved", actor.id, { reserved: result.reserved, failed: result.failed.length });
@@ -414,8 +436,9 @@ export async function overrideLine(organizationId: string, lineId: string, reaso
   return tenantDb(organizationId).$transaction(async (tx) => {
     const line = await tx.bookingEquipment.findFirst({ where: { id: lineId } });
     if (!line) throw new EquipmentError("not_found");
+    const booking = await lockedBooking(tx, organizationId, line.bookingId);
+    assertOpen(booking);
     await lockItems(tx, organizationId, [line.itemId]);
-    const booking = await loadBooking(tx, line.bookingId);
     if (!isReservingStatus(booking.status)) throw new EquipmentError("invalid_status");
     const fresh = await tx.bookingEquipment.findFirst({ where: { id: lineId } });
     if (!fresh || fresh.reservedAt) throw new EquipmentError("not_overridable");
@@ -439,8 +462,8 @@ export async function overrideLine(organizationId: string, lineId: string, reaso
  * conflicts. Runs inside the caller's transaction.
  */
 export async function checkEquipmentReschedule(tx: Tx, organizationId: string, bookingId: string, newDate: string | null, now = new Date()) {
-  const booking = await loadBooking(tx, bookingId);
-  if (!isReservingStatus(booking.status) || dateOf(booking) === newDate) return;
+  const booking = await lockedBooking(tx, organizationId, bookingId);
+  if (!isReservingStatus(booking.status) || dateOf(booking) === newDate || booking.equipmentCheckedInAt) return;
   const lines = await tx.bookingEquipment.findMany({ where: { bookingId, reservedAt: { not: null } } });
   if (lines.length === 0) return;
   const ids = lines.map((l) => l.itemId);
@@ -473,6 +496,9 @@ async function lineContext(tx: Tx, organizationId: string, lineIds: readonly str
 /** Loads (positive) or unloads (negative, only units not yet resolved) units on one line. */
 export async function loadLine(organizationId: string, lineId: string, delta: number, actorId: string, now = new Date()) {
   return tenantDb(organizationId).$transaction(async (tx) => {
+    const line = await tx.bookingEquipment.findFirst({ where: { id: lineId }, select: { bookingId: true } });
+    if (!line) throw new EquipmentError("not_found");
+    await lockedBooking(tx, organizationId, line.bookingId);
     await lineContext(tx, organizationId, [lineId]);
     const loaded = await loadLinesTx(tx, organizationId, [{ lineId, delta }], actorId, now, true);
     return loaded;
@@ -539,6 +565,7 @@ export async function loadGroup(organizationId: string, bookingId: string, conta
   return tenantDb(organizationId).$transaction(async (tx) => {
     const group = await tx.bookingEquipment.findMany({ where: { bookingId, OR: [{ itemId: containerId }, { viaContainerId: containerId }] } });
     if (group.length === 0) throw new EquipmentError("not_found");
+    await lockedBooking(tx, organizationId, bookingId);
     await lineContext(tx, organizationId, group.map((g) => g.id));
     const fresh = await tx.bookingEquipment.findMany({ where: { id: { in: group.map((g) => g.id) } } });
     const changes = fresh.filter((l) => l.loadedQty < l.quantity).map((l) => ({ lineId: l.id, delta: l.quantity - l.loadedQty }));
@@ -657,7 +684,8 @@ export async function returnGroup(
  */
 export async function finishCheckIn(organizationId: string, bookingId: string, actorId: string, now = new Date()) {
   const result = await tenantDb(organizationId).$transaction(async (tx) => {
-    // Same item locks as loading and returns, so check-in can't interleave with them.
+    // The booking lock every packing-list change takes, then the items (as loading and returns), so nothing interleaves.
+    await lockedBooking(tx, organizationId, bookingId);
     const itemIds = (await tx.bookingEquipment.findMany({ where: { bookingId }, select: { itemId: true } })).map((l) => l.itemId);
     await lockItems(tx, organizationId, itemIds);
     const booking = await loadBooking(tx, bookingId);

@@ -157,9 +157,13 @@ export function usableStock(item: StockItem): number {
   return item.tracking === "bulk" ? Math.max(0, item.quantity - item.defectiveQty) : 1;
 }
 
-/** Whether the line's reservation holds stock on this date. */
+/**
+ * Whether the line's reservation holds stock on this date. Not after the
+ * booking's check-in: nothing more can be loaded then, so only what's
+ * physically out (missing) still counts, through outBlocking.
+ */
 export function holdsOn(line: ClaimLine, date: string): boolean {
-  return line.reservedAt !== null && isReservingStatus(line.bookingStatus) && line.eventDate === date;
+  return line.reservedAt !== null && !line.checkedIn && isReservingStatus(line.bookingStatus) && line.eventDate === date;
 }
 
 /** What the line reserves on a date: planned units minus those that came back damaged or were lost (they left usable stock already). */
