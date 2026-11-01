@@ -124,6 +124,13 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
     ? await prisma.plan.findFirst({ where: { OR: [{ stripeMonthlyPriceId: priceId }, { stripeYearlyPriceId: priceId }] } })
     : null;
   const existing = await prisma.subscription.findUnique({ where: { organizationId } });
+  const live = (status: string | null | undefined) => ["active", "trialing", "past_due", "unpaid"].includes(status ?? "");
+  if (existing?.stripeSubscriptionId && existing.stripeSubscriptionId !== sub.id && live(existing.status)) {
+    // An older subscription (canceled, delayed event) must not replace the agency's current one.
+    if (!live(sub.status)) return existing;
+    // Two live subscriptions (e.g. two checkouts finished at once): both bill the customer. Flag it; an operator cancels one.
+    console.error(`[billing] agency ${organizationId} has two live Stripe subscriptions: ${existing.stripeSubscriptionId} and ${sub.id}`);
+  }
   const planId = plan?.id ?? sub.metadata["planId"] ?? existing?.planId;
   if (!planId) return null;
 

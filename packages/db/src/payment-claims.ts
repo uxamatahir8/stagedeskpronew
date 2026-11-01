@@ -68,8 +68,9 @@ export async function confirmPaymentClaim(organizationId: string, claimId: strin
   const claimed = await db.paymentClaim.updateMany({ where: { id: claimId, status: "pending" }, data: { status: "confirmed", reviewedById: actorId, reviewedAt: new Date() } });
   if (claimed.count === 0) throw new PaymentClaimError((await db.paymentClaim.count({ where: { id: claimId } })) ? "already_reviewed" : "not_found");
   const claim = await db.paymentClaim.findFirstOrThrow({ where: { id: claimId } });
+  let payment;
   try {
-    const payment = await recordPayment(
+    payment = await recordPayment(
       organizationId,
       claim.bookingId,
       {
@@ -81,12 +82,14 @@ export async function confirmPaymentClaim(organizationId: string, claimId: strin
       },
       actorId,
     );
-    await db.paymentClaim.updateMany({ where: { id: claimId }, data: { paymentId: payment.id } });
-    return { claim, payment };
   } catch (error) {
+    // Nothing was recorded: the claim goes back to the queue.
     await db.paymentClaim.updateMany({ where: { id: claimId }, data: { status: "pending", reviewedById: null, reviewedAt: null } });
     throw error;
   }
+  // The payment is recorded: the claim stays confirmed even if linking it fails (reopening it would let it be recorded twice).
+  await db.paymentClaim.updateMany({ where: { id: claimId }, data: { paymentId: payment.id } }).catch((error: unknown) => console.error("[claims] linking payment failed", claimId, payment.id, error));
+  return { claim, payment };
 }
 
 /** The money didn't arrive (or not this amount): the customer is told why and can report again. */

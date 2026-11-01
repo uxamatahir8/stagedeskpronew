@@ -129,13 +129,14 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       return false;
     }
     case "customer.subscription.created":
-      await applyStripeSubscription(event.data.object);
-      await attributeSubscriptionPromo(stripe, event.data.object);
-      return true;
     case "customer.subscription.updated":
-    case "customer.subscription.deleted":
-      await applyStripeSubscription(event.data.object);
+    case "customer.subscription.deleted": {
+      // Stripe doesn't promise order: apply the subscription as it is now, not as this (maybe old) event saw it.
+      const current = await stripe.subscriptions.retrieve(event.data.object.id);
+      await applyStripeSubscription(current);
+      if (event.type === "customer.subscription.created") await attributeSubscriptionPromo(stripe, current);
       return true;
+    }
     case "invoice.payment_failed":
     case "invoice.paid": {
       // The subscription events carry the status; refresh to pick up past_due / active.

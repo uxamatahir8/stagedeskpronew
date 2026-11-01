@@ -190,7 +190,13 @@ export const auth = betterAuth({
         // sendInvitationEmail re-counts under a lock once the invitation exists and cancels it
         // if the seats ran out (Better Auth ignores errors there); this reports that to the caller.
         afterCreateInvitation: async ({ invitation, inviter }) => {
-          const current = await prisma.invitation.findUnique({ where: { id: invitation.id }, select: { status: true } });
+          const current = await prisma.invitation.findUnique({ where: { id: invitation.id }, select: { status: true, seatCheckedAt: true } });
+          // Pending but never checked: the check failed and even canceling failed (Better Auth swallowed both).
+          // Cancel it here and say so, instead of reporting an invitation that wasn't sent as sent.
+          if (current?.status === "pending" && !current.seatCheckedAt) {
+            await prisma.invitation.updateMany({ where: { id: invitation.id, status: "pending" }, data: { status: "canceled" } });
+            throw new APIError("SERVICE_UNAVAILABLE", { message: "The invitation couldn't be checked. Try again.", code: "SEAT_CHECK_FAILED" });
+          }
           if (current?.status !== "canceled") return;
           const [{ limits }, usage] = await Promise.all([agencyBilling(invitation.organizationId), agencyUsage(invitation.organizationId)]);
           if (!withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, localeOf(inviter));
