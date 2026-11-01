@@ -37,6 +37,9 @@ test("customer and agency message each other, and support answers a question", a
     await customer.goto("/nl/app/event");
     await customer.getByLabel("Schrijf een bericht").fill(`Kan de DJ om 23:00 stoppen? ${run}`);
     await customer.getByRole("button", { name: "Versturen" }).click();
+    // The composer empties only once the server saved the message; the text is in the box until then,
+    // so checking for the text alone could pass before anything was saved.
+    await expect(customer.getByLabel("Schrijf een bericht")).toHaveValue("");
     await expect(customer.getByText(`Kan de DJ om 23:00 stoppen? ${run}`)).toBeVisible();
   });
 
@@ -53,6 +56,8 @@ test("customer and agency message each other, and support answers a question", a
   await test.step("the agency replies; the customer sees it and gets an email through the worker", async () => {
     await agency.getByLabel("Schrijf een bericht").fill(`Ja, dat regelen we. ${run}`);
     await agency.getByRole("button", { name: "Versturen" }).click();
+    // Saved (the composer clears after the server confirms) before the customer looks.
+    await expect(agency.getByLabel("Schrijf een bericht")).toHaveValue("");
     await expect(agency.getByText(`Ja, dat regelen we. ${run}`)).toBeVisible();
 
     await customer.reload();
