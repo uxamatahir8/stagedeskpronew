@@ -1,11 +1,21 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
-import { localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
+import { checkProductionConfig, localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
 import { approveDueCommissions, expireQuotes, prisma, resumeLeadAcceptances, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
 import { sendCampaign, sendDueCampaigns } from "./newsletter";
 import { sendReminders } from "./reminders";
+
+// In production, refuse to run with an unsafe or incomplete configuration (same rules as the web app).
+if (process.env["NODE_ENV"] === "production") {
+  const { errors, warnings } = checkProductionConfig(process.env, "worker");
+  for (const w of warnings) console.warn(`[config] ${w}`);
+  if (errors.length > 0) {
+    for (const e of errors) console.error(`[config] ${e}`);
+    process.exit(1);
+  }
+}
 
 const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379", {
   maxRetriesPerRequest: null,
