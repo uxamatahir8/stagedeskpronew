@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { markTrialUsed, planTrialDays, prisma, trialEligible } from "@stagedesk/db";
+import { markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
 import { referralPromotionCode } from "./affiliates";
 
 export class PaymentsError extends Error {
@@ -123,12 +123,34 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
   const plan = priceId
     ? await prisma.plan.findFirst({ where: { OR: [{ stripeMonthlyPriceId: priceId }, { stripeYearlyPriceId: priceId }] } })
     : null;
-  const existing = await prisma.subscription.findUnique({ where: { organizationId } });
+  // One writer per agency at a time: the agency row is locked, then the record read and written
+  // (READ COMMITTED, so the read sees what a writer before us committed). Two first-time writes
+  // used to both try to create the row.
+  if (sub.trial_end) await markTrialUsed(organizationId, now);
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+      return writeSubscription(tx, organizationId, sub, plan?.id ?? null, now, opts);
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted },
+  );
+}
+
+async function writeSubscription(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  sub: Stripe.Subscription,
+  matchedPlanId: string | null,
+  now: Date,
+  opts: { authoritative?: boolean },
+) {
+  const item = sub.items.data[0];
+  const existing = await tx.subscription.findUnique({ where: { organizationId } });
   // Only syncAgencySubscriptions (which has looked at all of the customer's subscriptions)
   // may move the agency to another subscription than the one it has while that one is live.
   // Any other caller acting on a different subscription leaves the record alone.
   if (!opts.authoritative && existing?.stripeSubscriptionId && existing.stripeSubscriptionId !== sub.id && isLive(existing.status)) return existing;
-  const planId = plan?.id ?? sub.metadata["planId"] ?? existing?.planId;
+  const planId = matchedPlanId ?? sub.metadata["planId"] ?? existing?.planId;
   if (!planId) return null;
 
   const status = knownStatuses.has(sub.status) ? sub.status : "incomplete";
@@ -145,9 +167,7 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
     // A paid Stripe subscription replaces a plan the admin granted by hand.
     complimentary: false,
   };
-  // A Stripe trial counts as the agency's one trial.
-  if (sub.trial_end) await markTrialUsed(organizationId, now);
-  return prisma.subscription.upsert({
+  return tx.subscription.upsert({
     where: { organizationId },
     create: { id: randomUUID(), organizationId, ...data },
     update: data,
