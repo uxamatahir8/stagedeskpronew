@@ -24,6 +24,7 @@ export function SignInForm() {
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   function done(twoFactor?: boolean) {
     if (twoFactor) {
@@ -34,6 +35,7 @@ export function SignInForm() {
   }
 
   async function signInWithPassword(form: FormData) {
+    if (pending) return;
     setPending(true);
     setError(null);
     setNotice(null);
@@ -51,21 +53,29 @@ export function SignInForm() {
     done(data && "twoFactorRedirect" in data && Boolean(data.twoFactorRedirect));
   }
 
-  async function sendCode(form: FormData) {
-    const address = String(form.get("email"));
+  async function requestCode(address: string) {
+    // Every code request starts with an empty field: a new code replaces the old one.
+    setCode("");
     setPending(true);
     setError(null);
+    setNotice(null);
     const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
     setCodeSentTo(address);
   }
 
-  async function signInWithCode(form: FormData) {
-    if (!codeSentTo) return;
+  async function sendCode(form: FormData) {
+    if (pending) return;
+    await requestCode(String(form.get("email")).trim());
+  }
+
+  async function signInWithCode() {
+    if (!codeSentTo || pending) return;
+    if (!/^\d{6}$/.test(code)) return setError(t("auth.signIn.invalidCode"));
     setPending(true);
     setError(null);
-    const { data, error } = await authClient.signIn.emailOtp({ email: codeSentTo, otp: String(form.get("code")).trim() });
+    const { data, error } = await authClient.signIn.emailOtp({ email: codeSentTo, otp: code });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
     done(data && "twoFactorRedirect" in data && Boolean(data.twoFactorRedirect));
@@ -116,18 +126,22 @@ export function SignInForm() {
 
       <TabsContent value="code" className="mt-4">
         {codeSentTo ? (
-          <form onSubmit={submit(signInWithCode)} className="grid gap-4">
+          // Its own key: React must not reuse the email step's input for the code (it kept the typed address).
+          <form key="code-step" onSubmit={submit(signInWithCode)} className="grid gap-4">
             <FormMessage tone="success">{t("auth.signIn.codeSent", { email: codeSentTo })}</FormMessage>
             <div className="grid gap-2">
               <Label htmlFor="signin-code">{t("auth.code")}</Label>
               <Input
                 id="signin-code"
-                name="code"
+                name="one-time-code"
+                type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                autoFocus
                 required
+                value={code}
+                // Digits only, so a pasted "123 456" or "123-456" still works.
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 className="font-mono tracking-[0.4em]"
               />
             </div>
@@ -135,12 +149,26 @@ export function SignInForm() {
             <Button type="submit" disabled={pending}>
               {t("auth.signIn.verifyCode")}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setCodeSentTo(null)}>
-              {t("auth.signIn.otherEmail")}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-x-2">
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => void requestCode(codeSentTo)}>
+                {t("auth.signIn.resendCode")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pending}
+                onClick={() => {
+                  setCodeSentTo(null);
+                  setCode("");
+                  setError(null);
+                }}
+              >
+                {t("auth.signIn.otherEmail")}
+              </Button>
+            </div>
           </form>
         ) : (
-          <form onSubmit={submit(sendCode)} className="grid gap-4">
+          <form key="email-step" onSubmit={submit(sendCode)} className="grid gap-4">
             <p className="text-sm text-muted-foreground">{t("auth.signIn.codeIntro")}</p>
             <div className="grid gap-2">
               <Label htmlFor="signin-code-email">{t("auth.email")}</Label>

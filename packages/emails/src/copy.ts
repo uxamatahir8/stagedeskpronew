@@ -33,6 +33,14 @@ export const copy = {
       body: (name: string) => `Hoi ${name}, je artiestenaccount is aangemaakt. Kies binnen 24 uur je wachtwoord om je optredens, beschikbaarheid en inkomsten te beheren.`,
       button: "Wachtwoord kiezen",
     },
+    accountSetup: {
+      subject: "Stel je StageDesk-account in",
+      preview: "Kies een wachtwoord voor je StageDesk-account.",
+      heading: "Je StageDesk-account staat klaar",
+      body: (name: string) =>
+        `Hoi ${name}, er is een StageDesk-account voor je aangemaakt. Kies binnen 24 uur je wachtwoord om in te loggen. Is de link verlopen? Vraag dan op de inlogpagina een nieuwe aan via "Wachtwoord vergeten?".`,
+      button: "Wachtwoord kiezen",
+    },
     invitation: {
       subject: (agency: string) => `Je bent uitgenodigd voor ${agency} op StageDesk`,
       preview: "Accepteer je uitnodiging voor StageDesk.",
@@ -130,6 +138,10 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Log in met je e-mailadres: je krijgt een code per mail, een wachtwoord is niet nodig. Je proefperiode loopt al.`,
       button: "Inloggen",
+      // A new account: the button sets the password.
+      bodySetup: (name: string, agency: string) =>
+        `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook). Je proefperiode loopt al.`,
+      buttonSetup: "Wachtwoord kiezen",
     },
     leadReceived: {
       subject: (reference: string) => `We hebben je aanvraag ontvangen (${reference})`,
@@ -255,6 +267,14 @@ export const copy = {
       body: (name: string) => `Hi ${name}, your artist account has been created. Choose your password within 24 hours to manage your gigs, availability and earnings.`,
       button: "Choose password",
     },
+    accountSetup: {
+      subject: "Set up your StageDesk account",
+      preview: "Choose a password for your StageDesk account.",
+      heading: "Your StageDesk account is ready",
+      body: (name: string) =>
+        `Hi ${name}, a StageDesk account has been created for you. Choose your password within 24 hours to sign in. Has the link expired? Request a new one on the sign-in page under "Forgot password?".`,
+      button: "Choose password",
+    },
     invitation: {
       subject: (agency: string) => `You're invited to ${agency} on StageDesk`,
       preview: "Accept your StageDesk invitation.",
@@ -352,6 +372,10 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hi ${name}, we've set up ${agency} for you on StageDesk. Sign in with your email address: we'll email you a code, no password needed. Your trial has started.`,
       button: "Sign in",
+      // A new account: the button sets the password.
+      bodySetup: (name: string, agency: string) =>
+        `Hi ${name}, we've set up ${agency} for you on StageDesk. Choose your password within 24 hours to sign in (signing in with an emailed code works too). Your trial has started.`,
+      buttonSetup: "Choose password",
     },
     leadReceived: {
       subject: (reference: string) => `We've received your request (${reference})`,

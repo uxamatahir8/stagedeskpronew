@@ -15,6 +15,7 @@ export * from "./booking-page";
 export * from "./content";
 export * from "./listing";
 export * from "./passwords";
+export * from "./redirects";
 export * from "./locale";
 export * from "./datetime";
 export * from "./geo";

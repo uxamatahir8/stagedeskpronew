@@ -6,6 +6,8 @@ import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { audit, createPlatformAdmin, deleteUserByAdmin, prisma, signOutEverywhere, updateUserByAdmin, UserAdminError } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
+import { deliver } from "@/lib/mail";
+import { hasPassword, passwordSetupUrl } from "@/lib/password-setup";
 import { clientIp } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/viewer";
 
@@ -67,6 +69,11 @@ export async function createPlatformAdminAction(input: z.input<typeof adminSchem
   if (!parsed.success) return { ok: false, message: t("invalid") };
   try {
     const user = await createPlatformAdmin(parsed.data);
+    // A new account (or one that never had a password) gets a one-time link to choose its password.
+    if (!(await hasPassword(user.id))) {
+      const locale = user.locale === "nl" ? "nl" : "en";
+      deliver({ kind: "accountSetup", to: user.email, params: { locale, name: user.name, url: await passwordSetupUrl(user.id, locale) } });
+    }
     await audit({ actorId: viewer.user.id, action: "user.create_admin", targetType: "user", targetId: user.id, data: { email: user.email }, ip: clientIp(await headers()) });
     revalidatePath("/[locale]/app/users", "page");
     return { ok: true, message: t("adminCreated", { name: user.name }) };

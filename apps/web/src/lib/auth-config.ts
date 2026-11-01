@@ -83,6 +83,12 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => {
       deliver({ kind: "resetPassword", to: user.email, params: { locale: localeOf(user), name: user.name, url } });
     },
+    // The link was mailed to the account's address, so using it confirms that address. Accounts
+    // created for someone (agency owners, admins) start unconfirmed; without this their first
+    // password sign-in would be refused. An admin email change voids open links (updateUserByAdmin).
+    onPasswordReset: async ({ user }) => {
+      if (!user.emailVerified) await prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
+    },
   },
 
   emailVerification: {
@@ -142,6 +148,10 @@ export const auth = betterAuth({
       roles: organizationRoles,
       creatorRole: "agency_owner",
       organizationLimit: 1,
+      // Every booking customer is a member (role customer), so Better Auth's default cap of 100
+      // members made accepting any invitation fail with a 403 once an agency had ~100 customers.
+      // Team seats are limited by the plan instead (maxStaff, checked in beforeCreateInvitation).
+      membershipLimit: 1_000_000,
       invitationExpiresIn: 60 * 60 * 24 * 7,
       cancelPendingInvitationsOnReInvite: true,
       requireEmailVerificationOnInvitation: true,

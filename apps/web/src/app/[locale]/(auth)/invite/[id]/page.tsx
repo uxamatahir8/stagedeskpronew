@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { isRole } from "@stagedesk/core";
@@ -24,6 +25,8 @@ export default function InvitePage({ params }: PageProps<"/[locale]/invite/[id]"
 }
 
 async function Invite({ params }: Pick<PageProps<"/[locale]/invite/[id]">, "params">) {
+  // Reads the database and the clock (expiry): request time only.
+  await connection();
   const { id, locale } = await params;
   setRequestLocale(locale as Locale);
   const t = await getTranslations();
@@ -36,8 +39,12 @@ async function Invite({ params }: Pick<PageProps<"/[locale]/invite/[id]">, "para
   const valid = invitation && invitation.status === "pending" && invitation.expiresAt > new Date();
   if (!valid) {
     return (
-      <AuthCard title={t("auth.signIn.title")}>
+      <AuthCard title={t("invite.invalidTitle")}>
         <FormMessage>{t("invite.invalid")}</FormMessage>
+        {/* Already accepted (or another address joined): signing in is the way on. */}
+        <Button asChild>
+          <Link href="/sign-in">{t("invite.signIn")}</Link>
+        </Button>
       </AuthCard>
     );
   }

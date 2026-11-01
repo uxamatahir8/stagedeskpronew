@@ -4,6 +4,7 @@ import { createTransport, type Transporter } from "nodemailer";
 import { createElement, type ReactElement } from "react";
 import { copy, type EmailLocale } from "./copy";
 import {
+  AccountSetup,
   AffiliateApproved,
   AffiliatePayout,
   AgencyCreated,
@@ -110,6 +111,10 @@ export function sendArtistAccountSetup(to: string, p: { locale: EmailLocale; nam
   return send(to, copy[p.locale].artistSetup.subject, createElement(ArtistAccountSetup, p));
 }
 
+export function sendAccountSetup(to: string, p: { locale: EmailLocale; name: string; url: string }) {
+  return send(to, copy[p.locale].accountSetup.subject, createElement(AccountSetup, p));
+}
+
 export function sendInquiryReceived(to: string, p: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
   return send(to, copy[p.locale].inquiryReceived.subject(p.agency), createElement(InquiryReceived, p));
 }
@@ -171,7 +176,7 @@ export function sendContactMessage(to: string, p: { locale: EmailLocale; name: s
   return send(to, copy[p.locale].contactMessage.subject(p.name), createElement(ContactMessage, p), p.email);
 }
 
-export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: string; agency: string; url: string }) {
+export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: string; agency: string; url: string; setup?: boolean }) {
   return send(to, copy[p.locale].agencyCreated.subject(p.agency), createElement(AgencyCreated, p));
 }
 
@@ -238,6 +243,7 @@ const senders = {
   loginCode: sendLoginCode,
   resetPassword: sendResetPassword,
   artistAccountSetup: sendArtistAccountSetup,
+  accountSetup: sendAccountSetup,
   inquiryReceived: sendInquiryReceived,
   newInquiry: sendNewInquiry,
   quote: sendQuote,

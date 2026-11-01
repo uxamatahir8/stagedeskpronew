@@ -200,6 +200,7 @@
       "sendCode": "Mail me een code",
       "codeSent": "Als er een account bestaat voor {email}, hebben we een code gestuurd. Hij is 10 minuten geldig.",
       "verifyCode": "Inloggen met code",
+      "resendCode": "Stuur een nieuwe code",
       "otherEmail": "Ander e-mailadres gebruiken",
       "noAccount": "Nieuw bureau?",
       "signUpLink": "Account aanmaken",
@@ -238,7 +239,11 @@
       "mismatch": "De wachtwoorden komen niet overeen.",
       "submit": "Wachtwoord opslaan",
       "done": "Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.",
-      "invalidToken": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan."
+      "invalidToken": "Deze link is verlopen of al gebruikt. Vraag een nieuwe aan.",
+      "setupTitle": "Kies je wachtwoord",
+      "setupBody": "Je account staat klaar. Kies een wachtwoord om in te loggen met je e-mailadres.",
+      "setupDone": "Je wachtwoord is ingesteld. Log in met je e-mailadres en je nieuwe wachtwoord.",
+      "requestNew": "Vraag een nieuwe link aan"
     },
     "twoFactor": {
       "title": "Verificatie in twee stappen",
@@ -306,6 +311,7 @@
     "wrongAccount": "Je bent ingelogd als {current}, maar deze uitnodiging is voor {email}.",
     "switchAccount": "Uitloggen en van account wisselen",
     "invalid": "Deze uitnodiging is verlopen of niet meer geldig. Vraag het bureau om een nieuwe.",
+    "invalidTitle": "Deze uitnodiging is niet meer geldig",
     "declined": "Je hebt de uitnodiging afgewezen."
   },
   "team": {
@@ -1892,7 +1898,7 @@
     "deleteForever": "Definitief verwijderen",
     "deleted": "Account verwijderd.",
     "newAdmin": "Beheerder toevoegen",
-    "newAdminHint": "Krijgt volledige toegang tot het platform en logt in met een code per e-mail. Een bestaand account krijgt beheerdersrechten.",
+    "newAdminHint": "Krijgt volledige toegang tot het platform. Een nieuw account krijgt een e-mail met een link om een wachtwoord te kiezen (24 uur geldig); inloggen met een code per e-mail kan ook. Een bestaand account krijgt beheerdersrechten.",
     "create": "Beheerder toevoegen",
     "adminCreated": "{name} is nu platformbeheerder.",
     "invalid": "Controleer de naam en het e-mailadres.",
@@ -2932,7 +2938,7 @@
   },
   "agencyAdmin": {
     "new": "Nieuw bureau",
-    "newHint": "Zet een bureau op voor iemand. Hun account wordt zo nodig aangemaakt; ze loggen in met een code per e-mail en kiezen daarna een abonnement. Je kunt ook zelf een abonnement toekennen.",
+    "newHint": "Zet een bureau op voor iemand. Hun account wordt zo nodig aangemaakt; een nieuwe eigenaar krijgt een e-mail met een link om een wachtwoord te kiezen (24 uur geldig) en kiest daarna een abonnement. Je kunt ook zelf een abonnement toekennen.",
     "agencyName": "Naam van het bureau",
     "city": "Plaats",
     "language": "Taal voor e-mails",
@@ -3503,6 +3509,8 @@
     "kind_resetPasswordHint": "Als iemand het wachtwoord vergeet",
     "kind_artistAccountSetup": "Artiestenaccount instellen",
     "kind_artistAccountSetupHint": "Als een bureau of platformbeheerder een artiestenaccount aanmaakt",
+    "kind_accountSetup": "Account instellen",
+    "kind_accountSetupHint": "Als een platformbeheerder een nieuwe beheerder toevoegt: een link om een eerste wachtwoord te kiezen",
     "kind_inquiryReceived": "Aanvraag ontvangen",
     "kind_inquiryReceivedHint": "Aan de klant, na de aanvraag",
     "kind_newInquiry": "Nieuwe aanvraag",

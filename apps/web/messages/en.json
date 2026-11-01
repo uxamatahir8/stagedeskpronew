@@ -200,6 +200,7 @@
       "sendCode": "Email me a code",
       "codeSent": "If an account exists for {email}, we sent a code. It is valid for 10 minutes.",
       "verifyCode": "Sign in with code",
+      "resendCode": "Send a new code",
       "otherEmail": "Use another email address",
       "noAccount": "New agency?",
       "signUpLink": "Create an account",
@@ -238,7 +239,11 @@
       "mismatch": "The passwords don't match.",
       "submit": "Save password",
       "done": "Your password has been changed. Sign in with your new password.",
-      "invalidToken": "This link has expired or was already used. Request a new one."
+      "invalidToken": "This link has expired or was already used. Request a new one.",
+      "setupTitle": "Choose your password",
+      "setupBody": "Your account is ready. Choose a password to sign in with your email address.",
+      "setupDone": "Your password is set. Sign in with your email address and new password.",
+      "requestNew": "Request a new link"
     },
     "twoFactor": {
       "title": "Two-step verification",
@@ -306,6 +311,7 @@
     "wrongAccount": "You're signed in as {current}, but this invitation is for {email}.",
     "switchAccount": "Sign out and switch account",
     "invalid": "This invitation has expired or is no longer valid. Ask the agency to send a new one.",
+    "invalidTitle": "This invitation is no longer valid",
     "declined": "You declined the invitation."
   },
   "team": {
@@ -1892,7 +1898,7 @@
     "deleteForever": "Delete for good",
     "deleted": "Account deleted.",
     "newAdmin": "Add admin",
-    "newAdminHint": "They get full access to the platform and sign in with a code sent to their email. An existing account is given admin rights.",
+    "newAdminHint": "They get full access to the platform. A new account gets an email with a link to choose a password (valid for 24 hours); signing in with an emailed code works too. An existing account is given admin rights.",
     "create": "Add admin",
     "adminCreated": "{name} is now a platform admin.",
     "invalid": "Check the name and email address.",
@@ -2932,7 +2938,7 @@
   },
   "agencyAdmin": {
     "new": "New agency",
-    "newHint": "Set up an agency for someone. Their account is created if needed; they sign in with a code sent to their email and then choose a plan. You can also grant a plan yourself.",
+    "newHint": "Set up an agency for someone. Their account is created if needed; a new owner gets an email with a link to choose a password (valid for 24 hours) and then chooses a plan. You can also grant a plan yourself.",
     "agencyName": "Agency name",
     "city": "City",
     "language": "Language for emails",
@@ -3503,6 +3509,8 @@
     "kind_resetPasswordHint": "When someone forgets their password",
     "kind_artistAccountSetup": "Artist account setup",
     "kind_artistAccountSetupHint": "When an agency or platform admin creates an artist account",
+    "kind_accountSetup": "Account setup",
+    "kind_accountSetupHint": "When a platform admin adds a new admin: a link to choose their first password",
     "kind_inquiryReceived": "Inquiry received",
     "kind_inquiryReceivedHint": "To the customer, after their inquiry",
     "kind_newInquiry": "New inquiry",

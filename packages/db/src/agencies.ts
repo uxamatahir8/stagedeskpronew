@@ -98,8 +98,9 @@ export async function freeSlug(name: string) {
 
 /**
  * Creates an agency for someone (the platform admin sets it up for them).
- * The owner gets an account if they don't have one; they sign in with an
- * emailed code and can set a password later. Like any new agency it starts
+ * The owner gets an account if they don't have one (without a password: the
+ * web action emails a one-time link to choose one; an emailed sign-in code
+ * works too). Like any new agency it starts
  * without a plan; the owner chooses one, or the admin grants or extends one.
  */
 export async function createAgencyForOwner(input: { name: string; city: string | null; ownerName: string; ownerEmail: string; locale: "nl" | "en" }) {

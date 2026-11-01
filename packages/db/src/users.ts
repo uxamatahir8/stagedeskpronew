@@ -74,7 +74,8 @@ export async function listUsers({
 
 /**
  * Makes someone a platform admin: a new account, or an existing one without a
- * platform role. They sign in with an email code and can set a password later.
+ * platform role. A new account has no password: the web action emails a
+ * one-time link to choose one (an emailed sign-in code works too).
  */
 export async function createPlatformAdmin(input: { name: string; email: string; locale?: string }) {
   const email = input.email.trim().toLowerCase();
@@ -84,16 +85,25 @@ export async function createPlatformAdmin(input: { name: string; email: string; 
   return prisma.user.create({ data: { id: randomUUID(), name: input.name.trim(), email, locale: input.locale ?? "en", platformRole: "platform_admin" } });
 }
 
-/** Name, email and phone. A new email address has to be confirmed again by the user. */
+/**
+ * Name, email and phone. A new email address has to be confirmed again by the
+ * user, and password links sent to the old address stop working (using one
+ * confirms the account's address, which is no longer the one it went to).
+ */
 export async function updateUserByAdmin(id: string, input: { name: string; email: string; phone?: string | null }) {
   const user = await prisma.user.findUnique({ where: { id }, select: { email: true } });
   if (!user) throw new UserAdminError("not_found");
   const email = input.email.trim().toLowerCase();
-  if (email !== user.email && (await prisma.user.findUnique({ where: { email }, select: { id: true } }))) throw new UserAdminError("email_taken");
-  return prisma.user.update({
-    where: { id },
-    data: { name: input.name.trim(), email, phone: input.phone?.trim() || null, ...(email !== user.email ? { emailVerified: false } : {}) },
-  });
+  const changed = email !== user.email;
+  if (changed && (await prisma.user.findUnique({ where: { email }, select: { id: true } }))) throw new UserAdminError("email_taken");
+  const [updated] = await prisma.$transaction([
+    prisma.user.update({
+      where: { id },
+      data: { name: input.name.trim(), email, phone: input.phone?.trim() || null, ...(changed ? { emailVerified: false } : {}) },
+    }),
+    ...(changed ? [prisma.verification.deleteMany({ where: { identifier: { startsWith: "reset-password:" }, value: id } })] : []),
+  ]);
+  return updated;
 }
 
 /** Ends every session of the user; they have to sign in again. */
