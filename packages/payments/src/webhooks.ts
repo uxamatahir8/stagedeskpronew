@@ -5,7 +5,7 @@ import { adjustCommissionsForCharge, attributeSubscriptionPromo, recordInvoiceCo
 import { recordStripePayment } from "./booking-payments";
 import { applyStripeAccount } from "./connect";
 import { syncChargeRefund } from "./refunds";
-import { applyStripeSubscription } from "./subscriptions";
+import { syncAgencySubscriptions } from "./subscriptions";
 
 /**
  * Verifies a webhook and stores it once by event id. Returns the event id to
@@ -118,8 +118,8 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object;
-      if (session.mode === "subscription" && typeof session.subscription === "string") {
-        await applyStripeSubscription(await stripe.subscriptions.retrieve(session.subscription));
+      if (session.mode === "subscription" && session.customer) {
+        await syncAgencySubscriptions(stripe, typeof session.customer === "string" ? session.customer : session.customer.id);
         return true;
       }
       if (session.mode === "payment") {
@@ -131,10 +131,10 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
     case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
-      // Stripe doesn't promise order: apply the subscription as it is now, not as this (maybe old) event saw it.
-      const current = await stripe.subscriptions.retrieve(event.data.object.id);
-      await applyStripeSubscription(current);
-      if (event.type === "customer.subscription.created") await attributeSubscriptionPromo(stripe, current);
+      // Stripe doesn't promise order: decide from all of the customer's subscriptions as they are now.
+      const object = event.data.object;
+      await syncAgencySubscriptions(stripe, typeof object.customer === "string" ? object.customer : object.customer.id);
+      if (event.type === "customer.subscription.created") await attributeSubscriptionPromo(stripe, await stripe.subscriptions.retrieve(object.id));
       return true;
     }
     case "invoice.payment_failed":
@@ -144,7 +144,7 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       const id = typeof subscriptionId === "string" ? subscriptionId : subscriptionId?.id;
       if (!id) return false;
       const sub = await stripe.subscriptions.retrieve(id);
-      await applyStripeSubscription(sub);
+      await syncAgencySubscriptions(stripe, typeof sub.customer === "string" ? sub.customer : sub.customer.id);
       if (event.type === "invoice.paid") {
         // The promo code decides the referral before the first commission is booked.
         await attributeSubscriptionPromo(stripe, sub);

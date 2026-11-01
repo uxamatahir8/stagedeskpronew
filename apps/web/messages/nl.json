@@ -1408,7 +1408,15 @@
     "opNotOpen": "Deze bewerking staat niet meer open.",
     "opCompleted": "Klaar: geboekt.",
     "opStillOpen": "Nog niet gelukt; zie de foutmelding. Er wordt verder geprobeerd.",
-    "noOperations": "Niets blijft hangen. Alle terugbetalingen en uitbetalingen zijn afgerond."
+    "noOperations": "Niets blijft hangen. Alle terugbetalingen en uitbetalingen zijn afgerond.",
+    "incidents": "Factuurincidenten",
+    "incidentsHint": "Bureaus met meer dan één lopend Stripe-abonnement: elk ervan brengt de klant kosten in rekening. StageDesk houdt het oudste aan en verandert niets in Stripe. Annuleer het extra abonnement in Stripe (en betaal zo nodig terug) en controleer daarna opnieuw.",
+    "incidentKeeps": "Houdt {id} aan",
+    "incidentDuplicates": "ook lopend: {ids}",
+    "incidentReconcile": "Controleren met Stripe",
+    "incidentResolve": "Markeren als afgehandeld",
+    "incidentResolved": "Opgelost: één lopend abonnement.",
+    "incidentStillOpen": "Nog {count} lopende abonnementen in Stripe."
   },
   "partners": {
     "metaTitle": "Partnerprogramma",
@@ -1985,7 +1993,9 @@
         "claim_reject": "Gemelde betaling als niet ontvangen gemarkeerd",
         "event_replayed": "Stripe-gebeurtenis opnieuw verwerkt",
         "operation_retried": "Terugbetaling of uitbetaling opnieuw geprobeerd",
-        "operation_closed": "Terugbetaling geboekt met tekort op terugboeking"
+        "operation_closed": "Terugbetaling geboekt met tekort op terugboeking",
+        "subscription_reconciled": "Abonnementen van een bureau met Stripe gecontroleerd",
+        "incident_resolved": "Factuurincident als afgehandeld gemarkeerd"
       },
       "user": {
         "disable": "Account uitgeschakeld",

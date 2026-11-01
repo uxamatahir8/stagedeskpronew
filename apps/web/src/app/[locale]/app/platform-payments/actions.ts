@@ -2,7 +2,7 @@
 
 import { getTranslations } from "next-intl/server";
 import { audit, prisma } from "@stagedesk/db";
-import { closeRefundWithShortfall, executePayout, executeRefund, getStripe, processStoredEvent, replayStripeEvent, resetOperation } from "@stagedesk/payments";
+import { closeRefundWithShortfall, executePayout, executeRefund, getStripe, processStoredEvent, replayStripeEvent, resetOperation, resolveBillingIncident, syncAgencySubscriptions } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { paymentsErrorMessage } from "@/lib/billing";
 import { requirePermission } from "@/lib/viewer";
@@ -51,4 +51,30 @@ export async function closeShortfallAction(operationId: string): Promise<ActionR
   } catch (error) {
     return { ok: false, message: await paymentsErrorMessage(error) };
   }
+}
+
+/** Re-reads the agency's subscriptions from Stripe and applies the rule (the incident resolves itself once one is left). */
+export async function reconcileSubscriptionsAction(agencyId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.payments");
+  const stripe = await getStripe();
+  const t = await getTranslations("platformPayments");
+  if (!stripe) return { ok: false, message: t("notConfigured") };
+  const org = await prisma.organization.findUnique({ where: { id: agencyId }, select: { stripeCustomerId: true } });
+  if (!org?.stripeCustomerId) return { ok: false, message: t("opNotOpen") };
+  try {
+    const result = await syncAgencySubscriptions(stripe, org.stripeCustomerId);
+    await audit({ actorId: viewer.user.id, action: "payment.subscription_reconciled", agencyId, data: { chosen: result?.chosen ?? null, duplicates: result?.duplicates ?? [] } });
+    return { ok: true, message: result && result.duplicates.length > 0 ? t("incidentStillOpen", { count: result.duplicates.length + 1 }) : t("incidentResolved") };
+  } catch (error) {
+    return { ok: false, message: await paymentsErrorMessage(error) };
+  }
+}
+
+/** The operator handled it in Stripe (cancelled one, refunded): close the incident. A later sync reopens it if two are still live. */
+export async function resolveIncidentAction(incidentId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.payments");
+  const t = await getTranslations("platformPayments");
+  if (!(await resolveBillingIncident(incidentId, viewer.user.id, null))) return { ok: false, message: t("opNotOpen") };
+  await audit({ actorId: viewer.user.id, action: "payment.incident_resolved", targetType: "billing_incident", targetId: incidentId });
+  return { ok: true, message: t("incidentResolved") };
 }

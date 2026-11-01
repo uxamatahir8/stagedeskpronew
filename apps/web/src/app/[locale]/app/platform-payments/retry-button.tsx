@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
-import { closeShortfallAction, retryEventAction, retryOperationAction } from "./actions";
+import { closeShortfallAction, reconcileSubscriptionsAction, resolveIncidentAction, retryEventAction, retryOperationAction } from "./actions";
 
 function useRun() {
   const router = useRouter();
@@ -70,6 +70,24 @@ export function OperationButtons({ operationId, canClose }: { operationId: strin
           </DialogContent>
         </Dialog>
       )}
+    </div>
+  );
+}
+
+/** A duplicate-subscription incident: re-read Stripe, or mark it handled. */
+export function IncidentButtons({ incidentId, agencyId }: { incidentId: string; agencyId: string }) {
+  const t = useTranslations("platformPayments");
+  const { pending, run } = useRun();
+  return (
+    <div className="flex justify-end gap-1">
+      <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => reconcileSubscriptionsAction(agencyId))}>
+        <RotateCwIcon />
+        {t("incidentReconcile")}
+      </Button>
+      <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => resolveIncidentAction(incidentId))}>
+        <CheckCheckIcon />
+        {t("incidentResolve")}
+      </Button>
     </div>
   );
 }

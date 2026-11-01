@@ -16,7 +16,7 @@ import { ServerTable } from "@/components/list/data-table";
 import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, startOfMonth } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
-import { OperationButtons, RetryEventButton } from "./retry-button";
+import { IncidentButtons, OperationButtons, RetryEventButton } from "./retry-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/platform-payments">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "platformPayments" });
@@ -53,7 +53,7 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
   const since = startOfMonth();
   // Platform-wide view: deliberately not tenant-scoped.
   const stuckBefore = minutesAgo(10);
-  const [t, ts, format, volume, ledger, paying, byStatus, events, operations] = await Promise.all([
+  const [t, ts, format, volume, ledger, paying, byStatus, events, operations, incidents] = await Promise.all([
     getTranslations("platformPayments"),
     getTranslations("subStatus"),
     getFormatter(),
@@ -81,7 +81,9 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
       orderBy: { createdAt: "asc" },
       take: 50,
     }),
+    prisma.billingIncident.findMany({ where: { status: "open" }, orderBy: { detectedAt: "asc" }, take: 50 }),
   ]);
+  const incidentAgencies = await prisma.organization.findMany({ where: { id: { in: incidents.map((i) => i.agencyId) } }, select: { id: true, name: true } });
   const opBookings = await prisma.booking.findMany({
     where: { id: { in: operations.map((o) => o.bookingId).filter((id): id is string => Boolean(id)) } },
     select: { id: true, trackingCode: true, organization: { select: { name: true } } },
@@ -104,6 +106,38 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
         <StatCard index={2} label={t("refunds")} value={euro(format, ledgerSum("refund"))} icon={Undo2Icon} />
         <StatCard index={3} label={t("mrr")} value={euro(format, mrr)} icon={RepeatIcon} />
       </div>
+
+      {incidents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("incidents")}</CardTitle>
+            <p className="text-sm text-muted-foreground">{t("incidentsHint")}</p>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableBody>
+                {incidents.map((i) => {
+                  const d = i.data as { authoritative?: string | null; duplicates?: string[] };
+                  return (
+                    <TableRow key={i.id}>
+                      <TableCell>
+                        <div className="font-medium">{incidentAgencies.find((a) => a.id === i.agencyId)?.name ?? i.agencyId}</div>
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {t("incidentKeeps", { id: d.authoritative ?? "-" })} · {t("incidentDuplicates", { ids: (d.duplicates ?? []).join(", ") })}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap tabular-nums">{dateTime(format, i.detectedAt)}</TableCell>
+                      <TableCell className="text-right">
+                        <IncidentButtons incidentId={i.id} agencyId={i.agencyId} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

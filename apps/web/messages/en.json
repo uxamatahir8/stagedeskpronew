@@ -1408,7 +1408,15 @@
     "opNotOpen": "This operation is no longer open.",
     "opCompleted": "Done: booked.",
     "opStillOpen": "Still not finished; see the error. It keeps retrying.",
-    "noOperations": "Nothing stuck. Every refund and payout finished."
+    "noOperations": "Nothing stuck. Every refund and payout finished.",
+    "incidents": "Billing incidents",
+    "incidentsHint": "Agencies with more than one live Stripe subscription: each one bills the customer. StageDesk keeps the earliest and changes nothing in Stripe. Cancel the extra one in Stripe (and refund if due), then reconcile.",
+    "incidentKeeps": "Keeps {id}",
+    "incidentDuplicates": "also live: {ids}",
+    "incidentReconcile": "Reconcile with Stripe",
+    "incidentResolve": "Mark handled",
+    "incidentResolved": "Resolved: one live subscription.",
+    "incidentStillOpen": "Still {count} live subscriptions in Stripe."
   },
   "partners": {
     "metaTitle": "Partner program",
@@ -1985,7 +1993,9 @@
         "claim_reject": "Marked a reported payment as not received",
         "event_replayed": "Replayed a Stripe event",
         "operation_retried": "Retried a refund or payout",
-        "operation_closed": "Closed a refund with a reversal shortfall"
+        "operation_closed": "Closed a refund with a reversal shortfall",
+        "subscription_reconciled": "Reconciled an agency's subscriptions with Stripe",
+        "incident_resolved": "Marked a billing incident as handled"
       },
       "user": {
         "disable": "Disabled an account",

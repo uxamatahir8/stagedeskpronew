@@ -37,6 +37,7 @@ export async function GET(request: Request) {
     new Queue(EMAIL_QUEUE, { connection: redis }).getJobCounts("failed", "waiting", "delayed"),
     prisma.stripeEvent.groupBy({ by: ["status"], where: { status: { in: ["received", "processing", "failed", "dead"] } }, _count: { _all: true } }),
     prisma.financialOperation.groupBy({ by: ["status"], where: { status: { in: ["pending", "review"] } }, _count: { _all: true } }),
+    prisma.billingIncident.count({ where: { status: "open" } }),
   ]);
   const value = <T,>(r: PromiseSettledResult<T>) => (r.status === "fulfilled" ? r.value : null);
   const heartbeat = value(details[0]);
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
     (stripeEvents["failed"] ?? 0) + (stripeEvents["received"] ?? 0) > 50 ? "stripe_events_backlog" : null,
     (operations["review"] ?? 0) > 0 ? "financial_operations_review" : null,
     ((value(details[1]) as { failed?: number } | null)?.failed ?? 0) > 0 ? "email_jobs_failed" : null,
+    ((value(details[4]) as number | null) ?? 0) > 0 ? "billing_incidents_open" : null,
   ].filter(Boolean);
   return Response.json(
     { ok: ready, checks: { database, redis: cache }, worker: { heartbeatAgeSeconds: workerAgeSeconds }, emailQueue: value(details[1]), stripeEvents, financialOperations: operations, alerts },

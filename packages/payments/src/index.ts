@@ -14,6 +14,9 @@ export {
 } from "./affiliates";
 export {
   applyStripeSubscription,
+  authoritativeSubscription,
+  resolveBillingIncident,
+  syncAgencySubscriptions,
   billingPortal,
   changeSubscriptionPlan,
   ensureCustomer,

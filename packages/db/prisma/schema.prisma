@@ -739,6 +739,32 @@ model Subscription {
   @@map("subscriptions")
 }
 
+/// Something in an agency's billing that a platform operator must look at,
+/// e.g. two live Stripe subscriptions. Platform-level (agencyId, not
+/// organizationId), so it stays out of tenantDb. Nothing is changed in Stripe
+/// automatically; reconciling re-reads Stripe and resolves it when it's gone.
+model BillingIncident {
+  id           String    @id @db.VarChar(64)
+  agencyId     String    @db.VarChar(64)
+  /// duplicate_subscription
+  kind         String    @db.VarChar(32)
+  /// open | resolved
+  status       String    @default("open") @db.VarChar(16)
+  /// "<agencyId>:<kind>" while open, null once resolved: one open incident per agency and kind.
+  openKey      String?   @unique @db.VarChar(120)
+  /// e.g. { authoritative: "sub_…", duplicates: ["sub_…"], customerId }
+  data         Json
+  detectedAt   DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  resolvedAt   DateTime?
+  resolvedById String?   @db.VarChar(64)
+  note         String?   @db.Text
+
+  @@index([status, detectedAt])
+  @@index([agencyId])
+  @@map("billing_incidents")
+}
+
 /// A Stripe Express account for an agency (receives its share) or an artist.
 model ConnectedAccount {
   id               String       @id @db.VarChar(64)
