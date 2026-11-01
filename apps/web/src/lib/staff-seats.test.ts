@@ -251,8 +251,18 @@ describe("invitations over the limit", () => {
     await member(a.id, "agency_staff");
     await member(a.id, "agency_staff");
     const email = `${run}-pending${n++}@test.local`;
+    // Invited yesterday, before the downgrade.
     const pending = await prisma.invitation.create({
-      data: { id: randomUUID(), organizationId: a.id, email, role: "agency_staff", status: "pending", expiresAt: new Date(Date.now() + 86_400_000), inviterId: a.owner.userId },
+      data: {
+        id: randomUUID(),
+        organizationId: a.id,
+        email,
+        role: "agency_staff",
+        status: "pending",
+        expiresAt: new Date(Date.now() + 86_400_000),
+        inviterId: a.owner.userId,
+        createdAt: new Date(Date.now() - 86_400_000),
+      },
     });
 
     await expect(invite(a, `${run}-new${n++}@test.local`)).rejects.toMatchObject(seatsFull);
@@ -261,5 +271,34 @@ describe("invitations over the limit", () => {
     await invite(a, email, true);
     expect((await prisma.invitation.findUniqueOrThrow({ where: { id: pending.id } })).status).toBe("pending");
     expect(vi.mocked(deliver).mock.calls.some(([job]) => job.kind === "invitation" && job.to === email)).toBe(true);
+  });
+
+  it("sends a quick resend of an invitation that fits", async () => {
+    const a = await agency();
+    const email = `${run}-quick${n++}@test.local`;
+    const first = await invite(a, email);
+    await invite(a, email, true);
+    expect((await prisma.invitation.findUniqueOrThrow({ where: { id: first.id } })).status).toBe("pending");
+    expect(vi.mocked(deliver).mock.calls.filter(([job]) => job.kind === "invitation" && job.to === email)).toHaveLength(2);
+  });
+
+  it("cancels a new invitation whose seat check fails, and says so (fails closed)", async () => {
+    // Better Auth swallows errors thrown while sending; an unchecked invitation must not stay behind.
+    const a = await agency();
+    const email = `${run}-unchecked${n++}@test.local`;
+    const held = intercept(prisma, "$transaction", (arg: unknown) => typeof arg === "function", "before");
+    try {
+      const inviting = invite(a, email).then(
+        () => "ok",
+        (e: unknown) => e,
+      );
+      await held.reached;
+      held.fail();
+      expect(await inviting).toMatchObject({ body: { code: "SEAT_CHECK_FAILED" } });
+    } finally {
+      held.restore();
+    }
+    expect(await prisma.invitation.count({ where: { organizationId: a.id, email, status: "pending" } })).toBe(0);
+    expect(vi.mocked(deliver).mock.calls.some(([job]) => job.kind === "invitation" && job.to === email)).toBe(false);
   });
 });
