@@ -22,7 +22,7 @@ import {
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { emailQuote } from "@/lib/quote-email";
-import { parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
+import { draftDeposit, parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
 import { limitBlocked, writeBlocked } from "@/lib/billing";
@@ -103,19 +103,23 @@ export async function sendQuoteAction(bookingId: string, input: QuoteDraft): Pro
   if ("badLine" in parsedLines) return { ok: false, message: t("invalidLine", { n: parsedLines.badLine }) };
   const quoteLines = parsedLines.lines;
 
+  const deposit = draftDeposit(parsed.data);
+  if (!deposit) return { ok: false, message: (await getTranslations("bookingErrors"))("invalid_amount") };
+
   return runAction(async () => {
     const quote = await sendQuote(
       organization.id,
       bookingId,
       {
         lines: quoteLines,
-        depositBps: Math.round(parsed.data.depositPct * 100),
+        deposit,
         expiresInDays: parsed.data.expiresInDays,
         notes: parsed.data.notes?.trim() || null,
+        locale: parsed.data.locale ?? null,
       },
       viewer.user.id,
     );
-    await emailQuote(quote.id, organization.name);
+    await emailQuote(quote.id);
     return t("sent", { n: quote.version });
   });
 }

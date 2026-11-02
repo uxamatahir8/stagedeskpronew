@@ -10,6 +10,8 @@ export interface QuoteTableData {
   totalCents: number;
   depositCents: number;
   depositBps: number;
+  /** none | percentage | fixed; missing on rows from before it was stored (= percentage). */
+  depositType?: string;
   notes: string | null;
 }
 
@@ -65,11 +67,19 @@ export async function QuoteTable({ quote, currency = "EUR" }: { quote: QuoteTabl
           <dt>{t("total")}</dt>
           <dd className="tabular-nums">{euro(format, quote.totalCents, currency)}</dd>
         </div>
-        {quote.depositCents > 0 && (
-          <div className="flex justify-between text-muted-foreground">
-            <dt>{t("depositLine", { pct: percent(format, quote.depositBps) })}</dt>
-            <dd className="tabular-nums">{euro(format, quote.depositCents, currency)}</dd>
-          </div>
+        {quote.depositCents > 0 ? (
+          <>
+            <div className="flex justify-between text-muted-foreground">
+              <dt>{quote.depositType === "fixed" ? t("depositFixedLine") : t("depositLine", { pct: percent(format, quote.depositBps) })}</dt>
+              <dd className="tabular-nums">{euro(format, quote.depositCents, currency)}</dd>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <dt>{t("balanceLine")}</dt>
+              <dd className="tabular-nums">{euro(format, quote.totalCents - quote.depositCents, currency)}</dd>
+            </div>
+          </>
+        ) : (
+          quote.totalCents > 0 && <p className="text-muted-foreground">{t("noDepositLine")}</p>
         )}
       </dl>
       {quote.notes && <p className="rounded-lg bg-muted/60 p-3 text-sm whitespace-pre-line">{quote.notes}</p>}

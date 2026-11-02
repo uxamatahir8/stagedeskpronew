@@ -509,7 +509,12 @@
     "artist_not_available_to_agency": "You can't book this artist.",
     "no_open_assignment": "There's no open request for you.",
     "quote_not_current": "This quote has been replaced or is no longer open.",
-    "invalid_amount": "Enter an amount."
+    "invalid_amount": "Enter an amount.",
+    "invalid_compensation": "Enter a valid artist fee: a percentage from 0 to 100 or an amount of 0 or more.",
+    "compensation_currency": "This artist's fixed fee is in another currency than this booking. Enter the fee for this booking.",
+    "invoice_number_invalid": "Use 1–32 letters, digits or - _ / . for the invoice number.",
+    "invoice_number_taken": "That invoice number is already used. Every invoice needs its own number.",
+    "manual_numbers_off": "Typing invoice numbers is switched off for your agency (Settings → Invoices)."
   },
   "bookings": {
     "title": "Bookings",
@@ -646,7 +651,24 @@
     "listHint": "One per line",
     "guests": "{count} guests",
     "customerMessage": "Message from the customer",
-    "back": "All bookings"
+    "back": "All bookings",
+    "depositType": "Upfront payment",
+    "depositType_none": "No upfront payment",
+    "depositType_percentage": "Percentage of the total",
+    "depositType_fixed": "Fixed amount",
+    "depositType_noneHint": "The customer pays everything later; nothing is due on acceptance.",
+    "depositType_percentageHint": "Due when the customer accepts.",
+    "depositType_fixedHint": "Due when the customer accepts; never more than the total.",
+    "depositFixed": "Upfront amount (incl. VAT)",
+    "depositFixedInvalid": "Enter an amount, e.g. 250,00.",
+    "depositFixedLine": "Upfront payment",
+    "balanceLine": "Balance",
+    "noDepositLine": "No upfront payment",
+    "mailLanguage": "Language for the customer",
+    "mailLanguage_customer": "The customer's own language.",
+    "mailLanguage_agency": "Your agency's language: the customer hasn't chosen one.",
+    "mailLanguage_chosen": "Chosen by you for this quote.",
+    "mailLanguageSummary": "The customer receives the email and PDF in {language}."
   },
   "timeline": {
     "created": "Booking created",
@@ -3554,7 +3576,7 @@
     "kind_newInquiry": "New inquiry",
     "kind_newInquiryHint": "To the agency team",
     "kind_quote": "Quote sent",
-    "kind_quoteHint": "To the customer, with the quote link",
+    "kind_quoteHint": "To the customer: every line, VAT, total, upfront payment, validity, the link to accept and the PDF",
     "kind_quoteExpiring": "Quote expiring",
     "kind_quoteExpiringHint": "To the customer, 48 hours before",
     "kind_balanceDue": "Balance due",
@@ -3599,7 +3621,13 @@
     "kind_leadLost": "Customer chose someone else",
     "kind_leadLostHint": "To the other providers once the customer has chosen",
     "kind_artistRequest": "Artist request between agencies",
-    "kind_artistRequestHint": "To the other agency when a request is sent, countered, accepted, declined or withdrawn"
+    "kind_artistRequestHint": "To the other agency when a request is sent, countered, accepted, declined or withdrawn",
+    "kind_gigAssigned": "Booking for an artist",
+    "kind_gigAssignedHint": "To the artist when they're asked to play, taken off a booking or it's cancelled",
+    "kind_bookingDetailsRequest": "Event details request",
+    "kind_bookingDetailsRequestHint": "To the customer, with a private link to fill in the event details",
+    "kind_senderTest": "Sender test",
+    "kind_senderTestHint": "To the agency, to check how its customer emails arrive"
   },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",

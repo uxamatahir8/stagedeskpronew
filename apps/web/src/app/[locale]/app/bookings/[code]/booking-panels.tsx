@@ -34,7 +34,7 @@ import {
   recordPaymentAction,
   updateDetailsAction,
 } from "../actions";
-import { type CatalogItem, QuoteBuilder, type BuilderLine } from "./quote-builder";
+import { type CatalogItem, QuoteBuilder, type BuilderLine, type QuoteDefaults } from "./quote-builder";
 
 /** Runs a server action, shows the result as a toast and refreshes the page data. */
 function useRun() {
@@ -193,6 +193,7 @@ export function QuoteControls({
   defaultDepositBps,
   defaultExpiryDays,
   currency,
+  quoteDefaults,
 }: {
   bookingId: string;
   canQuote: boolean;
@@ -208,6 +209,7 @@ export function QuoteControls({
   defaultDepositBps: number;
   defaultExpiryDays: number;
   currency: string;
+  quoteDefaults: QuoteDefaults;
 }) {
   const t = useTranslations();
   const [building, setBuilding] = useState(false);
@@ -225,6 +227,7 @@ export function QuoteControls({
         defaultDepositBps={defaultDepositBps}
         defaultExpiryDays={defaultExpiryDays}
         currency={currency}
+        defaults={quoteDefaults}
         onDone={() => setBuilding(false)}
       />
     );

@@ -509,7 +509,12 @@
     "artist_not_available_to_agency": "Je kunt deze artiest niet boeken.",
     "no_open_assignment": "Er staat geen open verzoek voor je klaar.",
     "quote_not_current": "Deze offerte is vervangen of staat niet meer open.",
-    "invalid_amount": "Vul een bedrag in."
+    "invalid_amount": "Vul een bedrag in.",
+    "invalid_compensation": "Vul een geldige artiestvergoeding in: een percentage van 0 tot 100 of een bedrag van 0 of meer.",
+    "compensation_currency": "De vaste vergoeding van deze artiest is in een andere valuta dan deze boeking. Vul de vergoeding voor deze boeking in.",
+    "invoice_number_invalid": "Gebruik 1–32 letters, cijfers of - _ / . voor het factuurnummer.",
+    "invoice_number_taken": "Dat factuurnummer is al gebruikt. Elke factuur heeft een eigen nummer nodig.",
+    "manual_numbers_off": "Zelf factuurnummers invullen staat uit voor je bureau (Instellingen → Facturen)."
   },
   "bookings": {
     "title": "Boekingen",
@@ -646,7 +651,24 @@
     "listHint": "Eén per regel",
     "guests": "{count} gasten",
     "customerMessage": "Bericht van de klant",
-    "back": "Alle boekingen"
+    "back": "Alle boekingen",
+    "depositType": "Aanbetaling",
+    "depositType_none": "Geen aanbetaling",
+    "depositType_percentage": "Percentage van het totaal",
+    "depositType_fixed": "Vast bedrag",
+    "depositType_noneHint": "De klant betaalt alles later; bij akkoord is niets verschuldigd.",
+    "depositType_percentageHint": "Verschuldigd zodra de klant akkoord geeft.",
+    "depositType_fixedHint": "Verschuldigd zodra de klant akkoord geeft; nooit meer dan het totaal.",
+    "depositFixed": "Aanbetaling (incl. btw)",
+    "depositFixedInvalid": "Vul een bedrag in, bijv. 250,00.",
+    "depositFixedLine": "Aanbetaling",
+    "balanceLine": "Restbedrag",
+    "noDepositLine": "Geen aanbetaling",
+    "mailLanguage": "Taal voor de klant",
+    "mailLanguage_customer": "De taal die de klant zelf koos.",
+    "mailLanguage_agency": "De taal van je bureau: de klant koos zelf geen taal.",
+    "mailLanguage_chosen": "Door jou gekozen voor deze offerte.",
+    "mailLanguageSummary": "De klant krijgt de e-mail en pdf in het {language}."
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -3554,7 +3576,7 @@
     "kind_newInquiry": "Nieuwe aanvraag",
     "kind_newInquiryHint": "Aan het bureauteam",
     "kind_quote": "Offerte verstuurd",
-    "kind_quoteHint": "Aan de klant, met de offertelink",
+    "kind_quoteHint": "Aan de klant: alle regels, btw, totaal, aanbetaling, geldigheid, de link om te accepteren en de pdf",
     "kind_quoteExpiring": "Offerte verloopt",
     "kind_quoteExpiringHint": "Aan de klant, 48 uur vooraf",
     "kind_balanceDue": "Restbedrag",
@@ -3599,7 +3621,13 @@
     "kind_leadLost": "Klant koos iemand anders",
     "kind_leadLostHint": "Aan de andere aanbieders zodra de klant gekozen heeft",
     "kind_artistRequest": "Artiestverzoek tussen bureaus",
-    "kind_artistRequestHint": "Aan het andere bureau als een verzoek is gestuurd, tegengeboden, geaccepteerd, afgewezen of ingetrokken"
+    "kind_artistRequestHint": "Aan het andere bureau als een verzoek is gestuurd, tegengeboden, geaccepteerd, afgewezen of ingetrokken",
+    "kind_gigAssigned": "Boeking voor een artiest",
+    "kind_gigAssignedHint": "Aan de artiest bij een aanvraag, als die van een boeking wordt gehaald of die is geannuleerd",
+    "kind_bookingDetailsRequest": "Verzoek om evenementgegevens",
+    "kind_bookingDetailsRequestHint": "Aan de klant, met een privélink om de evenementgegevens in te vullen",
+    "kind_senderTest": "Afzendertest",
+    "kind_senderTestHint": "Aan het bureau, om te zien hoe klantmails aankomen"
   },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",

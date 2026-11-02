@@ -8,6 +8,7 @@ import { getFormatter } from "@/lib/formatter";
 import {
   availableActions,
   type BookingStatus,
+  depositRuleOf,
   type EventType,
   isBudgetRange,
   paymentStatus,
@@ -27,6 +28,7 @@ import { RefundDialog } from "../../payments/refund-dialog";
 import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { requireAgency, viewerCan } from "@/lib/viewer";
+import { customerMailLocale } from "@/lib/correspondence";
 import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
@@ -114,6 +116,21 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
   const lastDeclined = !activeAssignment ? booking.assignments.find((a) => a.status === "declined") : null;
   const invoice = booking.invoices[0] ?? null;
   const pay = paymentStatus(booking.paidCents, booking.totalCents, booking.depositCents);
+  // A revision starts from the current quote's upfront payment and language; a first quote from the agency's defaults.
+  const agencyDefaults = await prisma.organization.findUniqueOrThrow({
+    where: { id: organization.id },
+    select: { defaultDepositType: true, defaultDepositBps: true, defaultDepositFixedCents: true, allowManualInvoiceNumbers: true },
+  });
+  const startDeposit = current
+    ? depositRuleOf(current)
+    : depositRuleOf({ depositType: agencyDefaults.defaultDepositType ?? "percentage", depositBps: agencyDefaults.defaultDepositBps ?? defaults.depositBps, depositFixedCents: agencyDefaults.defaultDepositFixedCents });
+  const mailLocale = current?.locale === "nl" || current?.locale === "en" ? { locale: current.locale as "nl" | "en", reason: "customer" as const } : await customerMailLocale(booking.id);
+  const quoteDefaults = {
+    depositType: startDeposit.type,
+    depositFixed: startDeposit.type === "fixed" ? centsToInput(startDeposit.cents, locale) : "",
+    locale: mailLocale.locale,
+    localeReason: mailLocale.reason,
+  };
 
   const canAssign = status === "booked" || status === "confirmed";
   // Asks to other agencies for one of their artists, newest first.
@@ -302,9 +319,10 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   unitPrice: centsToInput(i.unitPriceCents, locale),
                   vatBps: i.vatBps,
                 }))}
-                defaultDepositBps={current?.depositBps ?? defaults.depositBps}
+                defaultDepositBps={startDeposit.type === "percentage" ? startDeposit.bps : defaults.depositBps}
                 defaultExpiryDays={defaults.quoteExpiryDays}
                 currency={booking.currency}
+                quoteDefaults={quoteDefaults}
               />
             </CardContent>
           </Card>
