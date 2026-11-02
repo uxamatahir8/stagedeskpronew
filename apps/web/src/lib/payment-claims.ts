@@ -1,4 +1,5 @@
 import "server-only";
+import { agencySender, agencySenderSelect, bookingMailLocale } from "./correspondence";
 import { getTranslations } from "next-intl/server";
 import { deskRoles, formatIban } from "@stagedesk/core";
 import { getSetting, notify, prisma } from "@stagedesk/db";
@@ -73,15 +74,17 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
     getSetting("payments.methods"),
     prisma.booking.findUniqueOrThrow({
       where: { id: payment.bookingId },
-      select: { trackingCode: true, currency: true, totalCents: true, paidCents: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
+      select: { trackingCode: true, currency: true, totalCents: true, paidCents: true, customerId: true, organization: { select: agencySenderSelect }, customer: { select: { name: true, email: true, locale: true } } },
     }),
   ]);
   if (!booking.customer || !booking.customerId) return;
-  const locale = userLocale(booking.customer.locale);
+  // The booking's correspondence language (its quote's), signed by the agency.
+  const locale = await bookingMailLocale(payment.bookingId);
   if (sendReceipts) {
     deliver({
       kind: "paymentReceipt",
       to: booking.customer.email,
+      sender: agencySender(booking.organization),
       params: {
         locale,
         name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,
@@ -103,13 +106,14 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
 export async function announceRejected(claim: { bookingId: string; amountCents: number; rejectReason: string | null }) {
   const booking = await prisma.booking.findUniqueOrThrow({
     where: { id: claim.bookingId },
-    select: { trackingCode: true, currency: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
+    select: { trackingCode: true, currency: true, customerId: true, organization: { select: agencySenderSelect }, customer: { select: { name: true, email: true, locale: true } } },
   });
   if (!booking.customer || !booking.customerId) return;
-  const locale = userLocale(booking.customer.locale);
+  const locale = await bookingMailLocale(claim.bookingId);
   deliver({
     kind: "paymentNotReceived",
     to: booking.customer.email,
+    sender: agencySender(booking.organization),
     params: {
       locale,
       name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,

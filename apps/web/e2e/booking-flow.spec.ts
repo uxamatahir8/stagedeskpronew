@@ -84,6 +84,9 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
     await expect(agency.getByText("Aanbetaling ontvangen").first()).toBeVisible();
 
     await agency.getByRole("button", { name: "Factuur maken" }).click();
+    // The dialog shows the number the invoice will get before it's issued.
+    await expect(agency.getByRole("dialog").getByText(/\d{4}-\d{4}/).first()).toBeVisible();
+    await agency.getByRole("dialog").getByRole("button", { name: "Factuur uitgeven" }).click();
     await expect(agency.getByText(/Factuur \d{4}-\d{4} aangemaakt\./)).toBeVisible();
   });
 

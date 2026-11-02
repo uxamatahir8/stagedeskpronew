@@ -39,3 +39,9 @@ export function agencySender(org: { name: string; emailFromName: string | null; 
 }
 
 export const agencySenderSelect = { name: true, emailFromName: true, emailReplyTo: true, contactEmail: true } as const;
+
+/** The language a booking's customer gets mail in: the one its latest quote went out in, else customerMailLocale(). */
+export async function bookingMailLocale(bookingId: string): Promise<MailLocale> {
+  const quote = await prisma.quote.findFirst({ where: { bookingId, status: { in: ["sent", "accepted"] }, locale: { not: null } }, orderBy: { version: "desc" }, select: { locale: true } });
+  return asLocale(quote?.locale) ?? (await customerMailLocale(bookingId)).locale;
+}

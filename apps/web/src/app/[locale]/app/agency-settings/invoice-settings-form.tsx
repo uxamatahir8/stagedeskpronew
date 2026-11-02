@@ -45,8 +45,8 @@ export function InvoiceSettingsForm({
   };
 
   function save() {
-    const { backgroundUrl: _bg, ...template } = tpl;
-    start(async () => done(await saveInvoiceSettingsAction({ invoiceNumbering: numbering, invoicePrefix: prefix, allowManualInvoiceNumbers: manual, template })));
+    // The background is saved by its own upload action; the server ignores it here.
+    start(async () => done(await saveInvoiceSettingsAction({ invoiceNumbering: numbering, invoicePrefix: prefix, allowManualInvoiceNumbers: manual, template: tpl })));
   }
 
   function upload(f: File | undefined) {
