@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { assignArtist, prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
+import { emailArtists } from "@/lib/artist-mail";
 import { ArtistAccountError, ensureArtistAccount } from "@/lib/artist-account";
 
 const PLATFORM_ARTISTS_SLUG = "stagedesk-platform-artists";
@@ -72,7 +73,9 @@ export async function assignPlatformArtistAction(artistId: string, bookingId: st
       create: { id: randomUUID(), organizationId: artist.organizationId, artistId, partnerOrganizationId: booking.organizationId, status: "accepted", respondedAt: new Date() },
     });
   }
-  await assignArtist(booking.organizationId, booking.id, artistId, viewer.user.id);
+  const { assignmentId, withdrawnIds } = await assignArtist(booking.organizationId, booking.id, artistId, viewer.user.id);
+  await emailArtists([assignmentId], "new");
+  await emailArtists(withdrawnIds, "withdrawn");
   revalidatePath("/[locale]/app/platform-artists", "page");
   return { ok: true, message: (await getTranslations("platformArtists"))("assigned") };
 }

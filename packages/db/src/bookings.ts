@@ -434,15 +434,17 @@ export async function assignArtist(
     }
     // Replacing a confirmed artist sends the booking back to "booked" until the new one accepts.
     if (booking.status === "confirmed") await applyTransition(tx, booking, "release_artist", "agency", actorId, now);
+    const replaced = await tx.bookingAssignment.findMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true } });
     await tx.bookingAssignment.updateMany({
       where: { bookingId, status: { in: ["pending", "accepted"] } },
       data: { status: "withdrawn", respondedAt: now },
     });
+    const assignmentId = randomUUID();
     await tx.bookingAssignment.create({
-      data: { id: randomUUID(), organizationId, bookingId, artistId, status: "pending", ...pay },
+      data: { id: assignmentId, organizationId, bookingId, artistId, status: "pending", ...pay },
     });
     await logEvent(tx, bookingId, "artist_assigned", actorId, { artistId, stageName: allowed.stageName, ...pay });
-    return booking;
+    return { ...booking, assignmentId, withdrawnIds: replaced.map((r) => r.id) };
   });
   const artistUser = await prisma.artist.findUnique({ where: { id: artistId }, select: { userId: true, organization: { select: { name: true } } } });
   const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
@@ -451,6 +453,22 @@ export async function assignArtist(
     data: { name: agency?.name ?? "", code: booking.trackingCode },
     url: `/app/gigs/${booking.trackingCode}`,
   });
+  await notifyArtistsOff(booking.withdrawnIds, "gig_withdrawn", agency?.name ?? "", booking.trackingCode, artistId);
+  return { assignmentId: booking.assignmentId, withdrawnIds: booking.withdrawnIds };
+}
+
+/**
+ * Tells artists their request or gig is off (taken off the booking, or the
+ * booking was cancelled), so their dashboard never shows it as theirs any more.
+ * The artist who just got the booking again isn't told it was withdrawn.
+ */
+async function notifyArtistsOff(assignmentIds: string[], type: "gig_withdrawn" | "gig_cancelled", agency: string, code: string, exceptArtistId?: string) {
+  if (assignmentIds.length === 0) return;
+  const rows = await prisma.bookingAssignment.findMany({
+    where: { id: { in: assignmentIds }, ...(exceptArtistId ? { artistId: { not: exceptArtistId } } : {}) },
+    select: { artist: { select: { userId: true } } },
+  });
+  await notify(rows.map((r) => r.artist.userId), { type, data: { name: agency, code }, url: "/app/gigs" });
 }
 
 /**
@@ -500,16 +518,23 @@ export async function changeBookingStatus(
   by: { actor: BookingActor; actorId: string | null; reason?: string | null },
   now = new Date(),
 ) {
-  return tenantDb(organizationId).$transaction(async (tx) => {
+  const result = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     const extra = action === "cancel" || action === "decline" ? { cancelReason: by.reason ?? null } : {};
     const to = await applyTransition(tx, booking, action, by.actor, by.actorId, now, extra, by.reason ? { reason: by.reason } : undefined);
+    let withdrawn: string[] = [];
     if (to === "cancelled" || to === "declined") {
       await tx.quote.updateMany({ where: { bookingId, status: "sent" }, data: { status: "declined" } });
-      await tx.bookingAssignment.updateMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, data: { status: "withdrawn" } });
+      withdrawn = (await tx.bookingAssignment.findMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true } })).map((a) => a.id);
+      await tx.bookingAssignment.updateMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, data: { status: "withdrawn", respondedAt: now } });
     }
-    return to;
+    return { to, withdrawn, code: booking.trackingCode };
   });
+  if (result.withdrawn.length > 0) {
+    const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+    await notifyArtistsOff(result.withdrawn, "gig_cancelled", agency?.name ?? "", result.code);
+  }
+  return result.to;
 }
 
 /**

@@ -8,6 +8,8 @@ export type NotificationType =
   | "quote_accepted"
   | "gig_request"
   | "gig_response"
+  | "gig_withdrawn"
+  | "gig_cancelled"
   | "payment_received"
   | "message"
   | "ticket_new"

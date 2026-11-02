@@ -22,6 +22,7 @@ import {
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { emailQuote } from "@/lib/quote-email";
+import { emailArtists } from "@/lib/artist-mail";
 import { draftDeposit, parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
@@ -140,7 +141,9 @@ export async function assignArtistAction(bookingId: string, artistId: string): P
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   return runAction(async () => {
-    await assignArtist(organization.id, bookingId, artistId, viewer.user.id);
+    const { assignmentId, withdrawnIds } = await assignArtist(organization.id, bookingId, artistId, viewer.user.id);
+    await emailArtists([assignmentId], "new");
+    await emailArtists(withdrawnIds, "withdrawn");
     const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { stageName: true } });
     return t("assigned", { artist: artist?.stageName ?? "" });
   });
@@ -151,12 +154,14 @@ export async function changeStatusAction(
   action: "decline" | "cancel" | "complete" | "settle",
   reason: string | null,
 ): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.bookings.status");
+  const { viewer, organization, db } = await requireAgency("agency.bookings.status");
   const t = await getTranslations("booking");
-  return runAction(
-    () => changeBookingStatus(organization.id, bookingId, action, { actor: "agency", actorId: viewer.user.id, reason: reason?.trim() || null }).then(() => {}),
-    t("statusChanged"),
-  );
+  // Artists on the booking now; a cancel or decline takes them off it, and they're told.
+  const active = action === "cancel" || action === "decline" ? await db.bookingAssignment.findMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true } }) : [];
+  return runAction(async () => {
+    await changeBookingStatus(organization.id, bookingId, action, { actor: "agency", actorId: viewer.user.id, reason: reason?.trim() || null });
+    await emailArtists(active.map((a) => a.id), "cancelled");
+  }, t("statusChanged"));
 }
 
 const paymentSchema = z.object({

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { acceptQuote, assignArtist, createBooking, issueInvoice, nextInvoiceNumber, resolveBookingCustomer, sendQuote } from "./bookings";
+import { acceptQuote, assignArtist, changeBookingStatus, createBooking, issueInvoice, nextInvoiceNumber, resolveBookingCustomer, sendQuote } from "./bookings";
 import { prisma } from "./client";
 
 /**
@@ -47,6 +47,7 @@ afterAll(async () => {
   await prisma.bookingAssignment.deleteMany({ where: { organizationId: { in: orgs } } });
   await prisma.booking.deleteMany({ where: { organizationId: { in: orgs } } });
   await prisma.organization.deleteMany({ where: { id: { in: orgs } } });
+  await prisma.notification.deleteMany({ where: { userId: { in: [owner, customer, artistUser] } } });
   await prisma.user.deleteMany({ where: { OR: [{ id: { in: [owner, customer, artistUser] } }, { email: { startsWith: run } }] } });
   await prisma.$disconnect();
 });
@@ -161,5 +162,36 @@ describe("invoice numbering", () => {
   it("keeps the original yearly numbers for agencies that change nothing", async () => {
     const { booking } = await bookedBooking({ type: "none" }, "2027-06-20", usdOrg);
     expect((await issueInvoice(usdOrg, booking.id, owner, may1)).number).toBe("2027-0001");
+  });
+});
+
+describe("artist notifications", () => {
+  it("tells the artist about a request, about being taken off it, and about a cancellation", async () => {
+    const otherUser = `${run}-artist2`;
+    await prisma.user.create({ data: { id: otherUser, name: "Artist 2", email: `${run}-ar2@test.local` } });
+    await prisma.artist.create({ data: { id: `${run}-second`, organizationId: org, userId: otherUser, stageName: "DJ Second", genres: [] } });
+    const count = (userId: string, type: string) => prisma.notification.count({ where: { userId, type } });
+
+    const { booking } = await bookedBooking({ type: "none" }, "2027-09-01");
+    const first = await assignArtist(org, booking.id, fixedArtist, owner, may1);
+    expect(first.withdrawnIds).toEqual([]);
+    expect(await count(artistUser, "gig_request")).toBeGreaterThanOrEqual(1);
+
+    // Reassigning withdraws the first request and tells that artist.
+    const second = await assignArtist(org, booking.id, `${run}-second`, owner, may1);
+    expect(second.withdrawnIds).toEqual([first.assignmentId]);
+    expect(await count(artistUser, "gig_withdrawn")).toBe(1);
+    expect(await prisma.bookingAssignment.findUniqueOrThrow({ where: { id: first.assignmentId } })).toMatchObject({ status: "withdrawn" });
+
+    await changeBookingStatus(org, booking.id, "cancel", { actor: "agency", actorId: owner, reason: "Weather" }, may1);
+    expect(await count(otherUser, "gig_cancelled")).toBe(1);
+    // The first artist was already off the booking: no cancellation notice for them.
+    expect(await count(artistUser, "gig_cancelled")).toBe(0);
+    expect(await prisma.bookingAssignment.count({ where: { bookingId: booking.id, status: { in: ["pending", "accepted"] } } })).toBe(0);
+
+    await prisma.notification.deleteMany({ where: { userId: { in: [artistUser, otherUser] } } });
+    await prisma.bookingAssignment.deleteMany({ where: { bookingId: booking.id } });
+    await prisma.artist.delete({ where: { id: `${run}-second` } });
+    await prisma.user.delete({ where: { id: otherUser } });
   });
 });

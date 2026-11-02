@@ -1800,7 +1800,9 @@
     "artist_request_answer": "{name} {status, select, accepted {is akkoord over} declined {wees het verzoek af voor} other {trok het verzoek in voor}} {artist}",
     "equipment_unreserved": "{count, plural, one {# item} other {# items}} op {code} kon niet worden gereserveerd",
     "equipment_missing": "{count, plural, one {# item ontbreekt} other {# items ontbreken}} na {code}",
-    "equipment_damaged": "{count, plural, one {# item} other {# items}} beschadigd terug van {code}"
+    "equipment_damaged": "{count, plural, one {# item} other {# items}} beschadigd terug van {code}",
+    "gig_withdrawn": "{name} heeft je van boeking {code} gehaald",
+    "gig_cancelled": "Boeking {code} bij {name} is geannuleerd"
   },
   "messages": {
     "title": "Berichten",

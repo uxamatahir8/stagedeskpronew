@@ -23,7 +23,8 @@ export async function ArtistHome({ userId }: { userId: string }) {
     getTranslations("eventTypes"),
     getFormatter(),
     prisma.bookingAssignment.findMany({
-      where: { artist: { userId }, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] }, eventDate: { gte: toDateOnly(today) } } },
+      // Gigs without a date yet count as upcoming: leaving them out hid new requests from the artist.
+      where: { artist: { userId }, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] }, OR: [{ eventDate: null }, { eventDate: { gte: toDateOnly(today) } }] } },
       orderBy: { booking: { eventDate: "asc" } },
       take: 20,
       include: {

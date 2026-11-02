@@ -1800,7 +1800,9 @@
     "artist_request_answer": "{name} {status, select, accepted {agreed on} declined {declined the request for} other {withdrew the request for}} {artist}",
     "equipment_unreserved": "{count, plural, one {# item} other {# items}} on {code} couldn't be reserved",
     "equipment_missing": "{count, plural, one {# item is} other {# items are}} missing after {code}",
-    "equipment_damaged": "{count, plural, one {# item} other {# items}} came back damaged from {code}"
+    "equipment_damaged": "{count, plural, one {# item} other {# items}} came back damaged from {code}",
+    "gig_withdrawn": "{name} took you off booking {code}",
+    "gig_cancelled": "Booking {code} at {name} was cancelled"
   },
   "messages": {
     "title": "Messages",

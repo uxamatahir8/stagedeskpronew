@@ -53,7 +53,7 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
       where: {
         artistId: artist.id,
         status: { in: ["pending", "accepted"] },
-        booking: { eventDate: { gte: toDateOnly(today) }, status: { in: ["booked", "confirmed"] } },
+        booking: { OR: [{ eventDate: null }, { eventDate: { gte: toDateOnly(today) } }], status: { in: ["booked", "confirmed"] } },
       },
       include: { booking: { select: { trackingCode: true, eventDate: true, eventType: true, venueCity: true, organizationId: true } } },
       orderBy: { booking: { eventDate: "asc" } },
