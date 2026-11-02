@@ -72,6 +72,7 @@ export async function createDetailRequest(organizationId: string, bookingId: str
   const token = randomBytes(32).toString("base64url");
   const days = Math.max(1, Math.min(30, Math.trunc(opts.days ?? 7)));
   const expiresAt = new Date(now.getTime() + days * 86_400_000);
+  const id = randomUUID();
   await db.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${bookingId} FOR UPDATE`;
     const booking = await tx.booking.findFirst({ where: { id: bookingId } });
@@ -81,7 +82,7 @@ export async function createDetailRequest(organizationId: string, bookingId: str
     await tx.bookingDetailRequest.updateMany({ where: { bookingId, revokedAt: null, submittedAt: null }, data: { revokedAt: now } });
     await tx.bookingDetailRequest.create({
       data: {
-        id: randomUUID(),
+        id,
         organizationId,
         bookingId,
         tokenHash: hash(token),
@@ -95,7 +96,7 @@ export async function createDetailRequest(organizationId: string, bookingId: str
     });
     await tx.bookingEvent.create({ data: { bookingId, type: "details_requested", actorId, data: { expiresAt: expiresAt.toISOString() }, organizationId: "" } });
   });
-  return { token, expiresAt };
+  return { id, token, expiresAt };
 }
 
 export async function revokeDetailRequests(organizationId: string, bookingId: string, actorId: string, now = new Date()) {

@@ -61,7 +61,7 @@ export interface EmailSender {
   name: string;
   replyTo?: string | null;
 }
-const sending = new AsyncLocalStorage<EmailSender | undefined>();
+const sending = new AsyncLocalStorage<{ sender?: EmailSender; messageId?: string; accepted?: (id: string) => void }>();
 
 const platformFrom = () => process.env["MAIL_FROM"] ?? "StageDesk <no-reply@stagedesk.local>";
 
@@ -108,14 +108,17 @@ async function send(to: string, subject: string, element: ReactElement, replyTo?
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   const capture = previewing.getStore();
   if (capture) return capture({ subject, html, text });
-  const sender = sending.getStore();
+  const context = sending.getStore();
+  const sender = context?.sender;
   replyTo ??= replyToOk(sender?.replyTo);
   // Test and demo addresses never go out through a real mail server (tests run against Mailpit).
   if (isTestAddress(to) && !localMailTransport()) {
     console.warn(`[mail] not sent: ${subject.slice(0, 40)} is for a test address and SMTP is not local`);
     return;
   }
-  await getTransporter().sendMail({
+  const info = await getTransporter().sendMail({
+    // A stable id from the outbox: a resend after a crash is the same message to mail clients.
+    ...(context?.messageId ? { messageId: context.messageId } : {}),
     from: fromHeader(sender),
     to,
     subject,
@@ -124,6 +127,7 @@ async function send(to: string, subject: string, element: ReactElement, replyTo?
     html,
     text,
   });
+  context?.accepted?.(info.messageId);
 }
 
 export function sendVerifyEmail(to: string, p: { locale: EmailLocale; name: string; url: string }) {
@@ -324,9 +328,19 @@ export type EmailJob = { [K in EmailKind]: { kind: K; to: string; params: Parame
 /** Mail that proves who someone is or lets them in: always from the platform itself. */
 const securityKinds = new Set<EmailKind>(["verifyEmail", "loginCode", "resetPassword", "artistAccountSetup", "accountSetup", "invitation"]);
 
-export function sendEmailJob(job: EmailJob) {
+/**
+ * Sends one email. Resolves with the Message-ID the SMTP server accepted
+ * (acceptance, not delivery), or undefined when nothing went out (a preview,
+ * or a test address with a non-local server).
+ */
+export async function sendEmailJob(job: EmailJob, opts: { messageId?: string } = {}): Promise<string | undefined> {
   const sender = senders[job.kind] as (to: string, params: EmailJob["params"]) => Promise<void>;
-  return sending.run(securityKinds.has(job.kind) ? undefined : job.sender, () => sender(job.to, job.params));
+  let accepted: string | undefined;
+  await sending.run(
+    { sender: securityKinds.has(job.kind) ? undefined : job.sender, messageId: opts.messageId, accepted: (id) => void (accepted = id) },
+    () => sender(job.to, job.params),
+  );
+  return accepted;
 }
 
 /** Renders an email exactly as it would be sent, without sending it (admin previews). */

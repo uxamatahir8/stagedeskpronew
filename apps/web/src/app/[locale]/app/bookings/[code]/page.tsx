@@ -15,7 +15,7 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, openDetailRequest, prisma } from "@stagedesk/db";
+import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
@@ -33,6 +33,7 @@ import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
   AssignArtist,
+  RetryEmailButton,
   DetailRequestPanel,
   EditDetailsDialog,
   IssueInvoiceButton,
@@ -126,6 +127,8 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     ? depositRuleOf(current)
     : depositRuleOf({ depositType: agencyDefaults.defaultDepositType ?? "percentage", depositBps: agencyDefaults.defaultDepositBps ?? defaults.depositBps, depositFixedCents: agencyDefaults.defaultDepositFixedCents });
   const mailLocale = current?.locale === "nl" || current?.locale === "en" ? { locale: current.locale as "nl" | "en", reason: "customer" as const } : await customerMailLocale(booking.id);
+  // What happened to the booking's emails: stored, queued, accepted by the mail server, or failing.
+  const emails = await bookingEmails(booking.id);
   // The customer can fill in the event details through a link until a quote is accepted.
   const detailRequest =
     booking.customer && ["inquiry", "quoted", "expired"].includes(status) && viewerCan(viewer, "agency.bookings.edit")
@@ -578,6 +581,32 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardContent>
           </Card>
+
+          {emails.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("bookingEmails.title")}</CardTitle>
+                <CardDescription>{t("bookingEmails.hint")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-2 text-sm">
+                  {emails.map((m) => (
+                    <li key={m.id} className="grid gap-0.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="min-w-0 truncate">{t.has(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") ? t(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") : m.kind}</span>
+                        <Pill tone={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" ? "danger" : "neutral"}>{t(`bookingEmails.status_${m.status as "sent"}`)}</Pill>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {m.to} · {dateTime(format, m.sentAt ?? m.createdAt)}
+                        {m.status === "failed" && ` · ${t("bookingEmails.nextTry", { date: dateTime(format, m.nextAttemptAt) })}`}
+                      </p>
+                      {(m.status === "failed" || m.status === "dead") && viewerCan(viewer, "agency.bookings.edit") && <RetryEmailButton emailId={m.id} />}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

@@ -39,3 +39,4 @@ export * from "./newsletter";
 export * from "./dashboards";
 export * from "./artist-admin";
 export * from "./detail-requests";
+export * from "./email-outbox";

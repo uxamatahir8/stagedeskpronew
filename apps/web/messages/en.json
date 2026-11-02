@@ -681,7 +681,8 @@
     "invoiceNumberNext": "Invoice number",
     "invoiceNumberOwn": "Your own number (optional)",
     "invoiceNumberOwnHint": "Leave empty to take the next number. A typed number must be unused and is recorded in the audit log.",
-    "issueInvoiceConfirm": "Issue invoice"
+    "issueInvoiceConfirm": "Issue invoice",
+    "emailNotQueued": "The email could not be stored for sending; send it again from the booking's email list or contact support."
   },
   "timeline": {
     "created": "Booking created",
@@ -6139,7 +6140,8 @@
     "invalid": "Check the language and number of days.",
     "error_not_found": "That booking wasn't found.",
     "error_invalid_status": "Once a quote is accepted the customer can't change the details through a link.",
-    "error_no_customer": "Add a customer to the booking first."
+    "error_no_customer": "Add a customer to the booking first.",
+    "emailFailedCopy": "Link created, but the email could not be stored for sending. Copy the link and send it yourself."
   },
   "detailsPage": {
     "title": "Hi {name}, your event details",
@@ -6159,5 +6161,20 @@
     "tooMany": "Too many attempts. Try again in a few minutes.",
     "notAvailableTitle": "This link doesn't work",
     "notAvailable": "It may have expired, been used already or been replaced. Ask the agency for a new link."
+  },
+  "bookingEmails": {
+    "title": "Emails",
+    "hint": "What happened to this booking's emails. Sent means the mail server accepted it; whether it reached the inbox isn't known.",
+    "status_pending": "Waiting",
+    "status_queued": "Queued",
+    "status_sending": "Sending",
+    "status_sent": "Sent",
+    "status_failed": "Failed, will retry",
+    "status_dead": "Not sent",
+    "nextTry": "next try {date}",
+    "retry": "Send again",
+    "retried": "The email will be sent again.",
+    "notFound": "That email wasn't found.",
+    "notRetryable": "This email can't be sent again (it was sent, or its contents are no longer stored)."
   }
 }

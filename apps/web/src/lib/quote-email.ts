@@ -4,6 +4,7 @@ import { type EventType, type VatGroup } from "@stagedesk/core";
 import { fromDateOnly, prisma } from "@stagedesk/db";
 import { agencySender, agencySenderSelect, customerMailLocale, type MailLocale } from "./correspondence";
 import { absoluteUrl, appUrl, deliver } from "./mail";
+import type { DeliveryReceipt } from "./deliver";
 
 /**
  * Emails the customer their quote: what they get (every line, VAT, total,
@@ -13,7 +14,7 @@ import { absoluteUrl, appUrl, deliver } from "./mail";
  * customer's (see customerMailLocale).
  */
 /** `displayName` replaces the agency name (an independent artist quoting under their stage name). */
-export async function emailQuote(quoteId: string, displayName?: string) {
+export async function emailQuote(quoteId: string, displayName?: string): Promise<DeliveryReceipt | null> {
   const quote = await prisma.quote.findUnique({
     where: { id: quoteId },
     include: {
@@ -36,7 +37,7 @@ export async function emailQuote(quoteId: string, displayName?: string) {
     },
   });
   const customer = quote?.booking.customer;
-  if (!quote || !customer) return;
+  if (!quote || !customer) return null;
   const locale: MailLocale = quote.locale === "nl" || quote.locale === "en" ? quote.locale : (await customerMailLocale(quote.booking.id)).locale;
   const intl = locale === "en" ? "en-GB" : "nl-NL";
   const money = (cents: number) => new Intl.NumberFormat(intl, { style: "currency", currency: quote.booking.currency }).format(cents / 100);
@@ -51,7 +52,8 @@ export async function emailQuote(quoteId: string, displayName?: string) {
     : undefined;
   const org = quote.organization;
 
-  deliver({
+  // One email per quote version: a repeated action (double click, retry) stores nothing new.
+  return deliver({
     kind: "quote",
     to: customer.email,
     sender: displayName ? { ...agencySender(org), name: displayName } : agencySender(org),
@@ -79,5 +81,5 @@ export async function emailQuote(quoteId: string, displayName?: string) {
       contactPhone: org.phone ?? undefined,
       pdfUrl: `${appUrl}/api/pdf/quote/${quote.id}?token=${encodeURIComponent(quote.token)}&lang=${locale}`,
     },
-  });
+  }, { key: `quote:${quote.id}`, agencyId: quote.organizationId, bookingId: quote.bookingId });
 }

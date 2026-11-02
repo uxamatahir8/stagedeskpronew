@@ -571,6 +571,9 @@ model Quote {
   depositFixedCents Int?
   /// Language the quote was sent in (emails, PDF, reminders); null on quotes from before it was stored.
   locale            String?      @db.VarChar(8)
+  /// The event details the quote was made for (QuoteEventSnapshot in core). The customer accepts these;
+  /// when the booking's details change the quote is outdated and must be revised. null on older quotes.
+  eventSnapshot     Json?
   subtotalCents     Int
   vatCents          Int
   totalCents        Int
@@ -1972,4 +1975,38 @@ model BookingDetailRequest {
 
   @@index([organizationId, bookingId])
   @@map("booking_detail_requests")
+}
+
+/// Outbox for email: every message is stored before it is handed to the queue,
+/// so a Redis outage, a crashed worker or a failed SMTP call leaves a row to
+/// retry instead of losing the message. One send per row (claimed with a
+/// lease); `key` makes a repeated request store nothing new. Agency id, not
+/// organizationId, so it stays outside the tenant-scoped client.
+model EmailMessage {
+  id                String    @id @db.VarChar(64)
+  /// Idempotency key from the business record, e.g. quote:<id> or gig-new:<assignment id>.
+  key               String?   @unique @db.VarChar(191)
+  kind              String    @db.VarChar(40)
+  to                String    @db.VarChar(191)
+  /// The EmailJob; cleared after sending for mail that carries a sign-in or setup secret.
+  job               Json?
+  agencyId          String?   @db.VarChar(64)
+  bookingId         String?   @db.VarChar(64)
+  /// pending (stored) | queued (Redis accepted) | sending (claimed) | sent (SMTP server accepted) | failed (retry planned) | dead (gave up)
+  status            String    @default("pending") @db.VarChar(12)
+  attempts          Int       @default(0)
+  lastError         String?   @db.Text
+  nextAttemptAt     DateTime  @default(now())
+  lockedUntil       DateTime?
+  queuedAt          DateTime?
+  sentAt            DateTime?
+  /// The Message-ID the SMTP server accepted. Acceptance, not delivery to the inbox.
+  providerMessageId String?   @db.VarChar(191)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([bookingId, createdAt])
+  @@index([agencyId, createdAt])
+  @@map("email_messages")
 }

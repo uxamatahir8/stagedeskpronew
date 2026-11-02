@@ -681,7 +681,8 @@
     "invoiceNumberNext": "Factuurnummer",
     "invoiceNumberOwn": "Eigen nummer (optioneel)",
     "invoiceNumberOwnHint": "Laat leeg voor het volgende nummer. Een eigen nummer mag niet eerder gebruikt zijn en wordt vastgelegd in het auditlog.",
-    "issueInvoiceConfirm": "Factuur uitgeven"
+    "issueInvoiceConfirm": "Factuur uitgeven",
+    "emailNotQueued": "De e-mail kon niet worden opgeslagen om te versturen; verstuur hem opnieuw vanuit de e-maillijst van de boeking of neem contact op met support."
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -6139,7 +6140,8 @@
     "invalid": "Controleer de taal en het aantal dagen.",
     "error_not_found": "Die boeking is niet gevonden.",
     "error_invalid_status": "Als een offerte geaccepteerd is, kan de klant de gegevens niet meer via een link aanpassen.",
-    "error_no_customer": "Voeg eerst een klant toe aan de boeking."
+    "error_no_customer": "Voeg eerst een klant toe aan de boeking.",
+    "emailFailedCopy": "Link gemaakt, maar de e-mail kon niet worden opgeslagen om te versturen. Kopieer de link en stuur hem zelf."
   },
   "detailsPage": {
     "title": "Hoi {name}, de gegevens van je evenement",
@@ -6159,5 +6161,20 @@
     "tooMany": "Te veel pogingen. Probeer het over een paar minuten opnieuw.",
     "notAvailableTitle": "Deze link werkt niet",
     "notAvailable": "Hij is misschien verlopen, al gebruikt of vervangen. Vraag het bureau om een nieuwe link."
+  },
+  "bookingEmails": {
+    "title": "E-mails",
+    "hint": "Wat er met de e-mails van deze boeking gebeurde. Verstuurd betekent dat de mailserver hem aannam; of hij in de inbox is aangekomen, is niet bekend.",
+    "status_pending": "Wacht",
+    "status_queued": "In de wachtrij",
+    "status_sending": "Bezig",
+    "status_sent": "Verstuurd",
+    "status_failed": "Mislukt, wordt opnieuw geprobeerd",
+    "status_dead": "Niet verstuurd",
+    "nextTry": "volgende poging {date}",
+    "retry": "Opnieuw versturen",
+    "retried": "De e-mail wordt opnieuw verstuurd.",
+    "notFound": "Die e-mail is niet gevonden.",
+    "notRetryable": "Deze e-mail kan niet opnieuw worden verstuurd (hij is al verstuurd, of de inhoud is niet meer bewaard)."
   }
 }

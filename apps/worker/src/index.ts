@@ -1,7 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
 import { checkProductionConfig, localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
-import { approveDueCommissions, expireQuotes, prisma, resumeLeadAcceptances, saveExchangeRates } from "@stagedesk/db";
+import { approveDueCommissions, dueEmails, expireQuotes, markEmailQueued, prisma, processEmail, recordEmail, resumeLeadAcceptances, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
 import { getStripe, reconcileAffiliatePromos, recoverStripeWithdrawals, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
 import { sendCampaign, sendDueCampaigns } from "./newsletter";
@@ -25,16 +25,41 @@ const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379
 // web app; "retry-stripe-events" picks up any that failed, so none are lost.
 const systemQueue = new Queue("system", { connection });
 
-// Every email goes through this queue: the web app and the jobs below add
-// { kind, to, params }; failed sends are retried with backoff.
+// Email: every message is stored in the outbox (email_messages) first; the
+// queue only carries its id. Sending goes through the outbox claim, so one
+// row is sent once however many jobs or processes see it; retries are the
+// outbox's (the "email-outbox" sweep), so the queue job runs once.
 const emailQueue = new Queue(EMAIL_QUEUE, { connection });
-// jobId (optional) makes a re-add of the same email a no-op while the job is still kept.
-const queueEmail = (job: EmailJob, jobId?: string) =>
-  emailQueue.add(job.kind, job, { attempts: 5, backoff: { type: "exponential", delay: 30_000 }, removeOnComplete: 1000, removeOnFail: 5000, ...(jobId ? { jobId: jobId.replaceAll(":", "_") } : {}) });
+const sendStored = (id: string) => processEmail(id, (job, messageId) => sendEmailJob(job as EmailJob, { messageId }));
+
+const enqueueStored = async (id: string, kind: string) => {
+  try {
+    await emailQueue.add(kind, { outboxId: id }, { jobId: id, attempts: 1, removeOnComplete: 1000, removeOnFail: 5000 });
+    await markEmailQueued(id);
+  } catch (error) {
+    // Redis is down: the row stays pending and the sweep sends it.
+    console.error("[mail] queue unavailable; left in the outbox", id, error);
+  }
+};
+
+/**
+ * Stores an email for the jobs below and queues it. `key` makes a repeat (a
+ * reminder run twice) store nothing new. Throws only when the outbox itself
+ * can't store it, so callers that claim work (reminders) give the claim back.
+ */
+const queueEmail = async (job: EmailJob, key?: string) => {
+  const stored = await recordEmail({ key: key ?? null, kind: job.kind, to: job.to, job });
+  if (!stored.duplicate) await enqueueStored(stored.id, job.kind);
+};
 
 const emailWorker = new Worker(EMAIL_QUEUE, async (job) => {
-  await sendEmailJob(job.data as EmailJob);
-  return { to: (job.data as EmailJob).to };
+  const data = job.data as { outboxId?: string } & Partial<EmailJob>;
+  // Jobs queued before the outbox existed carry the email itself.
+  if (!data.outboxId) {
+    await sendEmailJob(job.data as EmailJob);
+    return { to: data.to, legacy: true };
+  }
+  return { outboxId: data.outboxId, result: await sendStored(data.outboxId) };
 }, { connection, concurrency: 5 });
 
 const systemWorker = new Worker(
@@ -53,6 +78,12 @@ const systemWorker = new Worker(
         return { expired: await expireQuotes() };
       case "reminders":
         return sendReminders(queueEmail);
+      case "email-outbox": {
+        // Never queued (Redis was down), failed and due, lost from the queue, or held by a process that died.
+        const due = await dueEmails();
+        for (const row of due) await sendStored(row.id).catch((error: unknown) => console.error("[mail] outbox send failed", row.id, error));
+        return { due: due.length };
+      }
       case "payouts":
         return stripe ? { paidOut: await runDuePayouts(stripe) } : { skipped: "Stripe not configured" };
       case "approve-commissions":
@@ -156,6 +187,7 @@ for (const w of [systemWorker, emailWorker]) {
 await systemQueue.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "heartbeat" });
 await systemQueue.upsertJobScheduler("expire-quotes", { every: 15 * 60_000 }, { name: "expire-quotes" });
 await systemQueue.upsertJobScheduler("reminders", { every: 60 * 60_000 }, { name: "reminders" });
+await systemQueue.upsertJobScheduler("email-outbox", { every: 60_000 }, { name: "email-outbox" });
 await systemQueue.upsertJobScheduler("payouts", { every: 60 * 60_000 }, { name: "payouts" });
 await systemQueue.upsertJobScheduler("approve-commissions", { every: 60 * 60_000 }, { name: "approve-commissions" });
 await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }, { name: "affiliate-payouts" });

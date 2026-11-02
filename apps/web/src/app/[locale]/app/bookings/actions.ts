@@ -13,6 +13,7 @@ import {
   createDetailRequest,
   DetailRequestError,
   resolveBookingCustomer,
+  retryEmail,
   revokeDetailRequests,
   getSetting,
   issueInvoice,
@@ -26,7 +27,8 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { emailQuote } from "@/lib/quote-email";
 import { emailArtists } from "@/lib/artist-mail";
-import { absoluteUrl, deliver } from "@/lib/mail";
+import { absoluteUrl, accepted, deliver } from "@/lib/mail";
+import { sendStored } from "@/lib/deliver";
 import { agencySender, agencySenderSelect } from "@/lib/correspondence";
 import { draftDeposit, parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
@@ -125,7 +127,9 @@ export async function sendQuoteAction(bookingId: string, input: QuoteDraft): Pro
       },
       viewer.user.id,
     );
-    await emailQuote(quote.id);
+    const receipt = await emailQuote(quote.id);
+    // The quote is saved either way; say so plainly when its email couldn't be handed on.
+    if (receipt && !accepted(receipt)) return `${t("sent", { n: quote.version })} ${t("emailNotQueued")}`;
     return t("sent", { n: quote.version });
   });
 }
@@ -162,10 +166,10 @@ export async function assignArtistAction(bookingId: string, artistId: string, pa
   }
   return runAction(async () => {
     const { assignmentId, withdrawnIds } = await assignArtist(organization.id, bookingId, artistId, viewer.user.id, undefined, compensation);
-    await emailArtists([assignmentId], "new");
+    const mailed = await emailArtists([assignmentId], "new");
     await emailArtists(withdrawnIds, "withdrawn");
     const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { stageName: true } });
-    return t("assigned", { artist: artist?.stageName ?? "" });
+    return mailed ? t("assigned", { artist: artist?.stageName ?? "" }) : `${t("assigned", { artist: artist?.stageName ?? "" })} ${t("emailNotQueued")}`;
   });
 }
 
@@ -260,12 +264,13 @@ export async function requestDetailsAction(bookingId: string, input: z.input<typ
   const booking = await db.booking.findFirst({ where: { id: bookingId }, select: { customer: { select: { name: true, email: true } } } });
   if (!booking?.customer) return { ok: false, message: t("error_no_customer") };
   try {
-    const { token, expiresAt } = await createDetailRequest(organization.id, bookingId, viewer.user.id, { locale: parsed.data.locale, days: parsed.data.days, emailedTo: parsed.data.email ? booking.customer.email : null });
+    const { id: requestId, token, expiresAt } = await createDetailRequest(organization.id, bookingId, viewer.user.id, { locale: parsed.data.locale, days: parsed.data.days, emailedTo: parsed.data.email ? booking.customer.email : null });
     const url = absoluteUrl(parsed.data.locale, `/d/${token}`);
+    let mailed = true;
     if (parsed.data.email) {
       const org = await prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: agencySenderSelect });
       const intl = parsed.data.locale === "en" ? "en-GB" : "nl-NL";
-      deliver({
+      const receipt = await deliver({
         kind: "bookingDetailsRequest",
         to: booking.customer.email,
         sender: agencySender(org),
@@ -276,9 +281,11 @@ export async function requestDetailsAction(bookingId: string, input: z.input<typ
           until: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" }).format(expiresAt),
           url,
         },
-      });
+      }, { key: `details:${requestId}`, agencyId: organization.id, bookingId });
+      mailed = accepted(receipt);
     }
-    return { ok: true, message: parsed.data.email ? t("emailed", { email: booking.customer.email }) : t("created"), url };
+    // The link works either way; if the email couldn't be handed on, the agency can copy it.
+    return { ok: true, message: !parsed.data.email ? t("created") : mailed ? t("emailed", { email: booking.customer.email }) : t("emailFailedCopy"), url };
   } catch (error) {
     if (error instanceof DetailRequestError) return { ok: false, message: t(`error_${error.code}`) };
     throw error;
@@ -290,4 +297,17 @@ export async function revokeDetailsAction(bookingId: string): Promise<ActionResu
   const t = await getTranslations("detailRequest");
   await revokeDetailRequests(organization.id, bookingId, viewer.user.id);
   return { ok: true, message: t("revoked") };
+}
+
+/** Puts a failed email of this booking back in line; the worker (or this request, without one) sends it. */
+export async function retryEmailAction(emailId: string): Promise<ActionResult> {
+  const { organization, db } = await requireAgency("agency.bookings.edit");
+  const t = await getTranslations("bookingEmails");
+  const row = await prisma.emailMessage.findUnique({ where: { id: String(emailId).slice(0, 64) }, select: { bookingId: true, agencyId: true } });
+  // Only this agency's bookings (the outbox isn't tenant-scoped, so check through the booking).
+  const mine = row?.bookingId ? await db.booking.findFirst({ where: { id: row.bookingId }, select: { id: true } }) : null;
+  if (!row || !mine || (row.agencyId && row.agencyId !== organization.id)) return { ok: false, message: t("notFound") };
+  if (!(await retryEmail(emailId))) return { ok: false, message: t("notRetryable") };
+  void sendStored(emailId).catch(() => undefined);
+  return { ok: true, message: t("retried") };
 }

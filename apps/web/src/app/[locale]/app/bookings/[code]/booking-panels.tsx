@@ -35,6 +35,7 @@ import {
   issueInvoiceAction,
   recordPaymentAction,
   requestDetailsAction,
+  retryEmailAction,
   revokeDetailsAction,
   updateDetailsAction,
 } from "../actions";
@@ -629,5 +630,16 @@ export function DetailRequestPanel({
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+/** "Send again" for a booking email that failed. */
+export function RetryEmailButton({ emailId }: { emailId: string }) {
+  const t = useTranslations("bookingEmails");
+  const [pending, run] = useRun();
+  return (
+    <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => retryEmailAction(emailId))}>
+      {t("retry")}
+    </Button>
   );
 }
