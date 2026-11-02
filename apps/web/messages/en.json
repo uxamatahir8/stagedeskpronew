@@ -968,7 +968,8 @@
     "alreadyPaid": "Already paid",
     "toPay": "To pay",
     "payWithin": "Please pay within 14 days, quoting invoice number {number}.",
-    "payTo": "Payment details"
+    "payTo": "Payment details",
+    "page": "{number} · page {page} of {pages}"
   },
   "budgetRanges": {
     "lt_750": "Up to €750",

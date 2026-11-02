@@ -37,7 +37,8 @@ export interface PdfData {
     | "alreadyPaid"
     | "toPay"
     | "footer"
-    | "payTo",
+    | "payTo"
+    | "page",
     string
   >;
   /** The agency's look (issued invoices use the snapshot taken when they were issued). */
@@ -116,7 +117,13 @@ export function BookingDocument({ data }: { data: PdfData }) {
       <Page size="A4" style={[styles.page, { paddingTop: mmToPt(tpl.marginTopMm), paddingBottom: mmToPt(tpl.marginBottomMm) + 24 }]}>
         {/* The agency's letterhead behind every page; the margins keep the figures clear of it. */}
         {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is drawn into the PDF and has no alt */}
-        {data.background && <Image src={data.background} fixed style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />}
+        {data.background && (
+          // Anchored to all four page edges through a fixed wrapper: an absolute Image alone is offset by the page padding.
+          <View fixed style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is drawn into the PDF and has no alt */}
+            <Image src={data.background} style={{ width: "100%", height: "100%", objectFit: "fill" }} />
+          </View>
+        )}
         <View style={styles.header}>
           <View>
             {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is drawn into the PDF and has no alt */}
@@ -233,6 +240,12 @@ export function BookingDocument({ data }: { data: PdfData }) {
         <Text style={[styles.footer, { bottom: Math.max(16, mmToPt(tpl.marginBottomMm) - 16) }]} fixed>
           {tpl.footerText ? `${tpl.footerText}\n${L.footer}` : L.footer}
         </Text>
+        {/* On documents of more than one page, every page says which document and which page it is. */}
+        <Text
+          style={[styles.footer, { bottom: Math.max(16, mmToPt(tpl.marginBottomMm) - 16), textAlign: "right" }]}
+          fixed
+          render={({ pageNumber, totalPages }) => (totalPages > 1 ? L.page.replace("{page}", String(pageNumber)).replace("{pages}", String(totalPages)).replace("{number}", data.number) : "")}
+        />
       </Page>
     </Document>
   );

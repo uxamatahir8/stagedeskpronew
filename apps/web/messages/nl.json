@@ -968,7 +968,8 @@
     "alreadyPaid": "Reeds betaald",
     "toPay": "Te betalen",
     "payWithin": "Graag betalen binnen 14 dagen onder vermelding van factuurnummer {number}.",
-    "payTo": "Betaalgegevens"
+    "payTo": "Betaalgegevens",
+    "page": "{number} · pagina {page} van {pages}"
   },
   "budgetRanges": {
     "lt_750": "Tot € 750",

@@ -77,6 +77,8 @@ export async function renderBookingPdf(
     toPay: t("pdf.toPay"),
     footer: kind === "invoice" ? t("pdf.payWithin", { number: input.number }) : input.agency.name,
     payTo: t("pdf.payTo"),
+    // Filled in per page by the document ({page}, {pages}, {number} stay as placeholders here).
+    page: t.raw("pdf.page") as string,
   };
   const data: PdfData = {
     ...input,
