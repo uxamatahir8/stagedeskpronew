@@ -5893,7 +5893,7 @@
     "pick_already_planned": "{code} is already on this packing list",
     "pick_none_free": "{quantity} more not free in this category",
     "applyPackage": "Add {count, plural, one {# item} other {# items}}",
-    "notReserved": "Not reserved",
+    "notReserved": "not reserved",
     "overridden": "Overridden",
     "atRisk": "Not all available to load",
     "onlyFree": "Only {free} free",
@@ -5951,7 +5951,17 @@
     "groupReturned": "Checked in.",
     "checkedIn": "Check-in finished.",
     "checkedInMissing": "Check-in finished. {count, plural, one {# item is} other {# items are}} missing.",
-    "lostConfirmed": "Confirmed lost."
+    "lostConfirmed": "Confirmed lost.",
+    "bookingHint": "What goes along to this event: single items or a whole package. Booked and confirmed bookings reserve it for the day.",
+    "addEquipmentOrPackage": "Add equipment or package",
+    "openFull": "Open the full packing list ({count, plural, one {# line} other {# lines}})",
+    "emptyBooking": "No equipment yet. Add items or a package; you'll see right away what's free on the event date.",
+    "freeOnDate": "{count} free on this date",
+    "takenOnDate": "not free on this date",
+    "progressLabel": "Loaded",
+    "progress": "{loaded} of {planned}",
+    "stillToLoad": "{count, plural, one {# piece still to load} other {# pieces still to load}}",
+    "checklist": "Equipment checklist ({loaded}/{planned})"
   },
   "communicationSettings": {
     "title": "Customer communication",

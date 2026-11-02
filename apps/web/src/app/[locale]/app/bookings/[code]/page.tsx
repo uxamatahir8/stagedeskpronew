@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, PackagePlusIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -331,6 +331,52 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
             </CardContent>
           </Card>
 
+          {equipment ? (
+            <Card id="equipment">
+              <CardHeader>
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  {t("equipment.title")}
+                  <EquipmentStagePill stage={equipment.stage} />
+                  {equipment.totals.unreserved > 0 && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.unreservedShort", { count: equipment.totals.unreserved })}</Pill>}
+                </CardTitle>
+                <CardDescription>{t("equipment.bookingHint")}</CardDescription>
+                <CardAction className="flex flex-wrap gap-2">
+                  <Button asChild size="sm" variant={equipment.totals.lines > 0 ? "outline" : "default"}>
+                    <Link href={`/app/bookings/${booking.trackingCode}/equipment`}>
+                      <PackagePlusIcon />
+                      {t("equipment.addEquipmentOrPackage")}
+                    </Link>
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="grid gap-3 text-sm">
+                {equipment.totals.lines > 0 ? (
+                  <>
+                    <ul className="divide-y rounded-lg border">
+                      {equipment.preview.map((l) => (
+                        <li key={l.code} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="min-w-0 truncate">
+                            <span className="font-mono text-xs text-muted-foreground">{l.code}</span> {l.name}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                            ×{l.quantity}
+                            {!l.reserved && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.notReserved")}</Pill>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-muted-foreground tabular-nums">{t("equipment.summary", { planned: equipment.totals.planned, loaded: equipment.totals.loaded, out: equipment.totals.outstanding })}</p>
+                    <Link href={`/app/bookings/${booking.trackingCode}/equipment`} className="w-fit text-primary underline-offset-4 hover:underline">
+                      {t("equipment.openFull", { count: equipment.totals.lines })}
+                    </Link>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">{t("equipment.emptyBooking")}</p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -518,26 +564,6 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardContent>
           </Card>
-
-          {equipment && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("equipment.title")}</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <EquipmentStagePill stage={equipment.stage} />
-                  {equipment.totals.unreserved > 0 && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.unreservedShort", { count: equipment.totals.unreserved })}</Pill>}
-                </div>
-                {equipment.totals.lines > 0 && (
-                  <p className="text-muted-foreground tabular-nums">{t("equipment.summary", { planned: equipment.totals.planned, loaded: equipment.totals.loaded, out: equipment.totals.outstanding })}</p>
-                )}
-                <Button asChild variant="outline" size="sm" className="w-fit">
-                  <Link href={`/app/bookings/${booking.trackingCode}/equipment`}>{equipment.totals.lines > 0 ? t("equipment.open") : t("equipment.start")}</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
 
           <Card>
             <CardHeader>

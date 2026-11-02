@@ -791,11 +791,16 @@ export async function bookingEquipmentSummary(organizationId: string, bookingId:
   const db = tenantDb(organizationId);
   const [booking, lines] = await Promise.all([
     db.booking.findFirst({ where: { id: bookingId }, select: { eventDate: true, equipmentCheckedInAt: true } }),
-    db.bookingEquipment.findMany({ where: { bookingId } }),
+    db.bookingEquipment.findMany({ where: { bookingId }, include: { item: { select: { code: true, name: true } } }, orderBy: { createdAt: "asc" } }),
   ]);
   if (!booking) return null;
   const totals = equipmentTotals(lines);
-  return { totals, stage: equipmentStage({ totals, eventDate: dateOf(booking), today: todayInNetherlands(now), checkedIn: booking.equipmentCheckedInAt !== null }) };
+  return {
+    totals,
+    stage: equipmentStage({ totals, eventDate: dateOf(booking), today: todayInNetherlands(now), checkedIn: booking.equipmentCheckedInAt !== null }),
+    /** The first lines of the packing list, for the booking page. */
+    preview: lines.slice(0, 6).map((l) => ({ code: l.item.code, name: l.item.name, quantity: l.quantity, reserved: l.reservedAt !== null })),
+  };
 }
 
 export type BookingEquipmentView = NonNullable<Awaited<ReturnType<typeof bookingEquipment>>>;

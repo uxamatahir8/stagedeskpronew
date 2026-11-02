@@ -5893,7 +5893,7 @@
     "pick_already_planned": "{code} staat al op deze paklijst",
     "pick_none_free": "Nog {quantity} niet vrij in deze categorie",
     "applyPackage": "{count, plural, one {# item} other {# items}} toevoegen",
-    "notReserved": "Niet gereserveerd",
+    "notReserved": "niet gereserveerd",
     "overridden": "Toegestaan",
     "atRisk": "Niet alles beschikbaar om te laden",
     "onlyFree": "Nog maar {free} vrij",
@@ -5951,7 +5951,17 @@
     "groupReturned": "Ingecheckt.",
     "checkedIn": "Inchecken afgerond.",
     "checkedInMissing": "Inchecken afgerond. {count, plural, one {# item ontbreekt} other {# items ontbreken}}.",
-    "lostConfirmed": "Als verloren bevestigd."
+    "lostConfirmed": "Als verloren bevestigd.",
+    "bookingHint": "Wat er mee moet naar dit evenement: losse items of een heel pakket. Geboekte en bevestigde boekingen reserveren het voor die dag.",
+    "addEquipmentOrPackage": "Apparatuur of pakket toevoegen",
+    "openFull": "Volledige paklijst openen ({count, plural, one {# regel} other {# regels}})",
+    "emptyBooking": "Nog geen apparatuur. Voeg items of een pakket toe; je ziet meteen wat er op de evenementdatum vrij is.",
+    "freeOnDate": "{count} vrij op deze datum",
+    "takenOnDate": "niet vrij op deze datum",
+    "progressLabel": "Ingeladen",
+    "progress": "{loaded} van {planned}",
+    "stillToLoad": "{count, plural, one {Nog # stuk in te laden} other {Nog # stuks in te laden}}",
+    "checklist": "Apparatuurlijst ({loaded}/{planned})"
   },
   "communicationSettings": {
     "title": "Communicatie met klanten",
