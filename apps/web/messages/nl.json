@@ -5641,7 +5641,9 @@
     "freeOf": "{free} van {requested} vrij",
     "breaks_reservations": "Komende optredens hebben deze apparatuur gereserveerd; door deze wijziging komen ze tekort:",
     "checked_in": "Het inchecken voor dit optreden is afgerond, dus de paklijst is gesloten. Registreer een late retour of bevestig verlies.",
-    "invalid_package": "Die keuze past niet bij het pakket (of staat al op de lijst). Vernieuw het overzicht en probeer het opnieuw."
+    "invalid_package": "Die keuze past niet bij het pakket (of staat al op de lijst). Vernieuw het overzicht en probeer het opnieuw.",
+    "serial_taken": "Dat serienummer is al gebruikt bij deze fabrikant:",
+    "batch_invalid": "Controleer de nummers: gebruik letters, cijfers en - . _ / # (maximaal 32), maximaal 100 apparaten tegelijk."
   },
   "inventory": {
     "title": "Apparatuur",
@@ -5821,7 +5823,22 @@
     "packageEditorHint": "Een pakket toevoegen kopieert de apparatuur naar een paklijst; het pakket later wijzigen verandert die paklijsten niet.",
     "packageDescription": "Omschrijving",
     "releaseConfirm": "{message}\n\nDie reserveringen vrijgeven en doorgaan? De optredens worden gemarkeerd en de planning krijgt bericht; hun apparatuur kan later opnieuw worden gereserveerd.",
-    "savedReleased": "Opgeslagen. Reserveringen vrijgegeven voor: {codes}."
+    "savedReleased": "Opgeslagen. Reserveringen vrijgegeven voor: {codes}.",
+    "howMany": "Aantal",
+    "howManyHint": "Meerdere identieke apparaten? Elk krijgt een eigen nummer en serienummer.",
+    "devices": "{count, plural, one {# apparaat} other {# apparaten}}",
+    "devicesHint": "Nummers worden voorgesteld na het hoogste nummer in gebruik; je kunt ze aanpassen. Serienummers moeten verschillen bij dezelfde fabrikant.",
+    "deviceCode": "Nummer van apparaat {n}",
+    "deviceSerial": "Serienummer van apparaat {n}",
+    "deviceNote": "Notitie bij apparaat {n}",
+    "deviceNotePlaceholder": "Notitie (optioneel)",
+    "saveBatch": "{count} apparaten toevoegen",
+    "savedBatch": "{count, plural, one {# apparaat toegevoegd} other {# apparaten toegevoegd}}",
+    "actions": "Acties",
+    "reportDefect": "Defect melden",
+    "reportDefectBulk": "Defecte stuks melden",
+    "reportDefectHint": "Defecte apparatuur kan niet worden ingepakt of gereserveerd. Beschrijf wat er mis is; dit komt in de geschiedenis van het item. Zet het terug in gebruik zodra het gerepareerd is.",
+    "conditionHint": "Alleen slijtage en uiterlijk. Werkt een apparaat niet: sla op en gebruik Defect melden."
   },
   "equipment": {
     "title": "Apparatuur",

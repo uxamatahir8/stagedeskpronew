@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
   availabilityOn,
+  equipmentCodePattern,
+  normalizeEquipmentCode,
   type ClaimLine,
   type EquipmentItemInput,
   type EquipmentPackageInput,
@@ -39,6 +41,8 @@ export type InventoryErrorCode =
   | "below_use"
   | "kind_locked"
   | "breaks_reservations"
+  | "serial_taken"
+  | "batch_invalid"
   | MembershipError;
 
 export class InventoryError extends Error {
@@ -213,9 +217,38 @@ function itemData(input: EquipmentItemInput) {
   };
 }
 
+/**
+ * Serial numbers are unique per manufacturer within an agency (the same
+ * number from two makers is two devices). Compared without case and spaces;
+ * items without a manufacturer are compared with each other. Callers hold the
+ * agency's inventory lock (lockInventory), so two saves can't both pass.
+ */
+async function serialClashes(tx: Tx, manufacturer: string | null, serials: readonly string[], exceptId: string | null = null) {
+  const wanted = [...new Set(serials.map(normalizeSerial).filter(Boolean))];
+  if (wanted.length === 0) return [];
+  const rows = await tx.equipmentItem.findMany({
+    where: { serialNumber: { not: null }, ...(exceptId ? { id: { not: exceptId } } : {}) },
+    select: { serialNumber: true, manufacturer: true },
+  });
+  const maker = (m: string | null) => (m ?? "").trim().toLowerCase();
+  return rows.filter((r) => maker(r.manufacturer) === maker(manufacturer) && wanted.includes(normalizeSerial(r.serialNumber!))).map((r) => r.serialNumber!);
+}
+
+const normalizeSerial = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, "").toUpperCase();
+
+/** Serialises equipment creation and serial checks for one agency (the agency row is the lock; nothing else takes it while holding item locks). */
+async function lockInventory(tx: Tx, organizationId: string) {
+  await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+}
+
 export async function createItem(organizationId: string, input: EquipmentItemInput, actorId: string) {
   try {
     return await tenantDb(organizationId).$transaction(async (tx) => {
+      await lockInventory(tx, organizationId);
+      if (input.serialNumber) {
+        const taken = await serialClashes(tx, input.manufacturer, [input.serialNumber]);
+        if (taken.length) throw new InventoryError("serial_taken", { serials: taken });
+      }
       await checkReferences(tx, input, null);
       if (input.containerId) await lockItems(tx, organizationId, [input.containerId]);
       const id = randomUUID();
@@ -230,6 +263,76 @@ export async function createItem(organizationId: string, input: EquipmentItemInp
   }
 }
 
+/** One device of a batch: its own number, serial and note; everything else is shared. */
+export interface BatchUnit {
+  code: string;
+  serialNumber?: string | null;
+  notes?: string | null;
+}
+
+export const MAX_BATCH = 100;
+
+/**
+ * Adds several identical, individually numbered devices at once (4 lights →
+ * LIGHT-001…LIGHT-004), each its own item with its own serial. All or
+ * nothing: one bad or taken code or serial and none are created. Only for
+ * numbered items and cases; counted stock is one item with a quantity.
+ */
+export async function createItems(organizationId: string, shared: EquipmentItemInput, units: readonly BatchUnit[], actorId: string) {
+  if (shared.tracking !== "unit" || shared.kind === "set" || units.length < 1 || units.length > MAX_BATCH) throw new InventoryError("batch_invalid");
+  const rows = units.map((u) => ({
+    code: normalizeEquipmentCode(u.code),
+    serialNumber: u.serialNumber?.trim() ? u.serialNumber.trim().slice(0, 96) : null,
+    notes: u.notes?.trim() ? u.notes.trim().slice(0, 5000) : shared.notes,
+  }));
+  const badCodes = rows.filter((r) => !equipmentCodePattern.test(r.code)).map((r) => r.code);
+  if (badCodes.length) throw new InventoryError("batch_invalid", { codes: badCodes });
+  const dupe = <T,>(values: T[]) => values.filter((v, i) => values.indexOf(v) !== i);
+  const sameCodes = dupe(rows.map((r) => r.code));
+  if (sameCodes.length) throw new InventoryError("code_taken", { codes: [...new Set(sameCodes)] });
+  const sameSerials = dupe(rows.map((r) => normalizeSerial(r.serialNumber)).filter(Boolean));
+  if (sameSerials.length) throw new InventoryError("serial_taken", { serials: [...new Set(sameSerials)] });
+
+  try {
+    return await tenantDb(organizationId).$transaction(async (tx) => {
+      await lockInventory(tx, organizationId);
+      await checkReferences(tx, shared, null);
+      const takenCodes = await tx.equipmentItem.findMany({ where: { code: { in: rows.map((r) => r.code) } }, select: { code: true } });
+      if (takenCodes.length) throw new InventoryError("code_taken", { codes: takenCodes.map((c) => c.code) });
+      const takenSerials = await serialClashes(tx, shared.manufacturer, rows.flatMap((r) => (r.serialNumber ? [r.serialNumber] : [])));
+      if (takenSerials.length) throw new InventoryError("serial_taken", { serials: takenSerials });
+      if (shared.containerId) await lockItems(tx, organizationId, [shared.containerId]);
+
+      const ids: string[] = [];
+      for (const row of rows) {
+        const id = randomUUID();
+        await tx.equipmentItem.create({ data: { id, ...itemData({ ...shared, ...row }), quantity: 1, organizationId } });
+        await logItemEvent(tx, id, "created", actorId, { code: row.code, quantity: 1, batch: rows.length });
+        if (shared.containerId) await logItemEvent(tx, id, "moved_in", actorId, { containerId: shared.containerId });
+        ids.push(id);
+      }
+      return ids;
+    }, readCommitted);
+  } catch (error) {
+    // A code another save took at the same moment.
+    if (isUniqueViolation(error)) throw new InventoryError("code_taken");
+    throw error;
+  }
+}
+
+/** n free numbers in a row for a prefix, zero-padded: "LIGHT", 4 → LIGHT-001…LIGHT-004 (after the highest one in use). */
+export async function suggestCodes(organizationId: string, prefix: string, count: number) {
+  const clean = prefix.trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12) || "EQ";
+  const n = Math.max(1, Math.min(MAX_BATCH, Math.trunc(count)));
+  const codes = await tenantDb(organizationId).equipmentItem.findMany({ where: { code: { startsWith: `${clean}-` } }, select: { code: true } });
+  const highest = codes.reduce((max, c) => {
+    const v = Number(c.code.slice(clean.length + 1));
+    return Number.isInteger(v) && v > max ? v : max;
+  }, 0);
+  const width = Math.max(3, String(highest + n).length);
+  return Array.from({ length: n }, (_, i) => `${clean}-${String(highest + 1 + i).padStart(width, "0")}`);
+}
+
 const tracked = ["code", "name", "condition", "categoryId", "manufacturer", "model", "serialNumber", "powerWatts", "batteryPowered", "notes", "excludeFromSharing"] as const;
 
 /**
@@ -240,9 +343,15 @@ const tracked = ["code", "name", "condition", "categoryId", "manufacturer", "mod
 export async function updateItem(organizationId: string, itemId: string, input: EquipmentItemInput, actorId: string) {
   try {
     await tenantDb(organizationId).$transaction(async (tx) => {
+      // Agency lock before item locks, the same order as creating.
+      if (input.serialNumber) await lockInventory(tx, organizationId);
       await lockItems(tx, organizationId, [itemId, ...(input.containerId ? [input.containerId] : [])]);
       const item = await tx.equipmentItem.findFirst({ where: { id: itemId }, include: { _count: { select: { contents: true, bookingLines: true } } } });
       if (!item) throw new InventoryError("not_found");
+      if (input.serialNumber && normalizeSerial(input.serialNumber) !== normalizeSerial(item.serialNumber)) {
+        const taken = await serialClashes(tx, input.manufacturer, [input.serialNumber], itemId);
+        if (taken.length) throw new InventoryError("serial_taken", { serials: taken });
+      }
       if ((item.kind !== input.kind || item.tracking !== input.tracking) && (item._count.bookingLines > 0 || item._count.contents > 0)) {
         throw new InventoryError("kind_locked");
       }

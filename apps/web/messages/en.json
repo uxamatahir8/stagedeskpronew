@@ -5641,7 +5641,9 @@
     "freeOf": "{free} of {requested} free",
     "breaks_reservations": "Upcoming gigs have this equipment reserved; this change would leave them short:",
     "checked_in": "Check-in for this gig is finished, so its packing list is closed. Record late returns or confirm losses instead.",
-    "invalid_package": "Those picks don't match the package (or are already on the list). Refresh the preview and try again."
+    "invalid_package": "Those picks don't match the package (or are already on the list). Refresh the preview and try again.",
+    "serial_taken": "That serial number is already used for this manufacturer:",
+    "batch_invalid": "Check the numbers: use letters, digits and - . _ / # (up to 32), at most 100 devices at once."
   },
   "inventory": {
     "title": "Inventory",
@@ -5821,7 +5823,22 @@
     "packageEditorHint": "Applying a package copies its equipment onto a packing list; editing the package later doesn't change those lists.",
     "packageDescription": "Description",
     "releaseConfirm": "{message}\n\nRelease those reservations and continue? The gigs are flagged and the desk is told; their equipment can be reserved again later.",
-    "savedReleased": "Saved. Reservations released for: {codes}."
+    "savedReleased": "Saved. Reservations released for: {codes}.",
+    "howMany": "How many",
+    "howManyHint": "Several identical devices? Each gets its own number and serial number.",
+    "devices": "{count, plural, one {# device} other {# devices}}",
+    "devicesHint": "Numbers are suggested after the highest one in use; change any of them. Serial numbers must be different for the same manufacturer.",
+    "deviceCode": "Number of device {n}",
+    "deviceSerial": "Serial number of device {n}",
+    "deviceNote": "Note for device {n}",
+    "deviceNotePlaceholder": "Note (optional)",
+    "saveBatch": "Add {count} devices",
+    "savedBatch": "{count, plural, one {# device added} other {# devices added}}",
+    "actions": "Actions",
+    "reportDefect": "Report defect",
+    "reportDefectBulk": "Report defective units",
+    "reportDefectHint": "Defective equipment can't be packed or reserved. Describe what's wrong; it's kept in the item's history. Put it back in service once it's repaired.",
+    "conditionHint": "Wear and looks only. A device that doesn't work: save, then use Report defect."
   },
   "equipment": {
     "title": "Equipment",
