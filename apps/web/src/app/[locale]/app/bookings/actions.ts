@@ -10,7 +10,10 @@ import {
   BookingError,
   changeBookingStatus,
   createBooking,
+  createDetailRequest,
+  DetailRequestError,
   resolveBookingCustomer,
+  revokeDetailRequests,
   getSetting,
   issueInvoice,
   prisma,
@@ -23,6 +26,8 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { emailQuote } from "@/lib/quote-email";
 import { emailArtists } from "@/lib/artist-mail";
+import { absoluteUrl, deliver } from "@/lib/mail";
+import { agencySender, agencySenderSelect } from "@/lib/correspondence";
 import { draftDeposit, parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
@@ -236,4 +241,53 @@ export async function addNoteAction(bookingId: string, body: string): Promise<Ac
   if (!booking) throw new BookingError("not_found");
   await db.bookingNote.create({ data: { id: randomUUID(), bookingId, authorId: viewer.user.id, body: text, organizationId: "" } });
   return { ok: true };
+}
+
+const detailRequestSchema = z.object({ locale: z.enum(["nl", "en"]), days: z.number().int().min(1).max(30), email: z.boolean() });
+
+/**
+ * Makes a private link for the customer to fill in the event details, and
+ * emails it when asked. Returns the link so it can be copied (it's shown
+ * only now; the server keeps a hash).
+ */
+export async function requestDetailsAction(bookingId: string, input: z.input<typeof detailRequestSchema>): Promise<ActionResult & { url?: string }> {
+  const { viewer, organization, db } = await requireAgency("agency.bookings.edit");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
+  const t = await getTranslations("detailRequest");
+  const parsed = detailRequestSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: t("invalid") };
+  const booking = await db.booking.findFirst({ where: { id: bookingId }, select: { customer: { select: { name: true, email: true } } } });
+  if (!booking?.customer) return { ok: false, message: t("error_no_customer") };
+  try {
+    const { token, expiresAt } = await createDetailRequest(organization.id, bookingId, viewer.user.id, { locale: parsed.data.locale, days: parsed.data.days, emailedTo: parsed.data.email ? booking.customer.email : null });
+    const url = absoluteUrl(parsed.data.locale, `/d/${token}`);
+    if (parsed.data.email) {
+      const org = await prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: agencySenderSelect });
+      const intl = parsed.data.locale === "en" ? "en-GB" : "nl-NL";
+      deliver({
+        kind: "bookingDetailsRequest",
+        to: booking.customer.email,
+        sender: agencySender(org),
+        params: {
+          locale: parsed.data.locale,
+          name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,
+          agency: org.emailFromName?.trim() || org.name,
+          until: new Intl.DateTimeFormat(intl, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Amsterdam" }).format(expiresAt),
+          url,
+        },
+      });
+    }
+    return { ok: true, message: parsed.data.email ? t("emailed", { email: booking.customer.email }) : t("created"), url };
+  } catch (error) {
+    if (error instanceof DetailRequestError) return { ok: false, message: t(`error_${error.code}`) };
+    throw error;
+  }
+}
+
+export async function revokeDetailsAction(bookingId: string): Promise<ActionResult> {
+  const { viewer, organization } = await requireAgency("agency.bookings.edit");
+  const t = await getTranslations("detailRequest");
+  await revokeDetailRequests(organization.id, bookingId, viewer.user.id);
+  return { ok: true, message: t("revoked") };
 }

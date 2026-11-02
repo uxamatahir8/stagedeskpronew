@@ -34,6 +34,8 @@ import {
   changeStatusAction,
   issueInvoiceAction,
   recordPaymentAction,
+  requestDetailsAction,
+  revokeDetailsAction,
   updateDetailsAction,
 } from "../actions";
 import { type CatalogItem, QuoteBuilder, type BuilderLine, type QuoteDefaults } from "./quote-builder";
@@ -510,5 +512,122 @@ export function AddNote({ bookingId }: { bookingId: string }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Ask the customer to fill in the event details through a private link: email
+ * it to them, or copy it (e.g. to send by WhatsApp while on the phone). The
+ * link is shown once; a new link replaces the open one.
+ */
+export function DetailRequestPanel({
+  bookingId,
+  defaultLocale,
+  open,
+  customerEmail,
+}: {
+  bookingId: string;
+  defaultLocale: "nl" | "en";
+  open: { expires: string; emailedTo: string | null } | null;
+  customerEmail: string;
+}) {
+  const t = useTranslations("detailRequest");
+  const [pending, run] = useRun();
+  const [dialog, setDialog] = useState(false);
+  const [locale, setLocale] = useState(defaultLocale);
+  const [days, setDays] = useState("7");
+  const [url, setUrl] = useState<string | null>(null);
+
+  const create = (email: boolean) =>
+    run(async () => {
+      const result = await requestDetailsAction(bookingId, { locale, days: Math.max(1, Math.min(30, Number(days) || 7)), email });
+      if (result.ok && result.url) setUrl(result.url);
+      return result;
+    });
+
+  return (
+    <div className="grid gap-2 border-t pt-3">
+      {open ? (
+        <p className="text-xs text-muted-foreground">{open.emailedTo ? t("openEmailed", { email: open.emailedTo, date: open.expires }) : t("openLink", { date: open.expires })}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("hint")}</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setUrl(null);
+            setDialog(true);
+          }}
+        >
+          <SendIcon />
+          {open ? t("newLink") : t("request")}
+        </Button>
+        {open && (
+          <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => revokeDetailsAction(bookingId))}>
+            {t("revoke")}
+          </Button>
+        )}
+      </div>
+      <Dialog open={dialog} onOpenChange={setDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("description")}</DialogDescription>
+          </DialogHeader>
+          {url ? (
+            <div className="grid gap-3">
+              <p className="text-sm">{t("linkReady")}</p>
+              <div className="flex gap-2">
+                <Input readOnly value={url} aria-label={t("link")} onFocus={(e) => e.target.select()} />
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(url);
+                    toast.success(t("copied"));
+                  }}
+                >
+                  <CopyIcon />
+                  {t("copy")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("linkOnce")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="dr-locale" label={t("language")}>
+                <NativeSelect id="dr-locale" value={locale} onChange={(e) => setLocale(e.target.value as "nl" | "en")} className="w-full">
+                  <option value="nl">Nederlands</option>
+                  <option value="en">English</option>
+                </NativeSelect>
+              </FormField>
+              <FormField id="dr-days" label={t("days")}>
+                <Input id="dr-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(e.target.value)} />
+              </FormField>
+              {open && <p className="text-xs text-muted-foreground sm:col-span-2">{t("replaces")}</p>}
+            </div>
+          )}
+          <DialogFooter>
+            {url ? (
+              <DialogClose asChild>
+                <Button>{t("done")}</Button>
+              </DialogClose>
+            ) : (
+              <>
+                <Button variant="outline" disabled={pending} onClick={() => create(false)}>
+                  <CopyIcon />
+                  {t("createLink")}
+                </Button>
+                <Button disabled={pending} onClick={() => create(true)}>
+                  <SendIcon />
+                  {t("sendTo", { email: customerEmail })}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

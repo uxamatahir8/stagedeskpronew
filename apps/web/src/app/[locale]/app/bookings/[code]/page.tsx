@@ -15,7 +15,7 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, prisma } from "@stagedesk/db";
+import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, openDetailRequest, prisma } from "@stagedesk/db";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
@@ -33,6 +33,7 @@ import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
   AssignArtist,
+  DetailRequestPanel,
   EditDetailsDialog,
   IssueInvoiceButton,
   QuoteControls,
@@ -125,6 +126,11 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     ? depositRuleOf(current)
     : depositRuleOf({ depositType: agencyDefaults.defaultDepositType ?? "percentage", depositBps: agencyDefaults.defaultDepositBps ?? defaults.depositBps, depositFixedCents: agencyDefaults.defaultDepositFixedCents });
   const mailLocale = current?.locale === "nl" || current?.locale === "en" ? { locale: current.locale as "nl" | "en", reason: "customer" as const } : await customerMailLocale(booking.id);
+  // The customer can fill in the event details through a link until a quote is accepted.
+  const detailRequest =
+    booking.customer && ["inquiry", "quoted", "expired"].includes(status) && viewerCan(viewer, "agency.bookings.edit")
+      ? { open: await openDetailRequest(organization.id, booking.id), locale: mailLocale.locale }
+      : null;
   const quoteDefaults = {
     depositType: startDeposit.type,
     depositFixed: startDeposit.type === "fixed" ? centsToInput(startDeposit.cents, locale) : "",
@@ -510,6 +516,14 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     {booking.customer.email}
                   </a>
                   {booking.customer.phone && <p className="tabular-nums">{booking.customer.phone}</p>}
+                  {detailRequest && (
+                    <DetailRequestPanel
+                      bookingId={booking.id}
+                      defaultLocale={detailRequest.locale}
+                      customerEmail={booking.customer.email}
+                      open={detailRequest.open ? { expires: dateTime(format, detailRequest.open.expiresAt), emailedTo: detailRequest.open.emailedTo } : null}
+                    />
+                  )}
                 </>
               ) : (
                 <p className="text-muted-foreground">{t("bookings.noCustomer")}</p>

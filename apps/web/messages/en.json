@@ -710,7 +710,10 @@
     "equipment_checked_in": "Equipment checked in{missing, plural, =0 {} other {, # missing: {codes}}}",
     "equipment_lost": "Confirmed lost: {codes} ({count})",
     "equipment_released": "Equipment reservation released ({codes}): {reason, select, damaged {damaged} lost {lost} maintenance {in maintenance} defective {defective} stock {stock corrected} other {no longer available}}",
-    "artist_withdrawn": "Artist taken off the booking: {reason}"
+    "artist_withdrawn": "Artist taken off the booking: {reason}",
+    "details_requested": "Event details requested from the customer",
+    "details_link_revoked": "Details link revoked",
+    "details_submitted": "The customer filled in the event details"
   },
   "quotes": {
     "title": "Quotes",
@@ -1834,7 +1837,8 @@
     "equipment_missing": "{count, plural, one {# item is} other {# items are}} missing after {code}",
     "equipment_damaged": "{count, plural, one {# item} other {# items}} came back damaged from {code}",
     "gig_withdrawn": "{name} took you off booking {code}",
-    "gig_cancelled": "Booking {code} at {name} was cancelled"
+    "gig_cancelled": "Booking {code} at {name} was cancelled",
+    "details_submitted": "{name} filled in the details of {code}"
   },
   "messages": {
     "title": "Messages",
@@ -6107,5 +6111,52 @@
     "invalidBackground": "Choose a PNG or JPEG of at most 4 MB.",
     "backgroundSaved": "Background saved",
     "backgroundRemoved": "Background removed"
+  },
+  "detailRequest": {
+    "hint": "Customer on the phone? Send them a link to fill in the event details themselves.",
+    "request": "Ask customer for details",
+    "newLink": "New link",
+    "revoke": "Revoke link",
+    "revoked": "Link revoked",
+    "openEmailed": "Link sent to {email}, valid until {date}.",
+    "openLink": "A link is open until {date}.",
+    "title": "Ask the customer for the event details",
+    "description": "The customer gets a private page with the details already filled in and can add the rest: date, times, venue, guests, music and wishes. You're notified when they're done. It works until a quote is accepted.",
+    "language": "Language of the page and email",
+    "days": "Valid for (days)",
+    "replaces": "The open link stops working.",
+    "createLink": "Only create the link",
+    "sendTo": "Email to {email}",
+    "linkReady": "The link is ready. Copy it now: for safety it isn't shown again.",
+    "link": "Link",
+    "copy": "Copy",
+    "copied": "Link copied",
+    "linkOnce": "The link works once and only for this booking.",
+    "done": "Done",
+    "created": "Link created",
+    "emailed": "Link emailed to {email}",
+    "invalid": "Check the language and number of days.",
+    "error_not_found": "That booking wasn't found.",
+    "error_invalid_status": "Once a quote is accepted the customer can't change the details through a link.",
+    "error_no_customer": "Add a customer to the booking first."
+  },
+  "detailsPage": {
+    "title": "Hi {name}, your event details",
+    "intro": "{agency} needs these to prepare your quote. Fill in what you know; this link works until {date}.",
+    "music": "Music you'd like",
+    "playlist": "Playlist link (Spotify, YouTube…)",
+    "phone": "Your phone number",
+    "notes": "Wishes and instructions",
+    "notesHint": "For example the first dance, songs you don't want, parking or set-up times.",
+    "submit": "Send details",
+    "questions": "Questions? {contact}",
+    "thanksTitle": "Thank you!",
+    "thanks": "Your details were sent. You'll hear from us soon.",
+    "keptNote": "Some details had been updated by the agency in the meantime; they'll check them with you.",
+    "invalid": "Check the fields: a date, times as 20:00, a number of guests and a web address for the playlist.",
+    "expired": "This link no longer works. Ask the agency for a new one.",
+    "tooMany": "Too many attempts. Try again in a few minutes.",
+    "notAvailableTitle": "This link doesn't work",
+    "notAvailable": "It may have expired, been used already or been replaced. Ask the agency for a new link."
   }
 }

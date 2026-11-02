@@ -710,7 +710,10 @@
     "equipment_checked_in": "Apparatuur ingecheckt{missing, plural, =0 {} other {, # ontbreekt: {codes}}}",
     "equipment_lost": "Als verloren bevestigd: {codes} ({count})",
     "equipment_released": "Reservering apparatuur vrijgegeven ({codes}): {reason, select, damaged {beschadigd} lost {verloren} maintenance {in onderhoud} defective {defect} stock {voorraad gecorrigeerd} other {niet meer beschikbaar}}",
-    "artist_withdrawn": "Artiest van de boeking gehaald: {reason}"
+    "artist_withdrawn": "Artiest van de boeking gehaald: {reason}",
+    "details_requested": "Evenementgegevens opgevraagd bij de klant",
+    "details_link_revoked": "Gegevenslink ingetrokken",
+    "details_submitted": "De klant heeft de evenementgegevens ingevuld"
   },
   "quotes": {
     "title": "Offertes",
@@ -1834,7 +1837,8 @@
     "equipment_missing": "{count, plural, one {# item ontbreekt} other {# items ontbreken}} na {code}",
     "equipment_damaged": "{count, plural, one {# item} other {# items}} beschadigd terug van {code}",
     "gig_withdrawn": "{name} heeft je van boeking {code} gehaald",
-    "gig_cancelled": "Boeking {code} bij {name} is geannuleerd"
+    "gig_cancelled": "Boeking {code} bij {name} is geannuleerd",
+    "details_submitted": "{name} heeft de gegevens van {code} ingevuld"
   },
   "messages": {
     "title": "Berichten",
@@ -6107,5 +6111,52 @@
     "invalidBackground": "Kies een PNG of JPEG van maximaal 4 MB.",
     "backgroundSaved": "Achtergrond opgeslagen",
     "backgroundRemoved": "Achtergrond verwijderd"
+  },
+  "detailRequest": {
+    "hint": "Klant aan de telefoon? Stuur een link waarmee die de evenementgegevens zelf invult.",
+    "request": "Gegevens opvragen bij klant",
+    "newLink": "Nieuwe link",
+    "revoke": "Link intrekken",
+    "revoked": "Link ingetrokken",
+    "openEmailed": "Link verstuurd naar {email}, geldig tot {date}.",
+    "openLink": "Er staat een link open tot {date}.",
+    "title": "Evenementgegevens opvragen bij de klant",
+    "description": "De klant krijgt een privépagina met wat al bekend is en vult de rest aan: datum, tijden, locatie, gasten, muziek en wensen. Je krijgt een melding als het klaar is. Het werkt tot een offerte is geaccepteerd.",
+    "language": "Taal van de pagina en e-mail",
+    "days": "Geldig (dagen)",
+    "replaces": "De link die nu open staat werkt dan niet meer.",
+    "createLink": "Alleen link maken",
+    "sendTo": "Mailen naar {email}",
+    "linkReady": "De link staat klaar. Kopieer hem nu: om veiligheidsredenen wordt hij niet opnieuw getoond.",
+    "link": "Link",
+    "copy": "Kopiëren",
+    "copied": "Link gekopieerd",
+    "linkOnce": "De link werkt één keer en alleen voor deze boeking.",
+    "done": "Klaar",
+    "created": "Link gemaakt",
+    "emailed": "Link gemaild naar {email}",
+    "invalid": "Controleer de taal en het aantal dagen.",
+    "error_not_found": "Die boeking is niet gevonden.",
+    "error_invalid_status": "Als een offerte geaccepteerd is, kan de klant de gegevens niet meer via een link aanpassen.",
+    "error_no_customer": "Voeg eerst een klant toe aan de boeking."
+  },
+  "detailsPage": {
+    "title": "Hoi {name}, de gegevens van je evenement",
+    "intro": "{agency} heeft deze gegevens nodig voor je offerte. Vul in wat je weet; deze link werkt tot {date}.",
+    "music": "Muziek die je wilt",
+    "playlist": "Link naar playlist (Spotify, YouTube…)",
+    "phone": "Je telefoonnummer",
+    "notes": "Wensen en instructies",
+    "notesHint": "Bijvoorbeeld de openingsdans, nummers die je niet wilt, parkeren of opbouwtijden.",
+    "submit": "Gegevens versturen",
+    "questions": "Vragen? {contact}",
+    "thanksTitle": "Bedankt!",
+    "thanks": "Je gegevens zijn verstuurd. Je hoort snel van ons.",
+    "keptNote": "Sommige gegevens had het bureau intussen al aangepast; die nemen ze met je door.",
+    "invalid": "Controleer de velden: een datum, tijden als 20:00, een aantal gasten en een webadres voor de playlist.",
+    "expired": "Deze link werkt niet meer. Vraag het bureau om een nieuwe.",
+    "tooMany": "Te veel pogingen. Probeer het over een paar minuten opnieuw.",
+    "notAvailableTitle": "Deze link werkt niet",
+    "notAvailable": "Hij is misschien verlopen, al gebruikt of vervangen. Vraag het bureau om een nieuwe link."
   }
 }

@@ -52,6 +52,7 @@ const icons: Record<string, { icon: LucideIcon; tone: string }> = {
   gig_response: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
   gig_withdrawn: { icon: Music2Icon, tone: "bg-muted text-muted-foreground" },
   gig_cancelled: { icon: Music2Icon, tone: "bg-destructive/10 text-destructive" },
+  details_submitted: { icon: InboxIcon, tone: "bg-primary/12 text-primary" },
   payment_received: { icon: BanknoteIcon, tone: "bg-success/15 text-success" },
   message: { icon: MessageSquareIcon, tone: "bg-info/12 text-info" },
   ticket_new: { icon: LifeBuoyIcon, tone: "bg-warning/18 text-foreground" },

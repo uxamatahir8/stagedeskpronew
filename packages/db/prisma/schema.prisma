@@ -1959,8 +1959,10 @@ model BookingDetailRequest {
   /// sha256 of the link's secret, base64url.
   tokenHash      String       @unique @db.VarChar(64)
   locale         String       @default("nl") @db.VarChar(8)
-  /// The booking's updatedAt when the link was made: a submit after the agency edited the booking is refused.
+  /// The booking's updatedAt when the link was made.
   bookingVersion DateTime
+  /// The event fields when the link was made: a field the agency changed since keeps the agency's value.
+  snapshot       Json
   expiresAt      DateTime
   revokedAt      DateTime?
   submittedAt    DateTime?

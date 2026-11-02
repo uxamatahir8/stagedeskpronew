@@ -35,6 +35,7 @@ CREATE TABLE `booking_detail_requests` (
     `tokenHash` VARCHAR(64) NOT NULL,
     `locale` VARCHAR(8) NOT NULL DEFAULT 'nl',
     `bookingVersion` DATETIME(3) NOT NULL,
+    `snapshot` JSON NOT NULL,
     `expiresAt` DATETIME(3) NOT NULL,
     `revokedAt` DATETIME(3) NULL,
     `submittedAt` DATETIME(3) NULL,

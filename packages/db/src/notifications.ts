@@ -10,6 +10,7 @@ export type NotificationType =
   | "gig_response"
   | "gig_withdrawn"
   | "gig_cancelled"
+  | "details_submitted"
   | "payment_received"
   | "message"
   | "ticket_new"
