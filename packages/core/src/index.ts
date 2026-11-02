@@ -8,6 +8,7 @@ export * from "./pages";
 export * from "./plans";
 export * from "./quotes";
 export * from "./fees";
+export * from "./compensation";
 export * from "./settings/fees";
 export * from "./settings/registry";
 export * from "./sites";

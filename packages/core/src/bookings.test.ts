@@ -4,7 +4,11 @@ import {
   type BookingContext,
   bookingActions,
   bookingStatuses,
+  formatAgencyInvoiceNumber,
   formatInvoiceNumber,
+  invoiceCounterKey,
+  invoiceNumberPattern,
+  normalizeInvoiceNumber,
   generateTrackingCode,
   paymentStatus,
   isPastInNetherlands,
@@ -142,5 +146,21 @@ describe("booking helpers", () => {
 
   it("formats invoice numbers per year", () => {
     expect(formatInvoiceNumber(2027, 42)).toBe("2027-0042");
+  });
+});
+
+describe("agency invoice numbers", () => {
+  it("keeps the original yearly format without a prefix", () => {
+    expect(formatAgencyInvoiceNumber({ numbering: "yearly", prefix: null, year: 2027, sequence: 42 })).toBe("2027-0042");
+    expect(invoiceCounterKey("yearly", 2027)).toBe("invoice:2027");
+  });
+  it("adds a prefix and supports a continuous series", () => {
+    expect(formatAgencyInvoiceNumber({ numbering: "yearly", prefix: "fb-", year: 2027, sequence: 7 })).toBe("FB-2027-0007");
+    expect(formatAgencyInvoiceNumber({ numbering: "continuous", prefix: "INV", year: 2027, sequence: 1234 })).toBe("INV001234");
+    expect(invoiceCounterKey("continuous", 2027)).toBe("invoice:all");
+  });
+  it("accepts sensible typed numbers only", () => {
+    for (const ok of ["2027-0001", "FB/2027/12", "A1"]) expect(invoiceNumberPattern.test(normalizeInvoiceNumber(ok))).toBe(true);
+    for (const bad of ["", " ", "-12", "a b", "x".repeat(33), "12<script>"]) expect(invoiceNumberPattern.test(normalizeInvoiceNumber(bad))).toBe(false);
   });
 });

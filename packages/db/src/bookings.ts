@@ -1,18 +1,29 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
+  assertCompensation,
   type BookingAction,
   type BookingActor,
   type BookingContext,
   type BookingStatus,
+  type Compensation,
+  compensationOf,
   computeQuote,
+  depositColumns,
+  type DepositRule,
   type EventType,
-  formatInvoiceNumber,
+  formatAgencyInvoiceNumber,
   generateTrackingCode,
+  invoiceCounterKey,
+  type InvoiceNumbering,
+  invoiceNumberPattern,
+  normalizeInvoiceNumber,
   type QuoteLineInput,
   todayInNetherlands,
+  toDepositRule,
   transition,
   type TransitionError,
 } from "@stagedesk/core";
+import { auditTx } from "./audit";
 import { effectiveFeeSnapshot } from "./billing";
 import { checkEquipmentReschedule, equipmentAfterTransition, equipmentTx, notifyUnreservedEquipment } from "./booking-equipment";
 import { prisma } from "./client";
@@ -33,7 +44,12 @@ export type BookingErrorCode =
   | "artist_not_available_to_agency"
   | "no_open_assignment"
   | "quote_not_current"
-  | "invalid_amount";
+  | "invalid_amount"
+  | "invalid_compensation"
+  | "compensation_currency"
+  | "invoice_number_invalid"
+  | "invoice_number_taken"
+  | "manual_numbers_off";
 
 export class BookingError extends Error {
   constructor(readonly code: BookingErrorCode) {
@@ -160,9 +176,11 @@ export async function resolveBookingCustomerTx(db: Tx | TenantDb, organizationId
   }
   if (!input.name || !input.email) return null;
   const email = input.email.trim().toLowerCase();
+  // Someone the agency enters gets the agency's correspondence language, not the column default (English).
+  const agency = await db.organization.findUnique({ where: { id: organizationId }, select: { correspondenceLocale: true } });
   const user =
     (await db.user.findUnique({ where: { email }, select: { id: true } })) ??
-    (await db.user.create({ data: { id: randomUUID(), email, name: input.name.trim(), phone: input.phone }, select: { id: true } }));
+    (await db.user.create({ data: { id: randomUUID(), email, name: input.name.trim(), phone: input.phone, locale: agency?.correspondenceLocale ?? "nl" }, select: { id: true } }));
   const existing = await db.member.findFirst({ where: { userId: user.id }, select: { role: true } });
   if (existing && existing.role !== "customer") return null;
   if (!existing) await db.member.create({ data: { id: randomUUID(), userId: user.id, role: "customer", organizationId } });
@@ -206,14 +224,26 @@ export async function insertBooking(tx: Tx, organizationId: string, input: NewBo
 
 export interface QuoteInput {
   lines: QuoteLineInput[];
-  depositBps: number;
+  /** A percentage upfront payment in basis points (0 = none); `deposit` replaces it when given. */
+  depositBps?: number;
+  /** No upfront payment, a percentage or a fixed amount. */
+  deposit?: DepositRule;
   expiresInDays: number;
   notes?: string | null;
+  /** Language the customer gets the quote in (emails, PDF, reminders). */
+  locale?: "nl" | "en" | null;
 }
 
 export async function sendQuote(organizationId: string, bookingId: string, input: QuoteInput, actorId: string, now = new Date()) {
   if (input.lines.length === 0) throw new BookingError("no_lines");
-  const totals = computeQuote(input.lines, input.depositBps);
+  const deposit = input.deposit ?? toDepositRule(input.depositBps ?? 0);
+  let totals: ReturnType<typeof computeQuote>;
+  try {
+    totals = computeQuote(input.lines, deposit);
+  } catch (error) {
+    if (error instanceof RangeError) throw new BookingError("invalid_amount");
+    throw error;
+  }
   const expiresAt = new Date(now.getTime() + input.expiresInDays * 86_400_000);
 
   return tenantDb(organizationId).$transaction(async (tx) => {
@@ -234,7 +264,8 @@ export async function sendQuote(organizationId: string, bookingId: string, input
         status: "sent",
         token: randomBytes(24).toString("base64url"),
         notes: input.notes ?? null,
-        depositBps: input.depositBps,
+        ...depositColumns(deposit),
+        locale: input.locale ?? null,
         subtotalCents: totals.subtotalCents,
         vatCents: totals.vatCents,
         totalCents: totals.totalCents,
@@ -335,7 +366,7 @@ export async function bookableArtists(organizationId: string) {
         { shares: { some: { partnerOrganizationId: organizationId, status: "accepted" } } },
       ],
     },
-    include: { organization: { select: { id: true, name: true } } },
+    include: { organization: { select: { id: true, name: true, currency: true } } },
     orderBy: { stageName: "asc" },
   });
 }
@@ -360,13 +391,43 @@ async function lockArtist(tx: Tx, artistId: string) {
   await tx.$queryRaw`SELECT id FROM artists WHERE id = ${artistId} FOR UPDATE`;
 }
 
-export async function assignArtist(organizationId: string, bookingId: string, artistId: string, actorId: string, now = new Date()) {
+/**
+ * What an assignment copies: the override for this booking, or the artist's
+ * default. A default fixed fee is in the artist's agency's currency, so it can
+ * only be copied onto a booking in that currency; otherwise the agency must
+ * enter the amount for this booking.
+ */
+function assignmentCompensation(
+  artist: { compensationType: string; defaultShareBps: number; defaultFixedFeeCents: number | null; organization: { currency: string } },
+  bookingCurrency: string,
+  override: Compensation | null | undefined,
+) {
+  const c = override ?? compensationOf(artist);
+  try {
+    assertCompensation(c);
+  } catch {
+    throw new BookingError("invalid_compensation");
+  }
+  if (!override && c.type === "fixed" && artist.organization.currency !== bookingCurrency) throw new BookingError("compensation_currency");
+  return { shareBps: c.type === "percentage" ? c.shareBps : 0, compensationType: c.type, fixedFeeCents: c.type === "fixed" ? c.fixedCents : null };
+}
+
+export async function assignArtist(
+  organizationId: string,
+  bookingId: string,
+  artistId: string,
+  actorId: string,
+  now = new Date(),
+  /** Pay for this booking only; null takes the artist's default. */
+  compensation?: Compensation | null,
+) {
   const allowed = (await bookableArtists(organizationId)).find((a) => a.id === artistId);
   if (!allowed) throw new BookingError("artist_not_available_to_agency");
 
   const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     if (booking.status !== "booked" && booking.status !== "confirmed") throw new BookingError("invalid_status");
+    const pay = assignmentCompensation(allowed, booking.currency, compensation);
     await lockArtist(tx, artistId);
     if (booking.eventDate && !(await isArtistFree(artistId, booking.eventDate, booking.id))) {
       throw new BookingError("artist_unavailable");
@@ -378,9 +439,9 @@ export async function assignArtist(organizationId: string, bookingId: string, ar
       data: { status: "withdrawn", respondedAt: now },
     });
     await tx.bookingAssignment.create({
-      data: { id: randomUUID(), organizationId, bookingId, artistId, status: "pending", shareBps: allowed.defaultShareBps },
+      data: { id: randomUUID(), organizationId, bookingId, artistId, status: "pending", ...pay },
     });
-    await logEvent(tx, bookingId, "artist_assigned", actorId, { artistId, stageName: allowed.stageName });
+    await logEvent(tx, bookingId, "artist_assigned", actorId, { artistId, stageName: allowed.stageName, ...pay });
     return booking;
   });
   const artistUser = await prisma.artist.findUnique({ where: { id: artistId }, select: { userId: true, organization: { select: { name: true } } } });
@@ -504,8 +565,40 @@ async function nextCounter(tx: Tx, organizationId: string, key: string) {
   return next;
 }
 
-/** Issues an invoice from the accepted quote. Returns the existing one if already issued. */
-export async function issueInvoice(organizationId: string, bookingId: string, actorId: string, now = new Date()) {
+/** The number the next invoice would get, without taking it (for the preview in the issue dialog). */
+export async function nextInvoiceNumber(organizationId: string, now = new Date()) {
+  const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { invoiceNumbering: true, invoicePrefix: true } });
+  const numbering = org.invoiceNumbering as InvoiceNumbering;
+  const year = Number(todayInNetherlands(now).slice(0, 4));
+  const counter = await prisma.organizationCounter.findUnique({ where: { organizationId_key: { organizationId, key: invoiceCounterKey(numbering, year) } } });
+  return formatAgencyInvoiceNumber({ numbering, prefix: org.invoicePrefix, year, sequence: (counter?.value ?? 0) + 1 });
+}
+
+/**
+ * Issues an invoice from the accepted quote. Returns the existing one if
+ * already issued. The number is the agency's next one (its scheme and
+ * prefix), or, when the agency allows it, one typed by hand: it must be
+ * unused (the unique index refuses a reuse even under a race) and is audited.
+ * Issued invoices are never renumbered.
+ */
+export async function issueInvoice(
+  organizationId: string,
+  bookingId: string,
+  actorId: string,
+  now = new Date(),
+  opts: { manualNumber?: string | null } = {},
+) {
+  const manual = opts.manualNumber ? normalizeInvoiceNumber(opts.manualNumber) : null;
+  if (manual !== null && !invoiceNumberPattern.test(manual)) throw new BookingError("invoice_number_invalid");
+  try {
+    return await issueInvoiceTx(organizationId, bookingId, actorId, now, manual);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") throw new BookingError("invoice_number_taken");
+    throw error;
+  }
+}
+
+async function issueInvoiceTx(organizationId: string, bookingId: string, actorId: string, now: Date, manual: string | null) {
   return tenantDb(organizationId).$transaction(async (tx) => {
     // Lock first: under REPEATABLE READ an earlier plain read would fix the snapshot before the lock,
     // and two simultaneous calls would both miss each other's invoice.
@@ -521,7 +614,20 @@ export async function issueInvoice(organizationId: string, bookingId: string, ac
       booking.customerId ? prisma.user.findUnique({ where: { id: booking.customerId }, select: { name: true, email: true } }) : null,
     ]);
     const year = Number(todayInNetherlands(now).slice(0, 4));
-    const number = formatInvoiceNumber(year, await nextCounter(tx, organizationId, `invoice:${year}`));
+    let number = manual ?? "";
+    if (manual) {
+      if (!agency.allowManualInvoiceNumbers) throw new BookingError("manual_numbers_off");
+      if (await tx.invoice.findFirst({ where: { number: manual }, select: { id: true } })) throw new BookingError("invoice_number_taken");
+    } else {
+      const numbering = agency.invoiceNumbering as InvoiceNumbering;
+      // A typed number may already hold what the counter gives next: skip past it rather than fail.
+      for (let attempt = 0; ; attempt++) {
+        const sequence = await nextCounter(tx, organizationId, invoiceCounterKey(numbering, year));
+        number = formatAgencyInvoiceNumber({ numbering, prefix: agency.invoicePrefix, year, sequence });
+        if (!(await tx.invoice.findFirst({ where: { number }, select: { id: true } }))) break;
+        if (attempt > 50) throw new BookingError("invoice_number_taken");
+      }
+    }
 
     const id = randomUUID();
     await tx.invoice.create({
@@ -530,6 +636,7 @@ export async function issueInvoice(organizationId: string, bookingId: string, ac
         organizationId,
         bookingId,
         number,
+        manualNumber: manual !== null,
         issuedAt: now,
         dueAt: new Date(now.getTime() + 14 * 86_400_000),
         subtotalCents: quote.subtotalCents,
@@ -544,8 +651,16 @@ export async function issueInvoice(organizationId: string, bookingId: string, ac
             postalCode: agency.postalCode,
             city: agency.city,
             contactEmail: agency.contactEmail,
+            phone: agency.phone,
+            iban: agency.iban,
+            bankAccountName: agency.bankAccountName,
+            paymentInstructions: agency.paymentInstructions,
             logo: agency.logo,
           },
+          // The look at the time of issue, so later template edits never change an issued invoice.
+          template: (agency.invoiceTemplate ?? null) as Prisma.InputJsonValue,
+          locale: quote.locale,
+          depositCents: quote.depositCents,
           customer,
           trackingCode: booking.trackingCode,
           eventDate: fromDateOnly(booking.eventDate),
@@ -561,7 +676,8 @@ export async function issueInvoice(organizationId: string, bookingId: string, ac
         },
       },
     });
-    await logEvent(tx, bookingId, "invoice_issued", actorId, { number });
+    await logEvent(tx, bookingId, "invoice_issued", actorId, { number, manual: manual !== null });
+    if (manual) await auditTx(tx, { actorId, action: "invoice.manual_number", agencyId: organizationId, targetType: "invoice", targetId: id, data: { number, bookingId } });
     return tx.invoice.findFirstOrThrow({ where: { id } });
   });
 }

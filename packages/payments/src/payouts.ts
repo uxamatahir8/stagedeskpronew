@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { type FeeSnapshot, splitBookingPayment } from "@stagedesk/core";
+import { artistCutOfPayment, availableForArtist, compensationOf, type FeeSnapshot, splitBookingPayment } from "@stagedesk/core";
 import { BookingError, changeBookingStatus, getSetting, lenderFee, prisma, tenantDb } from "@stagedesk/db";
 import {
   claimOperation,
@@ -32,6 +32,8 @@ interface PayoutData {
   artistId: string | null;
   /** The part of the lender's fee this payment covers (counted while the operation is pending). */
   lenderCut: number;
+  /** The artist's part of this payment (counted while pending, so a fixed fee is never paid twice). */
+  artistCut?: number;
   ids: Partial<Record<Party, string>>;
 }
 
@@ -67,6 +69,8 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
   const assignment = booking.assignments[0];
   const artistAccount = assignment?.artist.connectedAccount?.payoutsEnabled ? assignment.artist.connectedAccount : null;
   const artistId = assignment?.artistId ?? null;
+  // Percentage or fixed fee, as copied onto the assignment (old assignments are percentages).
+  const compensation = assignment ? compensationOf(assignment) : null;
 
   // An artist lent by another agency: their agreed fee comes out of this agency's share, until it's paid in full.
   const lent = await lenderFee(booking.id);
@@ -84,14 +88,34 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
         : 0;
       const feeLeft = lent ? Math.max(0, lent.feeCents - booked - pending) : 0;
 
+      // A fixed fee is spread over the booking's payments; what earlier payouts gave the artist (done or under way) counts.
+      let alreadyAllocated = 0;
+      if (compensation?.type === "fixed" && artistId) {
+        const booked = (await tx.ledgerEntry.aggregate({ where: { bookingId: booking.id, type: "artist_share", artistId }, _sum: { amountCents: true } }))._sum.amountCents ?? 0;
+        const pendingCut = (await tx.financialOperation.findMany({ where: { bookingId: booking.id, kind: "payout", status: { in: ["pending", "review"] } }, select: { data: true } }))
+          .reduce((sum, o) => sum + ((o.data as unknown as PayoutData).artistCut ?? 0), 0);
+        alreadyAllocated = booked + pendingCut;
+      }
+      const cut = compensation
+        ? artistCutOfPayment({
+            compensation,
+            amount,
+            bookingTotalCents: booking.totalCents,
+            alreadyAllocated,
+            available: availableForArtist({ amount, stripeFee: payment.stripeFeeCents, feeRule: fees.rule, stripeFeePaidBy: fees.stripeFeePaidBy }),
+          })
+        : { artist: 0, shortfall: 0 };
       const split = splitBookingPayment({
         amount,
         stripeFee: payment.stripeFeeCents,
-        artistShareBps: assignment?.shareBps ?? 0,
+        artistShareBps: 0,
+        artistCents: cut.artist,
         feeRule: fees.rule,
         stripeFeePaidBy: fees.stripeFeePaidBy,
       });
       const toArtist = artistAccount ? split.artist : 0;
+      // Owed by the agency to the artist: their share when they can't be paid through Stripe, plus any part of a fixed fee this payment couldn't cover.
+      const owedToArtist = (artistAccount ? 0 : split.artist) + cut.shortfall;
       const agencyPart = split.agency + (artistAccount ? 0 : split.artist);
       const lenderCut = Math.min(feeLeft, agencyPart);
       // Without a Stripe account the lender's cut stays with this agency and is recorded as owed.
@@ -108,9 +132,9 @@ export async function payoutBooking(stripe: Stripe, bookingId: string, now = new
         { type: "agency_share", party: "agency", amountCents: split.agency },
         ...(lent && lenderCut > 0 ? [{ type: "lender_fee", party: "lender", amountCents: lenderCut }] : []),
         ...(lent && !lenderAccount && lenderCut > 0 ? [{ type: "owed_by_agency", party: "lender", amountCents: lenderCut }] : []),
-        ...(artistId && !artistAccount && split.artist > 0 ? [{ type: "owed_by_agency", party: "artist", amountCents: split.artist, artistId }] : []),
+        ...(artistId && owedToArtist > 0 ? [{ type: "owed_by_agency", party: "artist", amountCents: owedToArtist, artistId }] : []),
       ];
-      return { bookingId: booking.id, currency: booking.currency, chargeId: payment.stripeChargeId!, transfers, ledger, artistId, lenderCut, ids: {} };
+      return { bookingId: booking.id, currency: booking.currency, chargeId: payment.stripeChargeId!, transfers, ledger, artistId, lenderCut, artistCut: split.artist, ids: {} };
     });
     if (!op) continue;
     const result = await executePayout(stripe, op.id, now);
