@@ -9,6 +9,8 @@ import {
   availableActions,
   type BookingStatus,
   depositRuleOf,
+  quoteChangedFields,
+  quoteEventSnapshot,
   type EventType,
   isBudgetRange,
   paymentStatus,
@@ -112,6 +114,8 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
 
   const current = booking.quotes[0] ?? null;
   const openQuote = current?.status === "sent" ? current : null;
+  // Details changed after the quote went out: it can't be accepted until it's revised.
+  const outdatedFields = openQuote ? quoteChangedFields(openQuote.eventSnapshot, quoteEventSnapshot(booking)) : [];
   const acceptedQuote = booking.quotes.find((q) => q.status === "accepted") ?? null;
   const shownQuote = acceptedQuote ?? current;
   const activeAssignment = booking.assignments.find((a) => a.status === "pending" || a.status === "accepted") ?? null;
@@ -310,6 +314,11 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {outdatedFields.length > 0 && (
+                <p className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
+                  {t("booking.quoteOutdated", { fields: outdatedFields.map((f) => t(`booking.field_${f}`)).join(", ") })}
+                </p>
+              )}
               {shownQuote ? (
                 <QuoteTable quote={shownQuote} currency={booking.currency} />
               ) : (
@@ -322,7 +331,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 quoteId={openQuote?.id ?? null}
                 quoteLink={openQuote ? `${localePrefix(locale)}/q/${openQuote.token}` : null}
                 pdfHref={shownQuote ? `/api/pdf/quote/${shownQuote.id}?lang=${locale}` : null}
-                canAcceptOnBehalf={Boolean(openQuote) && viewerCan(viewer, "agency.quotes.accept")}
+                canAcceptOnBehalf={Boolean(openQuote) && outdatedFields.length === 0 && viewerCan(viewer, "agency.quotes.accept")}
                 customerName={booking.customer?.name ?? ""}
                 catalog={catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, unitPriceCents: c.unitPriceCents, vatBps: c.vatBps }))}
                 vatRates={defaults.vatRatesBps}

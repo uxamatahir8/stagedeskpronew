@@ -43,10 +43,11 @@ export async function emailQuote(quoteId: string, displayName?: string): Promise
   const money = (cents: number) => new Intl.NumberFormat(intl, { style: "currency", currency: quote.booking.currency }).format(cents / 100);
   const qty = (hundredths: number) => new Intl.NumberFormat(intl, { maximumFractionDigits: 2 }).format(hundredths / 100);
   const pct = (bps: number) => new Intl.NumberFormat(intl, { style: "percent", maximumFractionDigits: 2 }).format(bps / 10_000);
-  const day = fromDateOnly(quote.booking.eventDate);
+  const snap = quote.eventSnapshot as { eventDate?: string | null; startTime?: string | null; endTime?: string | null; venueName?: string | null; venueCity?: string | null } | null;
+  const day = snap ? (snap.eventDate ?? null) : fromDateOnly(quote.booking.eventDate);
   const te = await getTranslations({ locale, namespace: "eventTypes" });
   const tb = await getTranslations({ locale, namespace: "booking" });
-  const b = quote.booking;
+  const b = { ...quote.booking, ...(snap ? { startTime: snap.startTime ?? null, endTime: snap.endTime ?? null, venueName: snap.venueName ?? null, venueCity: snap.venueCity ?? null } : {}) };
   const date = day
     ? `${new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}${b.startTime ? `, ${b.startTime}${b.endTime ? `–${b.endTime}` : ""}` : ""}`
     : undefined;

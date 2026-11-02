@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { acceptQuote, assignArtist, changeBookingStatus, createBooking, issueInvoice, nextInvoiceNumber, resolveBookingCustomer, sendQuote } from "./bookings";
+import { acceptQuote, assignArtist, changeBookingStatus, createBooking, issueInvoice, nextInvoiceNumber, resolveBookingCustomer, sendQuote, updateBookingDetails } from "./bookings";
 import { prisma } from "./client";
 
 /**
@@ -193,5 +193,17 @@ describe("artist notifications", () => {
     await prisma.bookingAssignment.deleteMany({ where: { bookingId: booking.id } });
     await prisma.artist.delete({ where: { id: `${run}-second` } });
     await prisma.user.delete({ where: { id: otherUser } });
+  });
+});
+
+describe("moving a booking", () => {
+  it("refuses a new date on which the assigned artist already plays", async () => {
+    const one = await bookedBooking({ type: "none" }, "2027-10-01");
+    const two = await bookedBooking({ type: "none" }, "2027-10-02");
+    await assignArtist(org, one.booking.id, pctArtist, owner, may1);
+    await assignArtist(org, two.booking.id, pctArtist, owner, may1);
+    await expect(updateBookingDetails(org, two.booking.id, { eventDate: new Date("2027-10-01T00:00:00Z") }, owner)).rejects.toThrow("artist_unavailable");
+    // Another free date is fine.
+    await updateBookingDetails(org, two.booking.id, { eventDate: new Date("2027-10-03T00:00:00Z") }, owner);
   });
 });

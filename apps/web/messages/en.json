@@ -514,7 +514,8 @@
     "compensation_currency": "This artist's fixed fee is in another currency than this booking. Enter the fee for this booking.",
     "invoice_number_invalid": "Use 1–32 letters, digits or - _ / . for the invoice number.",
     "invoice_number_taken": "That invoice number is already used. Every invoice needs its own number.",
-    "manual_numbers_off": "Typing invoice numbers is switched off for your agency (Settings → Invoices)."
+    "manual_numbers_off": "Typing invoice numbers is switched off for your agency (Settings → Invoices).",
+    "quote_outdated": "The event details changed after this quote was sent. Send a revised quote first."
   },
   "bookings": {
     "title": "Bookings",
@@ -682,7 +683,16 @@
     "invoiceNumberOwn": "Your own number (optional)",
     "invoiceNumberOwnHint": "Leave empty to take the next number. A typed number must be unused and is recorded in the audit log.",
     "issueInvoiceConfirm": "Issue invoice",
-    "emailNotQueued": "The email could not be stored for sending; send it again from the booking's email list or contact support."
+    "emailNotQueued": "The email could not be stored for sending; send it again from the booking's email list or contact support.",
+    "quoteOutdated": "Changed since the quote was sent: {fields}. The customer can't accept it until you send a revision.",
+    "field_eventType": "event type",
+    "field_eventDate": "date",
+    "field_startTime": "start time",
+    "field_endTime": "end time",
+    "field_venueName": "venue",
+    "field_venueAddress": "address",
+    "field_venueCity": "city",
+    "field_guestCount": "number of guests"
   },
   "timeline": {
     "created": "Booking created",
@@ -923,7 +933,8 @@
     "accountPasswordMismatch": "The passwords don't match.",
     "accountExists": "You already have an account. Sign in with your email.",
     "haveAccount": "Already have an account?",
-    "signIn": "Sign in to follow your booking"
+    "signIn": "Sign in to follow your booking",
+    "outdated": "The event details changed after this quote was made. The agency will send you an updated quote."
   },
   "reviews": {
     "title": "Reviews",
@@ -1840,7 +1851,8 @@
     "gig_withdrawn": "{name} took you off booking {code}",
     "gig_cancelled": "Booking {code} at {name} was cancelled",
     "details_submitted": "{name} filled in the details of {code}",
-    "artist_removed": "{name} was taken off {code}: assign another artist"
+    "artist_removed": "{name} was taken off {code}: assign another artist",
+    "quote_outdated": "{name} changed the details of {code}: revise the quote"
   },
   "messages": {
     "title": "Messages",

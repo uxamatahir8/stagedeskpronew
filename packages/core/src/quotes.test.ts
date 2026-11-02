@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeQuote, depositColumns, depositFor, depositRuleOf, lineSubtotal, parseEuros, parseQuantity } from "./quotes";
+import { computeQuote, depositColumns, depositFor, depositRuleOf, lineSubtotal, parseEuros, parseQuantity, quoteChangedFields, quoteEventSnapshot } from "./quotes";
 
 describe("computeQuote", () => {
   it("prices a wedding quote with two VAT rates", () => {
@@ -107,5 +107,21 @@ describe("deposit rules", () => {
     expect(depositRuleOf({ depositType: "fixed", depositBps: 0, depositFixedCents: 20_000 })).toEqual({ type: "fixed", cents: 20_000 });
     expect(depositColumns({ type: "fixed", cents: 20_000 })).toEqual({ depositType: "fixed", depositBps: 0, depositFixedCents: 20_000 });
     expect(depositFor({ type: "fixed", cents: 20_000 }, 0)).toBe(0);
+  });
+});
+
+describe("quote event snapshot", () => {
+  const booking = { eventType: "wedding", eventDate: new Date("2027-06-12T00:00:00Z"), startTime: "20:00", endTime: null, venueName: "Tivoli", venueAddress: null, venueCity: "Utrecht", guestCount: 100 };
+  it("matches the booking it was taken from, ignoring case and empty vs null", () => {
+    const snap = quoteEventSnapshot(booking);
+    expect(snap.eventDate).toBe("2027-06-12");
+    expect(quoteChangedFields(snap, quoteEventSnapshot({ ...booking, venueCity: "utrecht ", endTime: "" as unknown as null }))).toEqual([]);
+  });
+  it("names what changed", () => {
+    const snap = quoteEventSnapshot(booking);
+    expect(quoteChangedFields(snap, quoteEventSnapshot({ ...booking, eventDate: "2027-06-13", guestCount: 140 }))).toEqual(["eventDate", "guestCount"]);
+  });
+  it("treats older quotes without a snapshot as matching", () => {
+    expect(quoteChangedFields(null, quoteEventSnapshot(booking))).toEqual([]);
   });
 });

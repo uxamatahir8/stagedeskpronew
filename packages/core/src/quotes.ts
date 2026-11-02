@@ -133,3 +133,45 @@ export function parseEuros(value: string): Cents | null {
   const total = whole * 100 + cents;
   return negative ? -total : total;
 }
+
+/**
+ * The event details a quote is made for. A customer accepts these, so when
+ * one changes after the quote was sent the quote is outdated: it can't be
+ * accepted until the agency sends a revision. (Partner name, music and notes
+ * don't change what is offered.)
+ */
+export const quoteEventFields = ["eventType", "eventDate", "startTime", "endTime", "venueName", "venueAddress", "venueCity", "guestCount"] as const;
+export type QuoteEventField = (typeof quoteEventFields)[number];
+export type QuoteEventSnapshot = Record<QuoteEventField, string | number | null>;
+
+/** The snapshot stored on a quote; eventDate as YYYY-MM-DD. */
+export function quoteEventSnapshot(b: {
+  eventType: string;
+  eventDate: Date | string | null;
+  startTime: string | null;
+  endTime: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
+  venueCity: string | null;
+  guestCount: number | null;
+}): QuoteEventSnapshot {
+  const date = b.eventDate === null ? null : typeof b.eventDate === "string" ? b.eventDate : b.eventDate.toISOString().slice(0, 10);
+  return {
+    eventType: b.eventType,
+    eventDate: date,
+    startTime: b.startTime,
+    endTime: b.endTime,
+    venueName: b.venueName,
+    venueAddress: b.venueAddress,
+    venueCity: b.venueCity,
+    guestCount: b.guestCount,
+  };
+}
+
+/** Fields that differ between a quote's snapshot and the booking now; [] when it still matches (or has no snapshot: older quotes). */
+export function quoteChangedFields(snapshot: unknown, current: QuoteEventSnapshot): QuoteEventField[] {
+  if (!snapshot || typeof snapshot !== "object") return [];
+  const s = snapshot as Partial<QuoteEventSnapshot>;
+  const norm = (v: unknown) => (v === null || v === undefined || v === "" ? "" : String(v).trim().toLowerCase());
+  return quoteEventFields.filter((f) => norm(s[f]) !== norm(current[f]));
+}

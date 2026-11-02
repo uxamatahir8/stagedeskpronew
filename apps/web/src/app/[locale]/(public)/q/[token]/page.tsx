@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType } from "@stagedesk/core";
+import { type EventType, quoteChangedFields, quoteEventSnapshot, type QuoteEventSnapshot } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { confirmCheckoutReturn } from "@/lib/checkout-return";
 import { FormMessage } from "@/components/auth/auth-card";
@@ -52,13 +52,16 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
     include: {
       items: { orderBy: { position: "asc" } },
       organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true } },
-      booking: { select: { id: true, customerId: true, currency: true, customer: { select: { name: true, email: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } }, trackingCode: true, eventType: true, eventDate: true, venueName: true, venueCity: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true } },
+      booking: { select: { id: true, customerId: true, currency: true, customer: { select: { name: true, email: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } }, trackingCode: true, eventType: true, eventDate: true, startTime: true, endTime: true, venueName: true, venueAddress: true, venueCity: true, guestCount: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true } },
     },
   });
   if (!quote) return <FormMessage>{t("quotePage.notFound")}</FormMessage>;
 
   const agency = quote.organization;
   const expired = quote.status === "sent" && quote.expiresAt <= new Date();
+  // What was offered: the quote's own snapshot of the event (older quotes: the booking).
+  const offered = (quote.eventSnapshot as QuoteEventSnapshot | null) ?? quoteEventSnapshot(quote.booking);
+  const outdated = quote.status === "sent" && quoteChangedFields(quote.eventSnapshot, quoteEventSnapshot(quote.booking)).length > 0;
   const accent = agency.brandColor ?? undefined;
 
   return (
@@ -86,9 +89,9 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
         <h1 className="text-2xl font-semibold tracking-tight">{t("quotePage.title", { code: quote.booking.trackingCode })}</h1>
         <p className="text-muted-foreground">
           {quote.booking.customer && t("quotePage.for", { name: quote.booking.customer.name })} ·{" "}
-          {t(`eventTypes.${quote.booking.eventType as EventType}`)}
-          {quote.booking.eventDate && ` · ${eventDate(format, quote.booking.eventDate)}`}
-          {quote.booking.venueCity && ` · ${[quote.booking.venueName, quote.booking.venueCity].filter(Boolean).join(", ")}`}
+          {t(`eventTypes.${offered.eventType as EventType}`)}
+          {offered.eventDate && ` · ${eventDate(format, String(offered.eventDate))}`}
+          {offered.venueCity && ` · ${[offered.venueName, offered.venueCity].filter(Boolean).join(", ")}`}
         </p>
         {quote.status === "sent" && !expired && (
           <p className="text-sm text-muted-foreground">{t("quotePage.validUntil", { date: dateTime(format, quote.expiresAt) })}</p>
@@ -112,6 +115,8 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
         <FormMessage>{t("quotePage.notOpen")}</FormMessage>
       ) : expired ? (
         <FormMessage>{t("bookingErrors.quote_expired")}</FormMessage>
+      ) : outdated ? (
+        <FormMessage>{t("quotePage.outdated")}</FormMessage>
       ) : (
         <Card>
           <CardContent className="grid gap-4">

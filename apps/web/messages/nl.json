@@ -514,7 +514,8 @@
     "compensation_currency": "De vaste vergoeding van deze artiest is in een andere valuta dan deze boeking. Vul de vergoeding voor deze boeking in.",
     "invoice_number_invalid": "Gebruik 1–32 letters, cijfers of - _ / . voor het factuurnummer.",
     "invoice_number_taken": "Dat factuurnummer is al gebruikt. Elke factuur heeft een eigen nummer nodig.",
-    "manual_numbers_off": "Zelf factuurnummers invullen staat uit voor je bureau (Instellingen → Facturen)."
+    "manual_numbers_off": "Zelf factuurnummers invullen staat uit voor je bureau (Instellingen → Facturen).",
+    "quote_outdated": "De evenementgegevens zijn gewijzigd nadat deze offerte is verstuurd. Verstuur eerst een herziene offerte."
   },
   "bookings": {
     "title": "Boekingen",
@@ -682,7 +683,16 @@
     "invoiceNumberOwn": "Eigen nummer (optioneel)",
     "invoiceNumberOwnHint": "Laat leeg voor het volgende nummer. Een eigen nummer mag niet eerder gebruikt zijn en wordt vastgelegd in het auditlog.",
     "issueInvoiceConfirm": "Factuur uitgeven",
-    "emailNotQueued": "De e-mail kon niet worden opgeslagen om te versturen; verstuur hem opnieuw vanuit de e-maillijst van de boeking of neem contact op met support."
+    "emailNotQueued": "De e-mail kon niet worden opgeslagen om te versturen; verstuur hem opnieuw vanuit de e-maillijst van de boeking of neem contact op met support.",
+    "quoteOutdated": "Gewijzigd sinds de offerte is verstuurd: {fields}. De klant kan hem pas accepteren als je een herziene offerte stuurt.",
+    "field_eventType": "soort evenement",
+    "field_eventDate": "datum",
+    "field_startTime": "begintijd",
+    "field_endTime": "eindtijd",
+    "field_venueName": "locatie",
+    "field_venueAddress": "adres",
+    "field_venueCity": "plaats",
+    "field_guestCount": "aantal gasten"
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -923,7 +933,8 @@
     "accountPasswordMismatch": "De wachtwoorden zijn niet gelijk.",
     "accountExists": "Je hebt al een account. Log in met je e-mailadres.",
     "haveAccount": "Heb je al een account?",
-    "signIn": "Log in om je boeking te volgen"
+    "signIn": "Log in om je boeking te volgen",
+    "outdated": "De gegevens van je evenement zijn gewijzigd nadat deze offerte is gemaakt. Het bureau stuurt je een bijgewerkte offerte."
   },
   "reviews": {
     "title": "Reviews",
@@ -1840,7 +1851,8 @@
     "gig_withdrawn": "{name} heeft je van boeking {code} gehaald",
     "gig_cancelled": "Boeking {code} bij {name} is geannuleerd",
     "details_submitted": "{name} heeft de gegevens van {code} ingevuld",
-    "artist_removed": "{name} is van {code} gehaald: wijs een andere artiest toe"
+    "artist_removed": "{name} is van {code} gehaald: wijs een andere artiest toe",
+    "quote_outdated": "{name} heeft de gegevens van {code} gewijzigd: herzie de offerte"
   },
   "messages": {
     "title": "Berichten",

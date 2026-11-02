@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { type EventType, eventTypes } from "@stagedesk/core";
+import { type EventType, eventTypes, quoteEventFields } from "@stagedesk/core";
 import { fromDateOnly, toDateOnly } from "./bookings";
 import { prisma } from "./client";
 import { Prisma } from "./generated/prisma/client";
@@ -198,10 +198,16 @@ export async function submitDetailRequest(token: string, input: DetailInput, now
     }
     await tx.bookingDetailRequest.updateMany({ where: { id: request.id }, data: { submittedAt: now } });
     await tx.bookingEvent.create({ data: { bookingId: booking.id, type: "details_submitted", actorId: booking.customerId, data: { fields: Object.keys(data), kept }, organizationId: "" } });
-    return { code: booking.trackingCode, customer: booking.customerId, kept };
+    // A sent quote was made for the old details: the agency must revise it before it can be accepted.
+    const quoteOutdated = booking.status === "quoted" && Object.keys(data).some((k) => (quoteEventFields as readonly string[]).includes(k));
+    return { code: booking.trackingCode, customer: booking.customerId, kept, quoteOutdated };
   });
   if (!result) return null;
   const customer = result.customer ? await prisma.user.findUnique({ where: { id: result.customer }, select: { name: true } }) : null;
-  await notify(await agencyDeskUserIds(found.organizationId), { type: "details_submitted", data: { name: customer?.name ?? "", code: result.code }, url: `/app/bookings/${result.code}` });
+  await notify(await agencyDeskUserIds(found.organizationId), {
+    type: result.quoteOutdated ? "quote_outdated" : "details_submitted",
+    data: { name: customer?.name ?? "", code: result.code },
+    url: `/app/bookings/${result.code}`,
+  });
   return { kept: result.kept };
 }

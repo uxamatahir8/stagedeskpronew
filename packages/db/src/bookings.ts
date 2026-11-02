@@ -17,6 +17,8 @@ import {
   type InvoiceNumbering,
   invoiceNumberPattern,
   normalizeInvoiceNumber,
+  quoteChangedFields,
+  quoteEventSnapshot,
   type QuoteLineInput,
   todayInNetherlands,
   toDepositRule,
@@ -49,7 +51,8 @@ export type BookingErrorCode =
   | "compensation_currency"
   | "invoice_number_invalid"
   | "invoice_number_taken"
-  | "manual_numbers_off";
+  | "manual_numbers_off"
+  | "quote_outdated";
 
 export class BookingError extends Error {
   constructor(readonly code: BookingErrorCode) {
@@ -266,6 +269,8 @@ export async function sendQuote(organizationId: string, bookingId: string, input
         notes: input.notes ?? null,
         ...depositColumns(deposit),
         locale: input.locale ?? null,
+        // What the customer is offered: the event as it is now. Read under the booking lock.
+        eventSnapshot: quoteEventSnapshot(booking) as unknown as Prisma.InputJsonValue,
         subtotalCents: totals.subtotalCents,
         vatCents: totals.vatCents,
         totalCents: totals.totalCents,
@@ -310,6 +315,9 @@ export async function acceptQuote(
     // Read again under the booking lock (READ COMMITTED): a revision or another acceptance may have just committed.
     const quote = await tx.quote.findFirstOrThrow({ where: { id: quoteId } });
     if (quote.status !== "sent") throw new BookingError("quote_not_current");
+    // The event changed after this quote went out (date, times, venue, guests…): what would be
+    // accepted isn't what was offered, and equipment and the artist are checked for the new date.
+    if (quoteChangedFields(quote.eventSnapshot, quoteEventSnapshot(booking)).length > 0) throw new BookingError("quote_outdated");
 
     await applyTransition(
       tx,
@@ -549,6 +557,15 @@ export async function updateBookingDetails(
   actorId: string,
 ) {
   return tenantDb(organizationId).$transaction(async (tx) => {
+    const booking = await loadBooking(tx, bookingId);
+    // A new date must suit the artist on the booking too, not only the equipment.
+    if (data.eventDate && fromDateOnly(booking.eventDate) !== fromDateOnly(data.eventDate)) {
+      const assigned = await tx.bookingAssignment.findFirst({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { artistId: true } });
+      if (assigned) {
+        await lockArtist(tx, assigned.artistId);
+        if (!(await isArtistFree(assigned.artistId, data.eventDate, bookingId))) throw new BookingError("artist_unavailable");
+      }
+    }
     await checkEquipmentReschedule(tx, organizationId, bookingId, data.eventDate ? data.eventDate.toISOString().slice(0, 10) : null);
     const updated = await tx.booking.updateMany({ where: { id: bookingId, status: { in: ["inquiry", "quoted", "booked", "confirmed", "expired"] } }, data });
     if (updated.count === 0) throw new BookingError("invalid_status");

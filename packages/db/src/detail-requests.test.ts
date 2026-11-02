@@ -101,3 +101,33 @@ describe("booking details link", () => {
     await expect(createDetailRequest(other, booking.id, owner, { locale: "nl" }, now)).rejects.toThrow("not_found");
   });
 });
+
+describe("quote and booking details stay consistent", () => {
+  const lines = [{ description: "DJ", quantityHundredths: 100, unitPriceCents: 50_000, vatBps: 2_100 }];
+
+  it("a sent quote can't be accepted after the customer changed the date; a revision can", async () => {
+    const booking = await createBooking(org, { customerId: customer, eventType: "party", eventDate: "2027-07-10" }, owner);
+    const { token } = await createDetailRequest(org, booking.id, owner, { locale: "nl" }, now);
+    const quote = await sendQuote(org, booking.id, { lines, depositBps: 0, expiresInDays: 14 }, owner, now);
+    expect((quote.eventSnapshot as { eventDate: string }).eventDate).toBe("2027-07-10");
+
+    // The customer moves the event through the link while the quote is out.
+    await submitDetailRequest(token, input({ eventType: "party", eventDate: "2027-07-17", guestCount: null, partnerName: null, venueName: null, venueAddress: null, venueCity: null, startTime: null, endTime: null, preferredGenre: null, notes: null, phone: null }), now);
+    await expect(acceptQuote(org, quote.id, { actor: "customer", actorId: customer, name: "Sanne" }, now)).rejects.toThrow("quote_outdated");
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe("quoted");
+
+    // The agency revises: the new version carries the new date and can be accepted.
+    const revised = await sendQuote(org, booking.id, { lines, depositBps: 0, expiresInDays: 14 }, owner, now);
+    expect((revised.eventSnapshot as { eventDate: string }).eventDate).toBe("2027-07-17");
+    await acceptQuote(org, revised.id, { actor: "customer", actorId: customer, name: "Sanne" }, now);
+    expect((await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } })).status).toBe("booked");
+  });
+
+  it("an agency edit of a contract detail also needs a revision; a note-like field doesn't", async () => {
+    const booking = await createBooking(org, { customerId: customer, eventType: "party", eventDate: "2027-07-24" }, owner);
+    const quote = await sendQuote(org, booking.id, { lines, depositBps: 0, expiresInDays: 14 }, owner, now);
+    await updateBookingDetails(org, booking.id, { partnerName: "Tom", eventDate: new Date("2027-07-24T00:00:00Z") }, owner);
+    await updateBookingDetails(org, booking.id, { guestCount: 300, eventDate: new Date("2027-07-24T00:00:00Z") }, owner);
+    await expect(acceptQuote(org, quote.id, { actor: "agency", actorId: owner, name: "Phone" }, now)).rejects.toThrow("quote_outdated");
+  });
+});

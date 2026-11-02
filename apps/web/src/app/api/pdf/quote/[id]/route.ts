@@ -39,7 +39,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/q
     issued: quote.sentAt ?? quote.createdAt,
     due: quote.expiresAt,
     reference: quote.booking.trackingCode,
-    eventDate: fromDateOnly(quote.booking.eventDate),
+    // The event the quote was made for (older quotes: the booking now).
+    eventDate: (quote.eventSnapshot as { eventDate?: string | null } | null)?.eventDate ?? fromDateOnly(quote.booking.eventDate),
     lines: quote.items,
     vatGroups: quote.vatGroups as never,
     subtotalCents: quote.subtotalCents,
