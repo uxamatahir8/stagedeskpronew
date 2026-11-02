@@ -1838,7 +1838,8 @@
     "equipment_damaged": "{count, plural, one {# item} other {# items}} beschadigd terug van {code}",
     "gig_withdrawn": "{name} heeft je van boeking {code} gehaald",
     "gig_cancelled": "Boeking {code} bij {name} is geannuleerd",
-    "details_submitted": "{name} heeft de gegevens van {code} ingevuld"
+    "details_submitted": "{name} heeft de gegevens van {code} ingevuld",
+    "artist_removed": "{name} is van {code} gehaald: wijs een andere artiest toe"
   },
   "messages": {
     "title": "Berichten",

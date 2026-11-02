@@ -771,7 +771,8 @@ export async function withdrawArtist(organizationId: string, bookingId: string, 
     const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
     await notifyArtistsOff(result.ids, "gig_withdrawn", agency?.name ?? "", result.code);
     // The agency must find another artist.
-    await notify(await agencyDeskUserIds(organizationId), { type: "gig_response", data: { name: "—", code: result.code, accepted: "no" }, url: `/app/bookings/${result.code}` }, actorId);
+    const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { stageName: true } });
+    await notify(await agencyDeskUserIds(organizationId), { type: "artist_removed", data: { name: artist?.stageName ?? "", code: result.code }, url: `/app/bookings/${result.code}` }, actorId);
   }
   return result.ids;
 }

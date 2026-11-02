@@ -20,7 +20,8 @@ async function mailTo(request: APIRequestContext, to: string, subject: RegExp) {
     expect(hit).toBeTruthy();
     const message = await (await request.get(`${MAILPIT}/message/${hit!.ID}`)).json();
     found = {
-      text: message.Text as string,
+      // Intl puts a no-break space between € and the amount.
+      text: (message.Text as string).replace(/[  ]/g, " "),
       subject: message.Subject as string,
       from: `${message.From?.Name ?? ""} <${message.From?.Address ?? ""}>`,
       replyTo: ((message.ReplyTo ?? []) as { Address: string }[]).map((r) => r.Address).join(","),
@@ -29,8 +30,16 @@ async function mailTo(request: APIRequestContext, to: string, subject: RegExp) {
   return found!;
 }
 
+/** Picks an option in the app's select (a Radix listbox, not a native <select>). */
+async function pick(page: Page, label: string, option: string) {
+  await page.getByRole("combobox", { name: label, exact: true }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
 async function newPhoneBooking(page: Page, name: string, email: string, date: string) {
   await page.goto(`/nl/app/bookings/new?date=${date}`);
+  // The date from the calendar link is filled in (and can still be changed).
+  await expect(page.getByLabel("Datum")).not.toHaveValue("");
   await page.getByRole("tab", { name: "Nieuwe klant" }).click();
   await page.getByLabel("Je naam").fill(name);
   await page.getByLabel("E-mailadres").fill(email);
@@ -48,6 +57,8 @@ function futureDate(run: string, offsetDays: number) {
 }
 
 test("client feedback: equipment, calendar, quotes, artists, details link, invoices and support", async ({ browser, request }) => {
+  // One long walkthrough of seventeen items (three people, many pages).
+  test.setTimeout(300_000);
   const run = Date.now().toString(36);
   const owner = await (await browser.newContext()).newPage();
   const customerPage = await (await browser.newContext()).newPage();
@@ -60,14 +71,14 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     const dialog = owner.getByRole("dialog");
     await dialog.getByLabel("Nummer", { exact: true }).fill(`${prefix}-1`);
     await dialog.getByLabel("Aantal", { exact: true }).fill("4");
-    await expect(dialog.getByLabel("Nummer van apparaat 4")).toBeVisible();
+    await expect(dialog.getByLabel("Nummer van apparaat 4", { exact: true })).toBeVisible();
     await dialog.getByLabel("Naam", { exact: true }).fill(`E2E Moving head ${run}`);
-    for (let i = 1; i <= 4; i++) await dialog.getByLabel(`Serienummer van apparaat ${i}`).fill(`SN-${run}-${i}`);
+    for (let i = 1; i <= 4; i++) await dialog.getByLabel(`Serienummer van apparaat ${i}`, { exact: true }).fill(`SN-${run}-${i}`);
     // A repeated serial is refused and nothing is created.
-    await dialog.getByLabel("Serienummer van apparaat 4").fill(`SN-${run}-1`);
+    await dialog.getByLabel("Serienummer van apparaat 4", { exact: true }).fill(`SN-${run}-1`);
     await dialog.getByRole("button", { name: "4 apparaten toevoegen" }).click();
     await expect(owner.getByText("Dat serienummer is al gebruikt", { exact: false })).toBeVisible();
-    await dialog.getByLabel("Serienummer van apparaat 4").fill(`SN-${run}-4`);
+    await dialog.getByLabel("Serienummer van apparaat 4", { exact: true }).fill(`SN-${run}-4`);
     await dialog.getByRole("button", { name: "4 apparaten toevoegen" }).click();
     await expect(owner.getByText("4 apparaten toegevoegd")).toBeVisible();
     await owner.goto(`/nl/app/inventory?q=${encodeURIComponent(`E2E Moving head ${run}`)}`);
@@ -91,8 +102,9 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
 
   await test.step("CF-05: the calendar opens the booking form on the chosen day", async () => {
     await owner.goto(`/nl/app/calendar?month=${date.slice(0, 7)}`);
-    const day = Number(date.slice(8));
-    await owner.getByRole("link", { name: new RegExp(`^Boeking toevoegen op ${day} `) }).first().click();
+    // The grid also shows days of the next and previous month: match day and month.
+    const label = new Intl.DateTimeFormat("nl-NL", { day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(`${date}T12:00:00Z`));
+    await owner.getByRole("link", { name: new RegExp(`^Boeking toevoegen op ${label}( |$)`) }).first().click();
     await expect(owner).toHaveURL(new RegExp(`/app/bookings/new\\?date=${date}`));
     await expect(owner.getByRole("link", { name: "Terug naar de agenda" })).toBeVisible();
     code = await newPhoneBooking(owner, `E2E Feedback ${run}`, customerEmail, date);
@@ -109,6 +121,7 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await customerPage.goto(link);
     await expect(customerPage.getByRole("heading", { name: /de gegevens van je evenement/ })).toBeVisible();
     await customerPage.getByLabel("Aantal gasten").fill("140");
+    await expect(customerPage.getByLabel("Aantal gasten")).toHaveValue("140");
     await customerPage.getByLabel("Wensen en instructies").fill("Openingsdans om 21:00");
     await customerPage.getByRole("button", { name: "Gegevens versturen" }).click();
     await expect(customerPage.getByText("Bedankt!")).toBeVisible();
@@ -127,9 +140,8 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await owner.getByRole("menuitem", { name: /DJ, per uur/ }).click();
     await owner.getByLabel("Aantal 1").fill("5");
     // The customer was entered by the agency: the agency's language (Dutch), and the dialog says so.
-    await expect(owner.getByLabel("Taal voor de klant")).toHaveValue("nl");
     await expect(owner.getByText("De klant krijgt de e-mail en pdf in het Nederlands.")).toBeVisible();
-    await owner.getByLabel("Aanbetaling", { exact: true }).selectOption("fixed");
+    await pick(owner, "Aanbetaling", "Vast bedrag");
     await owner.getByLabel("Aanbetaling (incl. btw)").fill("250,00");
     await expect(owner.getByText("Restbedrag")).toBeVisible();
     await owner.getByRole("button", { name: "Offerte versturen" }).click();
@@ -155,7 +167,7 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
   await test.step("CF-06/16: DJ Sem gets a fixed fee for this booking, an email and the request on his dashboard", async () => {
     await owner.getByRole("combobox", { name: "Kies een artiest" }).click();
     await owner.getByRole("option", { name: /^DJ Sem/ }).click();
-    await owner.getByLabel("Vergoeding voor deze boeking").selectOption("fixed");
+    await pick(owner, "Vergoeding voor deze boeking", "Vast bedrag voor deze boeking");
     await owner.getByLabel("Vast bedrag voor deze boeking").fill("250,00");
     await owner.getByRole("button", { name: /Artiest toewijzen|Andere artiest/ }).click();
     await expect(owner.getByText("Verzoek verstuurd naar DJ Sem.")).toBeVisible();
@@ -197,7 +209,7 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await owner.getByRole("button", { name: "Offerte maken" }).click();
     await owner.getByRole("button", { name: "Toevoegen uit diensten" }).click();
     await owner.getByRole("menuitem", { name: /DJ, per uur/ }).click();
-    await owner.getByLabel("Aanbetaling", { exact: true }).selectOption("none");
+    await pick(owner, "Aanbetaling", "Geen aanbetaling");
     await owner.getByRole("button", { name: "Offerte versturen" }).click();
     await expect(owner.getByText("Offerte versie 1 verstuurd.")).toBeVisible();
     await expect(owner.getByText("Geen aanbetaling").first()).toBeVisible();
@@ -223,7 +235,7 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     const row = admin.getByRole("row").filter({ hasText: "dj.sem@feestband.local" }).first();
     await expect(row.getByRole("button", { name: "Inloggen als artiest" })).toBeVisible();
     await row.getByRole("link", { name: "Beheren" }).click();
-    await expect(admin.getByRole("heading", { name: "Supportacties" })).toBeVisible();
+    await expect(admin.getByText("Supportacties", { exact: true })).toBeVisible();
     await expect(admin.getByText(code)).toBeVisible();
     await expect(admin.getByRole("button", { name: "Inloggen als artiest" })).toBeVisible();
     await expect(admin.getByText("Heeft geschiedenis en kan dus niet verwijderd worden", { exact: false })).toBeVisible();

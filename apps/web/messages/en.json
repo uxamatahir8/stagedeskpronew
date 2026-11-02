@@ -1838,7 +1838,8 @@
     "equipment_damaged": "{count, plural, one {# item} other {# items}} came back damaged from {code}",
     "gig_withdrawn": "{name} took you off booking {code}",
     "gig_cancelled": "Booking {code} at {name} was cancelled",
-    "details_submitted": "{name} filled in the details of {code}"
+    "details_submitted": "{name} filled in the details of {code}",
+    "artist_removed": "{name} was taken off {code}: assign another artist"
   },
   "messages": {
     "title": "Messages",

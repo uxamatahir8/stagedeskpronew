@@ -22,19 +22,20 @@ export function DetailsForm({ token, initial, askPhone, contact }: { token: stri
   const t = useTranslations("detailsPage");
   const te = useTranslations("eventTypes");
   const tn = useTranslations("newBooking");
-  const [v, setV] = useState(initial);
-  const [notes, setNotes] = useState("");
-  const [phone, setPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string[] | null>(null);
   const [pending, start] = useTransition();
-  const field = (k: keyof Values) => ({ value: v[k], onChange: (e: React.ChangeEvent<HTMLInputElement>) => setV((x) => ({ ...x, [k]: e.target.value })) });
+  // Uncontrolled fields read at submit: what's on screen is what's sent, even if typed before the page finished loading.
+  const field = (k: keyof Values) => ({ name: k, defaultValue: initial[k] });
 
-  function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    const form = new FormData(e.currentTarget);
+    const get = (k: string) => String(form.get(k) ?? "");
+    const values = Object.fromEntries((Object.keys(initial) as (keyof Values)[]).map((k) => [k, get(k)])) as Values;
     start(async () => {
-      const result = await submitDetailsAction(token, { ...v, eventType: v.eventType as (typeof eventTypes)[number], notes, phone });
+      const result = await submitDetailsAction(token, { ...values, eventType: values.eventType as (typeof eventTypes)[number], notes: get("notes"), phone: get("phone") });
       if (!result.ok) return setError(result.message ?? t("invalid"));
       setDone(result.kept ?? []);
     });
@@ -56,7 +57,7 @@ export function DetailsForm({ token, initial, askPhone, contact }: { token: stri
   return (
     <form onSubmit={submit} className="grid gap-4 rounded-xl border bg-card p-5 sm:grid-cols-2">
       <FormField id="d-type" label={tn("eventType")}>
-        <NativeSelect id="d-type" value={v.eventType} onChange={(e) => setV((x) => ({ ...x, eventType: e.target.value }))} className="w-full">
+        <NativeSelect id="d-type" name="eventType" defaultValue={initial.eventType} className="w-full">
           {eventTypes.map((k) => (
             <option key={k} value={k}>
               {te(k)}
@@ -96,11 +97,11 @@ export function DetailsForm({ token, initial, askPhone, contact }: { token: stri
       </FormField>
       {askPhone && (
         <FormField id="d-phone" label={t("phone")}>
-          <Input id="d-phone" type="tel" maxLength={32} autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <Input id="d-phone" name="phone" type="tel" maxLength={32} autoComplete="tel" />
         </FormField>
       )}
       <FormField id="d-notes" label={t("notes")} hint={t("notesHint")} className="sm:col-span-2">
-        <Textarea id="d-notes" rows={4} maxLength={4000} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <Textarea id="d-notes" name="notes" rows={4} maxLength={4000} />
       </FormField>
       {error && (
         <p role="alert" className="text-sm text-destructive sm:col-span-2">

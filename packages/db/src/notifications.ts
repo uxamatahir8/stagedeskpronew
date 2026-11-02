@@ -11,6 +11,7 @@ export type NotificationType =
   | "gig_withdrawn"
   | "gig_cancelled"
   | "details_submitted"
+  | "artist_removed"
   | "payment_received"
   | "message"
   | "ticket_new"

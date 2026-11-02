@@ -177,7 +177,14 @@ export function ItemFormDialog({
           <DialogTitle>{item ? t("edit") : t("add")}</DialogTitle>
           <DialogDescription>{t("formHint")}</DialogDescription>
         </DialogHeader>
-        <form action={save} className="grid gap-4 sm:grid-cols-2">
+        <form
+          onSubmit={(e) => {
+            // Not a form action: React resets an action's form when it finishes, wiping what was typed after a refusal.
+            e.preventDefault();
+            save(new FormData(e.currentTarget));
+          }}
+          className="grid gap-4 sm:grid-cols-2"
+        >
           <FormField required id="eq-kind" label={t("kind")}>
             <NativeSelect id="eq-kind" value={kind} onChange={(e) => setKind(e.target.value as EquipmentKind)} disabled={item?.locked} className="w-full">
               {(["item", "case", "set"] as const).map((k) => (
