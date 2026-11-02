@@ -750,3 +750,28 @@ export async function assignLentArtist(organizationId: string, bookingId: string
   const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
   await notify([artist?.userId], { type: "gig_request", data: { name: agency?.name ?? "", code: booking.trackingCode }, url: `/app/gigs/${booking.trackingCode}` });
 }
+
+/**
+ * Takes the artist off a booking without putting anyone else on it (support
+ * removing an artist, or an agency withdrawing a request). A confirmed
+ * booking goes back to "booked" through release_artist, so the booking's
+ * status always matches who is on it. Returns the withdrawn assignment ids.
+ */
+export async function withdrawArtist(organizationId: string, bookingId: string, artistId: string, actorId: string | null, reason: string | null, now = new Date()) {
+  const result = await tenantDb(organizationId).$transaction(async (tx) => {
+    const booking = await loadBooking(tx, bookingId);
+    const active = await tx.bookingAssignment.findMany({ where: { bookingId, artistId, status: { in: ["pending", "accepted"] } }, select: { id: true, status: true } });
+    if (active.length === 0) return { ids: [] as string[], code: booking.trackingCode };
+    if (booking.status === "confirmed" && active.some((a) => a.status === "accepted")) await applyTransition(tx, booking, "release_artist", "agency", actorId, now);
+    await tx.bookingAssignment.updateMany({ where: { id: { in: active.map((a) => a.id) } }, data: { status: "withdrawn", respondedAt: now } });
+    await logEvent(tx, bookingId, "artist_withdrawn", actorId, { artistId, reason });
+    return { ids: active.map((a) => a.id), code: booking.trackingCode };
+  });
+  if (result.ids.length > 0) {
+    const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+    await notifyArtistsOff(result.ids, "gig_withdrawn", agency?.name ?? "", result.code);
+    // The agency must find another artist.
+    await notify(await agencyDeskUserIds(organizationId), { type: "gig_response", data: { name: "—", code: result.code, accepted: "no" }, url: `/app/bookings/${result.code}` }, actorId);
+  }
+  return result.ids;
+}

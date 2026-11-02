@@ -54,7 +54,7 @@ describe("batch of serialised devices", () => {
 
   it("creates nothing when one code or serial is wrong, taken or repeated", async () => {
     const before = await prisma.equipmentItem.count({ where: { organizationId: org } });
-    const attempt = (units: { code: string; serialNumber?: string }[]) => createItems(org, light(), units, owner).catch((e: InventoryError) => e);
+    const attempt = async (units: { code: string; serialNumber?: string }[]) => (await createItems(org, light(), units, owner).then(() => null, (e: unknown) => e)) as InventoryError;
     expect((await attempt([{ code: "NEW-1" }, { code: "new-1" }])).code).toBe("code_taken");
     expect((await attempt([{ code: "NEW-1" }, { code: "LIGHT-7" }])).detail).toEqual({ codes: ["LIGHT-7"] });
     expect((await attempt([{ code: "NEW-1", serialNumber: "AA 1" }, { code: "NEW-2", serialNumber: "aa1" }])).code).toBe("serial_taken");

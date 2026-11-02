@@ -8,7 +8,8 @@ import { audit, createPlatformAdmin, deleteUserByAdmin, prisma, signOutEverywher
 import type { ActionResult } from "@/lib/actions";
 import { deliver } from "@/lib/mail";
 import { hasPassword, passwordSetupUrl } from "@/lib/password-setup";
-import { clientIp } from "@/lib/rate-limit";
+import { allow, clientIp } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/viewer";
 
 /**
@@ -125,4 +126,35 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
   } catch (error) {
     return { ok: false, message: await userError(error) };
   }
+}
+
+/**
+ * Sends the confirmation email again. Someone with a password gets Better
+ * Auth's verification link (its own token, valid 24 hours); an account made
+ * for someone (no password yet) gets a fresh first-password link instead,
+ * which confirms the address when used. Nothing is marked confirmed here.
+ * At most three per account an hour; disabled and confirmed accounts are refused.
+ */
+export async function resendConfirmationAction(userId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.users");
+  const t = await getTranslations("users");
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true, locale: true, emailVerified: true, disabledAt: true, platformRole: true } });
+  if (!user) return { ok: false, message: t("notFound") };
+  if (user.disabledAt) return { ok: false, message: t("resendDisabled") };
+  if (user.emailVerified) return { ok: false, message: t("resendAlreadyVerified") };
+  if (!(await allow(`resend-confirm:${user.id}`, 3, 3600))) return { ok: false, message: t("resendTooMany") };
+  const requestHeaders = await headers();
+  const locale = user.locale === "nl" ? "nl" : "en";
+  let kind: "verification" | "setup";
+  if (await hasPassword(user.id)) {
+    kind = "verification";
+    await auth.api.sendVerificationEmail({ body: { email: user.email, callbackURL: "/app" }, headers: requestHeaders });
+  } else {
+    kind = "setup";
+    const url = await passwordSetupUrl(user.id, locale);
+    const artist = await prisma.artist.count({ where: { userId: user.id } });
+    deliver({ kind: artist > 0 ? "artistAccountSetup" : "accountSetup", to: user.email, params: { locale, name: user.name, url } });
+  }
+  await audit({ actorId: viewer.user.id, action: "user.resend_confirmation", targetType: "user", targetId: user.id, data: { kind }, ip: clientIp(requestHeaders) });
+  return { ok: true, message: t(kind === "verification" ? "resentVerification" : "resentSetup", { email: user.email }) };
 }
