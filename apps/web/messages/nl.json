@@ -570,7 +570,9 @@
     "invalidTime": "Gebruik een tijd zoals 20:30.",
     "invalidNumber": "Vul een heel getal in.",
     "invalidDate": "Kies een datum.",
-    "invalidPrice": "Vul een bedrag in zoals 125 of 125,50."
+    "invalidPrice": "Vul een bedrag in zoals 125 of 125,50.",
+    "backToCalendar": "Terug naar de agenda",
+    "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is."
   },
   "booking": {
     "eventDetails": "Evenementgegevens",
@@ -725,7 +727,13 @@
     "today": "Vandaag",
     "previous": "Vorige maand",
     "next": "Volgende maand",
-    "more": "+{count} meer"
+    "more": "+{count} meer",
+    "addBooking": "Boeking toevoegen",
+    "addHint": "Kies een dag en klik op + om een boeking op die datum toe te voegen.",
+    "add": "Toevoegen",
+    "addOnDay": "Boeking toevoegen op {date}",
+    "addOnBusyDay": "Boeking toevoegen op {date} (al {count, plural, one {# boeking} other {# boekingen}})",
+    "busyDay": "Al {count, plural, one {# boeking} other {# boekingen}} op deze dag"
   },
   "artists": {
     "title": "Artiesten",

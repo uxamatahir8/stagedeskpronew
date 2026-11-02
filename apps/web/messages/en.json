@@ -570,7 +570,9 @@
     "invalidTime": "Use a time like 20:30.",
     "invalidNumber": "Enter a whole number.",
     "invalidDate": "Choose a date.",
-    "invalidPrice": "Enter an amount like 125 or 125,50."
+    "invalidPrice": "Enter an amount like 125 or 125,50.",
+    "backToCalendar": "Back to the calendar",
+    "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free."
   },
   "booking": {
     "eventDetails": "Event details",
@@ -725,7 +727,13 @@
     "today": "Today",
     "previous": "Previous month",
     "next": "Next month",
-    "more": "+{count} more"
+    "more": "+{count} more",
+    "addBooking": "Add booking",
+    "addHint": "Pick a day and choose + to add a booking on that date.",
+    "add": "Add",
+    "addOnDay": "Add a booking on {date}",
+    "addOnBusyDay": "Add a booking on {date} ({count, plural, one {# booking} other {# bookings}} already)",
+    "busyDay": "{count, plural, one {# booking} other {# bookings}} on this day already"
   },
   "artists": {
     "title": "Artists",
