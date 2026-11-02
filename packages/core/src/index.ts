@@ -23,3 +23,4 @@ export * from "./geo";
 export * from "./visitor";
 export * from "./inventory";
 export * from "./config";
+export * from "./invoice-template";

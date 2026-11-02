@@ -453,14 +453,44 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
   );
 }
 
-export function IssueInvoiceButton({ bookingId }: { bookingId: string }) {
+/** Issues the invoice after showing its number; people who may can type the number instead (when the agency allows it). */
+export function IssueInvoiceButton({ bookingId, nextNumber, canTypeNumber }: { bookingId: string; nextNumber: string; canTypeNumber: boolean }) {
   const t = useTranslations("booking");
   const [pending, run] = useRun();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
   return (
-    <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => issueInvoiceAction(bookingId))}>
-      <ReceiptIcon />
-      {t("issueInvoice")}
-    </Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={pending}>
+          <ReceiptIcon />
+          {t("issueInvoice")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("issueInvoice")}</DialogTitle>
+          <DialogDescription>{t("issueInvoiceHint")}</DialogDescription>
+        </DialogHeader>
+        <p className="text-sm">
+          {t("invoiceNumberNext")}: <span className="font-mono font-medium">{typed.trim() ? typed.trim().toUpperCase() : nextNumber}</span>
+        </p>
+        {canTypeNumber && (
+          <FormField id="inv-number" label={t("invoiceNumberOwn")} hint={t("invoiceNumberOwnHint")}>
+            <Input id="inv-number" value={typed} maxLength={32} className="font-mono uppercase" placeholder={nextNumber} onChange={(e) => setTyped(e.target.value)} />
+          </FormField>
+        )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">{t("dialogCancel")}</Button>
+          </DialogClose>
+          <Button disabled={pending} onClick={() => run(() => issueInvoiceAction(bookingId, typed.trim() || null), () => setOpen(false))}>
+            <ReceiptIcon />
+            {t("issueInvoiceConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

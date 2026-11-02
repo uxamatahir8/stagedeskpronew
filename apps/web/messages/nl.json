@@ -673,7 +673,13 @@
     "payDefault": "Gebruikelijke vergoeding ({pay})",
     "payPercentage": "Percentage voor deze boeking",
     "payFixed": "Vast bedrag voor deze boeking",
-    "payHint": "Alleen voor deze boeking. Als je de gebruikelijke vergoeding later wijzigt, blijft deze gelijk."
+    "payHint": "Alleen voor deze boeking. Als je de gebruikelijke vergoeding later wijzigt, blijft deze gelijk.",
+    "dialogCancel": "Annuleren",
+    "issueInvoiceHint": "De factuur wordt gemaakt van de geaccepteerde offerte. Na het uitgeven veranderen nummer en bedragen niet meer.",
+    "invoiceNumberNext": "Factuurnummer",
+    "invoiceNumberOwn": "Eigen nummer (optioneel)",
+    "invoiceNumberOwnHint": "Laat leeg voor het volgende nummer. Een eigen nummer mag niet eerder gebruikt zijn en wordt vastgelegd in het auditlog.",
+    "issueInvoiceConfirm": "Factuur uitgeven"
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -937,7 +943,8 @@
     "vatNumber": "Btw-nr.",
     "alreadyPaid": "Reeds betaald",
     "toPay": "Te betalen",
-    "payWithin": "Graag betalen binnen 14 dagen onder vermelding van factuurnummer {number}."
+    "payWithin": "Graag betalen binnen 14 dagen onder vermelding van factuurnummer {number}.",
+    "payTo": "Betaalgegevens"
   },
   "budgetRanges": {
     "lt_750": "Tot € 750",
@@ -2015,7 +2022,8 @@
         "reactivate": "Bureau heractiveerd",
         "extend_trial": "Proefperiode verlengd",
         "grant_plan": "Abonnement toegekend",
-        "delete": "Bureau verwijderd"
+        "delete": "Bureau verwijderd",
+        "email_sender": "Wijzigde de e-mailafzender"
       },
       "affiliate": {
         "status": "Status partner gewijzigd",
@@ -2110,6 +2118,10 @@
       },
       "data": {
         "export": "Export gedownload"
+      },
+      "invoice": {
+        "manual_number": "Vulde een factuurnummer in",
+        "numbering": "Wijzigde de factuurnummering"
       }
     },
     "group_page": "Pagina's",
@@ -5915,5 +5927,68 @@
     "checkedIn": "Inchecken afgerond.",
     "checkedInMissing": "Inchecken afgerond. {count, plural, one {# item ontbreekt} other {# items ontbreken}}.",
     "lostConfirmed": "Als verloren bevestigd."
+  },
+  "communicationSettings": {
+    "title": "Communicatie met klanten",
+    "description": "De taal waarin klanten e-mails en documenten krijgen, de aanbetaling waarmee nieuwe offertes beginnen en hoe je e-mails ondertekend zijn.",
+    "language": "Taal voor klanten",
+    "languageHint": "Voor klanten die zelf geen taal kozen. Je kunt het per offerte aanpassen.",
+    "deposit": "Aanbetaling op nieuwe offertes",
+    "fromName": "Afzendernaam",
+    "fromNameHint": "Wat klanten als afzender zien. Laat leeg voor je bureaunaam.",
+    "replyTo": "Antwoorden naar",
+    "replyToHint": "Als een klant antwoordt op een offerte of herinnering. Laat leeg voor je contactadres.",
+    "previewTitle": "Zo zien klanten je e-mails",
+    "previewFrom": "Van",
+    "previewReply": "Antwoorden naar",
+    "noReplyTo": "niet ingesteld: vul een contactadres in",
+    "domainNote": "E-mails gaan via het geverifieerde adres van StageDesk, zodat ze in de inbox aankomen (SPF/DKIM). Versturen vanaf je eigen domein vraagt een domeinverificatie die nog niet beschikbaar is; neem contact op met support als je dat nodig hebt.",
+    "save": "Opslaan",
+    "saved": "Communicatie-instellingen opgeslagen",
+    "sendTest": "Stuur mij een testmail",
+    "testSent": "Testmail verstuurd naar {email}",
+    "tooMany": "Je hebt al een paar testmails verstuurd. Probeer het over een uur opnieuw.",
+    "invalid": "Controleer de velden en probeer het opnieuw.",
+    "invalidDeposit": "Vul het aanbetalingsbedrag in, bijv. 250,00."
+  },
+  "invoiceSettings": {
+    "title": "Facturen",
+    "description": "Hoe je facturen genummerd worden en hoe ze eruitzien. Offertes krijgen dezelfde opmaak.",
+    "numbering": "Nummering",
+    "numbering_yearly": "Per jaar (2027-0001)",
+    "numbering_continuous": "Eén doorlopende reeks (000001)",
+    "numbering_yearlyHint": "Begint elk jaar opnieuw bij 1.",
+    "numbering_continuousHint": "Begint nooit opnieuw; de nummers lopen door.",
+    "prefix": "Voorvoegsel (optioneel)",
+    "prefixHint": "Maximaal 12 letters, cijfers of - _ / . voor elk nummer.",
+    "nextNumber": "Volgende factuur",
+    "nextNumberHint": "met de opgeslagen instellingen. Uitgegeven facturen houden hun nummer.",
+    "manual": "Zelf een factuurnummer invullen toestaan",
+    "manualHint": "Eigenaren en beheerders kunnen dan bij het uitgeven een nummer invullen, bijvoorbeeld om de reeks van je boekhoudpakket voort te zetten. Een nummer kan nooit twee keer gebruikt worden en elk ingevuld nummer wordt vastgelegd. De Nederlandse regels vragen één doorlopende, unieke reeks: gebruik dit alleen om je bestaande reeks voort te zetten.",
+    "accent": "Accentkleur",
+    "accentHint": "Voor de titel. Laat staan voor je merkkleur.",
+    "useBrand": "Merkkleur gebruiken",
+    "showPayment": "Bankgegevens op facturen tonen",
+    "headerText": "Regel onder je gegevens",
+    "footerText": "Voettekst",
+    "footerTextHint": "Onderaan elke pagina, bijvoorbeeld je voorwaarden.",
+    "background": "Achtergrond (je eigen briefpapier)",
+    "backgroundHint": "Een volledige A4-pagina als PNG of JPEG (max. 4 MB, minstens 1240 × 1754 pixels voor scherpe print). Houd het midden licht zodat de bedragen leesbaar blijven.",
+    "uploadBackground": "Achtergrond uploaden",
+    "replaceBackground": "Achtergrond vervangen",
+    "removeBackground": "Verwijderen",
+    "marginTop": "Ruimte bovenaan (mm)",
+    "marginBottom": "Ruimte onderaan (mm)",
+    "marginHint": "Houdt de factuur vrij van de kop en voet op je briefpapier.",
+    "hideLogo": "Logo niet afdrukken (staat op de achtergrond)",
+    "save": "Opslaan",
+    "saved": "Factuurinstellingen opgeslagen",
+    "preview": "Voorbeeld-pdf",
+    "issuedUnchanged": "Al uitgegeven facturen houden het nummer en de opmaak waarmee ze zijn uitgegeven. Sla eerst op om wijzigingen in het voorbeeld te zien.",
+    "invalid": "Controleer de velden en probeer het opnieuw.",
+    "invalidPrefix": "Gebruik maximaal 12 letters, cijfers of - _ / . als voorvoegsel.",
+    "invalidBackground": "Kies een PNG of JPEG van maximaal 4 MB.",
+    "backgroundSaved": "Achtergrond opgeslagen",
+    "backgroundRemoved": "Achtergrond verwijderd"
   }
 }

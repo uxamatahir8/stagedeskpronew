@@ -15,7 +15,7 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, prisma } from "@stagedesk/db";
+import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, prisma } from "@stagedesk/db";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
@@ -347,7 +347,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                       </a>
                     </Button>
                   ) : (
-                    ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} />
+                    ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} nextNumber={await nextInvoiceNumber(organization.id)} canTypeNumber={agencyDefaults.allowManualInvoiceNumbers && viewerCan(viewer, "agency.settings")} />
                   )}
                   {status !== "settled" && status !== "cancelled" && (
                     <RecordPayment bookingId={booking.id} today={today} suggestedKind={booking.paidCents < booking.depositCents ? "deposit" : "balance"} />

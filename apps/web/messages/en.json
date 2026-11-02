@@ -673,7 +673,13 @@
     "payDefault": "Artist's usual pay ({pay})",
     "payPercentage": "Percentage for this booking",
     "payFixed": "Fixed amount for this booking",
-    "payHint": "Saved with this booking only. Changing the artist's usual pay later doesn't change it."
+    "payHint": "Saved with this booking only. Changing the artist's usual pay later doesn't change it.",
+    "dialogCancel": "Cancel",
+    "issueInvoiceHint": "The invoice is made from the accepted quote. Once issued, its number and amounts don't change.",
+    "invoiceNumberNext": "Invoice number",
+    "invoiceNumberOwn": "Your own number (optional)",
+    "invoiceNumberOwnHint": "Leave empty to take the next number. A typed number must be unused and is recorded in the audit log.",
+    "issueInvoiceConfirm": "Issue invoice"
   },
   "timeline": {
     "created": "Booking created",
@@ -937,7 +943,8 @@
     "vatNumber": "VAT no.",
     "alreadyPaid": "Already paid",
     "toPay": "To pay",
-    "payWithin": "Please pay within 14 days, quoting invoice number {number}."
+    "payWithin": "Please pay within 14 days, quoting invoice number {number}.",
+    "payTo": "Payment details"
   },
   "budgetRanges": {
     "lt_750": "Up to €750",
@@ -2015,7 +2022,8 @@
         "reactivate": "Reactivated an agency",
         "extend_trial": "Extended a trial",
         "grant_plan": "Granted a plan",
-        "delete": "Deleted an agency"
+        "delete": "Deleted an agency",
+        "email_sender": "Changed the email sender"
       },
       "affiliate": {
         "status": "Changed a partner's status",
@@ -2110,6 +2118,10 @@
       },
       "data": {
         "export": "Downloaded an export"
+      },
+      "invoice": {
+        "manual_number": "Typed an invoice number",
+        "numbering": "Changed invoice numbering"
       }
     },
     "group_page": "Pages",
@@ -5915,5 +5927,68 @@
     "checkedIn": "Check-in finished.",
     "checkedInMissing": "Check-in finished. {count, plural, one {# item is} other {# items are}} missing.",
     "lostConfirmed": "Confirmed lost."
+  },
+  "communicationSettings": {
+    "title": "Customer communication",
+    "description": "The language customers get emails and documents in, the upfront payment new quotes start with, and how your emails are signed.",
+    "language": "Language for customers",
+    "languageHint": "Used when a customer hasn't chosen a language themselves. You can change it per quote.",
+    "deposit": "Upfront payment on new quotes",
+    "fromName": "Sender name",
+    "fromNameHint": "What customers see as the sender. Leave empty to use your agency name.",
+    "replyTo": "Replies go to",
+    "replyToHint": "When a customer replies to a quote or reminder. Leave empty to use your contact email.",
+    "previewTitle": "How customers see your emails",
+    "previewFrom": "From",
+    "previewReply": "Reply to",
+    "noReplyTo": "not set: add a contact email",
+    "domainNote": "Emails are sent from StageDesk's verified address so they reach the inbox (SPF/DKIM). Sending from your own domain needs a domain verification that isn't available yet; contact support if you need it.",
+    "save": "Save",
+    "saved": "Communication settings saved",
+    "sendTest": "Send me a test email",
+    "testSent": "Test email sent to {email}",
+    "tooMany": "You've sent a few test emails already. Try again in an hour.",
+    "invalid": "Check the fields and try again.",
+    "invalidDeposit": "Enter the upfront amount, e.g. 250,00."
+  },
+  "invoiceSettings": {
+    "title": "Invoices",
+    "description": "How your invoices are numbered and what they look like. Quotes use the same look.",
+    "numbering": "Numbering",
+    "numbering_yearly": "Per year (2027-0001)",
+    "numbering_continuous": "One continuous series (000001)",
+    "numbering_yearlyHint": "Starts again at 1 every year.",
+    "numbering_continuousHint": "Never starts again; numbers keep counting up.",
+    "prefix": "Prefix (optional)",
+    "prefixHint": "Up to 12 letters, digits or - _ / . before every number.",
+    "nextNumber": "Next invoice",
+    "nextNumberHint": "with the saved settings. Issued invoices keep their number.",
+    "manual": "Allow typing an invoice number",
+    "manualHint": "Owners and admins can then enter a number when issuing, e.g. to continue your accounting software's series. A number can never be used twice, and each typed number is recorded. Dutch rules require one unbroken, unique series: only use this to continue your existing series.",
+    "accent": "Accent colour",
+    "accentHint": "For the title. Leave as is to use your brand colour.",
+    "useBrand": "Use brand colour",
+    "showPayment": "Show bank details on invoices",
+    "headerText": "Line under your details",
+    "footerText": "Footer text",
+    "footerTextHint": "Printed at the bottom of every page, e.g. your terms.",
+    "background": "Background (your own paper)",
+    "backgroundHint": "A full A4 page as PNG or JPEG (max. 4 MB, at least 1240 × 1754 pixels for sharp print). Keep the middle light so the figures stay readable.",
+    "uploadBackground": "Upload background",
+    "replaceBackground": "Replace background",
+    "removeBackground": "Remove",
+    "marginTop": "Space at the top (mm)",
+    "marginBottom": "Space at the bottom (mm)",
+    "marginHint": "Keeps the invoice clear of the header and footer printed on your paper.",
+    "hideLogo": "Don't print the logo (it's on the background)",
+    "save": "Save",
+    "saved": "Invoice settings saved",
+    "preview": "Preview PDF",
+    "issuedUnchanged": "Invoices already issued keep the number and look they were issued with. Save first to see changes in the preview.",
+    "invalid": "Check the fields and try again.",
+    "invalidPrefix": "Use up to 12 letters, digits or - _ / . for the prefix.",
+    "invalidBackground": "Choose a PNG or JPEG of at most 4 MB.",
+    "backgroundSaved": "Background saved",
+    "backgroundRemoved": "Background removed"
   }
 }

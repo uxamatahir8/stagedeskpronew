@@ -28,7 +28,7 @@ import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState } from "@/lib/validation";
 import { limitBlocked, writeBlocked } from "@/lib/billing";
 import { sendReceipt } from "@/lib/payment-claims";
-import { requireAgency } from "@/lib/viewer";
+import { requireAgency, viewerCan } from "@/lib/viewer";
 import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
 
 export async function createBookingAction(_prev: FormState, form: FormData): Promise<FormState> {
@@ -216,11 +216,14 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
   );
 }
 
-export async function issueInvoiceAction(bookingId: string): Promise<ActionResult> {
+export async function issueInvoiceAction(bookingId: string, manualNumber: string | null = null): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.invoices");
   const t = await getTranslations("booking");
+  // Typing a number (instead of the next in the series) is for people who manage the agency's settings.
+  if (manualNumber && !viewerCan(viewer, "agency.settings")) return { ok: false, message: (await getTranslations("bookingErrors"))("not_allowed") };
+  if (manualNumber !== null && (typeof manualNumber !== "string" || manualNumber.length > 64)) return { ok: false, message: (await getTranslations("bookingErrors"))("invoice_number_invalid") };
   return runAction(async () => {
-    const invoice = await issueInvoice(organization.id, bookingId, viewer.user.id);
+    const invoice = await issueInvoice(organization.id, bookingId, viewer.user.id, new Date(), { manualNumber });
     return t("invoiceIssued", { number: invoice.number });
   });
 }
