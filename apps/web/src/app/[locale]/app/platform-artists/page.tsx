@@ -1,4 +1,7 @@
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Metadata } from "next";
 import { prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
@@ -16,8 +19,17 @@ export async function generateMetadata({ params }: PageProps<"/[locale]/app/plat
 }
 
 export default async function PlatformArtistsPage({ params }: PageProps<"/[locale]/app/platform-artists">) {
-  const locale = (await params).locale as Locale;
-  setRequestLocale(locale);
+  setRequestLocale((await params).locale as Locale);
+  return (
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+      <PlatformArtists />
+    </Suspense>
+  );
+}
+
+/** Request-time data (the viewer and the database), so it renders under Suspense after connection(). */
+async function PlatformArtists() {
+  await connection();
   const viewer = await requirePermission("platform.agencies");
   const canImpersonate = viewerCan(viewer, "platform.users");
   const [t, artists, agencies, bookings] = await Promise.all([

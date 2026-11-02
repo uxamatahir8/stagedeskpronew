@@ -10,6 +10,8 @@ import { signIn } from "./helpers";
  */
 
 const run = Date.now().toString(36).toUpperCase();
+// Serial numbers are unique per manufacturer within an agency, and earlier runs' items stay in the demo data.
+const SERIAL = `SECRET-SERIAL-${run}`;
 const SPK = `E2E-SPK-${run}`;
 const XLR = `E2E-XLR-${run}`;
 const category = `E2E ${run}`;
@@ -89,7 +91,7 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await dialog.getByLabel("Nummer", { exact: true }).fill(SPK.toLowerCase());
     await dialog.getByLabel("Naam", { exact: true }).fill("E2E topspeaker");
     await choose(owner, "Categorie", category);
-    await dialog.getByLabel("Serienummer").fill("SECRET-SERIAL-1");
+    await dialog.getByLabel("Serienummer").fill(SERIAL);
     await dialog.getByRole("button", { name: "Opslaan" }).click();
     await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
     await expect(owner.getByText(SPK).first()).toBeVisible();
@@ -175,7 +177,7 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await dj.getByRole("link", { name: "Apparatuur" }).click();
     await expect(dj.getByText("Je ziet de apparatuur voor dit optreden.", { exact: false })).toBeVisible();
     await expect(dj.getByText(XLR)).toBeVisible();
-    await expect(dj.getByText("SECRET-SERIAL-1")).toHaveCount(0);
+    await expect(dj.getByText(SERIAL)).toHaveCount(0);
 
     await saveInventorySettings(owner, false, true);
     await dj.reload();
@@ -240,14 +242,14 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await other.reload();
     await other.getByRole("link", { name: SPK }).click();
     await expect(other.getByText("Gedeeld door Feestband Utrecht")).toBeVisible();
-    await expect(other.getByText("SECRET-SERIAL-1")).toHaveCount(0);
+    await expect(other.getByText(SERIAL)).toHaveCount(0);
     await expect(other.getByRole("button", { name: /Bewerken|Afvoeren|Verwijderen/ })).toHaveCount(0);
     const detail = other.url();
 
     // Exports are the agency's own equipment only.
     const mine = await (await owner.request.get("/api/export/equipment")).text();
     expect(mine).toContain(SPK);
-    expect(mine).toContain("SECRET-SERIAL-1");
+    expect(mine).toContain(SERIAL);
     const theirs = await other.request.get("/api/export/equipment");
     expect(theirs.status()).toBe(200);
     expect(await theirs.text()).not.toContain(SPK);

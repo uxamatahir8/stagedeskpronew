@@ -12,13 +12,21 @@ const MAILPIT = "http://localhost:8025/api/v1";
 type MailSummary = { ID: string; Subject: string; From: { Name: string; Address: string } };
 
 /** The newest message to `to` whose subject matches, with its text and headers. */
-async function mailTo(request: APIRequestContext, to: string, subject: RegExp) {
+async function mailTo(request: APIRequestContext, to: string, subject: RegExp, contains?: string) {
   let found: { text: string; from: string; replyTo: string; subject: string } | null = null;
   await expect(async () => {
     const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:${to}`)}`)).json();
-    const hit = ((search.messages ?? []) as MailSummary[]).find((m) => subject.test(m.Subject));
-    expect(hit).toBeTruthy();
-    const message = await (await request.get(`${MAILPIT}/message/${hit!.ID}`)).json();
+    let message: { Text: string; Subject: string; From?: { Name: string; Address: string }; ReplyTo?: { Address: string }[] } | null = null;
+    // Other specs mail the same demo people: take the newest matching message (that mentions `contains`).
+    for (const m of ((search.messages ?? []) as MailSummary[]).filter((m) => subject.test(m.Subject))) {
+      const full = await (await request.get(`${MAILPIT}/message/${m.ID}`)).json();
+      if (!contains || (full.Text as string).includes(contains)) {
+        message = full;
+        break;
+      }
+    }
+    expect(message).toBeTruthy();
+    if (!message) return;
     found = {
       // Intl puts a no-break space between € and the amount.
       text: (message.Text as string).replace(/[  ]/g, " "),
@@ -172,7 +180,7 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await owner.getByRole("button", { name: /Artiest toewijzen|Andere artiest/ }).click();
     await expect(owner.getByText("Verzoek verstuurd naar DJ Sem.")).toBeVisible();
 
-    const mail = await mailTo(request, "dj.sem@feestband.local", /Feestband Utrecht/);
+    const mail = await mailTo(request, "dj.sem@feestband.local", /Feestband Utrecht/, code);
     expect(mail.subject).toMatch(/boekingsaanvraag|booking request/);
     expect(mail.text).toContain(`/app/gigs/${code}`);
 

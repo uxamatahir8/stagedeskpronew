@@ -9,6 +9,8 @@ import { signIn, todayNl } from "./helpers";
  * it can be completed in the same run.
  */
 test("agency takes a booking from inquiry to settled with a quote and offline payments", async ({ browser, request }) => {
+  // Three people and many pages; a cold dev server in a full run needs more than the default.
+  test.setTimeout(240_000);
   const run = Date.now().toString(36);
   const agency = await (await browser.newContext()).newPage();
   const artist = await (await browser.newContext()).newPage();
