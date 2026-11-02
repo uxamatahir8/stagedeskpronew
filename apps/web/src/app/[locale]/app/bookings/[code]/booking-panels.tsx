@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
@@ -295,12 +297,18 @@ export interface ArtistOption {
   stageName: string;
   agency: string | null;
   free: boolean;
+  /** The artist's default pay, e.g. "40%" or "€ 250,00 per booking". */
+  payLabel: string;
 }
 
 export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: string; options: ArtistOption[]; hasArtist: boolean }) {
   const t = useTranslations("booking");
   const [pending, run] = useRun();
   const [artistId, setArtistId] = useState("");
+  // "default" takes the artist's own pay; the others set it for this booking only.
+  const [pay, setPay] = useState<"default" | "percentage" | "fixed">("default");
+  const [payValue, setPayValue] = useState("");
+  const chosen = options.find((a) => a.id === artistId);
 
   return (
     <div className="grid gap-2">
@@ -318,8 +326,40 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
           ))}
         </SelectContent>
       </Select>
+      {chosen && (
+        <div className="grid gap-2 rounded-lg border p-3">
+          <Label htmlFor="assign-pay">{t("payForBooking")}</Label>
+          <NativeSelect id="assign-pay" value={pay} onChange={(e) => setPay(e.target.value as typeof pay)} className="w-full">
+            <option value="default">{t("payDefault", { pay: chosen.payLabel })}</option>
+            <option value="percentage">{t("payPercentage")}</option>
+            <option value="fixed">{t("payFixed")}</option>
+          </NativeSelect>
+          {pay !== "default" && (
+            <Input
+              aria-label={pay === "fixed" ? t("payFixed") : t("payPercentage")}
+              value={payValue}
+              inputMode="decimal"
+              placeholder={pay === "fixed" ? "250,00" : "40"}
+              onChange={(e) => setPayValue(e.target.value)}
+            />
+          )}
+          <p className="text-xs text-muted-foreground">{t("payHint")}</p>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">{t("assignHint")}</p>
-      <Button disabled={!artistId || pending} onClick={() => run(() => assignArtistAction(bookingId, artistId), () => setArtistId(""))}>
+      <Button
+        disabled={!artistId || pending || (pay !== "default" && !payValue.trim())}
+        onClick={() =>
+          run(
+            () => assignArtistAction(bookingId, artistId, pay === "default" ? null : { type: pay, value: payValue }),
+            () => {
+              setArtistId("");
+              setPay("default");
+              setPayValue("");
+            },
+          )
+        }
+      >
         {hasArtist ? t("reassign") : t("assign")}
       </Button>
     </div>

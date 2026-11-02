@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { eventDate, percent } from "@/lib/format";
+import { euro, eventDate, percent } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
 import { CompleteGig, RespondGig } from "./gig-actions";
 
@@ -63,7 +63,10 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
             <AssignmentStatusBadge status={assignment.status as "pending"} />
           </div>
           <p className="text-muted-foreground">
-            {b.organization.name} · {t("gigs.yourShare", { pct: percent(format, assignment.shareBps) })}
+            {b.organization.name} ·{" "}
+            {assignment.compensationType === "fixed" && assignment.fixedFeeCents !== null
+              ? t("gigs.yourFee", { amount: euro(format, assignment.fixedFeeCents, b.currency) })
+              : t("gigs.yourShare", { pct: percent(format, assignment.shareBps) })}
           </p>
         </div>
         {assignment.status === "pending" && <RespondGig assignmentId={assignment.id} />}

@@ -668,7 +668,12 @@
     "mailLanguage_customer": "The customer's own language.",
     "mailLanguage_agency": "Your agency's language: the customer hasn't chosen one.",
     "mailLanguage_chosen": "Chosen by you for this quote.",
-    "mailLanguageSummary": "The customer receives the email and PDF in {language}."
+    "mailLanguageSummary": "The customer receives the email and PDF in {language}.",
+    "payForBooking": "Pay for this booking",
+    "payDefault": "Artist's usual pay ({pay})",
+    "payPercentage": "Percentage for this booking",
+    "payFixed": "Fixed amount for this booking",
+    "payHint": "Saved with this booking only. Changing the artist's usual pay later doesn't change it."
   },
   "timeline": {
     "created": "Booking created",
@@ -782,7 +787,16 @@
     "searchPlaceholder": "Search by name or genre",
     "sortName": "Name",
     "sortAdded": "Added",
-    "statusLabel": "Status"
+    "statusLabel": "Status",
+    "payType": "Pay",
+    "payType_percentage": "Percentage of each booking",
+    "payType_fixed": "Fixed amount per booking",
+    "payType_percentageHint": "The artist gets this share of what the customer pays.",
+    "payType_fixedHint": "The same amount for every booking, whatever the booking costs.",
+    "fixedFee": "Amount per booking ({currency})",
+    "fixedFeeHint": "Applies to bookings you assign from now on; gigs already assigned keep their pay.",
+    "invalidFixedFee": "Enter the amount per booking, e.g. 250,00.",
+    "fixedPerBooking": "{amount} per booking"
   },
   "services": {
     "title": "Services",
@@ -825,7 +839,8 @@
     "noProfile": "Your agency hasn't linked an artist profile to your account yet.",
     "yourShare": "Your share: {pct}",
     "back": "All gigs",
-    "completed": "Marked as completed."
+    "completed": "Marked as completed.",
+    "yourFee": "Your fee: {amount}"
   },
   "availability": {
     "title": "Availability",
@@ -1381,7 +1396,8 @@
     "searchPlaceholder": "Search by booking code",
     "filterPaid": "Paid out",
     "filterOwed": "Owed by the agency",
-    "filterOpen": "Not paid out yet"
+    "filterOpen": "Not paid out yet",
+    "fixedFee": "Fixed fee"
   },
   "myPayments": {
     "title": "Payments",

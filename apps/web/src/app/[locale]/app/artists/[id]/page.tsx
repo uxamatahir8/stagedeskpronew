@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { eventDate, percent } from "@/lib/format";
+import { centsToInput, eventDate, euro, percent } from "@/lib/format";
 import { requireAgency } from "@/lib/viewer";
 import { ArtistDialog, PhotoUpload, Sharing, UnavailableDates } from "../artist-forms";
 import { LendableSwitch } from "../lendable-switch";
@@ -79,11 +79,12 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
           </div>
           {genres.length > 0 && <p className="text-muted-foreground">{genres.join(" · ")}</p>}
           <p className="text-sm text-muted-foreground">
-            {t("share")}: {percent(format, artist.defaultShareBps)}
+            {t("share")}: {artist.compensationType === "fixed" && artist.defaultFixedFeeCents !== null ? t("fixedPerBooking", { amount: euro(format, artist.defaultFixedFeeCents, organization.currency) }) : percent(format, artist.defaultShareBps)}
             {artist.user && ` · ${artist.user.name} (${artist.user.email})`}
           </p>
           <div className="flex flex-wrap gap-2">
             <ArtistDialog
+              currency={organization.currency}
               accounts={accounts}
               artist={{
                 id: artist.id,
@@ -91,6 +92,8 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
                 genres: genres.join(", "),
                 bio: artist.bio ?? "",
                 sharePct: String(artist.defaultShareBps / 100),
+                compensationType: artist.compensationType === "fixed" ? "fixed" : "percentage",
+                fixedFee: artist.defaultFixedFeeCents !== null ? centsToInput(artist.defaultFixedFeeCents, locale) : "",
                 userId: artist.userId,
                 active: artist.active,
                 showOnBookingPage: artist.showOnBookingPage,

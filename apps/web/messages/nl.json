@@ -668,7 +668,12 @@
     "mailLanguage_customer": "De taal die de klant zelf koos.",
     "mailLanguage_agency": "De taal van je bureau: de klant koos zelf geen taal.",
     "mailLanguage_chosen": "Door jou gekozen voor deze offerte.",
-    "mailLanguageSummary": "De klant krijgt de e-mail en pdf in het {language}."
+    "mailLanguageSummary": "De klant krijgt de e-mail en pdf in het {language}.",
+    "payForBooking": "Vergoeding voor deze boeking",
+    "payDefault": "Gebruikelijke vergoeding ({pay})",
+    "payPercentage": "Percentage voor deze boeking",
+    "payFixed": "Vast bedrag voor deze boeking",
+    "payHint": "Alleen voor deze boeking. Als je de gebruikelijke vergoeding later wijzigt, blijft deze gelijk."
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -782,7 +787,16 @@
     "searchPlaceholder": "Zoek op naam of genre",
     "sortName": "Naam",
     "sortAdded": "Toegevoegd",
-    "statusLabel": "Status"
+    "statusLabel": "Status",
+    "payType": "Vergoeding",
+    "payType_percentage": "Percentage van elke boeking",
+    "payType_fixed": "Vast bedrag per boeking",
+    "payType_percentageHint": "De artiest krijgt dit deel van wat de klant betaalt.",
+    "payType_fixedHint": "Hetzelfde bedrag voor elke boeking, wat de boeking ook kost.",
+    "fixedFee": "Bedrag per boeking ({currency})",
+    "fixedFeeHint": "Geldt voor boekingen die je vanaf nu toewijst; al toegewezen optredens houden hun vergoeding.",
+    "invalidFixedFee": "Vul het bedrag per boeking in, bijv. 250,00.",
+    "fixedPerBooking": "{amount} per boeking"
   },
   "services": {
     "title": "Diensten",
@@ -825,7 +839,8 @@
     "noProfile": "Je bureau heeft nog geen artiestenprofiel aan je account gekoppeld.",
     "yourShare": "Jouw aandeel: {pct}",
     "back": "Alle optredens",
-    "completed": "Gemarkeerd als afgerond."
+    "completed": "Gemarkeerd als afgerond.",
+    "yourFee": "Jouw vergoeding: {amount}"
   },
   "availability": {
     "title": "Beschikbaarheid",
@@ -1381,7 +1396,8 @@
     "searchPlaceholder": "Zoek op boekingscode",
     "filterPaid": "Uitbetaald",
     "filterOwed": "Nog te ontvangen van bureau",
-    "filterOpen": "Nog niet uitbetaald"
+    "filterOpen": "Nog niet uitbetaald",
+    "fixedFee": "Vaste vergoeding"
   },
   "myPayments": {
     "title": "Betalingen",

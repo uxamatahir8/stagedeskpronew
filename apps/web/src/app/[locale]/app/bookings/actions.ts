@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { parseEuros } from "@stagedesk/core";
+import { type Compensation, parseEuros } from "@stagedesk/core";
 import {
   acceptQuote,
   assignArtist,
@@ -135,13 +135,28 @@ export async function acceptOnBehalfAction(quoteId: string, name: string): Promi
   );
 }
 
-export async function assignArtistAction(bookingId: string, artistId: string): Promise<ActionResult> {
+/** Pay for this booking only, as typed: a percentage ("40") or an amount ("250,00"). */
+const payOverride = z.object({ type: z.enum(["percentage", "fixed"]), value: z.string().max(32) }).nullable();
+
+export async function assignArtistAction(bookingId: string, artistId: string, pay: z.input<typeof payOverride> = null): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.bookings.edit");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
+  const parsedPay = payOverride.safeParse(pay);
+  if (!parsedPay.success) return { ok: false, message: (await getTranslations("bookingErrors"))("invalid_compensation") };
+  let compensation: Compensation | null = null;
+  if (parsedPay.data) {
+    const { type, value } = parsedPay.data;
+    const pct = Number(value.trim().replace(",", "."));
+    const cents = parseEuros(value);
+    compensation =
+      type === "percentage"
+        ? { type, shareBps: Number.isFinite(pct) ? Math.round(pct * 100) : -1, fixedCents: null }
+        : { type, shareBps: 0, fixedCents: cents ?? -1 };
+  }
   return runAction(async () => {
-    const { assignmentId, withdrawnIds } = await assignArtist(organization.id, bookingId, artistId, viewer.user.id);
+    const { assignmentId, withdrawnIds } = await assignArtist(organization.id, bookingId, artistId, viewer.user.id, undefined, compensation);
     await emailArtists([assignmentId], "new");
     await emailArtists(withdrawnIds, "withdrawn");
     const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { stageName: true } });

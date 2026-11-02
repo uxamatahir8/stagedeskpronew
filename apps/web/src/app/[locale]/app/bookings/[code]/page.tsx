@@ -25,7 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { RefundDialog } from "../../payments/refund-dialog";
-import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
+import { centsToInput, dateTime, euro, eventDate, percent } from "@/lib/format";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { requireAgency, viewerCan } from "@/lib/viewer";
 import { customerMailLocale } from "@/lib/correspondence";
@@ -146,6 +146,10 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
           stageName: a.stageName,
           agency: a.organizationId === organization.id ? null : a.organization.name,
           free: booking.eventDate ? await isArtistFree(a.id, booking.eventDate, booking.id) : true,
+          payLabel:
+            a.compensationType === "fixed" && a.defaultFixedFeeCents !== null
+              ? t("artists.fixedPerBooking", { amount: euro(format, a.defaultFixedFeeCents, a.organization.currency) })
+              : percent(format, a.defaultShareBps),
         })),
       )
     : [];
