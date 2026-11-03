@@ -58,7 +58,10 @@ test("agency books the event and the customer reports the balance transfer", asy
 
   await test.step("customer agrees by phone; owner accepts on their behalf", async () => {
     await agency.getByRole("button", { name: "Namens klant accepteren" }).click();
+    const accepted = agency.waitForResponse((response) => response.request().method() === "POST" && Boolean(response.request().headers()["next-action"]));
     await agency.getByRole("dialog").getByRole("button", { name: "Offerte accepteren" }).click();
+    expect((await accepted).ok()).toBe(true);
+    await agency.reload();
     await expect(agency.getByText("Geboekt", { exact: true }).first()).toBeVisible();
   });
 

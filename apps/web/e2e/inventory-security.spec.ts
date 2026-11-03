@@ -30,6 +30,14 @@ async function replay(as: APIRequestContext, request: Request, change: (body: st
   });
 }
 
+/** Opens a just-created numbered item by its durable list entry, independent of router timing. */
+async function openInventoryItem(page: Page, code: string) {
+  await page.goto(`/nl/app/inventory?q=${code}`);
+  await page.getByRole("link", { name: code, exact: true }).click();
+  await page.waitForURL(/\/app\/inventory\/[0-9a-f-]{36}$/);
+  return page.url();
+}
+
 test.describe.serial("server actions refuse direct requests without the right access", () => {
   test.describe.configure({ timeout: 180_000 });
   let owner: Page;
@@ -64,7 +72,7 @@ test.describe.serial("server actions refuse direct requests without the right ac
     await dialog.getByLabel("Nummer", { exact: true }).fill(SPK);
     await dialog.getByLabel("Naam", { exact: true }).fill("Beveiligingstest");
     const createItem = await capture(owner, () => dialog.getByRole("button", { name: "Opslaan" }).click());
-    await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
+    expect((await createItem.response())?.ok()).toBe(true);
 
     await replay(staff.request, createItem, (b) => b.replace(SPK, `${SPK}-STAFF`));
     await owner.goto(`/nl/app/inventory?q=${SPK}-STAFF`);
@@ -73,13 +81,8 @@ test.describe.serial("server actions refuse direct requests without the right ac
     await replay(owner.request, createItem, (b) => b.replace(SPK, `${SPK}-OWNER`));
     await owner.goto(`/nl/app/inventory?q=${SPK}-OWNER`);
     await expect(owner.getByRole("link", { name: `${SPK}-OWNER`, exact: true })).toBeVisible();
-    itemUrl = await (async () => {
-    await owner.goto(`/nl/app/inventory?q=${SPK}`);
-    await owner.getByRole("link", { name: SPK, exact: true }).click();
     // The item page, not the list: the write-off replay below targets this item's id.
-    await owner.waitForURL(/\/app\/inventory\/[0-9a-f-]{36}$/);
-    return owner.url();
-  })();
+    itemUrl = await openInventoryItem(owner, SPK);
 
     await owner.goto("/nl/app/bookings/new");
     await owner.getByRole("tab", { name: "Nieuwe klant" }).click();
@@ -149,9 +152,10 @@ test.describe.serial("server actions refuse direct requests without the right ac
     await owner.getByRole("button", { name: "Apparatuur toevoegen" }).click();
     await owner.getByRole("dialog").getByLabel("Nummer", { exact: true }).fill(`${SPK}-B`);
     await owner.getByRole("dialog").getByLabel("Naam", { exact: true }).fill("Tweede");
+    const secondCreated = owner.waitForResponse((response) => response.request().method() === "POST" && Boolean(response.request().headers()["next-action"]));
     await owner.getByRole("dialog").getByRole("button", { name: "Opslaan" }).click();
-    await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
-    const secondId = owner.url().split("/").pop()!;
+    expect((await secondCreated).ok()).toBe(true);
+    const secondId = (await openInventoryItem(owner, `${SPK}-B`)).split("/").pop()!;
     await owner.getByRole("button", { name: "Afschrijven als verloren" }).click();
     await owner.getByRole("dialog").getByLabel("Notitie").fill("test");
     const lost = await capture(owner, () => owner.getByRole("dialog").getByRole("button", { name: "Afschrijven als verloren" }).click());
@@ -163,9 +167,10 @@ test.describe.serial("server actions refuse direct requests without the right ac
     await owner.getByRole("button", { name: "Apparatuur toevoegen" }).click();
     await owner.getByRole("dialog").getByLabel("Nummer", { exact: true }).fill(`${SPK}-C`);
     await owner.getByRole("dialog").getByLabel("Naam", { exact: true }).fill("Derde");
+    const thirdCreated = owner.waitForResponse((response) => response.request().method() === "POST" && Boolean(response.request().headers()["next-action"]));
     await owner.getByRole("dialog").getByRole("button", { name: "Opslaan" }).click();
-    await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
-    const thirdId = owner.url().split("/").pop()!;
+    expect((await thirdCreated).ok()).toBe(true);
+    const thirdId = (await openInventoryItem(owner, `${SPK}-C`)).split("/").pop()!;
 
     await replay(staff.request, lost, (b) => b.replace(secondId, thirdId));
     // Lost equipment, filtered by status: the owner's write-off is there, the staff replay changed nothing.
