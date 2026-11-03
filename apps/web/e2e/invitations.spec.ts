@@ -37,14 +37,14 @@ async function fromMail(request: APIRequestContext, to: string, pattern: RegExp,
 
 const INVITE_LINK = /(https?:\/\/\S+\/invite\/[\w-]+)/;
 
-test("an invited person signs up from the link, joins, and the link can't be used again", async ({ browser, request }) => {
-  test.setTimeout(240_000);
-  const owner = await (await browser.newContext()).newPage();
-  await signIn(owner, "eigenaar@feestband.local");
-
+test.describe.serial("invitation acceptance", () => {
+  test.describe.configure({ timeout: 240_000 });
   let link = "";
-  await test.step("the owner invites a new address; a refused invite keeps what was typed", async () => {
-    const seen = await mailIds(request, invitee);
+
+  test("a new person signs up, joins, and cannot reuse the link", async ({ browser, request }) => {
+    const owner = await (await browser.newContext()).newPage();
+    await signIn(owner, "eigenaar@feestband.local");
+    const inviteSeen = await mailIds(request, invitee);
     await owner.goto("/nl/app/team");
     await owner.getByRole("button", { name: "Lid uitnodigen" }).click();
     const dialog = owner.getByRole("dialog");
@@ -57,46 +57,38 @@ test("an invited person signs up from the link, joins, and the link can't be use
     await dialog.locator("#invite-email").fill(invitee);
     await dialog.getByRole("button", { name: "Uitnodiging versturen" }).click();
     await expect(owner.getByText(`Uitnodiging verstuurd naar ${invitee}.`)).toBeVisible();
-    link = await fromMail(request, invitee, INVITE_LINK, seen);
-  });
+    link = await fromMail(request, invitee, INVITE_LINK, inviteSeen);
 
-  await test.step("someone signed in with another account is told so", async () => {
     const tab = await owner.context().newPage();
     await tab.goto(link);
     await expect(tab.getByText(`Je bent ingelogd als eigenaar@feestband.local, maar deze uitnodiging is voor ${invitee}.`)).toBeVisible();
     await tab.close();
-  });
 
-  const guest = await (await browser.newContext()).newPage();
-  await test.step("the invitee creates an account from the link and confirms their address", async () => {
+    const guest = await (await browser.newContext()).newPage();
     await guest.goto(link);
     await guest.getByRole("link", { name: "Account aanmaken" }).first().click();
     await expect(guest.locator("#signup-email")).toHaveValue(invitee);
     await expect(guest.getByText("Je maakt een account aan om lid te worden van Feestband Utrecht.")).toBeVisible();
-    const seen = await mailIds(request, invitee);
+    const verificationSeen = await mailIds(request, invitee);
     await guest.locator("#signup-name").fill("Ivo Invitee");
     await guest.locator("#signup-password").fill(PASSWORD);
     await guest.locator("#signup-confirm").fill(PASSWORD);
     await guest.getByRole("button", { name: "Account aanmaken" }).click();
     await expect(guest.getByText("Check je inbox")).toBeVisible();
-    await guest.goto(await fromMail(request, invitee, /(https?:\/\/\S+\/api\/auth\/verify-email\S+)/, seen));
+    await guest.goto(await fromMail(request, invitee, /(https?:\/\/\S+\/api\/auth\/verify-email\S+)/, verificationSeen));
     // Signed in and back on the invitation.
     await expect(guest).toHaveURL(/\/invite\//);
-  });
 
-  await test.step("accepting joins the agency", async () => {
     await guest.getByRole("button", { name: "Uitnodiging accepteren" }).click();
     await settleOnDashboard(guest);
-  });
 
-  await test.step("the used link says so and offers sign-in", async () => {
     const again = await (await browser.newContext()).newPage();
     await again.goto(link);
     await expect(again.getByRole("heading", { name: "Deze uitnodiging is niet meer geldig" })).toBeVisible();
     await expect(again.getByRole("link", { name: "Inloggen" }).last()).toBeVisible();
   });
 
-  await test.step("an existing account invited by another agency signs in from the link and joins", async () => {
+  test("an existing account signs in from another agency's link and joins", async ({ browser, request }) => {
     const other = await (await browser.newContext()).newPage();
     await signIn(other, "eigenaar@rotterdamdj.local");
     const seen = await mailIds(request, invitee);
@@ -117,7 +109,7 @@ test("an invited person signs up from the link, joins, and the link can't be use
     // Back on the invitation, not the dashboard.
     await expect(fresh).toHaveURL(/\/invite\//);
     await fresh.getByRole("button", { name: "Uitnodiging accepteren" }).click();
-    await expect(fresh).toHaveURL(/\/(app|accept-terms)/);
+    await settleOnDashboard(fresh);
   });
 });
 

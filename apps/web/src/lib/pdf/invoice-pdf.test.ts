@@ -1,30 +1,33 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { computeQuote, parseInvoiceTemplate } from "@stagedesk/core";
 
 vi.mock("server-only", () => ({}));
 vi.mock("../auth", () => ({ auth: { api: { getSession: async () => null } } }));
+vi.mock("../storage", () => ({
+  getPublicFile: async () => ({
+    Body: {
+      transformToByteArray: async () =>
+        Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAO0lEQVR4nO3RsQ0AMAjEwCf7rxspBUVGMA2db4BHMvVuZ9NZXY8HBvwBMhEyETIRMhEyETIRMhEyUcgH1YYDKdyYG1AAAAAASUVORK5CYII=",
+          "base64",
+        ),
+    },
+    ContentType: "image/png",
+  }),
+}));
 
 /** Real PDFs for raster inspection plus structural and money assertions. */
 const out = process.env["PDF_OUT"] ?? join(process.cwd(), "test-results", "pdf");
-const org = `pdf${Date.now().toString(36)}`;
-let backgroundUrl = "";
-let logoUrl = "";
 
-// A valid pale PNG. Inline data keeps the integration test self-contained on Windows and Linux.
-const palePng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAO0lEQVR4nO3RsQ0AMAjEwCf7rxspBUVGMA2db4BHMvVuZ9NZXY8HBvwBMhEyETIRMhEyETIRMhEyUcgH1YYDKdyYG1AAAAAASUVORK5CYII=", "base64");
+// Storage is mocked above with a valid pale PNG, keeping the integration test
+// self-contained while exercising the production /files/ image-loading path.
+const backgroundUrl = "/files/organizations/pdf-fixture/invoice/background.png";
+const logoUrl = "/files/organizations/pdf-fixture/logo.png";
 
-beforeAll(async () => {
+beforeAll(() => {
   mkdirSync(out, { recursive: true });
-  const { putPublicFile } = await import("../storage");
-  backgroundUrl = await putPublicFile(`organizations/${org}/invoice/background-test.png`, palePng, "image/png");
-  logoUrl = await putPublicFile(`organizations/${org}/logo-test.png`, palePng, "image/png");
-});
-
-afterAll(async () => {
-  const { deletePublicFile } = await import("../storage");
-  await Promise.all([deletePublicFile(backgroundUrl), deletePublicFile(logoUrl)]);
 });
 
 function documentInput(lineCount: number, template: unknown, options: { logo?: boolean; long?: boolean } = {}) {

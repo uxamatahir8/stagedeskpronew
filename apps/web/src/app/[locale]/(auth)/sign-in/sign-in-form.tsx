@@ -106,6 +106,7 @@ export function SignInForm() {
               type="email"
               autoComplete="email"
               required
+              disabled={!hydrated || pending}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -117,7 +118,7 @@ export function SignInForm() {
                 {t("auth.signIn.forgot")}
               </Link>
             </div>
-            <PasswordInput id="signin-password" name="password" autoComplete="current-password" required />
+            <PasswordInput id="signin-password" name="password" autoComplete="current-password" required disabled={!hydrated || pending} />
           </div>
           <FormMessage>{error}</FormMessage>
           <FormMessage tone="success">{notice}</FormMessage>
@@ -142,6 +143,7 @@ export function SignInForm() {
                 autoComplete="one-time-code"
                 autoFocus
                 required
+                disabled={!hydrated || pending}
                 value={code}
                 // Digits only, so a pasted "123 456" or "123-456" still works.
                 onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -181,6 +183,7 @@ export function SignInForm() {
                 type="email"
                 autoComplete="email"
                 required
+                disabled={!hydrated || pending}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />

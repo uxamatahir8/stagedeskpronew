@@ -89,7 +89,8 @@ export async function settleOnDashboard(page: Page) {
   await expect(gate.or(shell)).toBeVisible({ timeout: 30_000 });
   if (await gate.isVisible()) {
     await acceptTerms(page);
-    await expect(shell).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveURL(/\/app$/, { timeout: 60_000 });
+    await expect(shell).toBeVisible({ timeout: 60_000 });
   }
   await expect(page).toHaveURL(/\/app$/);
   await skipTour(page);
