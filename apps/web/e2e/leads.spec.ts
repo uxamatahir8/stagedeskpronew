@@ -111,6 +111,9 @@ test("a platform request reaches the providers in its area, who send prices; the
     await dialog.getByLabel("Prijs excl. btw 1").fill("800");
     await dialog.getByRole("button", { name: "Prijs sturen" }).click();
     await expect(rotterdam.getByText("Prijs gestuurd.", { exact: false })).toBeVisible();
+    // The toast confirms the action; verify its durable result after a fresh
+    // server render instead of racing the following router.refresh().
+    await rotterdam.reload();
     await expect(card(rotterdam)).toContainText("Jouw prijs: € 968,00");
   });
 
