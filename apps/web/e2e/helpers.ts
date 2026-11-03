@@ -39,7 +39,13 @@ export async function submitSignIn(page: Page, email: string) {
       await page.getByRole("button", { name: "Inloggen", exact: true }).click();
     }
     const limited = page.getByText("Te veel pogingen", { exact: false });
-    await expect(limited.or(page.locator('[data-slot="sidebar"]')).or(page.getByLabel(/Ik ga akkoord/)).first()).toBeVisible({ timeout: 30_000 });
+    // Navigation is the durable sign-in boundary. The streamed dashboard can
+    // still be a skeleton while a cold development server compiles the route;
+    // settleOnDashboard waits for its interactive shell separately.
+    await expect(async () => {
+      const signedIn = /\/(?:nl\/)?(?:app|accept-terms)(?:\/|$)/.test(new URL(page.url()).pathname);
+      expect(signedIn || (await limited.isVisible())).toBe(true);
+    }).toPass({ timeout: 30_000 });
     if (!(await limited.isVisible())) return;
     await page.waitForTimeout(61_000);
   }

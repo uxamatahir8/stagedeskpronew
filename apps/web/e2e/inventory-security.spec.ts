@@ -30,27 +30,40 @@ async function replay(as: APIRequestContext, request: Request, change: (body: st
   });
 }
 
-test("server actions refuse direct requests from people without the right access", async ({ browser }) => {
-  test.setTimeout(300_000);
-  const owner = await (await browser.newContext()).newPage();
-  const staff = await (await browser.newContext()).newPage();
-  const other = await (await browser.newContext()).newPage();
-  const dj = await (await browser.newContext()).newPage();
-  owner.on("dialog", (d) => d.accept());
+test.describe.serial("server actions refuse direct requests without the right access", () => {
+  test.describe.configure({ timeout: 180_000 });
+  let owner: Page;
+  let staff: Page;
+  let other: Page;
+  let dj: Page;
+  let itemUrl = "";
+  let code = "";
+  let add: Request;
 
-  await signIn(owner, "eigenaar@feestband.local");
-  await signIn(staff, "planning@feestband.local");
-  await signIn(other, "eigenaar@rotterdamdj.local");
-  await signIn(dj, "dj.sem@feestband.local");
+  test.beforeAll(async ({ browser }, testInfo) => {
+    testInfo.setTimeout(240_000);
+    owner = await (await browser.newContext()).newPage();
+    staff = await (await browser.newContext()).newPage();
+    other = await (await browser.newContext()).newPage();
+    dj = await (await browser.newContext()).newPage();
+    owner.on("dialog", (d) => d.accept());
+    await signIn(owner, "eigenaar@feestband.local");
+    await signIn(staff, "planning@feestband.local");
+    await signIn(other, "eigenaar@rotterdamdj.local");
+    await signIn(dj, "dj.sem@feestband.local");
+  });
 
-  let createItem: Request;
-  await test.step("staff can't create equipment by replaying the owner's request", async () => {
+  test.afterAll(async () => {
+    await Promise.all([owner, staff, other, dj].map((page) => page.context().close()));
+  });
+
+  test("staff can't create equipment and the owner prepares a booked gig", async () => {
     await owner.goto("/nl/app/inventory");
     await owner.getByRole("button", { name: "Apparatuur toevoegen" }).click();
     const dialog = owner.getByRole("dialog");
     await dialog.getByLabel("Nummer", { exact: true }).fill(SPK);
     await dialog.getByLabel("Naam", { exact: true }).fill("Beveiligingstest");
-    createItem = await capture(owner, () => dialog.getByRole("button", { name: "Opslaan" }).click());
+    const createItem = await capture(owner, () => dialog.getByRole("button", { name: "Opslaan" }).click());
     await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
 
     await replay(staff.request, createItem, (b) => b.replace(SPK, `${SPK}-STAFF`));
@@ -60,8 +73,7 @@ test("server actions refuse direct requests from people without the right access
     await replay(owner.request, createItem, (b) => b.replace(SPK, `${SPK}-OWNER`));
     await owner.goto(`/nl/app/inventory?q=${SPK}-OWNER`);
     await expect(owner.getByRole("link", { name: `${SPK}-OWNER`, exact: true })).toBeVisible();
-  });
-  const itemUrl = await (async () => {
+    itemUrl = await (async () => {
     await owner.goto(`/nl/app/inventory?q=${SPK}`);
     await owner.getByRole("link", { name: SPK, exact: true }).click();
     // The item page, not the list: the write-off replay below targets this item's id.
@@ -69,8 +81,6 @@ test("server actions refuse direct requests from people without the right access
     return owner.url();
   })();
 
-  let code = "";
-  await test.step("a booked gig with the item on its packing list", async () => {
     await owner.goto("/nl/app/bookings/new");
     await owner.getByRole("tab", { name: "Nieuwe klant" }).click();
     await owner.getByLabel("Je naam").fill(`E2E Sec ${run}`);
@@ -90,12 +100,14 @@ test("server actions refuse direct requests from people without the right access
     await owner.getByRole("button", { name: "Offerte versturen" }).click();
     await expect(owner.getByText("Offerte versie 1 verstuurd.")).toBeVisible();
     await owner.getByRole("button", { name: "Namens klant accepteren" }).click();
+    const accepted = owner.waitForResponse((response) => response.request().method() === "POST" && Boolean(response.request().headers()["next-action"]));
     await owner.getByRole("dialog").getByRole("button", { name: "Offerte accepteren" }).click();
+    expect((await accepted).ok()).toBe(true);
+    await owner.reload();
     await expect(owner.getByText("Geboekt", { exact: true }).first()).toBeVisible();
   });
 
-  let add: Request;
-  await test.step("another agency can't add to, or read, this agency's packing list", async () => {
+  test("another agency can't add to, or read, this agency's packing list", async () => {
     await owner.goto(`/nl/app/bookings/${code}/equipment`);
     await owner.getByRole("combobox", { name: "Kies apparatuur…" }).click();
     await owner.getByRole("option", { name: new RegExp(`^${SPK} ·`) }).click();
@@ -113,7 +125,7 @@ test("server actions refuse direct requests from people without the right access
     await expect(other.getByText(SPK)).toHaveCount(0);
   });
 
-  await test.step("neither another agency nor a DJ who isn't on the gig can load", async () => {
+  test("neither another agency nor a DJ who isn't on the gig can load", async () => {
     await replay(owner.request, add);
     await owner.reload();
     await owner.getByRole("tab", { name: "Laden" }).click();
@@ -131,7 +143,7 @@ test("server actions refuse direct requests from people without the right access
     await expect(dj.getByText(SPK)).toHaveCount(0);
   });
 
-  await test.step("staff can't write equipment off as lost by replaying the owner's request", async () => {
+  test("staff can't write equipment off as lost by replaying the owner's request", async () => {
     // A second item the owner writes off, to capture the request.
     await owner.goto("/nl/app/inventory");
     await owner.getByRole("button", { name: "Apparatuur toevoegen" }).click();

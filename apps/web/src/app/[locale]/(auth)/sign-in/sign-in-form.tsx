@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useState, useSyncExternalStore } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ import { authErrorKey } from "@/lib/auth-errors";
 import { safeNext } from "@/lib/paths";
 import { PasswordInput } from "@/components/password-input";
 
+const subscribeToHydration = () => () => undefined;
+
 export function SignInForm() {
   const t = useTranslations();
   const router = useRouter();
@@ -23,6 +25,7 @@ export function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
   const [code, setCode] = useState("");
 
@@ -94,7 +97,7 @@ export function SignInForm() {
       </TabsList>
 
       <TabsContent value="password" className="mt-4">
-        <form onSubmit={submit(signInWithPassword)} className="grid gap-4">
+        <form method="post" onSubmit={submit(signInWithPassword)} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="signin-email">{t("auth.email")}</Label>
             <Input
@@ -118,7 +121,7 @@ export function SignInForm() {
           </div>
           <FormMessage>{error}</FormMessage>
           <FormMessage tone="success">{notice}</FormMessage>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" disabled={!hydrated || pending}>
             {t("auth.signIn.submit")}
           </Button>
         </form>
@@ -127,7 +130,7 @@ export function SignInForm() {
       <TabsContent value="code" className="mt-4">
         {codeSentTo ? (
           // Its own key: React must not reuse the email step's input for the code (it kept the typed address).
-          <form key="code-step" onSubmit={submit(signInWithCode)} className="grid gap-4">
+          <form key="code-step" method="post" onSubmit={submit(signInWithCode)} className="grid gap-4">
             <FormMessage tone="success">{t("auth.signIn.codeSent", { email: codeSentTo })}</FormMessage>
             <div className="grid gap-2">
               <Label htmlFor="signin-code">{t("auth.code")}</Label>
@@ -146,7 +149,7 @@ export function SignInForm() {
               />
             </div>
             <FormMessage>{error}</FormMessage>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={!hydrated || pending}>
               {t("auth.signIn.verifyCode")}
             </Button>
             <div className="flex flex-wrap justify-center gap-x-2">
@@ -168,7 +171,7 @@ export function SignInForm() {
             </div>
           </form>
         ) : (
-          <form key="email-step" onSubmit={submit(sendCode)} className="grid gap-4">
+          <form key="email-step" method="post" onSubmit={submit(sendCode)} className="grid gap-4">
             <p className="text-sm text-muted-foreground">{t("auth.signIn.codeIntro")}</p>
             <div className="grid gap-2">
               <Label htmlFor="signin-code-email">{t("auth.email")}</Label>
@@ -183,7 +186,7 @@ export function SignInForm() {
               />
             </div>
             <FormMessage>{error}</FormMessage>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={!hydrated || pending}>
               {t("auth.signIn.sendCode")}
             </Button>
           </form>
