@@ -33,7 +33,12 @@ async function Equipment({ params }: Pick<PageProps<"/[locale]/app/bookings/[cod
   setRequestLocale(locale as Locale);
   const access = await requireEquipmentAccess(code, "desk");
   const [t, ti, format] = await Promise.all([getTranslations("equipment"), getTranslations("inventory"), getFormatter()]);
-  const data = await equipmentWorkspace(access, { kind: (k) => ti(`kind_${k as "case"}`), status: (s) => ti(`status_${s as "lost"}`) });
+  const data = await equipmentWorkspace(access, {
+    kind: (k) => ti(`kind_${k as "case"}`),
+    status: (s) => ti(`status_${s as "lost"}`),
+    free: (n) => t("freeOnDate", { count: n }),
+    taken: t("takenOnDate"),
+  });
   if (!data) notFound();
   const { view, props } = data;
   const date = view.booking.eventDate ? format.dateTime(view.booking.eventDate, { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }) : t("noDate");

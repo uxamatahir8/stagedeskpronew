@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { closeBrowserContexts, signIn } from "./helpers";
+
+test.afterEach(async ({ browser }) => closeBrowserContexts(browser));
 
 const MAILPIT = "http://localhost:8025/api/v1";
 

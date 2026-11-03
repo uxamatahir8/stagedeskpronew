@@ -14,6 +14,11 @@ next-env.d.ts
 
 packages/db/src/generated
 
-.DS_Store 
+.DS_Store
 Thumbs.db
 *.log
+
+# Local verification artifacts
+/output/pdf/
+/tmp/pdfs/
+/tmp

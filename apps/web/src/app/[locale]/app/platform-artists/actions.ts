@@ -3,9 +3,24 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
-import { assignArtist, prisma } from "@stagedesk/db";
+import { z } from "zod";
+import {
+  ArtistAdminError,
+  assignArtist,
+  deactivateArtist,
+  deleteArtistProfile,
+  prisma,
+  reactivateArtist,
+  relinkArtistUser,
+  revokeArtistShares,
+  unlinkArtistUser,
+  withdrawArtistEverywhere,
+} from "@stagedesk/db";
+import { redirect } from "@/i18n/navigation";
+import type { Locale } from "@/i18n/routing";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
+import { emailArtists } from "@/lib/artist-mail";
 import { ArtistAccountError, ensureArtistAccount } from "@/lib/artist-account";
 
 const PLATFORM_ARTISTS_SLUG = "stagedesk-platform-artists";
@@ -72,7 +87,70 @@ export async function assignPlatformArtistAction(artistId: string, bookingId: st
       create: { id: randomUUID(), organizationId: artist.organizationId, artistId, partnerOrganizationId: booking.organizationId, status: "accepted", respondedAt: new Date() },
     });
   }
-  await assignArtist(booking.organizationId, booking.id, artistId, viewer.user.id);
+  const { assignmentId, withdrawnIds } = await assignArtist(booking.organizationId, booking.id, artistId, viewer.user.id);
+  await emailArtists([assignmentId], "new");
+  await emailArtists(withdrawnIds, "withdrawn");
   revalidatePath("/[locale]/app/platform-artists", "page");
   return { ok: true, message: (await getTranslations("platformArtists"))("assigned") };
+}
+
+const reason = z.string().trim().min(1).max(500);
+
+/** Runs one support action on an artist and turns its refusals into text. */
+async function supportAction(task: (actorId: string) => Promise<unknown>, done: "withdrawn" | "deactivated" | "reactivated" | "sharesRevoked" | "unlinked" | "relinked" | "deleted"): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.agencies");
+  const t = await getTranslations("platformArtists");
+  try {
+    await task(viewer.user.id);
+  } catch (error) {
+    if (error instanceof ArtistAdminError) return { ok: false, message: t(`error_${error.code}`) };
+    throw error;
+  }
+  revalidatePath("/[locale]/app/platform-artists", "layout");
+  return { ok: true, message: t(done) };
+}
+
+export async function withdrawArtistAction(artistId: string, why: string) {
+  const r = reason.safeParse(why);
+  if (!r.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_reason_required") };
+  // Booking agencies are told, and so are the artists, by email too.
+  return supportAction(async (actor) => {
+    const active = await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] } } }, select: { id: true } });
+    await withdrawArtistEverywhere(artistId, actor, r.data);
+    await emailArtists(active.map((a) => a.id), "withdrawn");
+  }, "withdrawn");
+}
+
+export async function deactivateArtistAction(artistId: string, why: string, withdraw: boolean) {
+  const r = reason.safeParse(why);
+  if (!r.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_reason_required") };
+  return supportAction(async (actor) => {
+    const active = withdraw ? await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] } } }, select: { id: true } }) : [];
+    await deactivateArtist(artistId, actor, r.data, { withdraw });
+    await emailArtists(active.map((a) => a.id), "withdrawn");
+  }, "deactivated");
+}
+
+export async function reactivateArtistAction(artistId: string, why: string) {
+  return supportAction((actor) => reactivateArtist(artistId, actor, why), "reactivated");
+}
+
+export async function revokeArtistSharesAction(artistId: string, why: string) {
+  return supportAction((actor) => revokeArtistShares(artistId, actor, why), "sharesRevoked");
+}
+
+export async function unlinkArtistAction(artistId: string, why: string) {
+  return supportAction((actor) => unlinkArtistUser(artistId, actor, why), "unlinked");
+}
+
+export async function relinkArtistAction(artistId: string, email: string, why: string) {
+  const mail = z.email().max(191).safeParse(email.trim());
+  if (!mail.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_user_not_found") };
+  return supportAction((actor) => relinkArtistUser(artistId, mail.data, actor, why), "relinked");
+}
+
+export async function deleteArtistAction(artistId: string, why: string): Promise<ActionResult> {
+  const result = await supportAction((actor) => deleteArtistProfile(artistId, actor, why), "deleted");
+  if (result.ok) redirect({ href: "/app/platform-artists", locale: (await getLocale()) as Locale });
+  return result;
 }

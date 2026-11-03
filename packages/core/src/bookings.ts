@@ -180,3 +180,29 @@ export function generateTrackingCode(random: (n: number) => Uint8Array = (n) => 
 export function formatInvoiceNumber(year: number, sequence: number) {
   return `${year}-${String(sequence).padStart(4, "0")}`;
 }
+
+/**
+ * How an agency numbers its invoices. "yearly" restarts every year
+ * (prefix + 2027-0042, the original format); "continuous" never restarts
+ * (prefix + 000042). Dutch rules ask for one unbroken, unique series; a
+ * prefix may separate series (e.g. a new one per year).
+ */
+export const invoiceNumberings = ["yearly", "continuous"] as const;
+export type InvoiceNumbering = (typeof invoiceNumberings)[number];
+
+export const invoicePrefixPattern = /^[A-Z0-9][A-Z0-9\-_/.]{0,11}$/;
+/** What a typed invoice number may look like: letters, digits and - _ / . , 1–32 characters. */
+export const invoiceNumberPattern = /^[A-Z0-9][A-Z0-9\-_/.]{0,31}$/;
+
+export const normalizeInvoiceNumber = (value: string) => value.trim().toUpperCase();
+
+/** The counter key a numbering scheme draws from: per year, or one for ever. */
+export function invoiceCounterKey(numbering: InvoiceNumbering, year: number) {
+  return numbering === "continuous" ? "invoice:all" : `invoice:${year}`;
+}
+
+export function formatAgencyInvoiceNumber(input: { numbering: InvoiceNumbering; prefix: string | null; year: number; sequence: number }) {
+  const prefix = input.prefix ? normalizeInvoiceNumber(input.prefix) : "";
+  const body = input.numbering === "continuous" ? String(input.sequence).padStart(6, "0") : formatInvoiceNumber(input.year, input.sequence);
+  return `${prefix}${body}`;
+}

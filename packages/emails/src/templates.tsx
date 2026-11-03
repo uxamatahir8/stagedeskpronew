@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
 // Declared here so every runner (Next, tsx in the worker, Vitest) uses the automatic JSX runtime.
-import { Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
 import { copy, type EmailLocale } from "./copy";
 import { ActionButton, EmailLayout, LinkFallback, Paragraph } from "./layout";
 
@@ -96,6 +96,14 @@ export function NewInquiry({ locale, customer, event, date, url }: { locale: Ema
   );
 }
 
+/** One line of a quote as the customer sees it; every amount is formatted by the sender from the saved quote. */
+export interface QuoteEmailLine {
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+}
+
 export function QuoteSent({
   locale,
   name,
@@ -104,6 +112,20 @@ export function QuoteSent({
   until,
   url,
   accountUrl,
+  reference,
+  event,
+  date,
+  venue,
+  lines,
+  subtotal,
+  vat,
+  deposit,
+  balance,
+  notes,
+  paymentTerms,
+  contactEmail,
+  contactPhone,
+  pdfUrl,
 }: {
   locale: EmailLocale;
   name: string;
@@ -113,12 +135,105 @@ export function QuoteSent({
   url: string;
   /** Set when the customer has no password yet: where they create their account. */
   accountUrl?: string;
+  /** The booking's tracking code. */
+  reference?: string;
+  event?: string;
+  date?: string;
+  venue?: string;
+  lines?: QuoteEmailLine[];
+  subtotal?: string;
+  vat?: { label: string; amount: string }[];
+  /** Upfront payment; absent when nothing is due upfront. */
+  deposit?: string;
+  balance?: string;
+  notes?: string;
+  paymentTerms?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  pdfUrl?: string;
 }) {
   const c = copy[locale].quoteSent;
+  const cell = { color: "#3a3446", fontSize: 13, lineHeight: "18px", padding: "6px 0", borderBottom: "1px solid #eee9f3", verticalAlign: "top" } as const;
+  const num = { ...cell, textAlign: "right" as const, whiteSpace: "nowrap" as const, paddingLeft: 12 };
+  const sum = { color: "#3a3446", fontSize: 13, padding: "3px 0" } as const;
   return (
     <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
       <Paragraph>{c.body(name, agency, total, until)}</Paragraph>
+      {(reference || event || date || venue) && (
+        <Section style={{ backgroundColor: "#f6f4fa", borderRadius: 8, padding: "12px 16px", margin: "0 0 20px" }}>
+          {event && <Text style={{ ...sum, margin: 0, fontWeight: 600 }}>{event}</Text>}
+          {date && <Text style={{ ...sum, margin: 0 }}>{c.date}: {date}</Text>}
+          {venue && <Text style={{ ...sum, margin: 0 }}>{c.venue}: {venue}</Text>}
+          {reference && <Text style={{ ...sum, margin: 0 }}>{c.reference}: {reference}</Text>}
+        </Section>
+      )}
+      {lines && lines.length > 0 && (
+        <table role="presentation" cellPadding={0} cellSpacing={0} style={{ width: "100%", borderCollapse: "collapse", margin: "0 0 12px" }}>
+          <thead>
+            <tr>
+              <th style={{ ...cell, fontWeight: 600, textAlign: "left" }}>{c.what}</th>
+              <th style={{ ...num, fontWeight: 600 }}>{c.quantity}</th>
+              <th style={{ ...num, fontWeight: 600 }}>{c.price}</th>
+              <th style={{ ...num, fontWeight: 600 }}>{c.amount}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l, i) => (
+              <tr key={i}>
+                <td style={cell}>{l.description}</td>
+                <td style={num}>{l.quantity}</td>
+                <td style={num}>{l.unitPrice}</td>
+                <td style={num}>{l.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {subtotal && (
+        <table role="presentation" cellPadding={0} cellSpacing={0} style={{ width: "100%", margin: "0 0 20px" }}>
+          <tbody>
+            <tr>
+              <td style={sum}>{c.subtotal}</td>
+              <td style={{ ...sum, textAlign: "right" }}>{subtotal}</td>
+            </tr>
+            {(vat ?? []).map((v) => (
+              <tr key={v.label}>
+                <td style={sum}>{v.label}</td>
+                <td style={{ ...sum, textAlign: "right" }}>{v.amount}</td>
+              </tr>
+            ))}
+            <tr>
+              <td style={{ ...sum, fontWeight: 700, fontSize: 15, borderTop: "1px solid #e2dceb", paddingTop: 8 }}>{c.total}</td>
+              <td style={{ ...sum, fontWeight: 700, fontSize: 15, borderTop: "1px solid #e2dceb", paddingTop: 8, textAlign: "right" }}>{total}</td>
+            </tr>
+            {deposit && (
+              <tr>
+                <td style={sum}>{c.deposit}</td>
+                <td style={{ ...sum, textAlign: "right" }}>{deposit}</td>
+              </tr>
+            )}
+            {deposit && balance && (
+              <tr>
+                <td style={sum}>{c.balance}</td>
+                <td style={{ ...sum, textAlign: "right" }}>{balance}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
+      {subtotal && !deposit && <Paragraph>{c.noDeposit}</Paragraph>}
+      {notes && <Paragraph>{notes}</Paragraph>}
+      {paymentTerms && <Paragraph>{paymentTerms}</Paragraph>}
+      <Paragraph>{c.validUntil(until)}</Paragraph>
       <ActionButton href={url}>{c.button}</ActionButton>
+      {pdfUrl && (
+        <Paragraph>
+          <a href={pdfUrl} style={{ color: "#6d2a7a", fontWeight: 600 }}>
+            {c.pdf}
+          </a>
+        </Paragraph>
+      )}
+      {(contactEmail || contactPhone) && <Paragraph>{c.contact(agency, [contactEmail, contactPhone].filter(Boolean).join(" · "))}</Paragraph>}
       {accountUrl && (
         <Paragraph>
           {c.account}{" "}
@@ -412,6 +527,68 @@ export function PaymentReported({ locale, customer, amount, method, code, url }:
       <Paragraph>{c.body(customer, amount, method, code)}</Paragraph>
       <ActionButton href={url}>{c.button}</ActionButton>
       <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+/** An agency put the artist on a booking (request), took them off it, or the booking was cancelled. */
+export function GigAssigned({
+  locale,
+  status,
+  name,
+  agency,
+  event,
+  date,
+  venue,
+  url,
+  setupUrl,
+}: {
+  locale: EmailLocale;
+  status: "new" | "withdrawn" | "cancelled";
+  name: string;
+  agency: string;
+  event: string;
+  date: string;
+  venue: string;
+  url: string;
+  /** For an artist without a password yet: where they choose one first. */
+  setupUrl?: string;
+}) {
+  const c = copy[locale].gigAssigned;
+  return (
+    <EmailLayout locale={locale} preview={c.preview[status]} heading={c.heading[status]}>
+      <Paragraph>{c.body[status](name, agency, event, date, venue)}</Paragraph>
+      {status === "new" && (
+        <>
+          <ActionButton href={setupUrl ?? url}>{setupUrl ? c.setupButton : c.button}</ActionButton>
+          {setupUrl && <Paragraph>{c.setupHint}</Paragraph>}
+          <LinkFallback locale={locale} href={setupUrl ?? url} />
+        </>
+      )}
+    </EmailLayout>
+  );
+}
+
+/** The agency asks the customer to fill in the event details through a private link. */
+export function BookingDetailsRequest({ locale, name, agency, message, until, url }: { locale: EmailLocale; name: string; agency: string; message?: string; until: string; url: string }) {
+  const c = copy[locale].detailsRequest;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, agency)}</Paragraph>
+      {message && <Paragraph>{message}</Paragraph>}
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <Paragraph>{c.until(until)}</Paragraph>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+/** Sent from the agency settings to check how customer emails arrive. */
+export function SenderTest({ locale, agency, replyTo }: { locale: EmailLocale; agency: string; replyTo: string }) {
+  const c = copy[locale].senderTest;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(agency, replyTo)}</Paragraph>
     </EmailLayout>
   );
 }

@@ -11,7 +11,9 @@ const dateOnly = (iso: string, plusDays = 0) => {
 const person = { select: { id: true, name: true, email: true, locale: true } } as const;
 const bookingInclude = {
   customer: person,
-  organization: { select: { name: true } },
+  organization: { select: { name: true, emailFromName: true, emailReplyTo: true, contactEmail: true, correspondenceLocale: true } },
+  /** The language the latest quote went out in: the customer's correspondence language for this booking. */
+  quotes: { where: { status: { in: ["sent", "accepted"] as string[] } }, orderBy: { version: "desc" }, take: 1, select: { id: true, token: true, expiresAt: true, locale: true } },
   assignments: { where: { status: "accepted" }, take: 1, select: { artist: { select: { stageName: true, user: person } } } },
 } as const;
 
@@ -62,7 +64,7 @@ export function eventsInDays(days: number, now = new Date()) {
 export function quotesExpiringWithin(hours: number, now = new Date()) {
   return prisma.booking.findMany({
     where: { status: "quoted", quoteExpiresAt: { gt: now, lte: new Date(now.getTime() + hours * 3_600_000) } },
-    include: { ...bookingInclude, quotes: { where: { status: "sent" }, orderBy: { version: "desc" }, take: 1, select: { id: true, token: true, expiresAt: true } } },
+    include: { ...bookingInclude, quotes: { where: { status: "sent" }, orderBy: { version: "desc" }, take: 1, select: { id: true, token: true, expiresAt: true, locale: true } } },
   });
 }
 

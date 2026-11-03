@@ -10,6 +10,8 @@ import { signIn } from "./helpers";
  */
 
 const run = Date.now().toString(36).toUpperCase();
+// Serial numbers are unique per manufacturer within an agency, and earlier runs' items stay in the demo data.
+const SERIAL = `SECRET-SERIAL-${run}`;
 const SPK = `E2E-SPK-${run}`;
 const XLR = `E2E-XLR-${run}`;
 const category = `E2E ${run}`;
@@ -63,17 +65,34 @@ async function saveInventorySettings(page: Page, sharing: boolean, artists: bool
   await card.getByRole("switch", { name: /Toegewezen artiesten/ }).setChecked(artists);
   const save = card.getByRole("button", { name: "Opslaan" });
   if (await save.isEnabled()) {
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().includes("/app/agency-settings") &&
+        response.request().method() === "POST" &&
+        Boolean(response.request().headers()["next-action"]),
+    );
     await save.click();
-    await expect(page.getByText("Instellingen opgeslagen.")).toBeVisible();
+    // The toast can disappear while the settings page revalidates. Prove the
+    // durable result instead: wait for the action, then read both saved values.
+    await saved;
+    await page.reload();
+    const persisted = page.locator('[data-slot="card"]').filter({ hasText: "Inventaris delen met andere bureaus" });
+    await expect(persisted.getByRole("switch", { name: "Inventaris delen met andere bureaus" })).toBeChecked({
+      checked: sharing,
+    });
+    await expect(persisted.getByRole("switch", { name: /Toegewezen artiesten/ })).toBeChecked({
+      checked: artists,
+    });
   }
 }
 
-test("equipment from inventory to packing list, loading, check-in and sharing", async ({ browser }) => {
-  test.setTimeout(420_000);
+test.describe.serial("inventory lifecycle", () => {
+  let first = "";
+  let second = "";
+
+test("owner creates equipment, a package and two planned packing lists", async ({ browser }) => {
+  test.setTimeout(180_000);
   const owner = await (await browser.newContext()).newPage();
-  const dj = await (await browser.newContext()).newPage();
-  const other = await (await browser.newContext()).newPage();
-  const staff = await (await browser.newContext()).newPage();
   owner.on("dialog", (d) => d.accept());
 
   await test.step("owner adds a category, a speaker and counted cables", async () => {
@@ -89,7 +108,7 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await dialog.getByLabel("Nummer", { exact: true }).fill(SPK.toLowerCase());
     await dialog.getByLabel("Naam", { exact: true }).fill("E2E topspeaker");
     await choose(owner, "Categorie", category);
-    await dialog.getByLabel("Serienummer").fill("SECRET-SERIAL-1");
+    await dialog.getByLabel("Serienummer").fill(SERIAL);
     await dialog.getByRole("button", { name: "Opslaan" }).click();
     await expect(owner).toHaveURL(/\/app\/inventory\/[\w-]+$/);
     await expect(owner.getByText(SPK).first()).toBeVisible();
@@ -125,8 +144,6 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(owner).toHaveURL(/\/app\/inventory\/packages\/[\w-]+$/);
   });
 
-  let first = "";
-  let second = "";
   await test.step("two inquiries on the same day plan the same speaker; nothing is reserved yet", async () => {
     first = await newInquiry(owner, `E2E Eerste ${run}`);
     await owner.goto(`/nl/app/bookings/${first}/equipment`);
@@ -139,6 +156,15 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     second = await newInquiry(owner, `E2E Tweede ${run}`);
     await addToList(owner, second, new RegExp(SPK));
   });
+
+  await owner.context().close();
+});
+
+test("reservations conflict and the assigned DJ loads equipment when allowed", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const owner = await (await browser.newContext()).newPage();
+  const dj = await (await browser.newContext()).newPage();
+  await signIn(owner, "eigenaar@feestband.local");
 
   await test.step("accepting the first quote reserves; the second can't, but its acceptance goes through", async () => {
     await accept(owner, first);
@@ -163,6 +189,9 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
   });
 
   await test.step("the assigned DJ sees the list, and loads once the agency allows it", async () => {
+    // Establish both halves of the permission transition even when a previous
+    // interrupted run left the demo agency with artist loading enabled.
+    await saveInventorySettings(owner, false, false);
     await owner.goto(`/nl/app/bookings/${first}`);
     await choose(owner, "Kies een artiest", /^DJ Sem/);
     await owner.getByRole("button", { name: /Artiest toewijzen|Andere artiest/ }).click();
@@ -175,7 +204,7 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await dj.getByRole("link", { name: "Apparatuur" }).click();
     await expect(dj.getByText("Je ziet de apparatuur voor dit optreden.", { exact: false })).toBeVisible();
     await expect(dj.getByText(XLR)).toBeVisible();
-    await expect(dj.getByText("SECRET-SERIAL-1")).toHaveCount(0);
+    await expect(dj.getByText(SERIAL)).toHaveCount(0);
 
     await saveInventorySettings(owner, false, true);
     await dj.reload();
@@ -187,6 +216,16 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await dj.goto(`/nl/app/gigs/${second}/equipment`);
     await expect(dj.getByText(XLR)).toHaveCount(0);
   });
+
+  await owner.context().close();
+  await dj.context().close();
+});
+
+test("check-in records damage and a missing speaker can be recovered", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const owner = await (await browser.newContext()).newPage();
+  await signIn(owner, "eigenaar@feestband.local");
+  owner.on("dialog", (d) => d.accept());
 
   await test.step("check-in: one cable damaged, the speaker missing", async () => {
     await owner.goto(`/nl/app/bookings/${first}/equipment`);
@@ -231,6 +270,16 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(owner.getByText("10 (1 defect)")).toBeVisible();
   });
 
+  await owner.context().close();
+});
+
+test("sharing is read-only and staff cannot manage inventory or losses", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const owner = await (await browser.newContext()).newPage();
+  const other = await (await browser.newContext()).newPage();
+  const staff = await (await browser.newContext()).newPage();
+  await signIn(owner, "eigenaar@feestband.local");
+
   await test.step("another agency sees shared equipment read-only, and loses it when sharing stops", async () => {
     await signIn(other, "eigenaar@rotterdamdj.local");
     await other.goto(`/nl/app/inventory/shared?q=${SPK}`);
@@ -240,14 +289,14 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await other.reload();
     await other.getByRole("link", { name: SPK }).click();
     await expect(other.getByText("Gedeeld door Feestband Utrecht")).toBeVisible();
-    await expect(other.getByText("SECRET-SERIAL-1")).toHaveCount(0);
+    await expect(other.getByText(SERIAL)).toHaveCount(0);
     await expect(other.getByRole("button", { name: /Bewerken|Afvoeren|Verwijderen/ })).toHaveCount(0);
     const detail = other.url();
 
     // Exports are the agency's own equipment only.
     const mine = await (await owner.request.get("/api/export/equipment")).text();
     expect(mine).toContain(SPK);
-    expect(mine).toContain("SECRET-SERIAL-1");
+    expect(mine).toContain(SERIAL);
     const theirs = await other.request.get("/api/export/equipment");
     expect(theirs.status()).toBe(200);
     expect(await theirs.text()).not.toContain(SPK);
@@ -272,4 +321,9 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(staff.getByText(XLR)).toBeVisible();
     await expect(staff.getByRole("button", { name: "Verloren bevestigen" })).toHaveCount(0);
   });
+
+  await owner.context().close();
+  await other.context().close();
+  await staff.context().close();
+});
 });

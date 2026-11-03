@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { type Browser, type BrowserContext, expect, test } from "@playwright/test";
 import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /**
@@ -6,13 +6,25 @@ import { ADMIN_EMAIL, signIn } from "./helpers";
  * it on the agency's free address, and a Business agency connects its own
  * domain (a .localhost name, which development accepts without DNS).
  */
-test("an agency builds and publishes its website, also on its own domain", async ({ browser }) => {
+test.describe.serial("agency websites", () => {
   const run = Date.now().toString(36);
-  const owner = await (await browser.newContext()).newPage();
-  const visitor = await (await browser.newContext()).newPage();
-  const admin = await (await browser.newContext()).newPage();
-  const rotterdam = await (await browser.newContext()).newPage();
   const title = `Feest zonder zorgen ${run}`;
+  const contexts: BrowserContext[] = [];
+
+  async function freshPage(browser: Browser) {
+    const context = await browser.newContext();
+    contexts.push(context);
+    return context.newPage();
+  }
+
+  test.afterAll(async ({}, testInfo) => {
+    testInfo.setTimeout(60_000);
+    await Promise.allSettled(contexts.map((context) => context.close()));
+  });
+
+test("an agency builds and publishes its website on the free address", async ({ browser }) => {
+  const owner = await freshPage(browser);
+  const visitor = await freshPage(browser);
 
   await test.step("the owner edits the hero, adds a packages section and publishes", async () => {
     await signIn(owner, "eigenaar@feestband.local");
@@ -39,6 +51,12 @@ test("an agency builds and publishes its website, also on its own domain", async
     await visitor.goto("http://feestband-utrecht.localhost:3000/sitemap.xml");
     expect(await visitor.content()).toContain("http://feestband-utrecht.localhost:3000/");
   });
+});
+
+test("a Business agency connects and serves its own domain", async ({ browser }) => {
+  const visitor = await freshPage(browser);
+  const admin = await freshPage(browser);
+  const rotterdam = await freshPage(browser);
 
   // The plan is set here rather than assumed: the bulk demo seed puts Feestband on Business.
   async function grantPlan(plan: "Pro" | "Business") {
@@ -89,4 +107,5 @@ test("an agency builds and publishes its website, also on its own domain", async
     await row.getByRole("button", { name: "Verwijderen" }).click();
     await expect(rotterdam.getByText("Domein verwijderd.")).toBeVisible();
   });
+});
 });

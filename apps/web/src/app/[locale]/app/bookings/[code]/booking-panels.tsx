@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
@@ -32,9 +34,12 @@ import {
   changeStatusAction,
   issueInvoiceAction,
   recordPaymentAction,
+  requestDetailsAction,
+  retryEmailAction,
+  revokeDetailsAction,
   updateDetailsAction,
 } from "../actions";
-import { type CatalogItem, QuoteBuilder, type BuilderLine } from "./quote-builder";
+import { type CatalogItem, QuoteBuilder, type BuilderLine, type QuoteDefaults } from "./quote-builder";
 
 /** Runs a server action, shows the result as a toast and refreshes the page data. */
 function useRun() {
@@ -193,6 +198,7 @@ export function QuoteControls({
   defaultDepositBps,
   defaultExpiryDays,
   currency,
+  quoteDefaults,
 }: {
   bookingId: string;
   canQuote: boolean;
@@ -208,6 +214,7 @@ export function QuoteControls({
   defaultDepositBps: number;
   defaultExpiryDays: number;
   currency: string;
+  quoteDefaults: QuoteDefaults;
 }) {
   const t = useTranslations();
   const [building, setBuilding] = useState(false);
@@ -225,6 +232,7 @@ export function QuoteControls({
         defaultDepositBps={defaultDepositBps}
         defaultExpiryDays={defaultExpiryDays}
         currency={currency}
+        defaults={quoteDefaults}
         onDone={() => setBuilding(false)}
       />
     );
@@ -292,12 +300,18 @@ export interface ArtistOption {
   stageName: string;
   agency: string | null;
   free: boolean;
+  /** The artist's default pay, e.g. "40%" or "€ 250,00 per booking". */
+  payLabel: string;
 }
 
 export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: string; options: ArtistOption[]; hasArtist: boolean }) {
   const t = useTranslations("booking");
   const [pending, run] = useRun();
   const [artistId, setArtistId] = useState("");
+  // "default" takes the artist's own pay; the others set it for this booking only.
+  const [pay, setPay] = useState<"default" | "percentage" | "fixed">("default");
+  const [payValue, setPayValue] = useState("");
+  const chosen = options.find((a) => a.id === artistId);
 
   return (
     <div className="grid gap-2">
@@ -315,8 +329,40 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
           ))}
         </SelectContent>
       </Select>
+      {chosen && (
+        <div className="grid gap-2 rounded-lg border p-3">
+          <Label htmlFor="assign-pay">{t("payForBooking")}</Label>
+          <NativeSelect id="assign-pay" value={pay} onChange={(e) => setPay(e.target.value as typeof pay)} className="w-full">
+            <option value="default">{t("payDefault", { pay: chosen.payLabel })}</option>
+            <option value="percentage">{t("payPercentage")}</option>
+            <option value="fixed">{t("payFixed")}</option>
+          </NativeSelect>
+          {pay !== "default" && (
+            <Input
+              aria-label={pay === "fixed" ? t("payFixed") : t("payPercentage")}
+              value={payValue}
+              inputMode="decimal"
+              placeholder={pay === "fixed" ? "250,00" : "40"}
+              onChange={(e) => setPayValue(e.target.value)}
+            />
+          )}
+          <p className="text-xs text-muted-foreground">{t("payHint")}</p>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">{t("assignHint")}</p>
-      <Button disabled={!artistId || pending} onClick={() => run(() => assignArtistAction(bookingId, artistId), () => setArtistId(""))}>
+      <Button
+        disabled={!artistId || pending || (pay !== "default" && !payValue.trim())}
+        onClick={() =>
+          run(
+            () => assignArtistAction(bookingId, artistId, pay === "default" ? null : { type: pay, value: payValue }),
+            () => {
+              setArtistId("");
+              setPay("default");
+              setPayValue("");
+            },
+          )
+        }
+      >
         {hasArtist ? t("reassign") : t("assign")}
       </Button>
     </div>
@@ -410,14 +456,44 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
   );
 }
 
-export function IssueInvoiceButton({ bookingId }: { bookingId: string }) {
+/** Issues the invoice after showing its number; people who may can type the number instead (when the agency allows it). */
+export function IssueInvoiceButton({ bookingId, nextNumber, canTypeNumber }: { bookingId: string; nextNumber: string; canTypeNumber: boolean }) {
   const t = useTranslations("booking");
   const [pending, run] = useRun();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
   return (
-    <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => issueInvoiceAction(bookingId))}>
-      <ReceiptIcon />
-      {t("issueInvoice")}
-    </Button>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={pending}>
+          <ReceiptIcon />
+          {t("issueInvoice")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("issueInvoice")}</DialogTitle>
+          <DialogDescription>{t("issueInvoiceHint")}</DialogDescription>
+        </DialogHeader>
+        <p className="text-sm">
+          {t("invoiceNumberNext")}: <span className="font-mono font-medium">{typed.trim() ? typed.trim().toUpperCase() : nextNumber}</span>
+        </p>
+        {canTypeNumber && (
+          <FormField id="inv-number" label={t("invoiceNumberOwn")} hint={t("invoiceNumberOwnHint")}>
+            <Input id="inv-number" value={typed} maxLength={32} className="font-mono uppercase" placeholder={nextNumber} onChange={(e) => setTyped(e.target.value)} />
+          </FormField>
+        )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">{t("dialogCancel")}</Button>
+          </DialogClose>
+          <Button disabled={pending} onClick={() => run(() => issueInvoiceAction(bookingId, typed.trim() || null), () => setOpen(false))}>
+            <ReceiptIcon />
+            {t("issueInvoiceConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -437,5 +513,133 @@ export function AddNote({ bookingId }: { bookingId: string }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Ask the customer to fill in the event details through a private link: email
+ * it to them, or copy it (e.g. to send by WhatsApp while on the phone). The
+ * link is shown once; a new link replaces the open one.
+ */
+export function DetailRequestPanel({
+  bookingId,
+  defaultLocale,
+  open,
+  customerEmail,
+}: {
+  bookingId: string;
+  defaultLocale: "nl" | "en";
+  open: { expires: string; emailedTo: string | null } | null;
+  customerEmail: string;
+}) {
+  const t = useTranslations("detailRequest");
+  const [pending, run] = useRun();
+  const [dialog, setDialog] = useState(false);
+  const [locale, setLocale] = useState(defaultLocale);
+  const [days, setDays] = useState("7");
+  const [url, setUrl] = useState<string | null>(null);
+
+  const create = (email: boolean) =>
+    run(async () => {
+      const result = await requestDetailsAction(bookingId, { locale, days: Math.max(1, Math.min(30, Number(days) || 7)), email });
+      if (result.ok && result.url) setUrl(result.url);
+      return result;
+    });
+
+  return (
+    <div className="grid gap-2 border-t pt-3">
+      {open ? (
+        <p className="text-xs text-muted-foreground">{open.emailedTo ? t("openEmailed", { email: open.emailedTo, date: open.expires }) : t("openLink", { date: open.expires })}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("hint")}</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setUrl(null);
+            setDialog(true);
+          }}
+        >
+          <SendIcon />
+          {open ? t("newLink") : t("request")}
+        </Button>
+        {open && (
+          <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => revokeDetailsAction(bookingId))}>
+            {t("revoke")}
+          </Button>
+        )}
+      </div>
+      <Dialog open={dialog} onOpenChange={setDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("description")}</DialogDescription>
+          </DialogHeader>
+          {url ? (
+            <div className="grid gap-3">
+              <p className="text-sm">{t("linkReady")}</p>
+              <div className="flex gap-2">
+                <Input readOnly value={url} aria-label={t("link")} onFocus={(e) => e.target.select()} />
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(url);
+                    toast.success(t("copied"));
+                  }}
+                >
+                  <CopyIcon />
+                  {t("copy")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("linkOnce")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="dr-locale" label={t("language")}>
+                <NativeSelect id="dr-locale" value={locale} onChange={(e) => setLocale(e.target.value as "nl" | "en")} className="w-full">
+                  <option value="nl">Nederlands</option>
+                  <option value="en">English</option>
+                </NativeSelect>
+              </FormField>
+              <FormField id="dr-days" label={t("days")}>
+                <Input id="dr-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(e.target.value)} />
+              </FormField>
+              {open && <p className="text-xs text-muted-foreground sm:col-span-2">{t("replaces")}</p>}
+            </div>
+          )}
+          <DialogFooter>
+            {url ? (
+              <DialogClose asChild>
+                <Button>{t("done")}</Button>
+              </DialogClose>
+            ) : (
+              <>
+                <Button variant="outline" disabled={pending} onClick={() => create(false)}>
+                  <CopyIcon />
+                  {t("createLink")}
+                </Button>
+                <Button disabled={pending} onClick={() => create(true)}>
+                  <SendIcon />
+                  {t("sendTo", { email: customerEmail })}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/** "Send again" for a booking email that failed. */
+export function RetryEmailButton({ emailId }: { emailId: string }) {
+  const t = useTranslations("bookingEmails");
+  const [pending, run] = useRun();
+  return (
+    <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => retryEmailAction(emailId))}>
+      {t("retry")}
+    </Button>
   );
 }

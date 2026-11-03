@@ -155,8 +155,35 @@ export function EquipmentWorkspace(p: WorkspaceProps) {
     toast.success(t("copied"));
   };
 
+  const loadedPct = totals.planned > 0 ? Math.min(100, Math.round((totals.loaded / totals.planned) * 100)) : 0;
+  // Someone who only takes equipment along (an artist) starts on the loading checklist.
+  const firstTab =
+    p.stage === "returning" || p.stage === "out" || p.stage === "missing" ? "return" : p.stage === "loading" || (!p.canPlan && p.canHandle) ? "loading" : "packing";
+
   return (
     <div className="grid gap-4">
+      {p.lines.length > 0 && (
+        <div className="grid gap-1.5">
+          <div className="flex justify-between text-sm">
+            <span className="font-medium">{t("progressLabel")}</span>
+            <span className="tabular-nums text-muted-foreground">{t("progress", { loaded: totals.loaded, planned: totals.planned })}</span>
+          </div>
+          <div
+            role="progressbar"
+            aria-label={t("progressLabel")}
+            aria-valuemin={0}
+            aria-valuemax={totals.planned}
+            aria-valuenow={totals.loaded}
+            aria-valuetext={t("progress", { loaded: totals.loaded, planned: totals.planned })}
+            className="h-2.5 overflow-hidden rounded-full bg-muted"
+          >
+            <div className={loadedPct === 100 ? "h-full bg-success" : "h-full bg-primary"} style={{ width: `${loadedPct}%` }} />
+          </div>
+          {totals.planned > totals.loaded && (p.stage === "loading" || p.stage === "packing") && (
+            <p className="w-fit rounded bg-warning/18 px-2 py-0.5 text-xs text-foreground">{t("stillToLoad", { count: totals.planned - totals.loaded })}</p>
+          )}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <EquipmentStagePill stage={p.stage} />
@@ -200,7 +227,7 @@ export function EquipmentWorkspace(p: WorkspaceProps) {
       )}
       {!p.reserving && p.editable && p.lines.length > 0 && <p className="text-sm text-muted-foreground">{t("notReservingYet")}</p>}
 
-      <Tabs defaultValue={p.stage === "returning" || p.stage === "out" || p.stage === "missing" ? "return" : p.stage === "loading" ? "loading" : "packing"}>
+      <Tabs defaultValue={firstTab}>
         <TabsList>
           <TabsTrigger value="packing">{t("tabPacking")}</TabsTrigger>
           <TabsTrigger value="loading">{t("tabLoading")}</TabsTrigger>

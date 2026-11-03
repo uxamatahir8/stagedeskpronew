@@ -51,7 +51,7 @@ async function logoFor(url: string | null | undefined) {
 export async function renderBookingPdf(
   kind: "quote" | "invoice",
   locale: "nl" | "en",
-  input: Omit<PdfData, "kind" | "locale" | "labels" | "agency"> & { agency: Omit<PdfData["agency"], "logo"> & { logo?: string | null } },
+  input: Omit<PdfData, "kind" | "locale" | "labels" | "agency" | "background"> & { agency: Omit<PdfData["agency"], "logo"> & { logo?: string | null } },
 ) {
   const t = createTranslator({ locale, messages: locale === "en" ? en : nl });
   const labels: PdfData["labels"] = {
@@ -76,6 +76,9 @@ export async function renderBookingPdf(
     alreadyPaid: t("pdf.alreadyPaid"),
     toPay: t("pdf.toPay"),
     footer: kind === "invoice" ? t("pdf.payWithin", { number: input.number }) : input.agency.name,
+    payTo: t("pdf.payTo"),
+    // Filled in per page by the document ({page}, {pages}, {number} stay as placeholders here).
+    page: t.raw("pdf.page") as string,
   };
   const data: PdfData = {
     ...input,
@@ -83,6 +86,8 @@ export async function renderBookingPdf(
     locale,
     labels,
     agency: { ...input.agency, logo: await logoFor(input.agency.logo) },
+    // Same loader as the logo: only the agency's own uploaded PNG or JPEG files.
+    background: input.template?.backgroundUrl ? await logoFor(input.template.backgroundUrl) : null,
     vatGroups: input.vatGroups as VatGroup[],
   };
   return renderToBuffer(createElement(BookingDocument, { data }) as Parameters<typeof renderToBuffer>[0]);

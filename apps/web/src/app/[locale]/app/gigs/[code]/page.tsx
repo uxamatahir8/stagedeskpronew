@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { eventDate, percent } from "@/lib/format";
+import { euro, eventDate, percent } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
 import { CompleteGig, RespondGig } from "./gig-actions";
 
@@ -44,7 +44,8 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
   const b = assignment.booking;
 
   // Equipment for this gig, read through the assignment found above (the booking may be another agency's).
-  const [t, format, equipmentLines] = await Promise.all([getTranslations(), getFormatter(), prisma.bookingEquipment.count({ where: { bookingId: b.id } })]);
+  const [t, format, equipmentLines] = await Promise.all([getTranslations(), getFormatter(), prisma.bookingEquipment.aggregate({ where: { bookingId: b.id }, _count: { _all: true }, _sum: { quantity: true, loadedQty: true } })]);
+  const equipmentCount = equipmentLines._count._all;
   const today = todayInNetherlands();
   const eventReached = b.eventDate !== null && b.eventDate.toISOString().slice(0, 10) <= today;
   const dos = listOf(b.dos);
@@ -63,17 +64,20 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
             <AssignmentStatusBadge status={assignment.status as "pending"} />
           </div>
           <p className="text-muted-foreground">
-            {b.organization.name} · {t("gigs.yourShare", { pct: percent(format, assignment.shareBps) })}
+            {b.organization.name} ·{" "}
+            {assignment.compensationType === "fixed" && assignment.fixedFeeCents !== null
+              ? t("gigs.yourFee", { amount: euro(format, assignment.fixedFeeCents, b.currency) })
+              : t("gigs.yourShare", { pct: percent(format, assignment.shareBps) })}
           </p>
         </div>
         {assignment.status === "pending" && <RespondGig assignmentId={assignment.id} />}
         <div className="flex flex-wrap gap-2">
           {assignment.status === "accepted" && b.status === "confirmed" && eventReached && <CompleteGig assignmentId={assignment.id} />}
-          {equipmentLines > 0 && (
-            <Button asChild variant="outline" size="sm">
+          {equipmentCount > 0 && (
+            <Button asChild variant={assignment.status === "accepted" ? "default" : "outline"} size="sm">
               <Link href={`/app/gigs/${b.trackingCode}/equipment`}>
                 <BoxesIcon />
-                {t("equipment.title")}
+                {t("equipment.checklist", { loaded: equipmentLines._sum.loadedQty ?? 0, planned: equipmentLines._sum.quantity ?? 0 })}
               </Link>
             </Button>
           )}

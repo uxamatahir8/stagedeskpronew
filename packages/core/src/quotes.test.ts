@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeQuote, lineSubtotal, parseEuros, parseQuantity } from "./quotes";
+import { computeQuote, depositColumns, depositFor, depositRuleOf, lineSubtotal, parseEuros, parseQuantity, quoteChangedFields, quoteEventSnapshot } from "./quotes";
 
 describe("computeQuote", () => {
   it("prices a wedding quote with two VAT rates", () => {
@@ -72,5 +72,56 @@ describe("parsers", () => {
     expect(parseEuros("125,5")).toBe(12_550);
     expect(parseEuros("-50")).toBe(-5_000);
     expect(parseEuros("12,34,5")).toBeNull();
+  });
+});
+
+describe("deposit rules", () => {
+  const lines = [{ description: "DJ", quantityHundredths: 100, unitPriceCents: 100_000, vatBps: 2_100 }];
+
+  it("no upfront payment means a deposit of 0", () => {
+    expect(computeQuote(lines, { type: "none" }).depositCents).toBe(0);
+    expect(computeQuote(lines, 0).depositCents).toBe(0);
+  });
+
+  it("a percentage works as before, given as a rule or as basis points", () => {
+    expect(computeQuote(lines, { type: "percentage", bps: 3_000 }).depositCents).toBe(36_300);
+    expect(computeQuote(lines, 3_000).depositCents).toBe(36_300);
+  });
+
+  it("a fixed amount is taken as is and never exceeds the total", () => {
+    const q = computeQuote(lines, { type: "fixed", cents: 25_000 });
+    expect(q.depositCents).toBe(25_000);
+    expect(q.balanceCents).toBe(121_000 - 25_000);
+    expect(computeQuote(lines, { type: "fixed", cents: 500_000 }).depositCents).toBe(121_000);
+  });
+
+  it("refuses impossible rules", () => {
+    expect(() => computeQuote(lines, { type: "percentage", bps: 10_001 })).toThrow(RangeError);
+    expect(() => computeQuote(lines, { type: "fixed", cents: -1 })).toThrow(RangeError);
+    expect(() => computeQuote(lines, { type: "fixed", cents: 1.5 })).toThrow(RangeError);
+  });
+
+  it("reads stored columns, old quotes included", () => {
+    expect(depositRuleOf({ depositBps: 3_000 })).toEqual({ type: "percentage", bps: 3_000 });
+    expect(depositRuleOf({ depositType: "none", depositBps: 0 })).toEqual({ type: "none" });
+    expect(depositRuleOf({ depositType: "fixed", depositBps: 0, depositFixedCents: 20_000 })).toEqual({ type: "fixed", cents: 20_000 });
+    expect(depositColumns({ type: "fixed", cents: 20_000 })).toEqual({ depositType: "fixed", depositBps: 0, depositFixedCents: 20_000 });
+    expect(depositFor({ type: "fixed", cents: 20_000 }, 0)).toBe(0);
+  });
+});
+
+describe("quote event snapshot", () => {
+  const booking = { eventType: "wedding", eventDate: new Date("2027-06-12T00:00:00Z"), startTime: "20:00", endTime: null, venueName: "Tivoli", venueAddress: null, venueCity: "Utrecht", guestCount: 100 };
+  it("matches the booking it was taken from, ignoring case and empty vs null", () => {
+    const snap = quoteEventSnapshot(booking);
+    expect(snap.eventDate).toBe("2027-06-12");
+    expect(quoteChangedFields(snap, quoteEventSnapshot({ ...booking, venueCity: "utrecht ", endTime: "" as unknown as null }))).toEqual([]);
+  });
+  it("names what changed", () => {
+    const snap = quoteEventSnapshot(booking);
+    expect(quoteChangedFields(snap, quoteEventSnapshot({ ...booking, eventDate: "2027-06-13", guestCount: 140 }))).toEqual(["eventDate", "guestCount"]);
+  });
+  it("treats older quotes without a snapshot as matching", () => {
+    expect(quoteChangedFields(null, quoteEventSnapshot(booking))).toEqual([]);
   });
 });

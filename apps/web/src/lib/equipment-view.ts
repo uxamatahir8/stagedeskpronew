@@ -1,5 +1,5 @@
 import "server-only";
-import { bookingEquipment, listPackages, pickableItems } from "@stagedesk/db";
+import { availabilityFor, bookingEquipment, listPackages, pickableItems } from "@stagedesk/db";
 import type { WorkspaceProps } from "@/components/inventory/equipment-workspace";
 import type { EquipmentAccess } from "@/lib/equipment-access";
 
@@ -8,12 +8,23 @@ import type { EquipmentAccess } from "@/lib/equipment-access";
  * client. Artists get the same lines without anything private (no serial
  * numbers or notes are selected here at all) and without the item picker.
  */
-export async function equipmentWorkspace(access: EquipmentAccess, labels: { kind: (kind: string) => string; status: (status: string) => string }) {
+export async function equipmentWorkspace(
+  access: EquipmentAccess,
+  labels: { kind: (kind: string) => string; status: (status: string) => string; free?: (free: number) => string; taken?: string },
+) {
   const view = await bookingEquipment(access.organizationId, access.bookingId);
   if (!view) return null;
   const [items, packages] = access.canPlan
     ? await Promise.all([pickableItems(access.organizationId), listPackages(access.organizationId)])
     : [[], []];
+  // What is free on the booking's date (other bookings' reservations and gear still out), as reserving would see it.
+  const free = view.date && items.length ? await availabilityFor(access.organizationId, items.map((i) => i.id), view.date, access.bookingId) : null;
+  const freeLabel = (id: string, tracking: string, kind: string) => {
+    const a = free?.get(id);
+    if (!a || kind === "set") return "";
+    if (tracking === "bulk") return labels.free ? ` · ${labels.free(Math.max(0, a.free))}` : "";
+    return a.free < 1 && labels.taken ? ` · ${labels.taken}` : "";
+  };
   const props: Omit<WorkspaceProps, "title" | "printHref"> = {
     code: access.trackingCode,
     stage: view.stage,
@@ -52,7 +63,7 @@ export async function equipmentWorkspace(access: EquipmentAccess, labels: { kind
         id: i.id,
         kind: i.kind,
         tracking: i.tracking,
-        label: `${i.code} · ${i.name}${i.kind !== "item" ? ` (${labels.kind(i.kind)})` : ""}${i.tracking === "bulk" ? ` · ${i.quantity - i.defectiveQty}` : ""}${i.status !== "available" && i.kind !== "set" ? ` · ${labels.status(i.status)}` : ""}`,
+        label: `${i.code} · ${i.name}${i.kind !== "item" ? ` (${labels.kind(i.kind)})` : ""}${i.tracking === "bulk" ? ` · ${i.quantity - i.defectiveQty}` : ""}${i.status !== "available" && i.kind !== "set" ? ` · ${labels.status(i.status)}` : freeLabel(i.id, i.tracking, i.kind)}`,
       })),
     packages: packages.map((p) => ({ id: p.id, name: p.name })),
     canPlan: access.canPlan,

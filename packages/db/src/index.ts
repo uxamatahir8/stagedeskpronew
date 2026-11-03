@@ -37,3 +37,6 @@ export * from "./inquiries";
 export * from "./generated/prisma/client";
 export * from "./newsletter";
 export * from "./dashboards";
+export * from "./artist-admin";
+export * from "./detail-requests";
+export * from "./email-outbox";

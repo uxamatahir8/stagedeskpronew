@@ -1,7 +1,7 @@
 import { localePrefix } from "@stagedesk/core";
 import "server-only";
 
-export { deliver } from "./deliver";
+export { accepted, deliver, type DeliveryReceipt } from "./deliver";
 
 export const appUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
 

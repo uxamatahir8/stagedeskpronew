@@ -4,6 +4,16 @@ import type { EmailJob } from "@stagedesk/emails";
 
 type Locale = "nl" | "en";
 const localeOf = (value: string | null | undefined): Locale => (value === "nl" ? "nl" : "en");
+/** A customer gets reminders in the language their quote was sent in; before quotes stored one, their account's. */
+const customerLocale = (b: { quotes: { locale: string | null }[] }, customer: { locale: string | null }): Locale => {
+  const sent = b.quotes[0]?.locale;
+  return sent === "nl" || sent === "en" ? sent : localeOf(customer.locale);
+};
+/** Customer mail is signed by the agency (display name and Reply-To; the address stays the platform's). */
+const senderOf = (org: { name: string; emailFromName: string | null; emailReplyTo: string | null; contactEmail: string | null }) => ({
+  name: org.emailFromName?.trim() || org.name,
+  replyTo: org.emailReplyTo || org.contactEmail,
+});
 const appUrl = process.env["APP_URL"] ?? process.env["BETTER_AUTH_URL"] ?? "http://localhost:3000";
 const link = (locale: Locale, path: string) => `${appUrl}${localePrefix(locale)}${path}`;
 const firstName = (name: string) => name.split(/\s+/)[0] ?? name;
@@ -45,11 +55,12 @@ export async function sendReminders(queue: (job: EmailJob, jobId?: string) => Pr
       await attempt(key, async () => {
         const artist = b.assignments[0]?.artist;
         if (b.customer) {
-          const locale = localeOf(b.customer.locale);
+          const locale = customerLocale(b, b.customer);
           await queue(
             {
               kind: "eventReminder",
               to: b.customer.email,
+              sender: senderOf(b.organization),
               params: { locale, days, name: firstName(b.customer.name), event: eventNames[locale][b.eventType] ?? b.eventType, date: date(locale, eventDate), agency: b.organization.name, url: link(locale, `/app/event?booking=${b.trackingCode}`) },
             },
             `${key}:customer`,
@@ -81,11 +92,12 @@ export async function sendReminders(queue: (job: EmailJob, jobId?: string) => Pr
     if (!quote || !customer) continue;
     const key = `quote-expiring:${quote.id}`;
     await attempt(key, async () => {
-      const locale = localeOf(customer.locale);
+      const locale = customerLocale(b, customer);
       await queue(
         {
           kind: "quoteExpiring",
           to: customer.email,
+          sender: senderOf(b.organization),
           params: {
             locale,
             name: firstName(customer.name),
@@ -105,11 +117,12 @@ export async function sendReminders(queue: (job: EmailJob, jobId?: string) => Pr
     const eventDate = b.eventDate;
     const key = `balance:${b.id}`;
     await attempt(key, async () => {
-      const locale = localeOf(customer.locale);
+      const locale = customerLocale(b, customer);
       await queue(
         {
           kind: "balanceDue",
           to: customer.email,
+          sender: senderOf(b.organization),
           params: { locale, name: firstName(customer.name), amount: money(locale, b.totalCents - b.paidCents, b.currency), date: date(locale, eventDate), agency: b.organization.name, url: link(locale, "/app/my-payments") },
         },
         key,

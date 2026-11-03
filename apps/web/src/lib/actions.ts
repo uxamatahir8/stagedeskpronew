@@ -29,7 +29,9 @@ export async function runAction(task: () => Promise<string | void>, success?: st
       const items =
         conflicts.map((c) => (c.requested > 1 ? `${c.code} (${t("freeOf", { free: c.free, requested: c.requested })})` : c.code)).join(", ") ||
         // Bookings a stock change would leave short.
-        (error instanceof InventoryError && Array.isArray(error.detail?.["codes"]) ? (error.detail["codes"] as string[]).join(", ") : "");
+        (error instanceof InventoryError && Array.isArray(error.detail?.["codes"]) ? (error.detail["codes"] as string[]).join(", ") : "") ||
+        // Serial numbers that are already used (adding a batch of devices).
+        (error instanceof InventoryError && Array.isArray(error.detail?.["serials"]) ? (error.detail["serials"] as string[]).join(", ") : "");
       return { ok: false, message: items ? `${t(error.code)} ${items}` : t(error.code) };
     }
     console.error("[action]", error);

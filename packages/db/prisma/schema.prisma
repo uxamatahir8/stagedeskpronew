@@ -209,6 +209,25 @@ model Organization {
   artistRequestsMade  ArtistRequest[]  @relation("ArtistRequestBorrower")
   artistRequestsIn    ArtistRequest[]  @relation("ArtistRequestLender")
 
+  /// Language for customer emails and documents when the customer hasn't chosen one (nl | en).
+  correspondenceLocale      String                 @default("nl") @db.VarChar(8)
+  /// Upfront payment new quotes start with: none | percentage | fixed. null = the platform default percentage.
+  defaultDepositType        String?                @db.VarChar(16)
+  defaultDepositBps         Int?
+  defaultDepositFixedCents  Int?
+  /// Invoice numbers: yearly (2027-0042) | continuous (000042), with an optional prefix.
+  invoiceNumbering          String                 @default("yearly") @db.VarChar(16)
+  invoicePrefix             String?                @db.VarChar(12)
+  /// Owners and admins may type an invoice's number instead of taking the next one.
+  allowManualInvoiceNumbers Boolean                @default(false)
+  /// Invoice look (InvoiceTemplate in core): colours, header/footer text, background image. null = defaults.
+  invoiceTemplate           Json?
+  /// Display name on customer emails ("Feestband Utrecht via StageDesk"); null = the agency name.
+  emailFromName             String?                @db.VarChar(120)
+  /// Where customer replies go; null = contactEmail.
+  emailReplyTo              String?                @db.VarChar(191)
+  detailRequests            BookingDetailRequest[]
+
   /// Other agencies may browse this agency's equipment (read-only, public fields only). Off by default.
   inventorySharing       Boolean                @default(false)
   /// Assigned artists may record loading and returns on their gigs.
@@ -287,37 +306,40 @@ model RateLimit {
 
 /// A performer an agency books. userId links the artist's own login, if any.
 model Artist {
-  id                String                 @id @db.VarChar(64)
-  organizationId    String                 @db.VarChar(64)
-  organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId            String?                @db.VarChar(64)
-  user              User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  stageName         String                 @db.VarChar(120)
-  bio               String?                @db.Text
+  id                   String                 @id @db.VarChar(64)
+  organizationId       String                 @db.VarChar(64)
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId               String?                @db.VarChar(64)
+  user                 User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  stageName            String                 @db.VarChar(120)
+  bio                  String?                @db.Text
   /// string[]
-  genres            Json
-  photoUrl          String?                @db.Text
+  genres               Json
+  photoUrl             String?                @db.Text
   /// Shown on the agency's public booking page.
-  showOnBookingPage Boolean                @default(true)
+  showOnBookingPage    Boolean                @default(true)
   /// string[]: YouTube, Vimeo, SoundCloud or Mixcloud links
-  mediaLinks        Json?
+  mediaLinks           Json?
   /// Default share of each booking payment, in basis points.
-  defaultShareBps   Int                    @default(4000)
+  defaultShareBps      Int                    @default(4000)
+  /// percentage (defaultShareBps) | fixed (defaultFixedFeeCents per booking, in the agency's currency).
+  compensationType     String                 @default("percentage") @db.VarChar(16)
+  defaultFixedFeeCents Int?
   /// Other agencies may ask to book this artist for one of their bookings, for an agreed fee.
-  lendable          Boolean                @default(false)
+  lendable             Boolean                @default(false)
   /// Independent artists: one line under their name in the directory, and their lowest price.
-  headline          String?                @db.VarChar(160)
-  priceFromCents    Int?
-  listings          GigListing[]
-  requests          ArtistRequest[]
-  active            Boolean                @default(true)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  assignments       BookingAssignment[]
-  unavailability    ArtistUnavailability[]
-  shares            ArtistShare[]
-  reviews           Review[]
-  connectedAccount  ConnectedAccount?
+  headline             String?                @db.VarChar(160)
+  priceFromCents       Int?
+  listings             GigListing[]
+  requests             ArtistRequest[]
+  active               Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  assignments          BookingAssignment[]
+  unavailability       ArtistUnavailability[]
+  shares               ArtistShare[]
+  reviews              Review[]
+  connectedAccount     ConnectedAccount?
 
   @@unique([organizationId, userId])
   @@index([organizationId, active])
@@ -365,66 +387,66 @@ model ArtistShare {
 
 /// One event for one customer. Status changes go through transition() in core.
 model Booking {
-  id                   String              @id @db.VarChar(64)
-  organizationId       String              @db.VarChar(64)
-  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id                   String                 @id @db.VarChar(64)
+  organizationId       String                 @db.VarChar(64)
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   /// Public reference, e.g. K7Q2M9XA.
-  trackingCode         String              @unique @db.VarChar(8)
+  trackingCode         String                 @unique @db.VarChar(8)
   /// The agency's currency when the booking was made; all amounts on it are in this currency.
-  currency             String              @default("EUR") @db.VarChar(3)
-  status               String              @default("inquiry") @db.VarChar(16)
-  customerId           String?             @db.VarChar(64)
-  customer             User?               @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
-  eventType            String              @db.VarChar(24)
-  eventDate            DateTime?           @db.Date
-  startTime            String?             @db.VarChar(5)
-  endTime              String?             @db.VarChar(5)
-  venueName            String?             @db.VarChar(191)
-  venueAddress         String?             @db.VarChar(191)
-  venueCity            String?             @db.VarChar(96)
+  currency             String                 @default("EUR") @db.VarChar(3)
+  status               String                 @default("inquiry") @db.VarChar(16)
+  customerId           String?                @db.VarChar(64)
+  customer             User?                  @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  eventType            String                 @db.VarChar(24)
+  eventDate            DateTime?              @db.Date
+  startTime            String?                @db.VarChar(5)
+  endTime              String?                @db.VarChar(5)
+  venueName            String?                @db.VarChar(191)
+  venueAddress         String?                @db.VarChar(191)
+  venueCity            String?                @db.VarChar(96)
   guestCount           Int?
   budgetCents          Int?
   /// The customer's own words from the inquiry.
-  message              String?             @db.Text
-  partnerName          String?             @db.VarChar(191)
+  message              String?                @db.Text
+  partnerName          String?                @db.VarChar(191)
   /// string[]
   dos                  Json?
   /// string[]
   donts                Json?
-  playlistUrl          String?             @db.VarChar(500)
+  playlistUrl          String?                @db.VarChar(500)
   /// From the public inquiry form.
-  preferredArtistId    String?             @db.VarChar(64)
-  preferredGenre       String?             @db.VarChar(96)
+  preferredArtistId    String?                @db.VarChar(64)
+  preferredGenre       String?                @db.VarChar(96)
   /// Key from core's budgetRanges, e.g. "750_1500".
-  budgetRange          String?             @db.VarChar(16)
+  budgetRange          String?                @db.VarChar(16)
   ceremony             Boolean?
   /// manual | booking_page | lead | gig | profile
-  source               String              @default("manual") @db.VarChar(16)
+  source               String                 @default("manual") @db.VarChar(16)
   /// The gig an independent artist offered that the customer ordered (source "gig").
-  listingId            String?             @db.VarChar(64)
-  listing              GigListing?         @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listingId            String?                @db.VarChar(64)
+  listing              GigListing?            @relation(fields: [listingId], references: [id], onDelete: SetNull)
   /// Copied from the accepted quote.
-  totalCents           Int                 @default(0)
-  depositCents         Int                 @default(0)
+  totalCents           Int                    @default(0)
+  depositCents         Int                    @default(0)
   /// Sum of received payments, kept in step by recordPayment().
-  paidCents            Int                 @default(0)
+  paidCents            Int                    @default(0)
   quoteExpiresAt       DateTime?
   /// { rule: FeeRule; stripeFeePaidBy } frozen when the quote is accepted.
   feeSnapshot          Json?
   /// A customer opened a card dispute; payouts wait until it's resolved.
-  disputed             Boolean             @default(false)
+  disputed             Boolean                @default(false)
   /// When Stripe money was transferred to the agency and artist.
   paidOutAt            DateTime?
-  cancelReason         String?             @db.Text
-  createdById          String?             @db.VarChar(64)
+  cancelReason         String?                @db.Text
+  createdById          String?                @db.VarChar(64)
   quotedAt             DateTime?
   bookedAt             DateTime?
   confirmedAt          DateTime?
   completedAt          DateTime?
   settledAt            DateTime?
   cancelledAt          DateTime?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   assignments          BookingAssignment[]
   events               BookingEvent[]
   notes                BookingNote[]
@@ -439,6 +461,7 @@ model Booking {
   /// Set when the agency finished checking equipment back in; anything still out is then missing.
   equipmentCheckedInAt DateTime?
   equipment            BookingEquipment[]
+  detailRequests       BookingDetailRequest[]
 
   /// Target of the equipment lines' composite foreign key (same agency).
   @@unique([organizationId, id])
@@ -450,20 +473,23 @@ model Booking {
 
 /// An artist asked to perform at a booking. One open assignment per booking.
 model BookingAssignment {
-  id             String       @id @db.VarChar(64)
-  organizationId String       @db.VarChar(64)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  bookingId      String       @db.VarChar(64)
-  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  artistId       String       @db.VarChar(64)
-  artist         Artist       @relation(fields: [artistId], references: [id], onDelete: Restrict)
+  id               String       @id @db.VarChar(64)
+  organizationId   String       @db.VarChar(64)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId        String       @db.VarChar(64)
+  booking          Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  artistId         String       @db.VarChar(64)
+  artist           Artist       @relation(fields: [artistId], references: [id], onDelete: Restrict)
   /// pending | accepted | declined | withdrawn
-  status         String       @db.VarChar(16)
+  status           String       @db.VarChar(16)
   /// Artist's share for this booking, copied when assigned.
-  shareBps       Int
-  declineReason  String?      @db.Text
-  respondedAt    DateTime?
-  createdAt      DateTime     @default(now())
+  shareBps         Int
+  /// percentage (shareBps) | fixed (fixedFeeCents, in the booking's currency). Copied when assigned; old rows are percentage.
+  compensationType String       @default("percentage") @db.VarChar(16)
+  fixedFeeCents    Int?
+  declineReason    String?      @db.Text
+  respondedAt      DateTime?
+  createdAt        DateTime     @default(now())
 
   @@index([bookingId, status])
   @@index([artistId, status])
@@ -528,31 +554,39 @@ model ServiceItem {
 
 /// A versioned price offer for a booking. Totals are stored as sent.
 model Quote {
-  id             String       @id @db.VarChar(64)
-  organizationId String       @db.VarChar(64)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  bookingId      String       @db.VarChar(64)
-  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  version        Int
+  id                String       @id @db.VarChar(64)
+  organizationId    String       @db.VarChar(64)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId         String       @db.VarChar(64)
+  booking           Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  version           Int
   /// draft | sent | accepted | superseded | declined
-  status         String       @db.VarChar(16)
+  status            String       @db.VarChar(16)
   /// Secret for the customer's /q/<token> link.
-  token          String       @unique @db.VarChar(64)
-  notes          String?      @db.Text
-  depositBps     Int
-  subtotalCents  Int
-  vatCents       Int
-  totalCents     Int
-  depositCents   Int
+  token             String       @unique @db.VarChar(64)
+  notes             String?      @db.Text
+  /// none | percentage (depositBps) | fixed (depositFixedCents). Old quotes are percentage.
+  depositType       String       @default("percentage") @db.VarChar(16)
+  depositBps        Int
+  depositFixedCents Int?
+  /// Language the quote was sent in (emails, PDF, reminders); null on quotes from before it was stored.
+  locale            String?      @db.VarChar(8)
+  /// The event details the quote was made for (QuoteEventSnapshot in core). The customer accepts these;
+  /// when the booking's details change the quote is outdated and must be revised. null on older quotes.
+  eventSnapshot     Json?
+  subtotalCents     Int
+  vatCents          Int
+  totalCents        Int
+  depositCents      Int
   /// VatGroup[]
-  vatGroups      Json
-  expiresAt      DateTime
-  sentAt         DateTime?
-  acceptedAt     DateTime?
-  acceptedByName String?      @db.VarChar(191)
-  createdById    String?      @db.VarChar(64)
-  createdAt      DateTime     @default(now())
-  items          QuoteItem[]
+  vatGroups         Json
+  expiresAt         DateTime
+  sentAt            DateTime?
+  acceptedAt        DateTime?
+  acceptedByName    String?      @db.VarChar(191)
+  createdById       String?      @db.VarChar(64)
+  createdAt         DateTime     @default(now())
+  items             QuoteItem[]
 
   @@unique([bookingId, version])
   @@index([organizationId, status])
@@ -814,7 +848,9 @@ model Invoice {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   bookingId      String       @db.VarChar(64)
   booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
-  number         String       @db.VarChar(16)
+  number         String       @db.VarChar(32)
+  /// Typed by the agency instead of drawn from the counter (audited).
+  manualNumber   Boolean      @default(false)
   issuedAt       DateTime
   dueAt          DateTime?
   subtotalCents  Int
@@ -1652,11 +1688,11 @@ model NewsletterCampaign {
 
 /// One campaign to one subscriber; the unique key makes sending idempotent.
 model NewsletterDelivery {
-  id           String               @id @db.VarChar(64)
-  campaignId   String               @db.VarChar(64)
-  campaign     NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  subscriberId String               @db.VarChar(64)
-  subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  id            String               @id @db.VarChar(64)
+  campaignId    String               @db.VarChar(64)
+  campaign      NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriberId  String               @db.VarChar(64)
+  subscriber    NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
   /// queued (also while waiting to retry) | sent | failed (permanent, or out of retries)
   status        String               @default("queued") @db.VarChar(16)
   error         String?              @db.VarChar(500)
@@ -1912,4 +1948,67 @@ model EquipmentEvent {
   @@index([organizationId, itemId, createdAt])
   @@index([organizationId, bookingId])
   @@map("equipment_events")
+}
+
+/// A private link the agency sends a customer to fill in a booking's event details
+/// (after a phone call, say). Only the hash of the token is stored; the link
+/// expires, can be revoked, and is used once.
+model BookingDetailRequest {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// sha256 of the link's secret, base64url.
+  tokenHash      String       @unique @db.VarChar(64)
+  locale         String       @default("nl") @db.VarChar(8)
+  /// The booking's updatedAt when the link was made.
+  bookingVersion DateTime
+  /// The event fields when the link was made: a field the agency changed since keeps the agency's value.
+  snapshot       Json
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  submittedAt    DateTime?
+  createdById    String?      @db.VarChar(64)
+  emailedTo      String?      @db.VarChar(191)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, bookingId])
+  @@map("booking_detail_requests")
+}
+
+/// Outbox for email: every message is stored before it is handed to the queue,
+/// so a Redis outage, a crashed worker or a failed SMTP call leaves a row to
+/// retry instead of losing the message. One send per row (claimed with a
+/// lease); `key` makes a repeated request store nothing new. Agency id, not
+/// organizationId, so it stays outside the tenant-scoped client.
+model EmailMessage {
+  id                String    @id @db.VarChar(64)
+  /// Idempotency key from the business record, e.g. quote:<id> or gig-new:<assignment id>.
+  key               String?   @unique @db.VarChar(191)
+  kind              String    @db.VarChar(40)
+  to                String    @db.VarChar(191)
+  /// The EmailJob; cleared after sending for mail that carries a sign-in or setup secret.
+  job               Json?
+  agencyId          String?   @db.VarChar(64)
+  bookingId         String?   @db.VarChar(64)
+  /// pending (stored) | queued (Redis accepted) | sending (claimed) | sent (SMTP server accepted) | suppressed (intentionally not sent) | failed (retry planned) | dead (gave up)
+  status            String    @default("pending") @db.VarChar(12)
+  attempts          Int       @default(0)
+  lastError         String?   @db.Text
+  nextAttemptAt     DateTime  @default(now())
+  lockedUntil       DateTime?
+  /// Unique owner of the current sending lease. Completion/failure updates must present it.
+  leaseToken        String?   @db.VarChar(64)
+  queuedAt          DateTime?
+  sentAt            DateTime?
+  /// The Message-ID the SMTP server accepted. Acceptance, not delivery to the inbox.
+  providerMessageId String?   @db.VarChar(191)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([bookingId, createdAt])
+  @@index([agencyId, createdAt])
+  @@map("email_messages")
 }

@@ -1,0 +1,181 @@
+import { randomUUID } from "node:crypto";
+import { auditTx, type AuditInput } from "./audit";
+import { withdrawArtist } from "./bookings";
+import { prisma } from "./client";
+
+/**
+ * Platform support for artists an agency can't sort out itself: see
+ * everything about one artist, take them off upcoming gigs, deactivate,
+ * revoke sharing, fix the linked account, and delete only what has no
+ * history. Each change needs a reason and is audited; bookings, payments and
+ * ledger rows are never removed (artists with history are deactivated).
+ */
+
+export class ArtistAdminError extends Error {
+  constructor(readonly code: "not_found" | "has_history" | "has_upcoming" | "user_not_found" | "user_taken" | "user_not_allowed" | "reason_required") {
+    super(`Artist admin: ${code}`);
+    this.name = "ArtistAdminError";
+  }
+}
+
+const upcomingStatuses = ["booked", "confirmed"];
+
+/** Everything support needs to see about one artist. */
+export async function artistAdminDetail(artistId: string) {
+  const artist = await prisma.artist.findUnique({
+    where: { id: artistId },
+    include: {
+      organization: { select: { id: true, name: true, slug: true, kind: true, suspendedAt: true } },
+      user: { select: { id: true, name: true, email: true, emailVerified: true, disabledAt: true, platformRole: true, _count: { select: { accounts: true } } } },
+      shares: { include: { partnerOrganization: { select: { id: true, name: true } } }, orderBy: { createdAt: "desc" } },
+      connectedAccount: { select: { payoutsEnabled: true } },
+    },
+  });
+  if (!artist) return null;
+  const [active, history, ledger, reviews, requests] = await Promise.all([
+    prisma.bookingAssignment.findMany({
+      where: { artistId, status: { in: ["pending", "accepted"] } },
+      include: { booking: { select: { id: true, trackingCode: true, status: true, eventDate: true, organizationId: true, organization: { select: { name: true } } } } },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.bookingAssignment.count({ where: { artistId } }),
+    prisma.ledgerEntry.count({ where: { artistId } }),
+    prisma.review.count({ where: { artistId } }),
+    prisma.artistRequest.count({ where: { artistId } }),
+  ]);
+  return {
+    artist,
+    active: active.filter((a) => upcomingStatuses.includes(a.booking.status)),
+    history: { assignments: history, ledger, reviews, requests },
+    deletable: history + ledger + reviews + requests === 0,
+  };
+}
+
+async function auditArtist(input: Omit<AuditInput, "targetType">) {
+  await prisma.$transaction((tx) => auditTx(tx, { ...input, targetType: "artist" }));
+}
+
+function needReason(reason: string | null | undefined) {
+  const r = reason?.trim();
+  if (!r) throw new ArtistAdminError("reason_required");
+  return r.slice(0, 500);
+}
+
+/** Takes the artist off every upcoming gig, at whichever agency it is; the agencies are told. */
+export async function withdrawArtistEverywhere(artistId: string, actorId: string, reason: string, now = new Date()) {
+  const why = needReason(reason);
+  const active = await prisma.bookingAssignment.findMany({
+    where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: upcomingStatuses } } },
+    select: { bookingId: true, organizationId: true },
+  });
+  const done: string[] = [];
+  for (const a of active) done.push(...(await withdrawArtist(a.organizationId, a.bookingId, artistId, actorId, why, now)));
+  await auditArtist({ actorId, action: "artist.withdraw", targetId: artistId, data: { assignments: done.length, reason: why } });
+  return done.length;
+}
+
+/**
+ * Deactivates an artist: off the booking page, not lendable, not bookable.
+ * Refused while they're on upcoming gigs unless `withdraw` also takes them off.
+ */
+export async function deactivateArtist(artistId: string, actorId: string, reason: string, opts: { withdraw?: boolean } = {}) {
+  const why = needReason(reason);
+  const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { id: true, organizationId: true } });
+  if (!artist) throw new ArtistAdminError("not_found");
+  const upcoming = await prisma.bookingAssignment.count({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: upcomingStatuses } } } });
+  if (upcoming > 0 && !opts.withdraw) throw new ArtistAdminError("has_upcoming");
+  if (upcoming > 0) await withdrawArtistEverywhere(artistId, actorId, why);
+  await prisma.$transaction(async (tx) => {
+    await tx.artist.update({ where: { id: artistId }, data: { active: false, showOnBookingPage: false, lendable: false } });
+    await auditTx(tx, { actorId, action: "artist.deactivate", agencyId: artist.organizationId, targetType: "artist", targetId: artistId, data: { reason: why } });
+  });
+}
+
+export async function reactivateArtist(artistId: string, actorId: string, reason: string) {
+  const why = needReason(reason);
+  const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { organizationId: true } });
+  if (!artist) throw new ArtistAdminError("not_found");
+  await prisma.$transaction(async (tx) => {
+    await tx.artist.update({ where: { id: artistId }, data: { active: true } });
+    await auditTx(tx, { actorId, action: "artist.reactivate", agencyId: artist.organizationId, targetType: "artist", targetId: artistId, data: { reason: why } });
+  });
+}
+
+/** Ends every share of the artist with partner agencies (gigs already assigned there are left to withdrawArtistEverywhere). */
+export async function revokeArtistShares(artistId: string, actorId: string, reason: string) {
+  const why = needReason(reason);
+  const count = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.artistShare.updateMany({ where: { artistId, status: { in: ["pending", "accepted"] } }, data: { status: "revoked", respondedAt: new Date() } });
+    await auditTx(tx, { actorId, action: "artist.revoke_shares", targetType: "artist", targetId: artistId, data: { shares: count, reason: why } });
+    return count;
+  });
+  return count;
+}
+
+/**
+ * Removes the link between the artist profile and a user account: the user
+ * no longer sees the profile's gigs or earnings. Their artist membership of
+ * the agency goes too when no other artist profile there uses it. The
+ * account itself is kept.
+ */
+export async function unlinkArtistUser(artistId: string, actorId: string, reason: string) {
+  const why = needReason(reason);
+  await prisma.$transaction(async (tx) => {
+    const artist = await tx.artist.findUnique({ where: { id: artistId }, select: { userId: true, organizationId: true } });
+    if (!artist) throw new ArtistAdminError("not_found");
+    if (!artist.userId) return;
+    await tx.artist.update({ where: { id: artistId }, data: { userId: null } });
+    const others = await tx.artist.count({ where: { organizationId: artist.organizationId, userId: artist.userId } });
+    if (others === 0) await tx.member.deleteMany({ where: { organizationId: artist.organizationId, userId: artist.userId, role: "artist" } });
+    await auditTx(tx, { actorId, action: "artist.unlink", agencyId: artist.organizationId, targetType: "artist", targetId: artistId, data: { userId: artist.userId, reason: why } });
+  });
+}
+
+/**
+ * Links the profile to the right account (fixing a wrong link): an existing
+ * user who isn't a platform admin, isn't on the agency's team and has no
+ * other profile at this agency. They become an artist member if needed.
+ */
+export async function relinkArtistUser(artistId: string, email: string, actorId: string, reason: string) {
+  const why = needReason(reason);
+  await prisma.$transaction(async (tx) => {
+    const artist = await tx.artist.findUnique({ where: { id: artistId }, select: { userId: true, organizationId: true } });
+    if (!artist) throw new ArtistAdminError("not_found");
+    const user = await tx.user.findUnique({ where: { email: email.trim().toLowerCase() }, select: { id: true, platformRole: true } });
+    if (!user) throw new ArtistAdminError("user_not_found");
+    if (user.platformRole === "platform_admin") throw new ArtistAdminError("user_not_allowed");
+    const membership = await tx.member.findFirst({ where: { organizationId: artist.organizationId, userId: user.id }, select: { role: true } });
+    if (membership && membership.role !== "artist") throw new ArtistAdminError("user_not_allowed");
+    const taken = await tx.artist.findFirst({ where: { organizationId: artist.organizationId, userId: user.id, id: { not: artistId } }, select: { id: true } });
+    if (taken) throw new ArtistAdminError("user_taken");
+    await tx.artist.update({ where: { id: artistId }, data: { userId: user.id } });
+    if (!membership) await tx.member.create({ data: { id: randomUUID(), organizationId: artist.organizationId, userId: user.id, role: "artist" } });
+    // The previous account loses the membership when nothing else uses it.
+    if (artist.userId && artist.userId !== user.id) {
+      const others = await tx.artist.count({ where: { organizationId: artist.organizationId, userId: artist.userId } });
+      if (others === 0) await tx.member.deleteMany({ where: { organizationId: artist.organizationId, userId: artist.userId, role: "artist" } });
+    }
+    await auditTx(tx, { actorId, action: "artist.relink", agencyId: artist.organizationId, targetType: "artist", targetId: artistId, data: { from: artist.userId, to: user.id, reason: why } });
+  });
+}
+
+/**
+ * Deletes an artist profile for good, only when nothing refers to it: no
+ * gigs (also past or withdrawn), payouts, reviews or lending requests.
+ * Anything with history is deactivated instead.
+ */
+export async function deleteArtistProfile(artistId: string, actorId: string, reason: string) {
+  const why = needReason(reason);
+  const detail = await artistAdminDetail(artistId);
+  if (!detail) throw new ArtistAdminError("not_found");
+  if (!detail.deletable) throw new ArtistAdminError("has_history");
+  await prisma.$transaction(async (tx) => {
+    await auditTx(tx, { actorId, action: "artist.delete", agencyId: detail.artist.organizationId, targetType: "artist", targetId: artistId, data: { stageName: detail.artist.stageName, userId: detail.artist.userId, reason: why } });
+    await tx.connectedAccount.deleteMany({ where: { artistId } });
+    await tx.artist.delete({ where: { id: artistId } });
+    if (detail.artist.userId) {
+      const others = await tx.artist.count({ where: { organizationId: detail.artist.organizationId, userId: detail.artist.userId } });
+      if (others === 0) await tx.member.deleteMany({ where: { organizationId: detail.artist.organizationId, userId: detail.artist.userId, role: "artist" } });
+    }
+  });
+}

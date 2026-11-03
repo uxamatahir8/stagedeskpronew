@@ -17,6 +17,7 @@ export const tenantModels = [
   "BookingAssignment",
   "BookingEvent",
   "BookingNote",
+  "BookingDetailRequest",
   "ServiceItem",
   "Quote",
   "QuoteItem",

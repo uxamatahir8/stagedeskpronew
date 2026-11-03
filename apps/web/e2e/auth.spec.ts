@@ -204,14 +204,11 @@ test("a new platform admin gets the account setup email", async ({ browser, requ
   await expect(page.getByRole("heading", { name: "Kies je wachtwoord" })).toBeVisible();
 });
 
-test("a partner the admin adds chooses a password from the welcome email; with a password they're sent to sign in", async ({ browser, request }) => {
-  const admin = await freshPage(browser, "nl-NL");
-  await signInWithCode(admin, request, ADMIN_EMAIL);
-  await settleOnDashboard(admin);
+test.describe.serial("partner onboarding", () => {
   const name = `Pia Partner ${run}`;
   const email = `partner.${run}@test.local`;
 
-  const addPartner = async () => {
+  async function addPartner(admin: Page, request: APIRequestContext) {
     const seen = await mailIds(request, email);
     await admin.goto("/nl/app/affiliates");
     await admin.getByRole("button", { name: "Partner toevoegen" }).click();
@@ -223,16 +220,16 @@ test("a partner the admin adds chooses a password from the welcome email; with a
     await dialog.getByRole("button", { name: "Partner toevoegen" }).click();
     await expect(admin.getByText("Partner toegevoegd.")).toBeVisible();
     return seen;
-  };
+  }
 
-  let link = "";
-  await test.step("a new partner's welcome email links to the password setup (Dutch)", async () => {
-    const seen = await addPartner();
-    link = await fromMail(request, email, /(https?:\/\/\S+\/nl\/reset-password\?token=\w+&setup=1)/, seen);
-  });
+  test("a new partner chooses a password from the Dutch welcome email", async ({ browser, request }) => {
+    const admin = await freshPage(browser, "nl-NL");
+    await signInWithCode(admin, request, ADMIN_EMAIL);
+    await settleOnDashboard(admin);
+    const seen = await addPartner(admin, request);
+    const link = await fromMail(request, email, /(https?:\/\/\S+\/nl\/reset-password\?token=\w+&setup=1)/, seen);
 
-  const partner = await freshPage(browser, "nl-NL");
-  await test.step("the partner chooses a password and signs in with it", async () => {
+    const partner = await freshPage(browser, "nl-NL");
     await partner.goto(link);
     await expect(partner.getByRole("heading", { name: "Kies je wachtwoord" })).toBeVisible();
     await partner.locator("#reset-password").fill(PASSWORD);
@@ -244,22 +241,27 @@ test("a partner the admin adds chooses a password from the welcome email; with a
     await partner.locator("#signin-password").fill(PASSWORD);
     await partner.getByRole("button", { name: "Inloggen", exact: true }).click();
     await expect(partner).toHaveURL(/\/nl\/(app|accept-terms)/, { timeout: 30_000 });
-  });
 
-  await test.step("the used link is refused", async () => {
     const again = await freshPage(browser, "nl-NL");
     await again.goto(link);
     await expect(again.getByText("Deze link is verlopen of al gebruikt.")).toBeVisible();
     await expect(again.locator("#reset-password")).toHaveCount(0);
   });
 
-  await test.step("added again with a password, the email sends them to sign in instead", async () => {
+  test("an existing partner receives a sign-in link when added again", async ({ browser, request }) => {
+    const admin = await freshPage(browser, "nl-NL");
+    await signInWithCode(admin, request, ADMIN_EMAIL);
+    await settleOnDashboard(admin);
     await admin.goto("/nl/app/affiliates?tab=partners");
     await admin.getByRole("button", { name: `Acties voor ${name}` }).click();
     await admin.getByRole("menuitem", { name: "Partner verwijderen" }).click();
+    const removal = admin.waitForResponse((response) => response.request().method() === "POST" && Boolean(response.request().headers()["next-action"]));
     await admin.getByRole("dialog").getByRole("button", { name: "Partner verwijderen" }).click();
-    await expect(admin.getByText("Partner verwijderd.")).toBeVisible();
-    const seen = await addPartner();
+    expect((await removal).ok()).toBe(true);
+    await admin.reload();
+    await expect(admin.getByRole("button", { name: `Acties voor ${name}` })).toHaveCount(0);
+
+    const seen = await addPartner(admin, request);
     const url = await fromMail(request, email, /\[?(https?:\/\/\S+\/nl\/(?:sign-in|reset-password)\S*?)\]?(?:\s|$)/, seen);
     expect(url).toMatch(/\/nl\/sign-in$/);
   });

@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
 
 export const DEMO_PASSWORD = "StageDesk-demo-2026";
 
@@ -14,6 +14,11 @@ export const ADMIN_NAME = process.env["E2E_ADMIN_NAME"] ?? "Iris Platform";
 
 export function passwordFor(email: string) {
   return email === ADMIN_EMAIL ? ADMIN_PASSWORD : DEMO_PASSWORD;
+}
+
+/** Closes pages created from the worker-scoped browser, including on failure. */
+export async function closeBrowserContexts(browser: Browser) {
+  await Promise.all(browser.contexts().map((context) => context.close()));
 }
 
 export async function signIn(page: Page, email: string) {
@@ -39,7 +44,13 @@ export async function submitSignIn(page: Page, email: string) {
       await page.getByRole("button", { name: "Inloggen", exact: true }).click();
     }
     const limited = page.getByText("Te veel pogingen", { exact: false });
-    await expect(limited.or(page.locator('[data-slot="sidebar"]')).or(page.getByLabel(/Ik ga akkoord/)).first()).toBeVisible({ timeout: 30_000 });
+    // Navigation is the durable sign-in boundary. The streamed dashboard can
+    // still be a skeleton while a cold development server compiles the route;
+    // settleOnDashboard waits for its interactive shell separately.
+    await expect(async () => {
+      const signedIn = /\/(?:nl\/)?(?:app|accept-terms)(?:\/|$)/.test(new URL(page.url()).pathname);
+      expect(signedIn || (await limited.isVisible())).toBe(true);
+    }).toPass({ timeout: 60_000 });
     if (!(await limited.isVisible())) return;
     await page.waitForTimeout(61_000);
   }
@@ -83,7 +94,8 @@ export async function settleOnDashboard(page: Page) {
   await expect(gate.or(shell)).toBeVisible({ timeout: 30_000 });
   if (await gate.isVisible()) {
     await acceptTerms(page);
-    await expect(shell).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveURL(/\/app$/, { timeout: 60_000 });
+    await expect(shell).toBeVisible({ timeout: 60_000 });
   }
   await expect(page).toHaveURL(/\/app$/);
   await skipTour(page);

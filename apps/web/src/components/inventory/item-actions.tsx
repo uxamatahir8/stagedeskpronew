@@ -248,3 +248,28 @@ export function ContentsEditor({ containerId, contents, candidates }: { containe
     </div>
   );
 }
+
+/**
+ * The defect actions on an inventory list row, so a broken device can be
+ * taken out of use without opening it: numbered items are marked defective
+ * (reason required; upcoming reservations are only released on
+ * confirmation), counted stock moves units to defective, and a defective
+ * item can be put back in service. The full history is on the item page.
+ */
+export function RowDefectAction({ id, status, bulk, inStock, defectiveQty }: { id: string; status: string; bulk: boolean; inStock: number; defectiveQty: number }) {
+  const t = useTranslations("inventory");
+  if (bulk && status === "available") {
+    return inStock > 0 ? (
+      <NoteAction label={t("reportDefect")} title={t("reportDefectBulk")} description={t("reportDefectHint")} icon={TriangleAlertIcon} quantity={inStock} requireNote run={(n, note, release) => changeDefectiveAction(id, n, note, release)} />
+    ) : defectiveQty > 0 ? (
+      <NoteAction label={t("unitsRepaired")} title={t("unitsRepaired")} quantity={defectiveQty} icon={CircleCheckIcon} run={(n, note) => changeDefectiveAction(id, -n, note)} />
+    ) : null;
+  }
+  if (!bulk && (status === "available" || status === "maintenance")) {
+    return <NoteAction label={t("reportDefect")} title={t("reportDefect")} description={t("reportDefectHint")} icon={TriangleAlertIcon} requireNote run={(_, note, release) => setStatusAction(id, "defective", note, release)} />;
+  }
+  if (!bulk && status === "defective") {
+    return <NoteAction label={t("repaired")} title={t("repaired")} icon={CircleCheckIcon} run={(_, note) => setStatusAction(id, "available", note)} />;
+  }
+  return null;
+}

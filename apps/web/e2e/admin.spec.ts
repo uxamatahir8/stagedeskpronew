@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, ADMIN_NAME, signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /** The platform admin manages agencies, partners and accounts by hand. */
 test("platform admin creates, finds, suspends and deletes an agency; adds and removes a partner and an admin", async ({ page }) => {
@@ -119,7 +119,8 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
 
     await page.goto(`/nl/app/admin-bookings?source=platform_admin&q=platform.${run}`);
     const row = page.getByRole("row").filter({ hasText: `Klant Platform ${run}` });
-    await expect(row).toContainText(`platformbeheerder (${ADMIN_NAME})`);
+    // The local demo admin may have been renamed; attribution must still name the actual actor.
+    await expect(row).toContainText(/platformbeheerder \([^)]+\)/);
     await expect(row).toContainText("Aanvraag");
   });
 

@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { getLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { mediaEmbed } from "@stagedesk/core";
+import { mediaEmbed, parseEuros } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { toggleUnavailable } from "@/lib/availability";
@@ -19,6 +19,9 @@ const artistSchema = z.object({
   genres: z.string().max(500),
   bio: z.string().max(5000).nullable(),
   sharePct: z.number().min(0).max(100),
+  compensationType: z.enum(["percentage", "fixed"]).default("percentage"),
+  /** The fixed amount as typed, for compensationType "fixed". */
+  fixedFee: z.string().max(32).nullable().optional(),
   userId: z.string().max(64).nullable(),
   email: z.string().trim().email().max(191).nullable(),
   active: z.boolean(),
@@ -35,6 +38,19 @@ async function linkableUser(db: Awaited<ReturnType<typeof requireAgency>>["db"],
   return taken ? null : userId;
 }
 
+/**
+ * The account to keep linked: unchanged when the form sends the current one
+ * (an artist whose membership changed mustn't be silently unlinked by an
+ * unrelated edit), otherwise a linkable artist member of this agency.
+ */
+async function keptOrLinkableUser(db: Awaited<ReturnType<typeof requireAgency>>["db"], userId: string | null, artistId: string | null) {
+  if (artistId && userId) {
+    const current = await db.artist.findFirst({ where: { id: artistId }, select: { userId: true } });
+    if (current?.userId === userId) return userId;
+  }
+  return linkableUser(db, userId, artistId);
+}
+
 export async function saveArtistAction(input: z.input<typeof artistSchema>): Promise<ActionResult & { id?: string }> {
   const { organization, db } = await requireAgency("agency.artists.manage");
   // New artists count against the plan; edits only need an active subscription.
@@ -44,6 +60,8 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
   const parsed = artistSchema.safeParse(input);
   if (!parsed.success) return { ok: false, message: t("invalidShare") };
   const d = parsed.data;
+  const fixedCents = d.compensationType === "fixed" ? parseEuros(d.fixedFee ?? "") : null;
+  if (d.compensationType === "fixed" && (fixedCents === null || fixedCents < 0)) return { ok: false, message: t("invalidFixedFee") };
 
   // Only links we know how to embed safely are stored.
   const links = d.mediaLinks.split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 3);
@@ -57,7 +75,10 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
     genres: d.genres.split(",").map((g) => g.trim()).filter(Boolean).slice(0, 12),
     bio: d.bio?.trim() || null,
     defaultShareBps: Math.round(d.sharePct * 100),
-    userId: await linkableUser(db, d.userId, d.id),
+    // Only new assignments take this; gigs already assigned keep the pay they were given.
+    compensationType: d.compensationType,
+    defaultFixedFeeCents: d.compensationType === "fixed" ? fixedCents : null,
+    userId: await keptOrLinkableUser(db, d.userId, d.id),
     active: d.active,
   };
   if (d.id) {

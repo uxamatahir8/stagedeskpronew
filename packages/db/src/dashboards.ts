@@ -200,7 +200,7 @@ export async function artistDashboard(userId: string, now = new Date()) {
   const [earnRows, gigRows, answered, types, agencies, rating] = await Promise.all([
     // The artist's share of gigs that took place, by event month.
     prisma.$queryRaw<MonthRow[]>(Prisma.sql`
-      SELECT DATE_FORMAT(b.eventDate, '%Y-%m') AS month, SUM(FLOOR(b.totalCents * a.shareBps / 10000)) AS total
+      SELECT DATE_FORMAT(b.eventDate, '%Y-%m') AS month, SUM(CASE WHEN a.compensationType = 'fixed' THEN COALESCE(a.fixedFeeCents, 0) ELSE FLOOR(b.totalCents * a.shareBps / 10000) END) AS total
         FROM booking_assignments a JOIN bookings b ON b.id = a.bookingId
        WHERE a.artistId IN (${ids}) AND a.status = 'accepted' AND b.status IN ('completed','settled') AND b.eventDate >= ${since}
        GROUP BY month`),

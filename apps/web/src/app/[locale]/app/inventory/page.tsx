@@ -19,7 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { requireAgency } from "@/lib/viewer";
+import { requireAgency, viewerCan } from "@/lib/viewer";
+import { RowDefectAction } from "@/components/inventory/item-actions";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/inventory">): Promise<Metadata> {
   const t = await getTranslations({ locale: (await params).locale as Locale, namespace: "inventory" });
@@ -37,7 +38,8 @@ export default async function InventoryPage({ params, searchParams }: PageProps<
 
 async function Inventory({ searchParams }: Pick<PageProps<"/[locale]/app/inventory">, "searchParams">) {
   await connection();
-  const { organization, db } = await requireAgency("agency.inventory");
+  const { organization, db, viewer } = await requireAgency("agency.inventory");
+  const canManage = viewerCan(viewer, "agency.inventory.manage");
   const [t, categories, any] = await Promise.all([getTranslations("inventory"), listCategories(organization.id), db.equipmentItem.count()]);
   const spec = {
     sorts: ["code"],
@@ -105,7 +107,7 @@ async function Inventory({ searchParams }: Pick<PageProps<"/[locale]/app/invento
             { key: "kind", label: t("kind"), options: equipmentKinds.map((k) => ({ value: k, label: t(`kind_${k}`) })) },
             ...(categories.length ? [{ key: "category", label: t("category"), options: categories.map((c) => ({ value: c.id, label: c.name })) }] : []),
           ]}
-          columns={[{ label: t("code"), sort: "code" }, { label: t("name") }, { label: t("category"), className: "hidden lg:table-cell" }, { label: t("stock"), align: "right" }, { label: t("status") }]}
+          columns={[{ label: t("code"), sort: "code" }, { label: t("name") }, { label: t("category"), className: "hidden lg:table-cell" }, { label: t("stock"), align: "right" }, { label: t("status") }, ...(canManage ? [{ label: t("actions"), className: "w-px" }] : [])]}
         >
           {list.items.map((item) => (
             <TableRow key={item.id}>
@@ -140,6 +142,13 @@ async function Inventory({ searchParams }: Pick<PageProps<"/[locale]/app/invento
                   {item.excludeFromSharing && <Pill>{t("private")}</Pill>}
                 </div>
               </TableCell>
+              {canManage && (
+                <TableCell className="whitespace-nowrap">
+                  {item.kind !== "set" && (
+                    <RowDefectAction id={item.id} status={item.status} bulk={item.tracking === "bulk"} inStock={item.quantity - item.defectiveQty - item.out} defectiveQty={item.defectiveQty} />
+                  )}
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </ServerTable>

@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { parseInvoiceTemplate, templateBackgroundAllowed } from "@stagedesk/core";
 import { fromDateOnly, prisma } from "@stagedesk/db";
 import { canOpenBooking, pdfLocale, pdfResponse, renderBookingPdf } from "@/lib/pdf/render";
 
@@ -26,7 +27,11 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/q
   if (!allowed) return new Response("Not found", { status: 404 });
 
   const a = quote.organization;
-  const buffer = await renderBookingPdf("quote", pdfLocale(request), {
+  const template = parseInvoiceTemplate(a.invoiceTemplate);
+  if (!templateBackgroundAllowed(template.backgroundUrl, a.id)) template.backgroundUrl = null;
+  const lang = new URL(request.url).searchParams.has("lang") ? pdfLocale(request) : quote.locale === "en" ? "en" : "nl";
+  const buffer = await renderBookingPdf("quote", lang, {
+    template,
     agency: { name: a.name, addressLine: a.addressLine, postalCode: a.postalCode, city: a.city, contactEmail: a.contactEmail, kvkNumber: a.kvkNumber, vatNumber: a.vatNumber, brandColor: a.brandColor, logo: a.logo },
     currency: quote.booking.currency,
     customer: quote.booking.customer,
@@ -34,7 +39,8 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/q
     issued: quote.sentAt ?? quote.createdAt,
     due: quote.expiresAt,
     reference: quote.booking.trackingCode,
-    eventDate: fromDateOnly(quote.booking.eventDate),
+    // The event the quote was made for (older quotes: the booking now).
+    eventDate: (quote.eventSnapshot as { eventDate?: string | null } | null)?.eventDate ?? fromDateOnly(quote.booking.eventDate),
     lines: quote.items,
     vatGroups: quote.vatGroups as never,
     subtotalCents: quote.subtotalCents,

@@ -21,8 +21,7 @@ import {
   setContainer,
   setItemStatus,
   suggestCode,
-  updateItem,
-} from "@stagedesk/db";
+  updateItem, createItems, MAX_BATCH, suggestCodes } from "@stagedesk/db";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
@@ -80,6 +79,34 @@ export async function saveItemAction(itemId: string | null, input: unknown): Pro
     return t("saved");
   });
   return result.ok ? { ...result, id: savedId ?? undefined } : result;
+}
+
+const batchUnits = z
+  .array(z.object({ code: z.string().max(32), serialNumber: z.string().max(96).nullable(), notes: z.string().max(5000).nullable() }))
+  .min(2)
+  .max(MAX_BATCH);
+
+/** Adds several identical numbered devices at once (each its own item); all or nothing. */
+export async function createItemsAction(input: unknown, units: unknown): Promise<ItemResult & { count?: number }> {
+  const { userId, organizationId, blocked } = await agency("agency.inventory.manage");
+  if (blocked) return { ok: false, message: blocked };
+  const t = await getTranslations("inventory");
+  const parsedUnits = batchUnits.safeParse(units);
+  // The shared fields are checked with the first device's number; each number is checked again on its own.
+  const parsed = parsedUnits.success ? equipmentItemSchema.safeParse({ ...(input as object), code: parsedUnits.data[0]!.code, serialNumber: null }) : null;
+  if (!parsedUnits.success || !parsed?.success) return { ok: false, message: t("invalidItem") };
+  let first: string | undefined;
+  const result = await runAction(async () => {
+    const ids = await createItems(organizationId, parsed.data, parsedUnits.data, userId);
+    first = ids[0];
+    return t("savedBatch", { count: ids.length });
+  });
+  return result.ok ? { ...result, id: first, count: parsedUnits.data.length } : result;
+}
+
+export async function suggestCodesAction(prefix: string, count: number): Promise<string[]> {
+  const { organizationId } = await agency("agency.inventory.manage");
+  return suggestCodes(organizationId, z.string().max(32).parse(prefix), z.number().int().min(1).max(MAX_BATCH).parse(count));
 }
 
 export async function suggestCodeAction(prefix: string): Promise<string> {

@@ -1,7 +1,7 @@
 import { CalendarClockIcon, CalendarIcon, HandCoinsIcon, InboxIcon, MapPinIcon, WalletIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType, percentOf, todayInNetherlands } from "@stagedesk/core";
+import { artistEarnings, compensationOf, type EventType, todayInNetherlands } from "@stagedesk/core";
 import { prisma, toDateOnly } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
@@ -23,7 +23,8 @@ export async function ArtistHome({ userId }: { userId: string }) {
     getTranslations("eventTypes"),
     getFormatter(),
     prisma.bookingAssignment.findMany({
-      where: { artist: { userId }, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] }, eventDate: { gte: toDateOnly(today) } } },
+      // Gigs without a date yet count as upcoming: leaving them out hid new requests from the artist.
+      where: { artist: { userId }, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] }, OR: [{ eventDate: null }, { eventDate: { gte: toDateOnly(today) } }] } },
       orderBy: { booking: { eventDate: "asc" } },
       take: 20,
       include: {
@@ -45,7 +46,7 @@ export async function ArtistHome({ userId }: { userId: string }) {
   const gigs = assignments.filter((a) => a.status === "accepted");
   // In the currency of the next gig; gigs in another currency are left out of the sum.
   const currency = gigs[0]?.booking.currency ?? "EUR";
-  const upcoming = gigs.filter((a) => a.booking.currency === currency).reduce((sum, a) => sum + percentOf(a.booking.totalCents, a.shareBps), 0);
+  const upcoming = gigs.filter((a) => a.booking.currency === currency).reduce((sum, a) => sum + artistEarnings(compensationOf(a), a.booking.totalCents), 0);
   const next = gigs[0];
 
   return (

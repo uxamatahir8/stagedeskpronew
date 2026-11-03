@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type BookingStatus, percentOf } from "@stagedesk/core";
+import { type BookingStatus, artistEarnings, compensationOf } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ConnectCard } from "@/components/connect-card";
@@ -69,7 +69,9 @@ async function Earnings() {
   const rows = assignments.map((a) => ({
     ...a.booking,
     shareBps: a.shareBps,
-    share: percentOf(a.booking.totalCents, a.shareBps),
+    fixed: a.compensationType === "fixed",
+    // A share of the booking, or the fixed fee agreed for it.
+    share: artistEarnings(compensationOf(a), a.booking.totalCents),
     paidOut: ledgerFor(a.booking.id, ["transfer", "transfer_reversal"]),
     owed: ledgerFor(a.booking.id, ["owed_by_agency"]),
   }));
@@ -130,7 +132,7 @@ async function Earnings() {
                 <BookingStatusBadge key="s" status={r.status as BookingStatus} />,
                 <div key="sh">
                   {euro(format, r.share, r.currency)}
-                  <div className="text-xs text-muted-foreground">{percent(format, r.shareBps)}</div>
+                  <div className="text-xs text-muted-foreground">{r.fixed ? t("fixedFee") : percent(format, r.shareBps)}</div>
                 </div>,
                 r.paidOut ? euro(format, r.paidOut, r.currency) : "—",
                 r.owed ? euro(format, r.owed, r.currency) : "—",

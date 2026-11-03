@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useRouter } from "@/i18n/navigation";
 import { assignPlatformArtistAction, createPlatformArtistAction, sharePlatformArtistAction } from "./actions";
+import { LogInIcon } from "lucide-react";
+import { startImpersonationAction } from "@/lib/impersonation-actions";
 
 type Option = { id: string; label: string };
 
@@ -53,5 +55,27 @@ export function PlatformArtistManager({ artists, agencies, bookings }: { artists
         <Button disabled={pending}>{t("assignNow")}</Button>
       </form>
     </div>
+  );
+}
+
+/** "Log in as artist" from the artist list, with the existing impersonation (platform admins only, audited, one hour). */
+export function LoginAsArtistButton({ userId }: { userId: string }) {
+  const t = useTranslations("platformArtists");
+  const [pending, startTransition] = useTransition();
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={pending}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await startImpersonationAction(userId);
+          if (!result.ok) toast.error(result.message);
+        })
+      }
+    >
+      <LogInIcon />
+      {t("loginAsArtist")}
+    </Button>
   );
 }

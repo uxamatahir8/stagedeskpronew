@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { formatIban } from "@stagedesk/core";
-import { enabledCurrencies, getSetting, prisma } from "@stagedesk/db";
+import { formatIban, type InvoiceNumbering, parseInvoiceTemplate } from "@stagedesk/core";
+import { enabledCurrencies, getSetting, nextInvoiceNumber, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { platformDatePrefs } from "@/lib/date-prefs";
 import { requireAgency } from "@/lib/viewer";
 import { AgencyForm, LogoForm } from "./agency-forms";
+import { CommunicationForm } from "./communication-form";
+import { InvoiceSettingsForm } from "./invoice-settings-form";
+import { centsToInput } from "@/lib/format";
 import { InventorySettingsForm } from "./inventory-settings-form";
 import { PaymentMethodsForm } from "./payment-methods-form";
 import { ServiceAreaForm } from "./service-area-form";
@@ -27,17 +30,26 @@ export default async function AgencySettingsPage({ params }: PageProps<"/[locale
   );
 }
 
+/** The platform's sending address (the part between < >), shown in the sender preview. */
+const platformAddress = () => {
+  const from = process.env.MAIL_FROM ?? "StageDesk <no-reply@stagedesk.local>";
+  return from.match(/<([^>]+)>/)?.[1] ?? from;
+};
+
 async function AgencySettings() {
   const { organization } = await requireAgency("agency.settings");
   const t = await getTranslations("agencySettings");
   // The id comes from the viewer's own membership, so this reads only their agency.
-  const [agency, allowed, connected, platformDates, currencyOptions] = await Promise.all([
+  const [agency, allowed, connected, platformDates, currencyOptions, defaults, nextNumber] = await Promise.all([
     prisma.organization.findUniqueOrThrow({ where: { id: organization.id } }),
     getSetting("payments.methods"),
     prisma.connectedAccount.count({ where: { organizationId: organization.id, artistId: null, chargesEnabled: true } }),
     platformDatePrefs(),
     enabledCurrencies(),
+    getSetting("bookings.defaults"),
+    nextInvoiceNumber(organization.id),
   ]);
+  const locale = agency.correspondenceLocale === "en" ? "en" : "nl";
 
   return (
     <div className="grid max-w-3xl gap-8">
@@ -82,6 +94,29 @@ async function AgencySettings() {
         }}
         allowed={{ online: allowed.online, bankTransfer: allowed.bankTransfer, cash: allowed.cash }}
         stripeConnected={connected > 0}
+      />
+      <CommunicationForm
+        agencyName={agency.name}
+        contactEmail={agency.contactEmail}
+        platformAddress={platformAddress()}
+        initial={{
+          correspondenceLocale: locale,
+          depositType: agency.defaultDepositType === "none" || agency.defaultDepositType === "fixed" ? agency.defaultDepositType : "percentage",
+          depositPct: String((agency.defaultDepositBps ?? defaults.depositBps) / 100),
+          depositFixed: agency.defaultDepositFixedCents !== null ? centsToInput(agency.defaultDepositFixedCents, locale) : "",
+          emailFromName: agency.emailFromName ?? "",
+          emailReplyTo: agency.emailReplyTo ?? "",
+        }}
+      />
+      <InvoiceSettingsForm
+        nextNumber={nextNumber}
+        previewHref={`/api/pdf/invoice-preview?agency=${agency.id}&lang=${locale}`}
+        initial={{
+          invoiceNumbering: agency.invoiceNumbering as InvoiceNumbering,
+          invoicePrefix: agency.invoicePrefix ?? "",
+          allowManualInvoiceNumbers: agency.allowManualInvoiceNumbers,
+          template: parseInvoiceTemplate(agency.invoiceTemplate),
+        }}
       />
       <InventorySettingsForm initial={{ inventorySharing: agency.inventorySharing, artistsHandleEquipment: agency.artistsHandleEquipment }} />
     </div>

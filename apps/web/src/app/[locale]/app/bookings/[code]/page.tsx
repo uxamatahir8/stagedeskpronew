@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, PackagePlusIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -8,13 +8,16 @@ import { getFormatter } from "@/lib/formatter";
 import {
   availableActions,
   type BookingStatus,
+  depositRuleOf,
+  quoteChangedFields,
+  quoteEventSnapshot,
   type EventType,
   isBudgetRange,
   paymentStatus,
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, prisma } from "@stagedesk/db";
+import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
 import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
@@ -24,13 +27,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { RefundDialog } from "../../payments/refund-dialog";
-import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
+import { centsToInput, dateTime, euro, eventDate, percent } from "@/lib/format";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { requireAgency, viewerCan } from "@/lib/viewer";
+import { customerMailLocale } from "@/lib/correspondence";
 import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
   AssignArtist,
+  RetryEmailButton,
+  DetailRequestPanel,
   EditDetailsDialog,
   IssueInvoiceButton,
   QuoteControls,
@@ -108,12 +114,36 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
 
   const current = booking.quotes[0] ?? null;
   const openQuote = current?.status === "sent" ? current : null;
+  // Details changed after the quote went out: it can't be accepted until it's revised.
+  const outdatedFields = openQuote ? quoteChangedFields(openQuote.eventSnapshot, quoteEventSnapshot(booking)) : [];
   const acceptedQuote = booking.quotes.find((q) => q.status === "accepted") ?? null;
   const shownQuote = acceptedQuote ?? current;
   const activeAssignment = booking.assignments.find((a) => a.status === "pending" || a.status === "accepted") ?? null;
   const lastDeclined = !activeAssignment ? booking.assignments.find((a) => a.status === "declined") : null;
   const invoice = booking.invoices[0] ?? null;
   const pay = paymentStatus(booking.paidCents, booking.totalCents, booking.depositCents);
+  // A revision starts from the current quote's upfront payment and language; a first quote from the agency's defaults.
+  const agencyDefaults = await prisma.organization.findUniqueOrThrow({
+    where: { id: organization.id },
+    select: { defaultDepositType: true, defaultDepositBps: true, defaultDepositFixedCents: true, allowManualInvoiceNumbers: true },
+  });
+  const startDeposit = current
+    ? depositRuleOf(current)
+    : depositRuleOf({ depositType: agencyDefaults.defaultDepositType ?? "percentage", depositBps: agencyDefaults.defaultDepositBps ?? defaults.depositBps, depositFixedCents: agencyDefaults.defaultDepositFixedCents });
+  const mailLocale = current?.locale === "nl" || current?.locale === "en" ? { locale: current.locale as "nl" | "en", reason: "customer" as const } : await customerMailLocale(booking.id);
+  // What happened to the booking's emails: stored, queued, accepted by the mail server, or failing.
+  const emails = await bookingEmails(booking.id);
+  // The customer can fill in the event details through a link until a quote is accepted.
+  const detailRequest =
+    booking.customer && ["inquiry", "quoted", "expired"].includes(status) && viewerCan(viewer, "agency.bookings.edit")
+      ? { open: await openDetailRequest(organization.id, booking.id), locale: mailLocale.locale }
+      : null;
+  const quoteDefaults = {
+    depositType: startDeposit.type,
+    depositFixed: startDeposit.type === "fixed" ? centsToInput(startDeposit.cents, locale) : "",
+    locale: mailLocale.locale,
+    localeReason: mailLocale.reason,
+  };
 
   const canAssign = status === "booked" || status === "confirmed";
   // Asks to other agencies for one of their artists, newest first.
@@ -129,6 +159,10 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
           stageName: a.stageName,
           agency: a.organizationId === organization.id ? null : a.organization.name,
           free: booking.eventDate ? await isArtistFree(a.id, booking.eventDate, booking.id) : true,
+          payLabel:
+            a.compensationType === "fixed" && a.defaultFixedFeeCents !== null
+              ? t("artists.fixedPerBooking", { amount: euro(format, a.defaultFixedFeeCents, a.organization.currency) })
+              : percent(format, a.defaultShareBps),
         })),
       )
     : [];
@@ -280,6 +314,11 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {outdatedFields.length > 0 && (
+                <p className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
+                  {t("booking.quoteOutdated", { fields: outdatedFields.map((f) => t(`booking.field_${f}`)).join(", ") })}
+                </p>
+              )}
               {shownQuote ? (
                 <QuoteTable quote={shownQuote} currency={booking.currency} />
               ) : (
@@ -292,7 +331,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 quoteId={openQuote?.id ?? null}
                 quoteLink={openQuote ? `${localePrefix(locale)}/q/${openQuote.token}` : null}
                 pdfHref={shownQuote ? `/api/pdf/quote/${shownQuote.id}?lang=${locale}` : null}
-                canAcceptOnBehalf={Boolean(openQuote) && viewerCan(viewer, "agency.quotes.accept")}
+                canAcceptOnBehalf={Boolean(openQuote) && outdatedFields.length === 0 && viewerCan(viewer, "agency.quotes.accept")}
                 customerName={booking.customer?.name ?? ""}
                 catalog={catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, unitPriceCents: c.unitPriceCents, vatBps: c.vatBps }))}
                 vatRates={defaults.vatRatesBps}
@@ -302,12 +341,59 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   unitPrice: centsToInput(i.unitPriceCents, locale),
                   vatBps: i.vatBps,
                 }))}
-                defaultDepositBps={current?.depositBps ?? defaults.depositBps}
+                defaultDepositBps={startDeposit.type === "percentage" ? startDeposit.bps : defaults.depositBps}
                 defaultExpiryDays={defaults.quoteExpiryDays}
                 currency={booking.currency}
+                quoteDefaults={quoteDefaults}
               />
             </CardContent>
           </Card>
+
+          {equipment ? (
+            <Card id="equipment">
+              <CardHeader>
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  {t("equipment.title")}
+                  <EquipmentStagePill stage={equipment.stage} />
+                  {equipment.totals.unreserved > 0 && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.unreservedShort", { count: equipment.totals.unreserved })}</Pill>}
+                </CardTitle>
+                <CardDescription>{t("equipment.bookingHint")}</CardDescription>
+                <CardAction className="flex flex-wrap gap-2">
+                  <Button asChild size="sm" variant={equipment.totals.lines > 0 ? "outline" : "default"}>
+                    <Link href={`/app/bookings/${booking.trackingCode}/equipment`}>
+                      <PackagePlusIcon />
+                      {t("equipment.addEquipmentOrPackage")}
+                    </Link>
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="grid gap-3 text-sm">
+                {equipment.totals.lines > 0 ? (
+                  <>
+                    <ul className="divide-y rounded-lg border">
+                      {equipment.preview.map((l) => (
+                        <li key={l.code} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="min-w-0 truncate">
+                            <span className="font-mono text-xs text-muted-foreground">{l.code}</span> {l.name}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                            ×{l.quantity}
+                            {!l.reserved && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.notReserved")}</Pill>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-muted-foreground tabular-nums">{t("equipment.summary", { planned: equipment.totals.planned, loaded: equipment.totals.loaded, out: equipment.totals.outstanding })}</p>
+                    <Link href={`/app/bookings/${booking.trackingCode}/equipment`} className="w-fit text-primary underline-offset-4 hover:underline">
+                      {t("equipment.openFull", { count: equipment.totals.lines })}
+                    </Link>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">{t("equipment.emptyBooking")}</p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>
@@ -325,7 +411,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                       </a>
                     </Button>
                   ) : (
-                    ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} />
+                    ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} nextNumber={await nextInvoiceNumber(organization.id)} canTypeNumber={agencyDefaults.allowManualInvoiceNumbers && viewerCan(viewer, "agency.settings")} />
                   )}
                   {status !== "settled" && status !== "cancelled" && (
                     <RecordPayment bookingId={booking.id} today={today} suggestedKind={booking.paidCents < booking.depositCents ? "deposit" : "balance"} />
@@ -442,6 +528,14 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     {booking.customer.email}
                   </a>
                   {booking.customer.phone && <p className="tabular-nums">{booking.customer.phone}</p>}
+                  {detailRequest && (
+                    <DetailRequestPanel
+                      bookingId={booking.id}
+                      defaultLocale={detailRequest.locale}
+                      customerEmail={booking.customer.email}
+                      open={detailRequest.open ? { expires: dateTime(format, detailRequest.open.expiresAt), emailedTo: detailRequest.open.emailedTo } : null}
+                    />
+                  )}
                 </>
               ) : (
                 <p className="text-muted-foreground">{t("bookings.noCustomer")}</p>
@@ -497,22 +591,28 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
             </CardContent>
           </Card>
 
-          {equipment && (
+          {emails.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>{t("equipment.title")}</CardTitle>
+                <CardTitle>{t("bookingEmails.title")}</CardTitle>
+                <CardDescription>{t("bookingEmails.hint")}</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3 text-sm">
-                <div className="flex flex-wrap items-center gap-2">
-                  <EquipmentStagePill stage={equipment.stage} />
-                  {equipment.totals.unreserved > 0 && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.unreservedShort", { count: equipment.totals.unreserved })}</Pill>}
-                </div>
-                {equipment.totals.lines > 0 && (
-                  <p className="text-muted-foreground tabular-nums">{t("equipment.summary", { planned: equipment.totals.planned, loaded: equipment.totals.loaded, out: equipment.totals.outstanding })}</p>
-                )}
-                <Button asChild variant="outline" size="sm" className="w-fit">
-                  <Link href={`/app/bookings/${booking.trackingCode}/equipment`}>{equipment.totals.lines > 0 ? t("equipment.open") : t("equipment.start")}</Link>
-                </Button>
+              <CardContent>
+                <ul className="grid gap-2 text-sm">
+                  {emails.map((m) => (
+                    <li key={m.id} className="grid gap-0.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="min-w-0 truncate">{t.has(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") ? t(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") : m.kind}</span>
+                        <Pill tone={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" || m.status === "suppressed" ? "danger" : "neutral"}>{t(`bookingEmails.status_${m.status as "sent"}`)}</Pill>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {m.to} · {dateTime(format, m.sentAt ?? m.createdAt)}
+                        {m.status === "failed" && ` · ${t("bookingEmails.nextTry", { date: dateTime(format, m.nextAttemptAt) })}`}
+                      </p>
+                      {(m.status === "failed" || m.status === "dead") && viewerCan(viewer, "agency.bookings.edit") && <RetryEmailButton emailId={m.id} />}
+                    </li>
+                  ))}
+                </ul>
               </CardContent>
             </Card>
           )}

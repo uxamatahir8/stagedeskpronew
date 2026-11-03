@@ -29,6 +29,9 @@ import {
   PaymentReported,
   QuoteExpiring,
   QuoteSent,
+  GigAssigned,
+  BookingDetailsRequest,
+  SenderTest,
   ResetPassword,
   TicketReply,
   VerifyEmail,
@@ -47,6 +50,32 @@ export interface RenderedEmail {
 
 /** Set while previewing: `send` hands the rendered email here instead of mailing it. */
 const previewing = new AsyncLocalStorage<(email: RenderedEmail) => void>();
+
+/**
+ * Who an email is from, for mail an agency sends its customers. Only the
+ * display name and Reply-To change: the address stays the platform's own
+ * (MAIL_FROM), whose domain is verified (SPF/DKIM), so a message can never
+ * claim to come from a domain nobody verified.
+ */
+export interface EmailSender {
+  name: string;
+  replyTo?: string | null;
+}
+const sending = new AsyncLocalStorage<{ sender?: EmailSender; messageId?: string; accepted?: (id: string) => void }>();
+
+const platformFrom = () => process.env["MAIL_FROM"] ?? "StageDesk <no-reply@stagedesk.local>";
+
+/** The From header for a sender: "<agency> via StageDesk" <platform address>. */
+export function fromHeader(sender: EmailSender | undefined, from = platformFrom()) {
+  if (!sender?.name.trim()) return from;
+  const address = from.match(/<([^>]+)>/)?.[1] ?? from.trim();
+  const platform = from.match(/^\s*"?([^"<]+?)"?\s*</)?.[1]?.trim() || "StageDesk";
+  // Quotes and control characters can't break out of the display name.
+  const name = `${sender.name.replace(/["\\\r\n<>]/g, "").trim().slice(0, 100)} via ${platform}`;
+  return `"${name}" <${address}>`;
+}
+
+const replyToOk = (value: string | null | undefined) => (value && /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value) ? value : undefined);
 
 let transporter: Transporter | undefined;
 
@@ -79,13 +108,18 @@ async function send(to: string, subject: string, element: ReactElement, replyTo?
   const [html, text] = await Promise.all([render(element), render(element, { plainText: true })]);
   const capture = previewing.getStore();
   if (capture) return capture({ subject, html, text });
+  const context = sending.getStore();
+  const sender = context?.sender;
+  replyTo ??= replyToOk(sender?.replyTo);
   // Test and demo addresses never go out through a real mail server (tests run against Mailpit).
   if (isTestAddress(to) && !localMailTransport()) {
     console.warn(`[mail] not sent: ${subject.slice(0, 40)} is for a test address and SMTP is not local`);
     return;
   }
-  await getTransporter().sendMail({
-    from: process.env["MAIL_FROM"] ?? "StageDesk <no-reply@stagedesk.local>",
+  const info = await getTransporter().sendMail({
+    // A stable id from the outbox: a resend after a crash is the same message to mail clients.
+    ...(context?.messageId ? { messageId: context.messageId } : {}),
+    from: fromHeader(sender),
     to,
     subject,
     ...(replyTo ? { replyTo } : {}),
@@ -93,6 +127,7 @@ async function send(to: string, subject: string, element: ReactElement, replyTo?
     html,
     text,
   });
+  context?.accepted?.(info.messageId);
 }
 
 export function sendVerifyEmail(to: string, p: { locale: EmailLocale; name: string; url: string }) {
@@ -125,9 +160,21 @@ export function sendNewInquiry(to: string, p: { locale: EmailLocale; customer: s
 
 export function sendQuote(
   to: string,
-  p: { locale: EmailLocale; name: string; agency: string; total: string; until: string; url: string; accountUrl?: string },
+  p: Parameters<typeof QuoteSent>[0],
 ) {
   return send(to, copy[p.locale].quoteSent.subject(p.agency), createElement(QuoteSent, p));
+}
+
+export function sendGigAssigned(to: string, p: Parameters<typeof GigAssigned>[0]) {
+  return send(to, copy[p.locale].gigAssigned.subject[p.status](p.agency), createElement(GigAssigned, p));
+}
+
+export function sendBookingDetailsRequest(to: string, p: Parameters<typeof BookingDetailsRequest>[0]) {
+  return send(to, copy[p.locale].detailsRequest.subject(p.agency), createElement(BookingDetailsRequest, p));
+}
+
+export function sendSenderTest(to: string, p: Parameters<typeof SenderTest>[0]) {
+  return send(to, copy[p.locale].senderTest.subject, createElement(SenderTest, p));
 }
 
 export function sendInvitation(
@@ -247,6 +294,9 @@ const senders = {
   inquiryReceived: sendInquiryReceived,
   newInquiry: sendNewInquiry,
   quote: sendQuote,
+  gigAssigned: sendGigAssigned,
+  bookingDetailsRequest: sendBookingDetailsRequest,
+  senderTest: sendSenderTest,
   invitation: sendInvitation,
   affiliateApproved: sendAffiliateApproved,
   affiliatePayout: sendAffiliatePayout,
@@ -272,11 +322,25 @@ const senders = {
 } as const;
 
 export type EmailKind = keyof typeof senders;
-export type EmailJob = { [K in EmailKind]: { kind: K; to: string; params: Parameters<(typeof senders)[K]>[1] } }[EmailKind];
+/** `sender` is set on mail an agency sends its customers (quotes, receipts); security mail never has one. */
+export type EmailJob = { [K in EmailKind]: { kind: K; to: string; params: Parameters<(typeof senders)[K]>[1]; sender?: EmailSender } }[EmailKind];
 
-export function sendEmailJob(job: EmailJob) {
+/** Mail that proves who someone is or lets them in: always from the platform itself. */
+const securityKinds = new Set<EmailKind>(["verifyEmail", "loginCode", "resetPassword", "artistAccountSetup", "accountSetup", "invitation"]);
+
+/**
+ * Sends one email. Resolves with the Message-ID the SMTP server accepted
+ * (acceptance, not delivery), or undefined when nothing went out (a preview,
+ * or a test address with a non-local server).
+ */
+export async function sendEmailJob(job: EmailJob, opts: { messageId?: string } = {}): Promise<string | undefined> {
   const sender = senders[job.kind] as (to: string, params: EmailJob["params"]) => Promise<void>;
-  return sender(job.to, job.params);
+  let accepted: string | undefined;
+  await sending.run(
+    { sender: securityKinds.has(job.kind) ? undefined : job.sender, messageId: opts.messageId, accepted: (id) => void (accepted = id) },
+    () => sender(job.to, job.params),
+  );
+  return accepted;
 }
 
 /** Renders an email exactly as it would be sent, without sending it (admin previews). */

@@ -177,3 +177,53 @@ describe("webhooks", () => {
     await prisma.stripeEvent.delete({ where: { id: id! } });
   });
 });
+
+describe("fixed artist fee", () => {
+  it("pays a fixed €250 over deposit and balance, never as a percentage, and books the rest for the agency", async () => {
+    const a = await agencyWithAccounts(`${run}f`, { artistConnected: true });
+    await prisma.artist.update({ where: { id: a.artistId }, data: { compensationType: "fixed", defaultFixedFeeCents: 25_000 } });
+    const { booking } = await confirmedBooking(a, "2027-06-12", may);
+    const assignment = await prisma.bookingAssignment.findFirstOrThrow({ where: { bookingId: booking.id, status: "accepted" } });
+    expect(assignment).toMatchObject({ compensationType: "fixed", fixedFeeCents: 25_000, shareBps: 0 });
+
+    // Changing the artist's default later doesn't touch this gig.
+    await prisma.artist.update({ where: { id: a.artistId }, data: { defaultFixedFeeCents: 99_900 } });
+
+    const { stripe, calls } = fakeStripe({ stripeFeeCents: 0 });
+    await recordStripePayment(stripe, paidSession(a.organizationId, booking.id, 45_001, "deposit"));
+    await recordStripePayment(stripe, paidSession(a.organizationId, booking.id, 105_003, "balance"));
+    await complete(a, booking.id, new Date("2027-06-12T22:00:00Z"));
+    await payoutBooking(stripe, booking.id, afterEvent);
+    // Running again moves nothing more.
+    await payoutBooking(stripe, booking.id, afterEvent);
+
+    const transfers = calls.filter((c) => c.method === "transfers.create");
+    const sum = (party: string) => transfers.filter((t) => (t.params["metadata"] as { party: string }).party === party).reduce((s, t) => s + (t.params["amount"] as number), 0);
+    expect(sum("artist")).toBe(25_000);
+    const shares = await prisma.ledgerEntry.aggregate({ where: { bookingId: booking.id, type: "artist_share" }, _sum: { amountCents: true } });
+    expect(shares._sum.amountCents).toBe(25_000);
+    const fees = await prisma.ledgerEntry.aggregate({ where: { bookingId: booking.id, type: "platform_fee" }, _sum: { amountCents: true } });
+    expect(sum("artist") + sum("agency") + fees._sum.amountCents!).toBe(150_004);
+    expect(await prisma.ledgerEntry.count({ where: { bookingId: booking.id, type: "owed_by_agency" } })).toBe(0);
+  });
+
+  it("records what a payment can't cover, and an unconnected artist's fee, as owed by the agency", async () => {
+    const a = await agencyWithAccounts(`${run}g`, { artistConnected: false });
+    // More than the booking brings in after the platform's 3%.
+    await prisma.artist.update({ where: { id: a.artistId }, data: { compensationType: "fixed", defaultFixedFeeCents: 160_000 } });
+    const { booking } = await confirmedBooking(a, "2027-06-12", may);
+    const { stripe, calls } = fakeStripe({ stripeFeeCents: 0 });
+    await recordStripePayment(stripe, paidSession(a.organizationId, booking.id, 150_004, "deposit"));
+    await complete(a, booking.id, new Date("2027-06-12T22:00:00Z"));
+    await payoutBooking(stripe, booking.id, afterEvent);
+
+    const transfers = calls.filter((c) => c.method === "transfers.create");
+    expect(transfers.some((t) => (t.params["metadata"] as { party: string }).party === "artist")).toBe(false);
+    const share = await prisma.ledgerEntry.findFirstOrThrow({ where: { bookingId: booking.id, type: "artist_share" } });
+    const fee = await prisma.ledgerEntry.findFirstOrThrow({ where: { bookingId: booking.id, type: "platform_fee" } });
+    expect(share.amountCents).toBe(150_004 - fee.amountCents);
+    const owed = await prisma.ledgerEntry.findFirstOrThrow({ where: { bookingId: booking.id, type: "owed_by_agency", party: "artist" } });
+    // The whole fee: what went to the agency instead of the artist plus what the payment couldn't cover.
+    expect(owed.amountCents).toBe(160_000);
+  });
+});

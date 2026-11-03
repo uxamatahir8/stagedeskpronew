@@ -1,6 +1,6 @@
 "use client";
 
-import { BanIcon, EllipsisIcon, LogInIcon, LogOutIcon, MailCheckIcon, PencilIcon, PlusIcon, ShieldOffIcon, Trash2Icon, UserCheckIcon } from "lucide-react";
+import { BanIcon, EllipsisIcon, LogInIcon, LogOutIcon, MailCheckIcon, MailIcon, PencilIcon, PlusIcon, ShieldOffIcon, Trash2Icon, UserCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
   createPlatformAdminAction,
   deleteUserAction,
   markVerifiedAction,
+  resendConfirmationAction,
   resetTwoFactorAction,
   setUserDisabledAction,
   signOutEverywhereAction,
@@ -58,6 +59,12 @@ export function UserActions({ user, disabled, verified, twoFactor, self }: { use
             <PencilIcon />
             {t("edit")}
           </DropdownMenuItem>
+          {!verified && !disabled && (
+            <DropdownMenuItem onSelect={() => run(() => resendConfirmationAction(user.id))}>
+              <MailIcon />
+              {t("resendConfirmation")}
+            </DropdownMenuItem>
+          )}
           {!verified && (
             <DropdownMenuItem onSelect={() => run(() => markVerifiedAction(user.id))}>
               <MailCheckIcon />
