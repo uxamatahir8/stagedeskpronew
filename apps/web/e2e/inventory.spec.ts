@@ -86,12 +86,13 @@ async function saveInventorySettings(page: Page, sharing: boolean, artists: bool
   }
 }
 
-test("equipment from inventory to packing list, loading, check-in and sharing", async ({ browser }) => {
-  test.setTimeout(420_000);
+test.describe.serial("inventory lifecycle", () => {
+  let first = "";
+  let second = "";
+
+test("owner creates equipment, a package and two planned packing lists", async ({ browser }) => {
+  test.setTimeout(180_000);
   const owner = await (await browser.newContext()).newPage();
-  const dj = await (await browser.newContext()).newPage();
-  const other = await (await browser.newContext()).newPage();
-  const staff = await (await browser.newContext()).newPage();
   owner.on("dialog", (d) => d.accept());
 
   await test.step("owner adds a category, a speaker and counted cables", async () => {
@@ -143,8 +144,6 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(owner).toHaveURL(/\/app\/inventory\/packages\/[\w-]+$/);
   });
 
-  let first = "";
-  let second = "";
   await test.step("two inquiries on the same day plan the same speaker; nothing is reserved yet", async () => {
     first = await newInquiry(owner, `E2E Eerste ${run}`);
     await owner.goto(`/nl/app/bookings/${first}/equipment`);
@@ -157,6 +156,15 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     second = await newInquiry(owner, `E2E Tweede ${run}`);
     await addToList(owner, second, new RegExp(SPK));
   });
+
+  await owner.context().close();
+});
+
+test("reservations conflict and the assigned DJ loads equipment when allowed", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const owner = await (await browser.newContext()).newPage();
+  const dj = await (await browser.newContext()).newPage();
+  await signIn(owner, "eigenaar@feestband.local");
 
   await test.step("accepting the first quote reserves; the second can't, but its acceptance goes through", async () => {
     await accept(owner, first);
@@ -209,6 +217,16 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(dj.getByText(XLR)).toHaveCount(0);
   });
 
+  await owner.context().close();
+  await dj.context().close();
+});
+
+test("check-in records damage and a missing speaker can be recovered", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const owner = await (await browser.newContext()).newPage();
+  await signIn(owner, "eigenaar@feestband.local");
+  owner.on("dialog", (d) => d.accept());
+
   await test.step("check-in: one cable damaged, the speaker missing", async () => {
     await owner.goto(`/nl/app/bookings/${first}/equipment`);
     await owner.getByRole("tab", { name: "Inchecken" }).click();
@@ -252,6 +270,16 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(owner.getByText("10 (1 defect)")).toBeVisible();
   });
 
+  await owner.context().close();
+});
+
+test("sharing is read-only and staff cannot manage inventory or losses", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const owner = await (await browser.newContext()).newPage();
+  const other = await (await browser.newContext()).newPage();
+  const staff = await (await browser.newContext()).newPage();
+  await signIn(owner, "eigenaar@feestband.local");
+
   await test.step("another agency sees shared equipment read-only, and loses it when sharing stops", async () => {
     await signIn(other, "eigenaar@rotterdamdj.local");
     await other.goto(`/nl/app/inventory/shared?q=${SPK}`);
@@ -293,4 +321,9 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
     await expect(staff.getByText(XLR)).toBeVisible();
     await expect(staff.getByRole("button", { name: "Verloren bevestigen" })).toHaveCount(0);
   });
+
+  await owner.context().close();
+  await other.context().close();
+  await staff.context().close();
+});
 });
