@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { type Browser, type BrowserContext, expect, test } from "@playwright/test";
 import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /**
@@ -9,10 +9,22 @@ import { ADMIN_EMAIL, signIn } from "./helpers";
 test.describe.serial("agency websites", () => {
   const run = Date.now().toString(36);
   const title = `Feest zonder zorgen ${run}`;
+  const contexts: BrowserContext[] = [];
+
+  async function freshPage(browser: Browser) {
+    const context = await browser.newContext();
+    contexts.push(context);
+    return context.newPage();
+  }
+
+  test.afterAll(async ({}, testInfo) => {
+    testInfo.setTimeout(60_000);
+    await Promise.allSettled(contexts.map((context) => context.close()));
+  });
 
 test("an agency builds and publishes its website on the free address", async ({ browser }) => {
-  const owner = await (await browser.newContext()).newPage();
-  const visitor = await (await browser.newContext()).newPage();
+  const owner = await freshPage(browser);
+  const visitor = await freshPage(browser);
 
   await test.step("the owner edits the hero, adds a packages section and publishes", async () => {
     await signIn(owner, "eigenaar@feestband.local");
@@ -39,15 +51,12 @@ test("an agency builds and publishes its website on the free address", async ({ 
     await visitor.goto("http://feestband-utrecht.localhost:3000/sitemap.xml");
     expect(await visitor.content()).toContain("http://feestband-utrecht.localhost:3000/");
   });
-
-  await owner.context().close();
-  await visitor.context().close();
 });
 
 test("a Business agency connects and serves its own domain", async ({ browser }) => {
-  const visitor = await (await browser.newContext()).newPage();
-  const admin = await (await browser.newContext()).newPage();
-  const rotterdam = await (await browser.newContext()).newPage();
+  const visitor = await freshPage(browser);
+  const admin = await freshPage(browser);
+  const rotterdam = await freshPage(browser);
 
   // The plan is set here rather than assumed: the bulk demo seed puts Feestband on Business.
   async function grantPlan(plan: "Pro" | "Business") {
@@ -98,9 +107,5 @@ test("a Business agency connects and serves its own domain", async ({ browser })
     await row.getByRole("button", { name: "Verwijderen" }).click();
     await expect(rotterdam.getByText("Domein verwijderd.")).toBeVisible();
   });
-
-  await visitor.context().close();
-  await admin.context().close();
-  await rotterdam.context().close();
 });
 });

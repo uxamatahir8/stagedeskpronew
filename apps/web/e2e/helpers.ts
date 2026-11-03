@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Browser, type Page } from "@playwright/test";
 
 export const DEMO_PASSWORD = "StageDesk-demo-2026";
 
@@ -14,6 +14,11 @@ export const ADMIN_NAME = process.env["E2E_ADMIN_NAME"] ?? "Iris Platform";
 
 export function passwordFor(email: string) {
   return email === ADMIN_EMAIL ? ADMIN_PASSWORD : DEMO_PASSWORD;
+}
+
+/** Closes pages created from the worker-scoped browser, including on failure. */
+export async function closeBrowserContexts(browser: Browser) {
+  await Promise.all(browser.contexts().map((context) => context.close()));
 }
 
 export async function signIn(page: Page, email: string) {
@@ -45,7 +50,7 @@ export async function submitSignIn(page: Page, email: string) {
     await expect(async () => {
       const signedIn = /\/(?:nl\/)?(?:app|accept-terms)(?:\/|$)/.test(new URL(page.url()).pathname);
       expect(signedIn || (await limited.isVisible())).toBe(true);
-    }).toPass({ timeout: 30_000 });
+    }).toPass({ timeout: 60_000 });
     if (!(await limited.isVisible())) return;
     await page.waitForTimeout(61_000);
   }

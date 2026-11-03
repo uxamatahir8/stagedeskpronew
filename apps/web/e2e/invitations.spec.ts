@@ -1,5 +1,7 @@
 import { type APIRequestContext, expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, settleOnDashboard, signIn } from "./helpers";
+import { ADMIN_EMAIL, closeBrowserContexts, settleOnDashboard, signIn } from "./helpers";
+
+test.afterEach(async ({ browser }) => closeBrowserContexts(browser));
 
 /**
  * Team invitations through the real emails in Mailpit: a new person signs up

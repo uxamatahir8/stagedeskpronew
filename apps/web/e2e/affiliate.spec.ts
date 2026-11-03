@@ -1,5 +1,7 @@
 import { expect, type APIRequestContext, test } from "@playwright/test";
-import { ADMIN_EMAIL, acceptTerms, DEMO_PASSWORD, signIn } from "./helpers";
+import { ADMIN_EMAIL, acceptTerms, closeBrowserContexts, DEMO_PASSWORD, signIn } from "./helpers";
+
+test.afterEach(async ({ browser }) => closeBrowserContexts(browser));
 
 const MAILPIT = "http://localhost:8025";
 

@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, signIn } from "./helpers";
+import { ADMIN_EMAIL, closeBrowserContexts, signIn } from "./helpers";
+
+test.afterEach(async ({ browser }) => closeBrowserContexts(browser));
 
 /**
  * The platform admin changes the home page headline: a placeholder the text

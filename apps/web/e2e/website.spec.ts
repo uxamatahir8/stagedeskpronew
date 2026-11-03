@@ -1,5 +1,14 @@
 import { expect, type Page, test } from "@playwright/test";
-import { ADMIN_EMAIL, acceptTerms, settleOnDashboard, signIn, submitSignIn } from "./helpers";
+import {
+  ADMIN_EMAIL,
+  acceptTerms,
+  closeBrowserContexts,
+  settleOnDashboard,
+  signIn,
+  submitSignIn,
+} from "./helpers";
+
+test.afterEach(async ({ browser }) => closeBrowserContexts(browser));
 
 /** Fills a new page in both languages in the page builder. */
 async function fillPage(page: Page, slug: string, title: string, text: string) {

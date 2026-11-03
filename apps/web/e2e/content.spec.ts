@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { ADMIN_EMAIL, signIn } from "./helpers";
+import { ADMIN_EMAIL, closeBrowserContexts, signIn } from "./helpers";
+
+test.afterEach(async ({ browser }) => closeBrowserContexts(browser));
 
 /**
  * The platform admin writes a blog post in a new category, features it, and
