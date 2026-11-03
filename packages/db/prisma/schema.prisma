@@ -1992,12 +1992,14 @@ model EmailMessage {
   job               Json?
   agencyId          String?   @db.VarChar(64)
   bookingId         String?   @db.VarChar(64)
-  /// pending (stored) | queued (Redis accepted) | sending (claimed) | sent (SMTP server accepted) | failed (retry planned) | dead (gave up)
+  /// pending (stored) | queued (Redis accepted) | sending (claimed) | sent (SMTP server accepted) | suppressed (intentionally not sent) | failed (retry planned) | dead (gave up)
   status            String    @default("pending") @db.VarChar(12)
   attempts          Int       @default(0)
   lastError         String?   @db.Text
   nextAttemptAt     DateTime  @default(now())
   lockedUntil       DateTime?
+  /// Unique owner of the current sending lease. Completion/failure updates must present it.
+  leaseToken        String?   @db.VarChar(64)
   queuedAt          DateTime?
   sentAt            DateTime?
   /// The Message-ID the SMTP server accepted. Acceptance, not delivery to the inbox.

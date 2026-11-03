@@ -64,10 +64,15 @@ function futureDate(run: string, offsetDays: number) {
   return d.toISOString().slice(0, 10);
 }
 
-test("client feedback: equipment, calendar, quotes, artists, details link, invoices and support", async ({ browser, request }) => {
-  // One long walkthrough of seventeen items (three people, many pages).
-  test.setTimeout(300_000);
+test.describe.serial("client feedback journeys", () => {
   const run = Date.now().toString(36);
+  const customerEmail = `klant.${run}@test.local`;
+  let code = "";
+
+test("equipment, calendar, quotes, artists and the customer details link", async ({ browser, request }) => {
+  // This is one connected booking journey. Later, independent admin and invoice
+  // checks are separate tests so they retain their own assertion budgets.
+  test.setTimeout(240_000);
   const owner = await (await browser.newContext()).newPage();
   const customerPage = await (await browser.newContext()).newPage();
   await signIn(owner, "eigenaar@feestband.local");
@@ -105,9 +110,6 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
   });
 
   const date = futureDate(run, 0);
-  const customerEmail = `klant.${run}@test.local`;
-  let code = "";
-
   await test.step("CF-05: the calendar opens the booking form on the chosen day", async () => {
     await owner.goto(`/nl/app/calendar?month=${date.slice(0, 7)}`);
     // The grid also shows days of the next and previous month: match day and month.
@@ -199,7 +201,14 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await expect(owner).toHaveURL(new RegExp(`/app/bookings/${code}/equipment$`));
   });
 
-  await test.step("CF-12: a typed invoice number is used once only", async () => {
+  await owner.context().close();
+  await customerPage.context().close();
+});
+
+test("CF-12: a typed invoice number is used once only", async ({ browser }) => {
+    const owner = await (await browser.newContext()).newPage();
+    await signIn(owner, "eigenaar@feestband.local");
+
     await owner.goto("/nl/app/agency-settings");
     const card = owner.locator('[data-slot="card"]').filter({ hasText: "Zelf een factuurnummer invullen toestaan" });
     await card.getByRole("switch", { name: "Zelf een factuurnummer invullen toestaan" }).setChecked(true);
@@ -234,9 +243,10 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await card.getByRole("switch", { name: "Zelf een factuurnummer invullen toestaan" }).setChecked(false);
     await card.getByRole("button", { name: "Opslaan" }).click();
     await expect(owner.getByText("Factuurinstellingen opgeslagen")).toBeVisible();
-  });
+    await owner.context().close();
+});
 
-  await test.step("CF-14/15/17: support manages the artist, can log in as them and resends a confirmation", async () => {
+test("CF-14/15/17: support manages the artist and resends a confirmation", async ({ browser }) => {
     const admin = await (await browser.newContext()).newPage();
     await signIn(admin, ADMIN_EMAIL);
     await admin.goto("/nl/app/platform-artists");
@@ -254,8 +264,5 @@ test("client feedback: equipment, calendar, quotes, artists, details link, invoi
     await admin.getByRole("menuitem", { name: "Bevestigingsmail opnieuw sturen" }).click();
     await expect(admin.getByText("Dit account heeft nog geen wachtwoord", { exact: false })).toBeVisible();
     await admin.context().close();
-  });
-
-  await owner.context().close();
-  await customerPage.context().close();
+});
 });

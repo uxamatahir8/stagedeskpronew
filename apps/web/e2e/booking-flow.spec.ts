@@ -8,10 +8,12 @@ import { signIn, todayNl } from "./helpers";
  * (and settled) with a quote, using offline payments. The event is today so
  * it can be completed in the same run.
  */
-test("agency takes a booking from inquiry to settled with a quote and offline payments", async ({ browser, request }) => {
-  // Three people and many pages; a cold dev server in a full run needs more than the default.
-  test.setTimeout(240_000);
+test.describe.serial("booking lifecycle with offline payments", () => {
   const run = Date.now().toString(36);
+  let code = "";
+
+test("agency books the event and the customer reports the balance transfer", async ({ browser, request }) => {
+  test.setTimeout(180_000);
   const agency = await (await browser.newContext()).newPage();
   const artist = await (await browser.newContext()).newPage();
   const customer = await (await browser.newContext()).newPage();
@@ -41,7 +43,7 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
     await expect(agency).toHaveURL(/\/app\/bookings\/[A-Z2-9]{8}$/);
     await expect(agency.getByText("Aanvraag", { exact: true }).first()).toBeVisible();
   });
-  const code = agency.url().split("/").pop()!;
+  code = agency.url().split("/").pop()!;
 
   await test.step("owner builds and sends a quote from the service catalog", async () => {
     await agency.getByRole("button", { name: "Offerte maken" }).click();
@@ -120,8 +122,18 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
     await expect(customer.getByText("betaling van € 529,37 gemeld", { exact: false })).toBeVisible();
   });
 
+  await agency.context().close();
+  await artist.context().close();
+  await customer.context().close();
+});
+
+test("the agency confirms, settles, downloads the invoice and records a refund", async ({ browser, request }) => {
+  test.setTimeout(180_000);
+  const agency = await (await browser.newContext()).newPage();
+  await signIn(agency, "eigenaar@feestband.local");
+  await agency.goto(`/nl/app/bookings/${code}`);
+
   await test.step("the owner confirms receipt; the booking is paid and the customer gets a receipt", async () => {
-    await agency.reload();
     await expect(agency.getByText("Klant meldt € 529,37 betaald per Bankoverschrijving")).toBeVisible();
     await agency.getByRole("button", { name: "Ontvangst bevestigen" }).click();
     // The date field takes focus and its calendar covers the button; click the heading to close it.
@@ -136,7 +148,6 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
   });
 
   await test.step("the booking is settled", async () => {
-
     await agency.getByRole("button", { name: "Markeren als afgerekend" }).click();
     await agency.getByRole("dialog").getByRole("button", { name: "Markeren als afgerekend" }).click();
     await expect(agency.getByText("Afgerekend", { exact: true }).first()).toBeVisible();
@@ -158,4 +169,6 @@ test("agency takes a booking from inquiry to settled with a quote and offline pa
     await expect(agency.getByText("€ 10,00 terugbetaald.")).toBeVisible();
     await expect(agency.getByText("−€ 10,00").first()).toBeVisible();
   });
+  await agency.context().close();
+});
 });

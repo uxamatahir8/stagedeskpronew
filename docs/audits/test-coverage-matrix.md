@@ -30,11 +30,12 @@ and no staging run were made from this branch.
 |---|---|
 | `pnpm typecheck` | 7/7 packages pass |
 | `pnpm lint` | 0 errors; 1 pre-existing warning (`components/ui/select.tsx`) |
-| `pnpm test` | **485 passed, 0 failed, 0 skipped**: core 216 (25 files), emails 13, db 181 (24 files), payments 57 (7 files, stripe-mock contract included), web 18 |
-| `npx playwright test e2e/client-feedback.spec.ts` | **1 passed** (2.8 min) |
+| `pnpm test` | **513 passed, 0 failed, 0 skipped**: core 219 (25 files), emails 13, db 184 (24 files), payments 57 (7 files, stripe-mock contract included), web 40 (email outbox 9, PDF 13, staff 13, rate limits 5) |
+| focused Playwright client-feedback journeys | **3 passed**; the connected booking journey, invoice uniqueness, and support workflow have independent budgets |
 | full Playwright suite | see `docs/reports/production-readiness-final.md` |
-| `pnpm audit --prod` | 2 pre-existing advisories (low, moderate) in the `shadcn` CLI's `deepmerge` (dev tool) |
-| Secret scan | gitleaks not installed locally; regex scan of the branch diff found nothing |
+| PDF regression matrix | **13 passed**; 26 pages rendered and visually inspected, page labels and clipping checked |
+| `pnpm audit --prod --audit-level high` | passes; 2 advisories remain (low `deepmerge`, moderate `minimatch`) below the gate |
+| Secret scan | gitleaks 8.28.0 scanned 155 commits; no leaks |
 
 Baseline before changes (staging `1c60468`): typecheck 7/7; core 193, emails 8, db
 149/150 — the one failure was this session's schema edit landing mid-run (the

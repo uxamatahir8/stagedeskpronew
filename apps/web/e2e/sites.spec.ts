@@ -6,13 +6,13 @@ import { ADMIN_EMAIL, signIn } from "./helpers";
  * it on the agency's free address, and a Business agency connects its own
  * domain (a .localhost name, which development accepts without DNS).
  */
-test("an agency builds and publishes its website, also on its own domain", async ({ browser }) => {
+test.describe.serial("agency websites", () => {
   const run = Date.now().toString(36);
+  const title = `Feest zonder zorgen ${run}`;
+
+test("an agency builds and publishes its website on the free address", async ({ browser }) => {
   const owner = await (await browser.newContext()).newPage();
   const visitor = await (await browser.newContext()).newPage();
-  const admin = await (await browser.newContext()).newPage();
-  const rotterdam = await (await browser.newContext()).newPage();
-  const title = `Feest zonder zorgen ${run}`;
 
   await test.step("the owner edits the hero, adds a packages section and publishes", async () => {
     await signIn(owner, "eigenaar@feestband.local");
@@ -39,6 +39,15 @@ test("an agency builds and publishes its website, also on its own domain", async
     await visitor.goto("http://feestband-utrecht.localhost:3000/sitemap.xml");
     expect(await visitor.content()).toContain("http://feestband-utrecht.localhost:3000/");
   });
+
+  await owner.context().close();
+  await visitor.context().close();
+});
+
+test("a Business agency connects and serves its own domain", async ({ browser }) => {
+  const visitor = await (await browser.newContext()).newPage();
+  const admin = await (await browser.newContext()).newPage();
+  const rotterdam = await (await browser.newContext()).newPage();
 
   // The plan is set here rather than assumed: the bulk demo seed puts Feestband on Business.
   async function grantPlan(plan: "Pro" | "Business") {
@@ -89,4 +98,9 @@ test("an agency builds and publishes its website, also on its own domain", async
     await row.getByRole("button", { name: "Verwijderen" }).click();
     await expect(rotterdam.getByText("Domein verwijderd.")).toBeVisible();
   });
+
+  await visitor.context().close();
+  await admin.context().close();
+  await rotterdam.context().close();
+});
 });

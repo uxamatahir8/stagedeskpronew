@@ -10,15 +10,17 @@ import { Prisma } from "./generated/prisma/client";
  * the sweeper and stay visible; after MAX_ATTEMPTS a message is dead.
  *
  * What a status means: `queued` = Redis accepted the job; `sent` = the SMTP
- * server accepted the message (its Message-ID is stored). Whether it reached
- * the inbox is not known: there are no bounce or delivery webhooks.
+ * server accepted the message (its Message-ID is stored); `suppressed` = the
+ * sender deliberately sent nothing (for example a test address guarded from
+ * a real SMTP server). Whether accepted mail reached the inbox is not known:
+ * there are no bounce or delivery webhooks.
  *
  * At-least-once: if a process dies after the SMTP server accepted a message
  * but before it was marked sent, the lease runs out and it is sent again,
  * with the same Message-ID, which mail clients use to drop the copy.
  */
 
-export type EmailStatus = "pending" | "queued" | "sending" | "sent" | "failed" | "dead";
+export type EmailStatus = "pending" | "queued" | "sending" | "sent" | "suppressed" | "failed" | "dead";
 
 export const MAX_ATTEMPTS = 8;
 const LEASE_MS = 2 * 60_000;
@@ -69,45 +71,59 @@ export async function markEmailQueued(id: string, now = new Date()) {
 
 /** Claims a message for one send: null when it's sent, dead, or another process holds it. */
 export async function claimEmail(id: string, now = new Date()) {
+  const leaseToken = randomUUID();
   const claimed = await prisma.emailMessage.updateMany({
     where: {
       id,
       OR: [{ status: { in: ["pending", "queued", "failed"] } }, { status: "sending", lockedUntil: { lt: now } }],
     },
-    data: { status: "sending", lockedUntil: new Date(now.getTime() + LEASE_MS), attempts: { increment: 1 } },
+    data: { status: "sending", lockedUntil: new Date(now.getTime() + LEASE_MS), leaseToken, attempts: { increment: 1 } },
   });
   if (claimed.count !== 1) return null;
-  return prisma.emailMessage.findUnique({ where: { id } });
+  return prisma.emailMessage.findFirst({ where: { id, status: "sending", leaseToken } });
 }
 
 /** Wait before attempt n+1: 1, 2, 4 … minutes, at most 6 hours. */
 export const retryDelayMs = (attempts: number) => Math.min(6 * 60 * 60_000, 60_000 * 2 ** Math.max(0, attempts - 1));
 
-export async function completeEmail(id: string, providerMessageId: string | null, now = new Date()) {
-  const row = await prisma.emailMessage.findUnique({ where: { id }, select: { kind: true } });
-  await prisma.emailMessage.updateMany({
-    where: { id, status: "sending" },
+export async function completeEmail(id: string, leaseToken: string, providerMessageId: string, now = new Date()) {
+  const row = await prisma.emailMessage.findFirst({ where: { id, status: "sending", leaseToken }, select: { kind: true } });
+  if (!row) return false;
+  const updated = await prisma.emailMessage.updateMany({
+    where: { id, status: "sending", leaseToken },
     data: {
       status: "sent",
       sentAt: now,
       lockedUntil: null,
+      leaseToken: null,
       lastError: null,
-      providerMessageId: providerMessageId?.slice(0, 191) ?? null,
+      providerMessageId: providerMessageId.slice(0, 191),
       // A link that signs someone in shouldn't stay in the database after it went out.
-      ...(row && secretKinds.has(row.kind) ? { job: Prisma.DbNull } : {}),
+      ...(secretKinds.has(row.kind) ? { job: Prisma.DbNull } : {}),
     },
   });
+  return updated.count === 1;
 }
 
-export async function failEmail(id: string, error: unknown, now = new Date()) {
-  const row = await prisma.emailMessage.findUnique({ where: { id }, select: { attempts: true } });
-  const attempts = row?.attempts ?? MAX_ATTEMPTS;
+export async function suppressEmail(id: string, leaseToken: string, reason: string, now = new Date()) {
+  const updated = await prisma.emailMessage.updateMany({
+    where: { id, status: "sending", leaseToken },
+    data: { status: "suppressed", lockedUntil: null, leaseToken: null, lastError: reason.slice(0, 2000), nextAttemptAt: now },
+  });
+  return updated.count === 1;
+}
+
+export async function failEmail(id: string, leaseToken: string, error: unknown, now = new Date()) {
+  const row = await prisma.emailMessage.findFirst({ where: { id, status: "sending", leaseToken }, select: { attempts: true } });
+  if (!row) return "stale" as const;
+  const attempts = row.attempts;
   const dead = attempts >= MAX_ATTEMPTS;
   const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-  await prisma.emailMessage.updateMany({
-    where: { id, status: "sending" },
-    data: { status: dead ? "dead" : "failed", lockedUntil: null, lastError: message.slice(0, 2000), nextAttemptAt: new Date(now.getTime() + retryDelayMs(attempts)) },
+  const updated = await prisma.emailMessage.updateMany({
+    where: { id, status: "sending", leaseToken },
+    data: { status: dead ? "dead" : "failed", lockedUntil: null, leaseToken: null, lastError: message.slice(0, 2000), nextAttemptAt: new Date(now.getTime() + retryDelayMs(attempts)) },
   });
+  if (updated.count !== 1) return "stale" as const;
   return dead ? ("dead" as const) : ("failed" as const);
 }
 
@@ -115,16 +131,19 @@ export async function failEmail(id: string, error: unknown, now = new Date()) {
 export async function processEmail(id: string, send: (job: unknown, messageId: string) => Promise<string | null | undefined | void>, now = new Date()) {
   const row = await claimEmail(id, now);
   if (!row) return "skipped" as const;
+  if (!row.leaseToken) return "skipped" as const;
   if (row.job === null) {
-    await failEmail(id, new Error("payload missing"), now);
+    await failEmail(id, row.leaseToken, new Error("payload missing"), now);
     return "failed" as const;
   }
   try {
     const accepted = await send(row.job, messageIdFor(row.id));
-    await completeEmail(id, accepted || messageIdFor(row.id));
-    return "sent" as const;
+    if (!accepted) {
+      return (await suppressEmail(id, row.leaseToken, "No message was accepted by the mail provider", now)) ? ("suppressed" as const) : ("stale" as const);
+    }
+    return (await completeEmail(id, row.leaseToken, accepted, now)) ? ("sent" as const) : ("stale" as const);
   } catch (error) {
-    return failEmail(id, error);
+    return failEmail(id, row.leaseToken, error, now);
   }
 }
 
@@ -152,7 +171,7 @@ export async function dueEmails(now = new Date(), take = 100) {
 
 /** Puts a failed or dead message back in line (support's "send again"). */
 export async function retryEmail(id: string, now = new Date()) {
-  const { count } = await prisma.emailMessage.updateMany({ where: { id, status: { in: ["failed", "dead"] }, job: { not: Prisma.DbNull } }, data: { status: "pending", nextAttemptAt: now, attempts: 0, lastError: null } });
+  const { count } = await prisma.emailMessage.updateMany({ where: { id, status: { in: ["failed", "dead"] }, job: { not: Prisma.DbNull } }, data: { status: "pending", nextAttemptAt: now, attempts: 0, lastError: null, leaseToken: null, lockedUntil: null } });
   return count === 1;
 }
 

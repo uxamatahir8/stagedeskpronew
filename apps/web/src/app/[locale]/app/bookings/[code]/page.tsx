@@ -603,7 +603,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     <li key={m.id} className="grid gap-0.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="min-w-0 truncate">{t.has(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") ? t(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") : m.kind}</span>
-                        <Pill tone={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" ? "danger" : "neutral"}>{t(`bookingEmails.status_${m.status as "sent"}`)}</Pill>
+                        <Pill tone={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" || m.status === "suppressed" ? "danger" : "neutral"}>{t(`bookingEmails.status_${m.status as "sent"}`)}</Pill>
                       </div>
                       <p className="truncate text-xs text-muted-foreground">
                         {m.to} · {dateTime(format, m.sentAt ?? m.createdAt)}

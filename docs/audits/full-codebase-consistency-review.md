@@ -59,9 +59,19 @@ docs. Their earlier audits in `docs/audits/*` were not re-verified.
 
 ## Known inconsistencies left open
 
-- `CLAUDE.md` says Dutch is the default locale without prefix; the code has English
-  without prefix and Dutch under `/nl` (`lib/mail.ts` `absoluteUrl`, migration
-  `20261025162358_english_default`). Documentation should be corrected by the team.
 - The Playwright suite's own comment in `booking-flow.spec.ts` (customers default to
   English) no longer holds after this branch; the step is language-independent.
 - `components/ui/select.tsx` lint warning (combobox ARIA props), pre-existing.
+
+## Continuation findings
+
+- The original outbox lease used only a timestamp. An expired worker could still mark
+  a message after another worker reclaimed it. Unique lease tokens now fence those
+  writes, with deterministic stale-worker coverage.
+- A provider suppression previously had no honest terminal representation. It now
+  becomes `suppressed`, is visible in booking email history, and is never counted as
+  sent.
+- The prior CI check invoked SMTP integration tests without SMTP. Mailpit is now a
+  declared service and readiness gate; the e2e job has likewise been restored.
+- `CLAUDE.md` now correctly documents English without a locale prefix and Dutch at
+  `/nl`.

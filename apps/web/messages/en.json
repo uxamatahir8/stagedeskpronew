@@ -6182,6 +6182,7 @@
     "status_queued": "Queued",
     "status_sending": "Sending",
     "status_sent": "Sent",
+    "status_suppressed": "Suppressed (not sent)",
     "status_failed": "Failed, will retry",
     "status_dead": "Not sent",
     "nextTry": "next try {date}",

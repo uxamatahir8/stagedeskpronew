@@ -65,8 +65,24 @@ async function saveInventorySettings(page: Page, sharing: boolean, artists: bool
   await card.getByRole("switch", { name: /Toegewezen artiesten/ }).setChecked(artists);
   const save = card.getByRole("button", { name: "Opslaan" });
   if (await save.isEnabled()) {
+    const saved = page.waitForResponse(
+      (response) =>
+        response.url().includes("/app/agency-settings") &&
+        response.request().method() === "POST" &&
+        Boolean(response.request().headers()["next-action"]),
+    );
     await save.click();
-    await expect(page.getByText("Instellingen opgeslagen.")).toBeVisible();
+    // The toast can disappear while the settings page revalidates. Prove the
+    // durable result instead: wait for the action, then read both saved values.
+    await saved;
+    await page.reload();
+    const persisted = page.locator('[data-slot="card"]').filter({ hasText: "Inventaris delen met andere bureaus" });
+    await expect(persisted.getByRole("switch", { name: "Inventaris delen met andere bureaus" })).toBeChecked({
+      checked: sharing,
+    });
+    await expect(persisted.getByRole("switch", { name: /Toegewezen artiesten/ })).toBeChecked({
+      checked: artists,
+    });
   }
 }
 
@@ -165,6 +181,9 @@ test("equipment from inventory to packing list, loading, check-in and sharing", 
   });
 
   await test.step("the assigned DJ sees the list, and loads once the agency allows it", async () => {
+    // Establish both halves of the permission transition even when a previous
+    // interrupted run left the demo agency with artist loading enabled.
+    await saveInventorySettings(owner, false, false);
     await owner.goto(`/nl/app/bookings/${first}`);
     await choose(owner, "Kies een artiest", /^DJ Sem/);
     await owner.getByRole("button", { name: /Artiest toewijzen|Andere artiest/ }).click();

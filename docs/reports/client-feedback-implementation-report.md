@@ -71,3 +71,18 @@ deee28e feat(bookings): upfront payment kinds, fixed artist fees and agency invo
 2. Whether typed invoice numbers should exist at all; and credit notes (gap G2).
 3. Own-domain email sending: provider choice and DNS verification (gap G1).
 4. Whether the details link should work after a quote is accepted.
+
+## Production-hardening continuation
+
+The continuation after `a8ad0cb` adds migration
+`20261105090000_email_outbox_lease_fencing`. `email_messages.leaseToken` fences
+completion and failure writes from workers whose lease expired, and `suppressed`
+records a provider decision not to deliver without presenting it as a successful
+send. The delivery contract remains at-least-once; a stable Message-ID supplies
+best-effort provider deduplication, not an exactly-once guarantee.
+
+CI now supplies Mailpit to the check job, runs the complete browser suite against an
+isolated stack, uploads failure artifacts, and blocks staging deployment on all three
+gates. The PDF regression suite is self-contained and generates 13 real documents for
+rendered visual and structural inspection. See `production-readiness-final.md` for
+current gate results and remaining production decisions.

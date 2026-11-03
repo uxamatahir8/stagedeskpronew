@@ -30,14 +30,20 @@ test("platform admin changes subscription rules and an agency fee deal", async (
   await test.step("a fee deal is set for one agency and removed again", async () => {
     await page.goto("/nl/app/agencies");
     const row = page.getByRole("row").filter({ hasText: "Rotterdam DJ Collectief" });
-    await row.getByRole("button", { name: "Kostenafspraak" }).click();
     const dialog = page.getByRole("dialog");
+    const openDeal = async () => {
+      await row.getByRole("button", { name: "Kostenafspraak" }).click();
+      await expect(dialog).toBeVisible();
+    };
+    // A streamed page can paint its button just before React attaches the handler.
+    // Retry the click until the dialog proves the interaction was hydrated.
+    await expect(openDeal).toPass();
     await dialog.getByRole("switch").click();
     await dialog.getByRole("button", { name: "Opslaan" }).click();
     await expect(page.getByText("Kostenafspraak opgeslagen.")).toBeVisible();
 
-    await row.getByRole("button", { name: "Kostenafspraak" }).click();
-    await page.getByRole("dialog").getByRole("switch").click();
+    await expect(openDeal).toPass();
+    await dialog.getByRole("switch").click();
     await page.getByRole("dialog").getByRole("button", { name: "Opslaan" }).click();
     await expect(page.getByText("Kostenafspraak opgeslagen.").first()).toBeVisible();
   });

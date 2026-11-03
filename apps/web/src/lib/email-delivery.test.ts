@@ -173,6 +173,32 @@ describe("email outbox", () => {
     expect((await inbox(address))[0]!.MessageID).toBe(db.messageIdFor(stored.id).slice(1, -1));
   });
 
+  it("fences a stale worker after another worker reclaims its expired lease", async () => {
+    const stored = await db.recordEmail({ kind: "gigAssigned", to: to("fenced"), job: job(to("fenced")) });
+    const t0 = new Date();
+    const workerA = await db.claimEmail(stored.id, t0);
+    expect(workerA?.leaseToken).toBeTruthy();
+
+    const workerB = await db.claimEmail(stored.id, new Date(t0.getTime() + 3 * 60_000));
+    expect(workerB?.leaseToken).toBeTruthy();
+    expect(workerB?.leaseToken).not.toBe(workerA?.leaseToken);
+
+    // A's SMTP call may finish late, but A no longer owns the row.
+    expect(await db.completeEmail(stored.id, workerA!.leaseToken!, "<stale@provider.test>")).toBe(false);
+    expect(await db.failEmail(stored.id, workerA!.leaseToken!, new Error("late failure"))).toBe("stale");
+    expect(await row(stored.id)).toMatchObject({ status: "sending", leaseToken: workerB!.leaseToken });
+
+    expect(await db.completeEmail(stored.id, workerB!.leaseToken!, "<current@provider.test>")).toBe(true);
+    expect(await row(stored.id)).toMatchObject({ status: "sent", providerMessageId: "<current@provider.test>", leaseToken: null });
+  });
+
+  it("records a deliberately suppressed message without claiming SMTP accepted it", async () => {
+    const stored = await db.recordEmail({ kind: "gigAssigned", to: to("suppressed"), job: job(to("suppressed")) });
+    expect(await db.processEmail(stored.id, async () => undefined)).toBe("suppressed");
+    expect(await row(stored.id)).toMatchObject({ status: "suppressed", providerMessageId: null, sentAt: null });
+    expect((await db.dueEmails(new Date(Date.now() + 24 * 60 * 60_000), 1000)).some((r) => r.id === stored.id)).toBe(false);
+  });
+
   it("a message that was never queued (stored while Redis was down) is picked up by the sweep", async () => {
     const stored = await db.recordEmail({ kind: "gigAssigned", to: to("sweep"), job: job(to("sweep")) });
     expect((await db.dueEmails(new Date(), 1000)).some((r) => r.id === stored.id)).toBe(true);

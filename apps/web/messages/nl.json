@@ -6182,6 +6182,7 @@
     "status_queued": "In de wachtrij",
     "status_sending": "Bezig",
     "status_sent": "Verstuurd",
+    "status_suppressed": "Onderdrukt (niet verstuurd)",
     "status_failed": "Mislukt, wordt opnieuw geprobeerd",
     "status_dead": "Niet verstuurd",
     "nextTry": "volgende poging {date}",

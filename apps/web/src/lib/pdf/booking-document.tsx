@@ -116,7 +116,6 @@ export function BookingDocument({ data }: { data: PdfData }) {
     <Document title={`${L.title} ${data.number}`} author={a.name}>
       <Page size="A4" style={[styles.page, { paddingTop: mmToPt(tpl.marginTopMm), paddingBottom: mmToPt(tpl.marginBottomMm) + 24 }]}>
         {/* The agency's letterhead behind every page; the margins keep the figures clear of it. */}
-        {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is drawn into the PDF and has no alt */}
         {data.background && (
           // Anchored to all four page edges through a fixed wrapper: an absolute Image alone is offset by the page padding.
           <View fixed style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>

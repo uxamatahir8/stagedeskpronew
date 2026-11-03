@@ -155,10 +155,10 @@ test("staff seats hold for role changes, also through Better Auth's API directly
     await dialog.locator("#na-locale").click();
     await admin.getByRole("option", { name: "Nederlands" }).click();
     await dialog.getByRole("button", { name: "Bureau aanmaken" }).click();
-    await expect(admin.getByText(`${agencyName} aangemaakt.`)).toBeVisible();
+    // Creation navigates to the durable agency page; the toast may disappear while
+    // a development server is compiling that page for the first time.
+    await expect(admin.getByRole("heading", { level: 1, name: agencyName })).toBeVisible({ timeout: 60_000 });
     setupLink = await fromMail(request, owner, /(https?:\/\/\S+\/nl\/reset-password\?token=\w+&setup=1)/, seen);
-    await admin.goto(`/nl/app/agencies?q=${encodeURIComponent(agencyName)}`);
-    await admin.getByRole("link", { name: agencyName }).click();
     await expect(admin).toHaveURL(/\/app\/agencies\/[\w-]+$/);
     organizationId = admin.url().split("/").pop()!;
     await admin.locator("#sub-plan").click();
