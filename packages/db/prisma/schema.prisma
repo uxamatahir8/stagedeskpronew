@@ -210,23 +210,26 @@ model Organization {
   artistRequestsIn    ArtistRequest[]  @relation("ArtistRequestLender")
 
   /// Language for customer emails and documents when the customer hasn't chosen one (nl | en).
-  correspondenceLocale      String                 @default("nl") @db.VarChar(8)
+  correspondenceLocale        String                 @default("nl") @db.VarChar(8)
   /// Upfront payment new quotes start with: none | percentage | fixed. null = the platform default percentage.
-  defaultDepositType        String?                @db.VarChar(16)
-  defaultDepositBps         Int?
-  defaultDepositFixedCents  Int?
+  defaultDepositType          String?                @db.VarChar(16)
+  defaultDepositBps           Int?
+  defaultDepositFixedCents    Int?
   /// Invoice numbers: yearly (2027-0042) | continuous (000042), with an optional prefix.
-  invoiceNumbering          String                 @default("yearly") @db.VarChar(16)
-  invoicePrefix             String?                @db.VarChar(12)
+  invoiceNumbering            String                 @default("yearly") @db.VarChar(16)
+  invoicePrefix               String?                @db.VarChar(12)
   /// Owners and admins may type an invoice's number instead of taking the next one.
-  allowManualInvoiceNumbers Boolean                @default(false)
+  allowManualInvoiceNumbers   Boolean                @default(false)
   /// Invoice look (InvoiceTemplate in core): colours, header/footer text, background image. null = defaults.
-  invoiceTemplate           Json?
+  invoiceTemplate             Json?
   /// Display name on customer emails ("Feestband Utrecht via StageDesk"); null = the agency name.
-  emailFromName             String?                @db.VarChar(120)
+  emailFromName               String?                @db.VarChar(120)
   /// Where customer replies go; null = contactEmail.
-  emailReplyTo              String?                @db.VarChar(191)
-  detailRequests            BookingDetailRequest[]
+  emailReplyTo                String?                @db.VarChar(191)
+  detailRequests              BookingDetailRequest[]
+  changeRequests              BookingChangeRequest[]
+  /// Customers may edit their music wishes and instructions in their portal.
+  customerPreferencesEditable Boolean                @default(true)
 
   /// Other agencies may browse this agency's equipment (read-only, public fields only). Off by default.
   inventorySharing       Boolean                @default(false)
@@ -462,13 +465,45 @@ model Booking {
   equipmentCheckedInAt DateTime?
   equipment            BookingEquipment[]
   detailRequests       BookingDetailRequest[]
+  changeRequests       BookingChangeRequest[]
+  /// The customer's further music wishes and instructions, separate from their first message.
+  musicRequests        String?                @db.Text
+  specialRequests      String?                @db.Text
+  /// A key the customer's form sends along, so a repeated submit doesn't make a second booking.
+  clientRequestId      String?                @db.VarChar(64)
 
   /// Target of the equipment lines' composite foreign key (same agency).
   @@unique([organizationId, id])
+  @@unique([organizationId, clientRequestId])
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
   @@index([customerId])
   @@map("bookings")
+}
+
+/// A customer asking to change contract details (date, times, venue, type, guests) the agency then decides on.
+model BookingChangeRequest {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// pending | approved | rejected | withdrawn | superseded
+  status         String       @db.VarChar(16)
+  /// { field: new value } for the fields that would change.
+  changes        Json
+  /// { field: value at the time of asking }, so the agency sees what it replaces.
+  baseline       Json
+  note           String?      @db.Text
+  requestedById  String       @db.VarChar(64)
+  decidedById    String?      @db.VarChar(64)
+  decidedAt      DateTime?
+  decisionNote   String?      @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([bookingId, status])
+  @@index([organizationId, status])
+  @@map("booking_change_requests")
 }
 
 /// An artist asked to perform at a booking. One open assignment per booking.

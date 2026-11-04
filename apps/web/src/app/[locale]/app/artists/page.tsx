@@ -2,11 +2,11 @@ import { Music2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { prisma } from "@stagedesk/db";
+import { artistAccountStatesOf, prisma } from "@stagedesk/db";
 import { ArtistAvatar } from "@/components/artist-avatar";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
-import { Pill } from "@/components/status-badge";
+import { ArtistAccountBadge, Pill } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
@@ -49,6 +49,7 @@ async function Artists() {
       include: { artist: true, organization: { select: { name: true } } },
     }),
   ]);
+  const accountStates = await artistAccountStatesOf(artists.map((a) => a.id));
   const linked = new Set(artists.map((a) => a.userId));
   const accounts = members.filter((m) => !linked.has(m.userId)).map((m) => ({ id: m.user.id, label: `${m.user.name} · ${m.user.email}` }));
   const genres = (value: unknown) => (Array.isArray(value) ? value.join(" · ") : "");
@@ -99,6 +100,7 @@ async function Artists() {
                     <span className="truncate font-medium">{a.stageName}</span>
                     {!a.active && <Pill>{t("inactive")}</Pill>}
                   </div>
+                  {accountStates.get(a.id) !== "active" && <div><ArtistAccountBadge state={accountStates.get(a.id) ?? "no_account"} /></div>}
                   <span className="truncate text-sm text-muted-foreground">{genres(a.genres)}</span>
                 </div>
               </Link>

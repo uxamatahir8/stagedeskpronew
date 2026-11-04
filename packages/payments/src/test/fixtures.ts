@@ -166,6 +166,7 @@ export async function agencyWithAccounts(run: string, opts: { artistConnected: b
       { id: artistUser, name: "Artist", email: `${run}-ar@test.local` },
     ],
   });
+  await prisma.member.create({ data: { id: randomUUID(), organizationId, userId: artistUser, role: "artist" } });
   await prisma.artist.create({ data: { id: artistId, organizationId, userId: artistUser, stageName: "DJ Pay", genres: [], defaultShareBps: 4_000 } });
   await prisma.connectedAccount.createMany({
     data: [

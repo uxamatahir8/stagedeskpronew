@@ -3,7 +3,7 @@ import { getLocale, setRequestLocale } from "next-intl/server";
 import { DatePrefsProvider } from "@/components/date-prefs";
 import { Guide } from "@/components/shell/guide";
 
-import { pendingLegal, prisma } from "@stagedesk/db";
+import { pendingGigCount, pendingLegal, prisma } from "@stagedesk/db";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SubscriptionBanner } from "@/components/shell/subscription-banner";
 import { ImpersonationBanner } from "@/components/shell/impersonation-banner";
@@ -36,10 +36,12 @@ async function Shell({ children }: { children: React.ReactNode }) {
   // A suspended agency is closed to its team and customers; they can still switch agency or sign out.
   const suspended = organization ? await prisma.organization.findUnique({ where: { id: organization.id }, select: { suspendedAt: true, suspendReason: true } }) : null;
   const datePrefs = await viewerDatePrefs();
+  // Requests waiting for this artist's answer, as a count next to Gigs.
+  const gigRequests = permissions.includes("artist.gigs") ? await pendingGigCount(user.id) : 0;
   return (
     <DatePrefsProvider prefs={datePrefs}>
       <SidebarProvider>
-        <AppSidebar viewer={{ user, role, organization, memberships, permissions, impersonatedBy }} />
+        <AppSidebar viewer={{ user, role, organization, memberships, permissions, impersonatedBy }} badges={{ gigs: gigRequests }} />
         <SidebarInset>
           <TopBar permissions={permissions} role={role} />
           {/* The tour is the user's own; an admin logged in as them shouldn't dismiss it. */}

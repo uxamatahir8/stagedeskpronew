@@ -145,3 +145,90 @@ export async function submitInquiry(slug: string, input: InquiryInput, source: "
   );
   return { agency, booking, customerId: user.id, newAccount: !existing };
 }
+
+export class CustomerRequestError extends Error {
+  constructor(readonly code: "not_customer" | "closed") {
+    super(`Customer request: ${code}`);
+    this.name = "CustomerRequestError";
+  }
+}
+
+/** An exact repeat within this time is the same request, even from a reloaded form. */
+const REPEAT_WINDOW_MS = 10 * 60_000;
+
+export interface CustomerRequestInput {
+  /** A key from the form; a repeat with the same one returns the first booking. */
+  clientRequestId: string;
+  eventType: EventType;
+  eventDate: string;
+  startTime: string | null;
+  venueName: string | null;
+  venueCity: string;
+  guestCount: number | null;
+  budgetRange: string | null;
+  preferredArtistId: string | null;
+  preferredGenre: string | null;
+  partnerName: string | null;
+  ceremony: boolean | null;
+  message: string | null;
+}
+
+/**
+ * Whether an agency takes requests from its customers' portals: the same
+ * switches as its public page, so turning that off or being suspended stops both.
+ */
+export async function agencyTakesRequests(organizationId: string) {
+  const agency = await prisma.organization.findFirst({ where: { id: organizationId, bookingPageEnabled: true, suspendedAt: null }, select: { id: true } });
+  return agency !== null;
+}
+
+/**
+ * A signed-in customer asks their agency for a booking. They must already be a
+ * customer of exactly this agency, so no account is made and no other agency can
+ * be reached. `duplicate` says the booking already existed: nobody should be told again.
+ */
+export async function submitCustomerRequest(organizationId: string, customerId: string, input: CustomerRequestInput, now = new Date()) {
+  const db = tenantDb(organizationId);
+  const member = await db.member.findFirst({ where: { userId: customerId, role: "customer" }, select: { id: true } });
+  if (!member) throw new CustomerRequestError("not_customer");
+  if (!(await agencyTakesRequests(organizationId))) throw new CustomerRequestError("closed");
+
+  const repeat = await db.booking.findFirst({ where: { customerId, clientRequestId: input.clientRequestId } });
+  if (repeat) return { booking: repeat, duplicate: true };
+  const lookalike = await db.booking.findFirst({
+    where: { customerId, status: "inquiry", source: "customer_portal", eventType: input.eventType, eventDate: toDateOnly(input.eventDate), venueCity: input.venueCity, createdAt: { gte: new Date(now.getTime() - REPEAT_WINDOW_MS) } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (lookalike) return { booking: lookalike, duplicate: true };
+
+  const preferred = input.preferredArtistId ? ((await publicArtists(organizationId)).find((a) => a.id === input.preferredArtistId)?.id ?? null) : null;
+  try {
+    const booking = await createBooking(
+      organizationId,
+      {
+        customerId,
+        eventType: input.eventType,
+        eventDate: input.eventDate,
+        startTime: input.startTime,
+        venueName: input.venueName,
+        venueCity: input.venueCity,
+        guestCount: input.guestCount,
+        message: input.message,
+        partnerName: input.eventType === "wedding" ? input.partnerName : null,
+        ceremony: input.eventType === "wedding" ? input.ceremony : null,
+        preferredArtistId: preferred,
+        preferredGenre: input.preferredGenre,
+        budgetRange: isBudgetRange(input.budgetRange) ? input.budgetRange : null,
+        source: "customer_portal",
+        clientRequestId: input.clientRequestId,
+      },
+      customerId,
+    );
+    return { booking, duplicate: false };
+  } catch (error) {
+    // Two submits at once: the unique index let one through, and that one is the answer.
+    const winner = await db.booking.findFirst({ where: { customerId, clientRequestId: input.clientRequestId } });
+    if (winner) return { booking: winner, duplicate: true };
+    throw error;
+  }
+}

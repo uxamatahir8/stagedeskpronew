@@ -515,7 +515,9 @@
     "invoice_number_invalid": "Gebruik 1–32 letters, cijfers of - _ / . voor het factuurnummer.",
     "invoice_number_taken": "Dat factuurnummer is al gebruikt. Elke factuur heeft een eigen nummer nodig.",
     "manual_numbers_off": "Zelf factuurnummers invullen staat uit voor je bureau (Instellingen → Facturen).",
-    "quote_outdated": "De evenementgegevens zijn gewijzigd nadat deze offerte is verstuurd. Verstuur eerst een herziene offerte."
+    "quote_outdated": "De evenementgegevens zijn gewijzigd nadat deze offerte is verstuurd. Verstuur eerst een herziene offerte.",
+    "artist_no_account": "Deze artiest heeft nog geen login en kan een aanvraag dus niet zien of beantwoorden. Nodig de artiest eerst uit via de artiestenpagina.",
+    "artist_account_disabled": "Het account van deze artiest is uitgeschakeld, dus een aanvraag kan niet worden gezien of beantwoord."
   },
   "bookings": {
     "title": "Boekingen",
@@ -692,7 +694,18 @@
     "field_venueName": "locatie",
     "field_venueAddress": "adres",
     "field_venueCity": "plaats",
-    "field_guestCount": "aantal gasten"
+    "field_guestCount": "aantal gasten",
+    "assignedSavedOnly": "De aanvraag voor {artist} is opgeslagen, maar {artist} is misschien niet op de hoogte.",
+    "notifyFailed": "De melding in de app kon niet worden gemaakt.",
+    "changeApproved": "Wijziging goedgekeurd en doorgevoerd. De artiest en de klant zijn op de hoogte gebracht.",
+    "changeRejected": "Wijziging geweigerd. De klant is op de hoogte gebracht.",
+    "changeRequestTitle": "{name} vroeg op {date} om deze gegevens te wijzigen",
+    "changeReason": "Opmerking voor de klant (optioneel)",
+    "approveChange": "Goedkeuren en doorvoeren",
+    "rejectChange": "Weigeren",
+    "artistUnreachable": "Deze artiest kan deze aanvraag niet zien: {state}.",
+    "artistUnreachableFix": "Los dit op via de artiestenpagina.",
+    "artistSetupPending": "De artiest heeft nog geen wachtwoord gekozen; de e-mail met de aanvraag bevat daarvoor een link."
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -724,7 +737,13 @@
     "artist_withdrawn": "Artiest van de boeking gehaald: {reason}",
     "details_requested": "Evenementgegevens opgevraagd bij de klant",
     "details_link_revoked": "Gegevenslink ingetrokken",
-    "details_submitted": "De klant heeft de evenementgegevens ingevuld"
+    "details_submitted": "De klant heeft de evenementgegevens ingevuld",
+    "preferences_updated": "De klant heeft de muziekwensen en instructies bijgewerkt",
+    "customer_event_updated": "De klant heeft de evenementgegevens gewijzigd",
+    "change_requested": "De klant heeft gevraagd de evenementgegevens te wijzigen",
+    "change_withdrawn": "De klant heeft het wijzigingsverzoek ingetrokken",
+    "change_approved": "Wijzigingsverzoek goedgekeurd",
+    "change_rejected": "Wijzigingsverzoek geweigerd"
   },
   "quotes": {
     "title": "Offertes",
@@ -869,7 +888,11 @@
     "yourShare": "Jouw aandeel: {pct}",
     "back": "Alle optredens",
     "completed": "Gemarkeerd als afgerond.",
-    "yourFee": "Jouw vergoeding: {amount}"
+    "yourFee": "Jouw vergoeding: {amount}",
+    "dateNotScheduled": "Datum nog niet bekend",
+    "requestsCount": "{count, plural, one {# aanvraag te beantwoorden} other {# aanvragen te beantwoorden}}",
+    "closedTitle": "Niet meer op je planning",
+    "endedTitle": "Deze aanvraag van {agency} staat niet meer open"
   },
   "availability": {
     "title": "Beschikbaarheid",
@@ -904,7 +927,48 @@
     "quote": "Offerte",
     "payments": "Betalingen",
     "invoice": "Factuur {number} downloaden",
-    "stars": "{count, plural, one {# ster} other {# sterren}}"
+    "stars": "{count, plural, one {# ster} other {# sterren}}",
+    "noBookingBody": "Vertel over je evenement, dan komen ze bij je terug met een offerte.",
+    "reference": "Boekingsnummer",
+    "agency": "Bureau",
+    "preferences": "Muziek en wensen",
+    "editPreferences": "Evenementvoorkeuren bewerken",
+    "preferencesHint": "Je wensen gaan direct naar je bureau en artiest. Ze veranderen niets aan je boeking of de prijs.",
+    "preferencesClosed": "Deze boeking kan niet meer worden gewijzigd. Neem contact op met je bureau als er iets aangepast moet worden.",
+    "preferencesLocked": "{agency} regelt deze gegevens. Stuur een bericht als je iets wilt laten aanpassen.",
+    "noPreferences": "Nog niets ingevuld.",
+    "dosLabel": "Do's: muziek en activiteiten die je wilt",
+    "dontsLabel": "Don'ts: muziek en activiteiten die je niet wilt",
+    "playlistLabel": "Link naar afspeellijst",
+    "playlistHint": "Spotify, Apple Music, YouTube, SoundCloud, Mixcloud, TIDAL of Deezer.",
+    "invalidPlaylist": "Gebruik een afspeellijst van Spotify, Apple Music, YouTube, SoundCloud, Mixcloud, TIDAL of Deezer, beginnend met https://.",
+    "musicRequests": "Overige muziekwensen",
+    "specialRequests": "Speciale wensen en instructies",
+    "yourMessage": "Je bericht aan het bureau",
+    "preferencesSaved": "Je voorkeuren zijn opgeslagen.",
+    "invalidForm": "Controleer wat je hebt ingevuld.",
+    "rateLimited": "Te veel wijzigingen in korte tijd. Probeer het later opnieuw.",
+    "requestChange": "Wijziging aanvragen",
+    "changeDetails": "Gegevens wijzigen",
+    "changeDirectHint": "Er is nog geen offerte gemaakt, dus dit wordt meteen opgeslagen.",
+    "changeRequestHint": "Datum, tijden, locatie en gasten kunnen de beschikbaarheid en prijs beïnvloeden, dus je bureau bevestigt wijzigingen eerst. Tot die tijd blijft je boeking zoals ze is.",
+    "changeNote": "Is er iets dat je bureau moet weten?",
+    "sendRequest": "Verzoek versturen",
+    "changeSaved": "Je evenementgegevens zijn bijgewerkt.",
+    "changeRequested": "Je verzoek is naar je bureau gestuurd. Je krijgt bericht zodra ze hebben besloten.",
+    "changeWithdrawn": "Je wijzigingsverzoek is ingetrokken.",
+    "withdrawChange": "Intrekken",
+    "changePending": "Wacht op bevestiging van je bureau",
+    "changeApproved": "Je bureau heeft je laatst gevraagde wijziging goedgekeurd.",
+    "changeRejected": "Je bureau kon je laatst gevraagde wijziging niet doorvoeren.",
+    "atOtherAgencies": "Boekingen bij andere bureaus",
+    "provider_spotify": "Open de Spotify-afspeellijst",
+    "provider_apple_music": "Open in Apple Music",
+    "provider_youtube": "Open op YouTube",
+    "provider_soundcloud": "Open op SoundCloud",
+    "provider_mixcloud": "Open op Mixcloud",
+    "provider_tidal": "Open op TIDAL",
+    "provider_deezer": "Open op Deezer"
   },
   "quotePage": {
     "title": "Offerte {code}",
@@ -1144,7 +1208,8 @@
     "confirmReceipt": "Ontvangst bevestigen",
     "via_platform_admin": "aangemaakt door platformbeheerder",
     "via_gig": "optreden besteld via de gids",
-    "via_profile": "via je openbare profiel"
+    "via_profile": "via je openbare profiel",
+    "via_customer_portal": "via klantportaal"
   },
   "billing": {
     "title": "Abonnement",
@@ -1853,7 +1918,13 @@
     "gig_cancelled": "Boeking {code} bij {name} is geannuleerd",
     "details_submitted": "{name} heeft de gegevens van {code} ingevuld",
     "artist_removed": "{name} is van {code} gehaald: wijs een andere artiest toe",
-    "quote_outdated": "{name} heeft de gegevens van {code} gewijzigd: herzie de offerte"
+    "quote_outdated": "{name} heeft de gegevens van {code} gewijzigd: herzie de offerte",
+    "preferences_updated": "{name} heeft de muziekwensen van {code} bijgewerkt",
+    "change_requested": "{name} vroeg om de gegevens van {code} te wijzigen",
+    "change_approved": "{name} heeft je gevraagde wijziging van {code} goedgekeurd",
+    "change_rejected": "{name} kon je gevraagde wijziging van {code} niet doorvoeren",
+    "gig_updated": "{name} heeft de gegevens van optreden {code} gewijzigd",
+    "booking_updated": "{name} heeft de gegevens van je boeking {code} gewijzigd"
   },
   "messages": {
     "title": "Berichten",
@@ -2057,7 +2128,8 @@
         "extend_trial": "Proefperiode verlengd",
         "grant_plan": "Abonnement toegekend",
         "delete": "Bureau verwijderd",
-        "email_sender": "Wijzigde de e-mailafzender"
+        "email_sender": "Wijzigde de e-mailafzender",
+        "customer_portal": "Instelling klantportaal gewijzigd"
       },
       "affiliate": {
         "status": "Status partner gewijzigd",
@@ -2105,7 +2177,12 @@
         "reject": "Reactie afgewezen"
       },
       "booking": {
-        "create_for_agency": "Boeking aangemaakt als platformbeheerder"
+        "create_for_agency": "Boeking aangemaakt als platformbeheerder",
+        "customer_preferences": "Klant heeft evenementwensen gewijzigd",
+        "customer_details": "Klant heeft evenementgegevens gewijzigd",
+        "change_requested": "Klant vroeg om evenementgegevens te wijzigen",
+        "change_approved": "Wijzigingsverzoek goedgekeurd",
+        "change_rejected": "Wijzigingsverzoek geweigerd"
       },
       "support": {
         "start": "Supportmodus gestart in een bureau",
@@ -2165,7 +2242,9 @@
         "revoke_shares": "Trok het delen van een artiest in",
         "unlink": "Koppelde het account van een artiest los",
         "relink": "Koppelde een artiest aan een ander account",
-        "delete": "Verwijderde een artiest"
+        "delete": "Verwijderde een artiest",
+        "invite": "Artiest uitgenodigd of aan account gekoppeld",
+        "setup_resent": "Wachtwoordlink artiest opnieuw verstuurd"
       }
     },
     "group_page": "Pagina's",
@@ -2333,7 +2412,8 @@
     "guests": "{count} gasten",
     "dos": "Wel",
     "donts": "Niet",
-    "playlist": "Playlist openen"
+    "playlist": "Playlist openen",
+    "dateNotScheduled": "Datum nog niet bekend"
   },
   "customerHome": {
     "noBooking": "Nog geen boeking bij {agency}.",
@@ -2345,7 +2425,12 @@
     "noArtistYet": "Nog niet toegewezen",
     "openEvent": "Bekijk je evenement",
     "messageAgency": "Bericht aan {agency}",
-    "pay": "Betalen"
+    "pay": "Betalen",
+    "noBookingBody": "Vertel over je evenement, dan komen ze bij je terug met een offerte.",
+    "requestBooking": "Boeking aanvragen",
+    "requestAnother": "Nog een boeking aanvragen",
+    "editPreferences": "Evenementvoorkeuren bewerken",
+    "otherBookings": "Je andere boekingen"
   },
   "site": {
     "switchLanguage": "English",
@@ -4064,7 +4149,8 @@
     "openCreated": "Boeking openen",
     "createdNotice": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht.",
     "source_gig": "Bestelling optreden",
-    "source_profile": "Artiestenprofiel"
+    "source_profile": "Artiestenprofiel",
+    "source_customer_portal": "Klantportaal"
   },
   "websiteEditor": {
     "title": "Website",
@@ -6190,5 +6276,74 @@
     "retried": "De e-mail wordt opnieuw verstuurd.",
     "notFound": "Die e-mail is niet gevonden.",
     "notRetryable": "Deze e-mail kan niet opnieuw worden verstuurd (hij is al verstuurd, of de inhoud is niet meer bewaard)."
+  },
+  "gigStates": {
+    "new_request": "Nieuwe aanvraag",
+    "pending_response": "Wacht op je antwoord",
+    "accepted": "Geaccepteerd",
+    "date_pending": "Geaccepteerd, datum volgt",
+    "completed": "Afgerond",
+    "past": "Geweest",
+    "declined": "Afgewezen",
+    "withdrawn": "Ingetrokken",
+    "cancelled": "Geannuleerd"
+  },
+  "artistAccount": {
+    "state_no_account": "Nog geen login",
+    "state_not_member": "Niet meer in het team",
+    "state_disabled": "Account uitgeschakeld",
+    "state_setup_pending": "Nog geen wachtwoord",
+    "state_active": "Kan inloggen",
+    "explain_no_account": "Deze artiest kan niet inloggen en zou een aanvraag dus niet zien. Nodig de artiest per e-mail uit: die krijgt een link om een wachtwoord te kiezen, en alles wat al klaarstaat is meteen zichtbaar.",
+    "explain_not_member": "Het account van dit profiel is uit je team verwijderd en kan hier geen optredens meer zien. Voeg de persoon opnieuw toe als artiest, of koppel een ander account.",
+    "explain_disabled": "Het account van dit profiel is uitgeschakeld en kan niet inloggen. Koppel een ander account of neem contact op met support.",
+    "explain_setup_pending": "Deze artiest heeft een account maar nog geen wachtwoord gekozen. E-mails met een aanvraag bevatten daarvoor een link; je kunt ook een nieuwe sturen (een link werkt 24 uur).",
+    "explain_active": "Deze artiest kan inloggen en aanvragen beantwoorden.",
+    "emailLabel": "E-mailadres van de artiest",
+    "invite": "Uitnodiging versturen",
+    "invalidEmail": "Vul een geldig e-mailadres in.",
+    "invited": "Uitnodiging verstuurd naar {email}; {name} kan daarmee een wachtwoord kiezen.",
+    "linked": "{name} is gekoppeld aan dat bestaande account.",
+    "requestsDelivered": "{count, plural, one {# wachtende aanvraag is nu zichtbaar} other {# wachtende aanvragen zijn nu zichtbaar}}.",
+    "resendSetup": "Nieuwe wachtwoordlink sturen",
+    "setupSent": "Er is een nieuwe wachtwoordlink onderweg naar {email}.",
+    "setupFailed": "De e-mail kon niet worden opgeslagen voor verzending. Probeer het opnieuw of neem contact op met support.",
+    "alreadyActive": "Deze artiest kan al inloggen.",
+    "rateLimited": "Te veel pogingen. Probeer het later opnieuw.",
+    "error_other_role": "Dit e-mailadres hoort al bij iemand met een andere rol in dit bureau.",
+    "error_already_linked": "Dit account is al gekoppeld aan een artiest in dit bureau."
+  },
+  "customerEventErrors": {
+    "not_found": "Deze boeking is niet gevonden.",
+    "closed": "Deze boeking kan niet meer worden gewijzigd.",
+    "locked_by_agency": "Je bureau regelt deze gegevens. Stuur een bericht als je iets wilt laten aanpassen.",
+    "invalid_playlist": "Gebruik een afspeellijst van Spotify, Apple Music, YouTube, SoundCloud, Mixcloud, TIDAL of Deezer.",
+    "invalid_date": "Kies een datum die nog moet komen.",
+    "invalid_details": "Controleer wat je hebt ingevuld.",
+    "no_changes": "Je hebt niets gewijzigd.",
+    "not_pending": "Dit verzoek is al afgehandeld.",
+    "date_required": "Een geboekte datum kan niet leeg blijven. Kies een nieuwe datum of stuur je bureau een bericht.",
+    "agency_unavailable": "Wijzigen kan op dit moment niet. Neem rechtstreeks contact op met je bureau."
+  },
+  "customerRequest": {
+    "title": "Boeking aanvragen",
+    "description": "Je aanvraag gaat naar {agency}, die bij je terugkomt met een offerte.",
+    "agency": "Bureau",
+    "agencyHint": "De aanvraag gaat alleen naar dit bureau.",
+    "emailHint": "Dit is het adres van je account. Je kunt het wijzigen onder je profiel.",
+    "submit": "Aanvraag versturen",
+    "sentTitle": "Je aanvraag is verstuurd",
+    "sentBody": "{agency} heeft je aanvraag ontvangen en komt bij je terug. Je boekingsnummer:",
+    "openEvent": "Bekijk je boeking",
+    "notCustomer": "Je kunt alleen een boeking aanvragen bij een bureau waarvan je klant bent.",
+    "closed": "{agency} neemt hier op dit moment geen aanvragen aan.",
+    "closedBody": "Stuur een bericht of neem rechtstreeks contact op."
+  },
+  "customerPortalSettings": {
+    "title": "Klantportaal",
+    "description": "Wat klanten met hun eigen boeking kunnen doen als ze inloggen.",
+    "editable": "Klanten kunnen hun muziekwensen bewerken",
+    "editableHint": "Genres, do's en don'ts, afspeellijst en instructies. Datum, tijden en locatie lopen altijd via jou zodra er een offerte is.",
+    "save": "Opslaan"
   }
 }

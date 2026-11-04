@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes } from "@stagedesk/core";
+import { eventTypes, playlistLink } from "@stagedesk/core";
 import { submitDetailRequest } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -26,7 +26,8 @@ const schema = z.object({
   guestCount: z.union([z.literal(""), z.coerce.number().int().min(1).max(100_000)]).transform((v) => (v === "" ? null : v)),
   partnerName: text(191),
   preferredGenre: text(96),
-  playlistUrl: z.union([z.literal(""), z.url({ protocol: /^https?$/ }).max(500)]).transform((v) => (v === "" ? null : v)),
+  // The same music services the customer's portal and the agency accept.
+  playlistUrl: z.union([z.literal(""), z.string().trim().max(500).refine((v) => playlistLink(v) !== null)]).transform((v) => (v === "" ? null : playlistLink(v)!.url)),
   notes: text(4000),
   phone: text(32),
 });

@@ -16,6 +16,16 @@ export async function writeBlocked(organizationId: string): Promise<string | nul
   return access.level === "read_only" ? (await getTranslations("billing"))("readOnly") : null;
 }
 
+/**
+ * For money that really moved (recording a payment, invoicing it, closing a
+ * booking): an agency whose subscription lapsed can still keep its books right,
+ * so only a suspension stops these. Otherwise like writeBlocked.
+ */
+export async function suspendedBlocked(organizationId: string): Promise<string | null> {
+  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { suspendedAt: true } });
+  return org?.suspendedAt ? (await getTranslations("agencySuspended"))("title") : null;
+}
+
 export async function limitBlocked(organizationId: string, key: CountLimit): Promise<string | null> {
   const blocked = await writeBlocked(organizationId);
   if (blocked) return blocked;

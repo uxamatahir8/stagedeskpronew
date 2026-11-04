@@ -515,7 +515,9 @@
     "invoice_number_invalid": "Use 1–32 letters, digits or - _ / . for the invoice number.",
     "invoice_number_taken": "That invoice number is already used. Every invoice needs its own number.",
     "manual_numbers_off": "Typing invoice numbers is switched off for your agency (Settings → Invoices).",
-    "quote_outdated": "The event details changed after this quote was sent. Send a revised quote first."
+    "quote_outdated": "The event details changed after this quote was sent. Send a revised quote first.",
+    "artist_no_account": "This artist has no login yet, so they can't see or answer a request. Invite them from their artist page first.",
+    "artist_account_disabled": "This artist's account is disabled, so they can't see or answer a request."
   },
   "bookings": {
     "title": "Bookings",
@@ -692,7 +694,18 @@
     "field_venueName": "venue",
     "field_venueAddress": "address",
     "field_venueCity": "city",
-    "field_guestCount": "number of guests"
+    "field_guestCount": "number of guests",
+    "assignedSavedOnly": "The request for {artist} is saved, but {artist} may not have been told.",
+    "notifyFailed": "The in-app notification could not be created.",
+    "changeApproved": "Change approved and applied. The artist and the customer have been told.",
+    "changeRejected": "Change refused. The customer has been told.",
+    "changeRequestTitle": "{name} asked to change these details on {date}",
+    "changeReason": "Note to the customer (optional)",
+    "approveChange": "Approve and apply",
+    "rejectChange": "Refuse",
+    "artistUnreachable": "This artist can't see this request: {state}.",
+    "artistUnreachableFix": "Sort this out on their artist page.",
+    "artistSetupPending": "They haven't set a password yet; the request email has a link to do so."
   },
   "timeline": {
     "created": "Booking created",
@@ -724,7 +737,13 @@
     "artist_withdrawn": "Artist taken off the booking: {reason}",
     "details_requested": "Event details requested from the customer",
     "details_link_revoked": "Details link revoked",
-    "details_submitted": "The customer filled in the event details"
+    "details_submitted": "The customer filled in the event details",
+    "preferences_updated": "The customer updated their music wishes and instructions",
+    "customer_event_updated": "The customer changed the event details",
+    "change_requested": "The customer asked to change the event details",
+    "change_withdrawn": "The customer took back their change request",
+    "change_approved": "Change request approved",
+    "change_rejected": "Change request refused"
   },
   "quotes": {
     "title": "Quotes",
@@ -869,7 +888,11 @@
     "yourShare": "Your share: {pct}",
     "back": "All gigs",
     "completed": "Marked as completed.",
-    "yourFee": "Your fee: {amount}"
+    "yourFee": "Your fee: {amount}",
+    "dateNotScheduled": "Date not scheduled yet",
+    "requestsCount": "{count, plural, one {# request to answer} other {# requests to answer}}",
+    "closedTitle": "No longer on your schedule",
+    "endedTitle": "This request from {agency} is no longer open"
   },
   "availability": {
     "title": "Availability",
@@ -904,7 +927,48 @@
     "quote": "Quote",
     "payments": "Payments",
     "invoice": "Download invoice {number}",
-    "stars": "{count, plural, one {# star} other {# stars}}"
+    "stars": "{count, plural, one {# star} other {# stars}}",
+    "noBookingBody": "Tell them about your event and they'll come back to you with a quote.",
+    "reference": "Booking reference",
+    "agency": "Agency",
+    "preferences": "Music and wishes",
+    "editPreferences": "Edit event preferences",
+    "preferencesHint": "Your wishes go straight to your agency and artist. They don't change your booking or its price.",
+    "preferencesClosed": "This booking can no longer be changed. Contact your agency if something needs correcting.",
+    "preferencesLocked": "{agency} takes care of these details. Send them a message if you'd like something changed.",
+    "noPreferences": "Nothing filled in yet.",
+    "dosLabel": "Do's: music and activities you want",
+    "dontsLabel": "Don'ts: music and activities you don't want",
+    "playlistLabel": "Playlist link",
+    "playlistHint": "Spotify, Apple Music, YouTube, SoundCloud, Mixcloud, TIDAL or Deezer.",
+    "invalidPlaylist": "Use a playlist link from Spotify, Apple Music, YouTube, SoundCloud, Mixcloud, TIDAL or Deezer, starting with https://.",
+    "musicRequests": "Other music requests",
+    "specialRequests": "Special requests and instructions",
+    "yourMessage": "Your message to the agency",
+    "preferencesSaved": "Your preferences have been saved.",
+    "invalidForm": "Please check what you filled in.",
+    "rateLimited": "Too many changes in a short time. Try again in a while.",
+    "requestChange": "Request a change",
+    "changeDetails": "Change details",
+    "changeDirectHint": "No quote has been made yet, so this is saved straight away.",
+    "changeRequestHint": "Date, times, venue and guests can affect availability and price, so your agency confirms changes to them first. Your booking stays as it is until then.",
+    "changeNote": "Anything your agency should know?",
+    "sendRequest": "Send request",
+    "changeSaved": "Your event details have been updated.",
+    "changeRequested": "Your request has gone to your agency. You'll get a message when they've decided.",
+    "changeWithdrawn": "Your change request has been withdrawn.",
+    "withdrawChange": "Withdraw",
+    "changePending": "Waiting for your agency to confirm this change",
+    "changeApproved": "Your agency approved your last requested change.",
+    "changeRejected": "Your agency couldn't make your last requested change.",
+    "atOtherAgencies": "Bookings with other agencies",
+    "provider_spotify": "Open the Spotify playlist",
+    "provider_apple_music": "Open in Apple Music",
+    "provider_youtube": "Open on YouTube",
+    "provider_soundcloud": "Open on SoundCloud",
+    "provider_mixcloud": "Open on Mixcloud",
+    "provider_tidal": "Open on TIDAL",
+    "provider_deezer": "Open on Deezer"
   },
   "quotePage": {
     "title": "Quote {code}",
@@ -1144,7 +1208,8 @@
     "confirmReceipt": "Confirm receipt",
     "via_platform_admin": "created by platform admin",
     "via_gig": "gig ordered from the directory",
-    "via_profile": "via your public profile"
+    "via_profile": "via your public profile",
+    "via_customer_portal": "via customer portal"
   },
   "billing": {
     "title": "Subscription",
@@ -1853,7 +1918,13 @@
     "gig_cancelled": "Booking {code} at {name} was cancelled",
     "details_submitted": "{name} filled in the details of {code}",
     "artist_removed": "{name} was taken off {code}: assign another artist",
-    "quote_outdated": "{name} changed the details of {code}: revise the quote"
+    "quote_outdated": "{name} changed the details of {code}: revise the quote",
+    "preferences_updated": "{name} updated the music wishes of {code}",
+    "change_requested": "{name} asked to change the details of {code}",
+    "change_approved": "{name} approved your requested change to {code}",
+    "change_rejected": "{name} couldn't make your requested change to {code}",
+    "gig_updated": "{name} changed the details of gig {code}",
+    "booking_updated": "{name} changed the details of your booking {code}"
   },
   "messages": {
     "title": "Messages",
@@ -2057,7 +2128,8 @@
         "extend_trial": "Extended a trial",
         "grant_plan": "Granted a plan",
         "delete": "Deleted an agency",
-        "email_sender": "Changed the email sender"
+        "email_sender": "Changed the email sender",
+        "customer_portal": "Customer portal setting changed"
       },
       "affiliate": {
         "status": "Changed a partner's status",
@@ -2105,7 +2177,12 @@
         "reject": "Rejected a comment"
       },
       "booking": {
-        "create_for_agency": "Created a platform admin booking"
+        "create_for_agency": "Created a platform admin booking",
+        "customer_preferences": "Customer changed their event wishes",
+        "customer_details": "Customer changed event details",
+        "change_requested": "Customer asked to change event details",
+        "change_approved": "Change request approved",
+        "change_rejected": "Change request refused"
       },
       "support": {
         "start": "Started support mode in an agency",
@@ -2165,7 +2242,9 @@
         "revoke_shares": "Revoked an artist's sharing",
         "unlink": "Unlinked an artist's account",
         "relink": "Linked an artist to another account",
-        "delete": "Deleted an artist"
+        "delete": "Deleted an artist",
+        "invite": "Artist invited or linked to an account",
+        "setup_resent": "Artist password setup link resent"
       }
     },
     "group_page": "Pages",
@@ -2333,7 +2412,8 @@
     "guests": "{count} guests",
     "dos": "Do",
     "donts": "Don't",
-    "playlist": "Open playlist"
+    "playlist": "Open playlist",
+    "dateNotScheduled": "Date not scheduled yet"
   },
   "customerHome": {
     "noBooking": "No booking with {agency} yet.",
@@ -2345,7 +2425,12 @@
     "noArtistYet": "Not assigned yet",
     "openEvent": "View your event",
     "messageAgency": "Message {agency}",
-    "pay": "Pay"
+    "pay": "Pay",
+    "noBookingBody": "Tell them about your event and they'll come back to you with a quote.",
+    "requestBooking": "Request a booking",
+    "requestAnother": "Request another booking",
+    "editPreferences": "Edit event preferences",
+    "otherBookings": "Your other bookings"
   },
   "site": {
     "switchLanguage": "Dutch",
@@ -4064,7 +4149,8 @@
     "openCreated": "Open the booking",
     "createdNotice": "Platform admin booking {code} created for {agency}. Their team has been notified.",
     "source_gig": "Gig order",
-    "source_profile": "Artist profile"
+    "source_profile": "Artist profile",
+    "source_customer_portal": "Customer portal"
   },
   "websiteEditor": {
     "title": "Website",
@@ -6190,5 +6276,74 @@
     "retried": "The email will be sent again.",
     "notFound": "That email wasn't found.",
     "notRetryable": "This email can't be sent again (it was sent, or its contents are no longer stored)."
+  },
+  "gigStates": {
+    "new_request": "New request",
+    "pending_response": "Waiting for your answer",
+    "accepted": "Accepted",
+    "date_pending": "Accepted, date to be set",
+    "completed": "Completed",
+    "past": "Past",
+    "declined": "Declined",
+    "withdrawn": "Withdrawn",
+    "cancelled": "Cancelled"
+  },
+  "artistAccount": {
+    "state_no_account": "No login yet",
+    "state_not_member": "No longer on the team",
+    "state_disabled": "Account disabled",
+    "state_setup_pending": "Password not set yet",
+    "state_active": "Can sign in",
+    "explain_no_account": "This artist can't sign in, so they wouldn't see any request you send. Invite them by email: they get a link to choose a password, and anything already waiting for them shows up straight away.",
+    "explain_not_member": "The account linked to this profile was removed from your team, so it can't see gigs here. Add the person back as an artist, or link another account.",
+    "explain_disabled": "The account linked to this profile has been disabled and can't sign in. Link another account or contact support.",
+    "explain_setup_pending": "This artist has an account but hasn't chosen a password yet. Request emails carry a link to do it; you can also send a new one (a link works for 24 hours).",
+    "explain_active": "This artist can sign in and answer requests.",
+    "emailLabel": "Artist's email address",
+    "invite": "Send invitation",
+    "invalidEmail": "Enter a valid email address.",
+    "invited": "Invitation sent to {email}; {name} can set a password from there.",
+    "linked": "{name} is linked to that existing account.",
+    "requestsDelivered": "{count, plural, one {# waiting request now reaches them} other {# waiting requests now reach them}}.",
+    "resendSetup": "Send a new password link",
+    "setupSent": "A new password link is on its way to {email}.",
+    "setupFailed": "The email could not be stored for sending. Try again or contact support.",
+    "alreadyActive": "This artist can already sign in.",
+    "rateLimited": "Too many attempts. Try again in a while.",
+    "error_other_role": "This email already belongs to someone with another role in this agency.",
+    "error_already_linked": "This account is already linked to an artist in this agency."
+  },
+  "customerEventErrors": {
+    "not_found": "This booking was not found.",
+    "closed": "This booking can no longer be changed.",
+    "locked_by_agency": "Your agency takes care of these details. Send them a message if you'd like something changed.",
+    "invalid_playlist": "Use a playlist link from Spotify, Apple Music, YouTube, SoundCloud, Mixcloud, TIDAL or Deezer.",
+    "invalid_date": "Choose a date that's still ahead.",
+    "invalid_details": "Please check what you filled in.",
+    "no_changes": "You haven't changed anything.",
+    "not_pending": "This request has already been dealt with.",
+    "date_required": "A booked date can't be left empty. Choose a new date, or message your agency.",
+    "agency_unavailable": "Changes can't be made right now. Contact your agency directly."
+  },
+  "customerRequest": {
+    "title": "Request a booking",
+    "description": "Your request goes to {agency}, who'll come back to you with a quote.",
+    "agency": "Agency",
+    "agencyHint": "The request goes to this agency only.",
+    "emailHint": "This is your account's address. You can change it under your profile.",
+    "submit": "Send request",
+    "sentTitle": "Your request has been sent",
+    "sentBody": "{agency} has received it and will get back to you. Your booking reference:",
+    "openEvent": "View your booking",
+    "notCustomer": "You can only request a booking from an agency you're a customer of.",
+    "closed": "{agency} isn't taking booking requests here at the moment.",
+    "closedBody": "Send them a message, or contact them directly."
+  },
+  "customerPortalSettings": {
+    "title": "Customer portal",
+    "description": "What customers can do with their own booking when they sign in.",
+    "editable": "Customers can edit their music wishes",
+    "editableHint": "Genres, do's and don'ts, playlist and instructions. Date, times and venue always go through you once a quote is out.",
+    "save": "Save"
   }
 }

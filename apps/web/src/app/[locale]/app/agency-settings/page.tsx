@@ -10,6 +10,7 @@ import { platformDatePrefs } from "@/lib/date-prefs";
 import { requireAgency } from "@/lib/viewer";
 import { AgencyForm, LogoForm } from "./agency-forms";
 import { CommunicationForm } from "./communication-form";
+import { CustomerPortalForm } from "./customer-portal-form";
 import { InvoiceSettingsForm } from "./invoice-settings-form";
 import { centsToInput } from "@/lib/format";
 import { InventorySettingsForm } from "./inventory-settings-form";
@@ -118,6 +119,7 @@ async function AgencySettings() {
           template: parseInvoiceTemplate(agency.invoiceTemplate),
         }}
       />
+      <CustomerPortalForm initial={{ customerPreferencesEditable: agency.customerPreferencesEditable }} />
       <InventorySettingsForm initial={{ inventorySharing: agency.inventorySharing, artistsHandleEquipment: agency.artistsHandleEquipment }} />
     </div>
   );

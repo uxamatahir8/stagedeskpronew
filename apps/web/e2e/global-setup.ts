@@ -30,7 +30,7 @@ export default async function globalSetup() {
 const warmRoutes = [
   "/nl", "/nl/sign-in", "/nl/sign-up", "/nl/forgot-password", "/nl/reset-password", "/nl/accept-terms", "/nl/onboarding",
   "/nl/request", "/nl/partners", "/nl/blog", "/nl/changelog", "/nl/b/feestband-utrecht", "/embed/feestband-utrecht",
-  "/nl/app", "/nl/app/bookings", "/nl/app/bookings/new", "/nl/app/bookings/XXXXXXXX", "/nl/app/event", "/nl/app/gigs/XXXXXXXX",
+  "/nl/app", "/nl/app/bookings", "/nl/app/bookings/new", "/nl/app/bookings/XXXXXXXX", "/nl/app/event", "/nl/app/event/request", "/nl/app/gigs", "/nl/app/gigs/XXXXXXXX", "/nl/app/notifications", "/nl/app/artists/x",
   "/nl/app/messages", "/nl/app/messages/XXXXXXXX", "/nl/app/payments", "/nl/app/my-payments", "/nl/app/agency-settings",
   "/nl/app/settings", "/nl/app/settings/payments", "/nl/app/team", "/nl/app/artists", "/nl/app/profile", "/nl/app/support",
   "/nl/app/inventory", "/nl/app/inventory/XXXXXXXX", "/nl/app/inventory/categories", "/nl/app/inventory/packages/new",

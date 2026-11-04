@@ -203,6 +203,24 @@ export async function saveInventorySettingsAction(input: z.input<typeof inventor
   return { ok: true, message: (await getTranslations("agencySettings"))("saved") };
 }
 
+const customerPortalSchema = z.object({ customerPreferencesEditable: z.boolean() });
+
+/** Whether customers may edit their own wishes in their portal. It decides who can write to a booking, so it's audited. */
+export async function saveCustomerPortalAction(input: z.input<typeof customerPortalSchema>): Promise<ActionResult> {
+  const { viewer, organization } = await requireAgency("agency.settings");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
+  const data = customerPortalSchema.parse(input);
+  await prisma.$transaction(async (tx) => {
+    const before = await tx.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { customerPreferencesEditable: true } });
+    await tx.organization.update({ where: { id: organization.id }, data });
+    if (before.customerPreferencesEditable !== data.customerPreferencesEditable) {
+      await auditTx(tx, { actorId: viewer.user.id, action: "agency.customer_portal", agencyId: organization.id, targetType: "agency", targetId: organization.id, data: { on: data.customerPreferencesEditable } });
+    }
+  });
+  return { ok: true, message: (await getTranslations("agencySettings"))("saved") };
+}
+
 /**
  * Issued invoices print the logo and background they had when issued (their
  * snapshot keeps the file path), so a replaced file is only deleted while the

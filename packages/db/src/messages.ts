@@ -84,11 +84,16 @@ export interface ConversationScope {
 
 /** Conversations someone can see, newest first, with unread counts. */
 export async function conversations(scope: ConversationScope, take = 50) {
+  const asArtist = { channel: "artist", booking: { assignments: { some: { status: { in: ["pending", "accepted"] }, artist: { userId: scope.artistUserId ?? "-" } } } } };
+  const asCustomer = { channel: "customer", booking: { customerId: scope.customerId ?? "-" } };
+  // Someone can be a customer of one agency and an artist at another: they see both sides.
   const where = scope.agencyId
     ? { organizationId: scope.agencyId }
-    : scope.artistUserId
-      ? { channel: "artist", booking: { assignments: { some: { status: { in: ["pending", "accepted"] }, artist: { userId: scope.artistUserId } } } } }
-      : { channel: "customer", booking: { customerId: scope.customerId ?? "-" } };
+    : scope.artistUserId && scope.customerId
+      ? { OR: [asArtist, asCustomer] }
+      : scope.artistUserId
+        ? asArtist
+        : asCustomer;
   const threads = await prisma.bookingMessage.groupBy({
     by: ["bookingId", "channel"],
     where,

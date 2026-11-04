@@ -37,5 +37,7 @@ export async function messageAccess(viewer: Viewer & { role: NonNullable<Viewer[
 export function conversationScope(viewer: Viewer & { role: NonNullable<Viewer["role"]> }) {
   if (viewer.organization && viewer.permissions.includes("agency.bookings")) return { userId: viewer.user.id, agencyId: viewer.organization.id };
   if (viewer.role === "artist") return { userId: viewer.user.id, artistUserId: viewer.user.id };
+  // A customer here who is an artist at another agency also has their gig conversations.
+  if (viewer.permissions.includes("artist.gigs")) return { userId: viewer.user.id, artistUserId: viewer.user.id, customerId: viewer.user.id };
   return { userId: viewer.user.id, customerId: viewer.user.id };
 }

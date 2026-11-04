@@ -13,7 +13,7 @@ import { AffiliateHome } from "./affiliate-home";
 import { AgencyAnalytics } from "./agency-analytics";
 import { AgencyHome } from "./agency-home";
 import { AgencyInsights } from "./agency-insights";
-import { ArtistHome } from "./artist-home";
+import { ArtistHome, GigRequestsCard } from "./artist-home";
 import { CustomerHome } from "./customer-home";
 import { AffiliateAnalytics, ArtistAnalytics, CustomerProgress } from "./role-analytics";
 
@@ -103,6 +103,8 @@ async function RoleHome({ searchParams }: Pick<PageProps<"/[locale]/app">, "sear
   return (
     <div className="grid gap-8">
       {header}
+      {/* An artist at another agency: their requests are on every home, whichever agency is active. */}
+      {role !== "artist" && permissions.includes("artist.gigs") && <GigRequestsCard userId={user.id} />}
       {body}
     </div>
   );

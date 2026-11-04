@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { type Compensation, parseEuros } from "@stagedesk/core";
+import { type Compensation, parseEuros, playlistLink } from "@stagedesk/core";
 import {
   acceptQuote,
   assignArtist,
@@ -11,6 +11,7 @@ import {
   changeBookingStatus,
   createBooking,
   createDetailRequest,
+  decideChangeRequest,
   DetailRequestError,
   resolveBookingCustomer,
   retryEmail,
@@ -32,8 +33,8 @@ import { sendStored } from "@/lib/deliver";
 import { agencySender, agencySenderSelect } from "@/lib/correspondence";
 import { draftDeposit, parseQuoteLines, type QuoteDraft, quoteDraftSchema } from "@/lib/quote-input";
 import { type ActionResult, runAction } from "@/lib/actions";
-import { type FormState } from "@/lib/validation";
-import { limitBlocked, writeBlocked } from "@/lib/billing";
+import { type FormState, optionalText } from "@/lib/validation";
+import { limitBlocked, suspendedBlocked, writeBlocked } from "@/lib/billing";
 import { sendReceipt } from "@/lib/payment-claims";
 import { requireAgency, viewerCan } from "@/lib/viewer";
 import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
@@ -78,14 +79,25 @@ const detailsSchema = z.object({
   ...eventFields,
   dos: lines,
   donts: lines,
+  preferredGenre: optionalText(96),
+  musicRequests: optionalText(4000),
+  specialRequests: optionalText(4000),
+  // The same music services a customer may link; the artist opens whatever is stored here.
   playlistUrl: z.preprocess(
     (v) => (typeof v === "string" && v.trim() === "" ? null : v),
-    z.url({ protocol: /^https?$/, error: "invalidUrl" }).max(500).nullable(),
+    z
+      .string()
+      .max(500)
+      .refine((v) => playlistLink(v) !== null, "invalidUrl")
+      .transform((v) => playlistLink(v)!.url)
+      .nullable(),
   ),
 });
 
 export async function updateDetailsAction(bookingId: string, _prev: FormState, form: FormData): Promise<FormState> {
   const { viewer, organization } = await requireAgency("agency.bookings.edit");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { message: blocked };
   const parsed = detailsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const { eventDate, budget, ...rest } = parsed.data;
@@ -137,6 +149,8 @@ export async function sendQuoteAction(bookingId: string, input: QuoteDraft): Pro
 /** Emails the customer their quote link, in their own language. */
 export async function acceptOnBehalfAction(quoteId: string, name: string): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.quotes.accept");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   return runAction(
     () => acceptQuote(organization.id, quoteId, { actor: "agency", actorId: viewer.user.id, name: name.trim().slice(0, 191) || viewer.user.name }),
@@ -165,11 +179,26 @@ export async function assignArtistAction(bookingId: string, artistId: string, pa
         : { type, shareBps: 0, fixedCents: cents ?? -1 };
   }
   return runAction(async () => {
-    const { assignmentId, withdrawnIds } = await assignArtist(organization.id, bookingId, artistId, viewer.user.id, undefined, compensation);
+    const { assignmentId, withdrawnIds, notified } = await assignArtist(organization.id, bookingId, artistId, viewer.user.id, undefined, compensation);
     const mailed = await emailArtists([assignmentId], "new");
     await emailArtists(withdrawnIds, "withdrawn");
     const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { stageName: true } });
-    return mailed ? t("assigned", { artist: artist?.stageName ?? "" }) : `${t("assigned", { artist: artist?.stageName ?? "" })} ${t("emailNotQueued")}`;
+    const name = artist?.stageName ?? "";
+    // Says what really happened: the request is saved either way, reaching the artist may not have worked.
+    if (notified && mailed) return t("assigned", { artist: name });
+    return [t("assignedSavedOnly", { artist: name }), !notified && t("notifyFailed"), !mailed && t("emailNotQueued")].filter(Boolean).join(" ");
+  });
+}
+
+/** The agency approves or refuses a customer's requested change. Approving runs the same checks as an edit. */
+export async function decideChangeRequestAction(requestId: string, approve: boolean, note: string | null): Promise<ActionResult> {
+  const { viewer, organization } = await requireAgency("agency.bookings.edit");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
+  const t = await getTranslations("booking");
+  return runAction(async () => {
+    await decideChangeRequest(organization.id, String(requestId).slice(0, 64), viewer.user.id, { approve, note: note?.slice(0, 2000) ?? null });
+    return approve ? t("changeApproved") : t("changeRejected");
   });
 }
 
@@ -179,6 +208,8 @@ export async function changeStatusAction(
   reason: string | null,
 ): Promise<ActionResult> {
   const { viewer, organization, db } = await requireAgency("agency.bookings.status");
+  const blocked = await suspendedBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   // Artists on the booking now; a cancel or decline takes them off it, and they're told.
   const active = action === "cancel" || action === "decline" ? await db.bookingAssignment.findMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true } }) : [];
@@ -198,6 +229,8 @@ const paymentSchema = z.object({
 
 export async function recordPaymentAction(bookingId: string, input: z.input<typeof paymentSchema>): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.payments.record");
+  const blocked = await suspendedBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   const parsed = paymentSchema.safeParse(input);
   const amountCents = parsed.success ? parseEuros(parsed.data.amount) : null;
@@ -227,6 +260,8 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
 
 export async function issueInvoiceAction(bookingId: string, manualNumber: string | null = null): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.invoices");
+  const blocked = await suspendedBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   // Typing a number (instead of the next in the series) is for people who manage the agency's settings.
   if (manualNumber && !viewerCan(viewer, "agency.settings")) return { ok: false, message: (await getTranslations("bookingErrors"))("not_allowed") };
@@ -238,7 +273,9 @@ export async function issueInvoiceAction(bookingId: string, manualNumber: string
 }
 
 export async function addNoteAction(bookingId: string, body: string): Promise<ActionResult> {
-  const { viewer, db } = await requireAgency("agency.bookings");
+  const { viewer, organization, db } = await requireAgency("agency.bookings");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const text = body.trim().slice(0, 5000);
   if (!text) return { ok: false };
   const booking = await db.booking.findFirst({ where: { id: bookingId }, select: { id: true } });

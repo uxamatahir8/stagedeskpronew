@@ -5,13 +5,15 @@ import { getLocale } from "next-intl/server";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { mediaEmbed, parseEuros } from "@stagedesk/core";
-import { prisma } from "@stagedesk/db";
+import { audit, prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { toggleUnavailable } from "@/lib/availability";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
 import { featureBlocked, limitBlocked, writeBlocked } from "@/lib/billing";
+import { accepted } from "@/lib/mail";
+import { allow } from "@/lib/rate-limit";
 import { requireAgency } from "@/lib/viewer";
-import { ArtistAccountError, ensureArtistAccount } from "@/lib/artist-account";
+import { announceOpenRequests, ArtistAccountError, ensureArtistAccount, resendArtistSetup } from "@/lib/artist-account";
 
 const artistSchema = z.object({
   id: z.string().max(64).nullable(),
@@ -82,7 +84,10 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
     active: d.active,
   };
   if (d.id) {
+    const before = await db.artist.findFirst({ where: { id: d.id }, select: { userId: true } });
     await db.artist.updateMany({ where: { id: d.id }, data });
+    // Linked just now: requests sent before they had a login reach them from here on.
+    if (data.userId && data.userId !== before?.userId) await announceOpenRequests(d.id, data.userId);
     return { ok: true, message: t("saved"), id: d.id };
   }
   const email = d.email?.toLowerCase() ?? null;
@@ -94,9 +99,56 @@ export async function saveArtistAction(input: z.input<typeof artistSchema>): Pro
     await db.artist.create({ data: { ...data, userId: account.userId, id, organizationId: organization.id } });
     return { ok: true, message: account.setupSent ? t("invited", { name: d.stageName, email }) : t("added", { name: d.stageName }), id };
   } catch (error) {
-    if (error instanceof ArtistAccountError) return { ok: false, message: error.message };
+    if (error instanceof ArtistAccountError) return { ok: false, message: (await getTranslations("artistAccount"))(`error_${error.code}`) };
     throw error;
   }
+}
+
+const inviteSchema = z.object({ artistId: z.string().min(1).max(64), email: z.email().max(191) });
+
+/**
+ * Gives a profile without a login its account: an invitation with a first-password
+ * link, or a link to the existing account with that address. Requests already
+ * waiting for this artist reach them at once.
+ */
+export async function inviteArtistAccountAction(input: z.input<typeof inviteSchema>): Promise<ActionResult> {
+  const { viewer, organization, db } = await requireAgency("agency.artists.manage");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
+  const t = await getTranslations("artistAccount");
+  const parsed = inviteSchema.safeParse({ ...input, email: input.email?.trim() });
+  if (!parsed.success) return { ok: false, message: t("invalidEmail") };
+  const artist = await db.artist.findFirst({ where: { id: parsed.data.artistId }, select: { id: true, stageName: true, userId: true } });
+  if (!artist) return { ok: false };
+  if (artist.userId) return { ok: false, message: t("error_already_linked") };
+  if (!(await allow(`artist-invite:${organization.id}`, 30, 3600))) return { ok: false, message: t("rateLimited") };
+
+  try {
+    const email = parsed.data.email.toLowerCase();
+    const account = await ensureArtistAccount({ organizationId: organization.id, email, name: artist.stageName, locale: await getLocale() });
+    const { count } = await db.artist.updateMany({ where: { id: artist.id, userId: null }, data: { userId: account.userId } });
+    if (count !== 1) return { ok: false, message: t("error_already_linked") };
+    await audit({ actorId: viewer.user.id, action: "artist.invite", agencyId: organization.id, targetType: "artist", targetId: artist.id, data: { userId: account.userId, newPassword: account.setupSent } });
+    const waiting = await announceOpenRequests(artist.id, account.userId);
+    const said = account.setupSent ? t("invited", { name: artist.stageName, email }) : t("linked", { name: artist.stageName });
+    return { ok: true, message: waiting > 0 ? `${said} ${t("requestsDelivered", { count: waiting })}` : said };
+  } catch (error) {
+    if (error instanceof ArtistAccountError) return { ok: false, message: t(`error_${error.code}`) };
+    throw error;
+  }
+}
+
+/** Sends a new first-password link to an artist who hasn't been able to sign in yet. */
+export async function resendArtistSetupAction(artistId: string): Promise<ActionResult> {
+  const { viewer, organization, db } = await requireAgency("agency.artists.manage");
+  const t = await getTranslations("artistAccount");
+  const artist = await db.artist.findFirst({ where: { id: String(artistId).slice(0, 64) }, select: { id: true, user: { select: { id: true, email: true, name: true, locale: true, disabledAt: true, accounts: { select: { id: true }, take: 1 } } } } });
+  if (!artist?.user || artist.user.disabledAt) return { ok: false, message: t("state_no_account") };
+  if (artist.user.accounts.length > 0) return { ok: false, message: t("alreadyActive") };
+  if (!(await allow(`artist-setup:${artist.id}`, 5, 3600))) return { ok: false, message: t("rateLimited") };
+  const receipt = await resendArtistSetup(artist.user);
+  await audit({ actorId: viewer.user.id, action: "artist.setup_resent", agencyId: organization.id, targetType: "artist", targetId: artist.id });
+  return accepted(receipt) ? { ok: true, message: t("setupSent", { email: artist.user.email }) } : { ok: false, message: t("setupFailed") };
 }
 
 export async function uploadArtistPhotoAction(artistId: string, form: FormData): Promise<ActionResult> {

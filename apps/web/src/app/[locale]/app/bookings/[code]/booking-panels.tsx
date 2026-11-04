@@ -32,6 +32,7 @@ import {
   addNoteAction,
   assignArtistAction,
   changeStatusAction,
+  decideChangeRequestAction,
   issueInvoiceAction,
   recordPaymentAction,
   requestDetailsAction,
@@ -114,18 +115,56 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
   );
 }
 
+/** A customer's requested change: what would change, and the agency's answer. */
+export function ChangeRequestPanel({ requestId, rows, note, customer, requested }: { requestId: string; rows: { field: string; label: string; from: string; to: string }[]; note: string | null; customer: string; requested: string }) {
+  const t = useTranslations("booking");
+  const [pending, run] = useRun();
+  const [reason, setReason] = useState("");
+  return (
+    <div className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4 text-sm" data-testid="change-request">
+      <p className="font-medium">{t("changeRequestTitle", { name: customer, date: requested })}</p>
+      <ul className="grid gap-1">
+        {rows.map((r) => (
+          <li key={r.field}>
+            {r.label}: <span className="text-muted-foreground line-through">{r.from}</span> → <span className="font-medium">{r.to}</span>
+          </li>
+        ))}
+      </ul>
+      {note && <p className="whitespace-pre-line rounded-lg bg-muted/60 p-2">{note}</p>}
+      <FormField id="change-reason" label={t("changeReason")}>
+        <Input id="change-reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+      </FormField>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" disabled={pending} onClick={() => run(() => decideChangeRequestAction(requestId, true, reason || null))}>
+          <CheckIcon />
+          {t("approveChange")}
+        </Button>
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => decideChangeRequestAction(requestId, false, reason || null))}>
+          {t("rejectChange")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function EditDetailsDialog({
   bookingId,
   values,
   dos,
   donts,
   playlistUrl,
+  preferredGenre,
+  musicRequests,
+  specialRequests,
 }: {
   bookingId: string;
   values: EventValues;
   dos: string[];
   donts: string[];
   playlistUrl: string;
+  preferredGenre: string;
+  musicRequests: string;
+  specialRequests: string;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -164,6 +203,15 @@ export function EditDetailsDialog({
             </FormField>
             <FormField id="ed-playlist" label={t("booking.playlist")} error={errors["playlistUrl"]} className="sm:col-span-2">
               <Input id="ed-playlist" name="playlistUrl" type="url" defaultValue={playlistUrl} placeholder="https://open.spotify.com/…" />
+            </FormField>
+            <FormField id="ed-genre" label={t("bookingPage.genre")} className="sm:col-span-2">
+              <Input id="ed-genre" name="preferredGenre" maxLength={96} defaultValue={preferredGenre} />
+            </FormField>
+            <FormField id="ed-music" label={t("customerEvent.musicRequests")}>
+              <Textarea id="ed-music" name="musicRequests" rows={3} maxLength={4000} defaultValue={musicRequests} />
+            </FormField>
+            <FormField id="ed-special" label={t("customerEvent.specialRequests")}>
+              <Textarea id="ed-special" name="specialRequests" rows={3} maxLength={4000} defaultValue={specialRequests} />
             </FormField>
           </div>
           <FormMessage>{state.message && !state.ok ? state.message : null}</FormMessage>
@@ -302,6 +350,10 @@ export interface ArtistOption {
   free: boolean;
   /** The artist's default pay, e.g. "40%" or "€ 250,00 per booking". */
   payLabel: string;
+  /** Null when the artist can get a request; otherwise why not, shown next to the name. */
+  blocked: string | null;
+  /** Shown next to the name for an artist who still has to set a password. */
+  note: string | null;
 }
 
 export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: string; options: ArtistOption[]; hasArtist: boolean }) {
@@ -321,10 +373,12 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
         </SelectTrigger>
         <SelectContent>
           {options.map((a) => (
-            <SelectItem key={a.id} value={a.id} disabled={!a.free}>
+            <SelectItem key={a.id} value={a.id} disabled={!a.free || a.blocked !== null}>
               {a.stageName}
               {a.agency && <span className="text-muted-foreground"> · {t("sharedFrom", { agency: a.agency })}</span>}
               {!a.free && <span className="text-muted-foreground"> · {t("unavailable")}</span>}
+              {a.blocked && <span className="text-muted-foreground"> · {a.blocked}</span>}
+              {a.note && <span className="text-muted-foreground"> · {a.note}</span>}
             </SelectItem>
           ))}
         </SelectContent>

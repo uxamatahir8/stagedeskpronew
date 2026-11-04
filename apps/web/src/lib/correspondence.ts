@@ -6,7 +6,7 @@ export type MailLocale = "nl" | "en";
 const asLocale = (value: string | null | undefined): MailLocale | null => (value === "nl" || value === "en" ? value : null);
 
 /** Bookings whose customer filled in a form themselves, in the language of that form. */
-const selfServiceSources = new Set(["booking_page", "lead", "gig", "profile"]);
+const selfServiceSources = new Set(["booking_page", "lead", "gig", "profile", "customer_portal"]);
 
 /**
  * The language a booking's customer should get mail in, and why:

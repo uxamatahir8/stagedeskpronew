@@ -18,7 +18,7 @@ import {
 } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import type { ActionResult } from "@/lib/actions";
+import { type ActionResult, runAction } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 import { emailArtists } from "@/lib/artist-mail";
 import { ArtistAccountError, ensureArtistAccount } from "@/lib/artist-account";
@@ -52,7 +52,7 @@ export async function createPlatformArtistAction(input: { stageName: string; ema
     revalidatePath("/[locale]/app/platform-artists", "page");
     return { ok: true, message: account.setupSent ? t("created", { name: stageName, email }) : t("linked", { name: stageName }) };
   } catch (error) {
-    if (error instanceof ArtistAccountError) return { ok: false, message: error.message };
+    if (error instanceof ArtistAccountError) return { ok: false, message: (await getTranslations("artistAccount"))(`error_${error.code}`) };
     throw error;
   }
 }
@@ -80,18 +80,23 @@ export async function assignPlatformArtistAction(artistId: string, bookingId: st
     prisma.booking.findFirst({ where: { id: bookingId, status: { in: ["booked", "confirmed"] } }, select: { id: true, organizationId: true } }),
   ]);
   if (!artist || !booking) return { ok: false };
-  if (artist.organizationId !== booking.organizationId) {
-    await prisma.artistShare.upsert({
-      where: { artistId_partnerOrganizationId: { artistId, partnerOrganizationId: booking.organizationId } },
-      update: { status: "accepted", respondedAt: new Date() },
-      create: { id: randomUUID(), organizationId: artist.organizationId, artistId, partnerOrganizationId: booking.organizationId, status: "accepted", respondedAt: new Date() },
-    });
-  }
-  const { assignmentId, withdrawnIds } = await assignArtist(booking.organizationId, booking.id, artistId, viewer.user.id);
-  await emailArtists([assignmentId], "new");
-  await emailArtists(withdrawnIds, "withdrawn");
-  revalidatePath("/[locale]/app/platform-artists", "page");
-  return { ok: true, message: (await getTranslations("platformArtists"))("assigned") };
+  const t = await getTranslations("platformArtists");
+  const tb = await getTranslations("booking");
+  // A refusal (unavailable, no login) gets the same message as at an agency, not a server error.
+  return runAction(async () => {
+    if (artist.organizationId !== booking.organizationId) {
+      await prisma.artistShare.upsert({
+        where: { artistId_partnerOrganizationId: { artistId, partnerOrganizationId: booking.organizationId } },
+        update: { status: "accepted", respondedAt: new Date() },
+        create: { id: randomUUID(), organizationId: artist.organizationId, artistId, partnerOrganizationId: booking.organizationId, status: "accepted", respondedAt: new Date() },
+      });
+    }
+    const { assignmentId, withdrawnIds, notified } = await assignArtist(booking.organizationId, booking.id, artistId, viewer.user.id);
+    const mailed = await emailArtists([assignmentId], "new");
+    await emailArtists(withdrawnIds, "withdrawn");
+    revalidatePath("/[locale]/app/platform-artists", "page");
+    return notified && mailed ? t("assigned") : [t("assigned"), !notified && tb("notifyFailed"), !mailed && tb("emailNotQueued")].filter(Boolean).join(" ");
+  });
 }
 
 const reason = z.string().trim().min(1).max(500);
