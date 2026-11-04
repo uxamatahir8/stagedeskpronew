@@ -202,16 +202,24 @@ and [artist-assignment-review.md](artist-assignment-review.md).
 | Secret scan | gitleaks over all commits: see report |
 | Dependency audit | 1 low, 1 moderate: see report |
 
+## Later correction
+
+This audit is as of `2215c45`. The independent review that followed, and the defects it and the
+new tests found, are in the [final hardening report](../reports/customer-artist-final-hardening.md).
+That includes one this audit missed: a date typed into a form and followed straight away by a
+click on Save was lost.
+
 ## Unverified observations
 
-- Refused pages return HTTP 200 with a "no access" page, because the refusal renders inside the stream. The data stays protected (14 pages checked in a browser), but monitoring or scripts can't rely on a 403 status.
+- Refused pages return HTTP 200 with a "no access" page, because the refusal renders inside the stream. The data stays protected (14 pages checked in a browser), but monitoring or scripts can't rely on a 403 status. They can rely on the digest `NEXT_HTTP_ERROR_FALLBACK;403` in the response, which the smoke scripts and `portal-hardening.spec.ts` now use. Plain text can't be used: the translation file is on every page.
 - A long-lived dev server ran out of memory after 2 h 7 min across two full suites, and its cache
   then caused a page reload loop until cleared. Seen in `next dev` only; production was not load-tested.
 - The dev overlay reports Next.js 16.4.2 installed where 16.4.5 is current. Not assessed.
 - The demo agency has two profiles named "DJ Ruben". Looks like seed data; harmless.
 - The public booking form doesn't check `writeBlocked`, so a read-only agency still receives
-  inquiries, while the customer portal refuses them. Possibly intended; worth a product decision.
+  inquiries, while the customer portal refuses them. Kept and documented as a channel difference
+  in the [final hardening report](../reports/customer-artist-final-hardening.md).
 - The same push-then-refresh pattern as QA-10 remains in the sidebar's agency switcher, sign-out
-  (`user-menu`) and the quote page's account setup (`q/[token]/account-setup`). Not seen failing;
-  not changed.
+  (`user-menu`), the quote page's account setup (`q/[token]/account-setup`) and accepting an
+  invitation. Still not seen failing; not changed.
 - `OnboardingForm` uses a form action, which resets what was typed when validation fails. Not fixed.

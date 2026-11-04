@@ -77,16 +77,18 @@ link to fix it.
 
 ## Before deploying
 
-Bookings already stuck on a profile with no login can be found with:
+Requests already stuck can be found with the read-only
+[diagnostic](../operations/artist-assignment-diagnostic.sql), which replaces the query that was
+here: that one only found profiles with no login, not disabled accounts, lost memberships,
+deactivated profiles or missing passwords. What to do with the results is in the
+[remediation guide](../operations/artist-assignment-remediation.md).
 
-```sql
-SELECT o.name AS agency, b.trackingCode, a.stageName
-FROM booking_assignments ba
-JOIN artists a ON a.id = ba.artistId
-JOIN bookings b ON b.id = ba.bookingId
-JOIN organizations o ON o.id = b.organizationId
-WHERE ba.status = 'pending' AND a.userId IS NULL AND b.status IN ('booked', 'confirmed');
-```
+It was tested on an isolated local database with one record per state. It has not been run
+against staging or production.
 
-This has not been run against staging or production. Agencies with results need to invite
-those artists, or reassign.
+## After the independent review
+
+The access rule now lives in one place, `packages/db/src/artist-access.ts`, used by the
+dashboard, gig list and details, answering, messages, equipment, earnings and notifications.
+What each change does to an artist's access is in the
+[final hardening report](../reports/customer-artist-final-hardening.md).

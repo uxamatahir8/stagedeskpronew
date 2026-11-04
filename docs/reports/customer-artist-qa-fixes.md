@@ -1,8 +1,14 @@
 # Customer and artist fixes, and role-based QA
 
 The three client reports are fixed and verified locally. A role-by-role audit found and fixed
-further defects, including two in this work's own first version. **Nothing has been pushed, merged, deployed or run against staging**, and
-some real-world paths could not be tested here (see BLOCKED).
+further defects, including two in this work's own first version. This work **was pushed** to
+`origin/fix/customer-artist-portal-qa` (up to `2215c45`). It has **not been merged or deployed**, and
+no browser or role testing ran on a staging server. Some real-world paths could not be tested here (see BLOCKED).
+
+> **Corrected after an independent review.** An earlier version of this report said nothing had been
+> pushed, and described the smoke comparison as stronger evidence than it is. Both are corrected below.
+> Later work on these findings is in the [final hardening report](customer-artist-final-hardening.md),
+> which replaces the NOT DONE and smoke entries here where they differ.
 
 | | |
 | - | - |
@@ -76,14 +82,14 @@ Implemented, but the specific path has no direct test.
 
 | Item | Reason |
 | ---- | ------ |
-| Email to the customer on a change decision | In-app notification only; would need a new template. Your call |
+| Email to the customer on a change decision | Done later; see the [final hardening report](customer-artist-final-hardening.md) |
 | Customer cancels their own booking | Not requested in this work; they can message the agency |
 | Resetting the form on failed validation in `OnboardingForm` | Noticed, left alone; low impact |
 | Two tabs or people editing one booking's wishes at once | The last save wins; there's no version check. Agency and customer can overwrite each other |
 | Comparing figures across all pages, for example dashboard against Earnings | Not audited. Financial tests pass but weren't extended |
 | Dependency advisories | 1 low (`deepmerge` 4.3.1), 1 moderate (`minimatch` 10.2.6), both transitive; no safe automatic fix applied |
 | Next.js 16.4.2 to 16.4.5 | Not attempted in this branch |
-| Smoke scripts | Out of date on staging too; not repaired. Website script not compared against staging |
+| Smoke scripts | Repaired later; see the [final hardening report](customer-artist-final-hardening.md). Website script never compared against staging |
 
 ## BLOCKED
 
@@ -158,14 +164,24 @@ requires one. No assertion was removed or weakened.
 | Production build | `pnpm build` | Pass |
 | Migrations | `prisma migrate status`; applied fresh on the test database each run | 41 applied, up to date |
 | Browser suite | `pnpm --filter @stagedesk/web e2e` | **59 of 59 in one uninterrupted run**, 1.0 h, commit `164ba5d` |
-| Smoke scripts | `bash scripts/smoke-*.sh` | **Fail on this branch and on staging alike; not a usable gate.** See below |
+| Smoke scripts | `bash scripts/smoke-*.sh` | **Failed; not a usable gate. The staging comparison can't be relied on.** See below |
 | Secret scan | gitleaks 8.28, all 171 commits | No leaks. `.env` is untracked |
 | Dependency audit | `pnpm audit --prod` | 1 low, 1 moderate; 0 high, 0 critical. Not fixed |
 
 Unit checks ran on `4054059`. The browser run's commit `164ba5d` differs from it only by one
 test file, and the commits after that add only documents.
 
-**Smoke scripts.** On this branch: accounts 25 passed, 11 failed; bookings 12, 12; payments 0, 18; affiliates 4, 13; dashboards 7, 19; website 38, 19. Five of the six were run on untouched staging `08e9e03` and compared by check name: all 121 checks gave the same result, so those failures aren't caused by this work. The staging comparison of the website script was stopped before it finished, so its 19 failures are **not** compared; they look stale (they expect `/en` addresses, which now redirect, and Dutch text on English pages), but that's a reading, not a measurement. The scripts date from October and `grep` raw HTML. Causes seen: a local admin password that no longer matches, exact text, and expecting a 403 status. Because some are permission checks, those were checked in a real browser: 14 restricted pages across customer, artist, staff and owner all show "no access". They return HTTP 200, because the refusal renders inside the streamed page. The scripts need updating or retiring.
+**Smoke scripts.** On this branch: accounts 25 passed, 11 failed; bookings 12, 12; payments 0, 18; affiliates 4, 13; dashboards 7, 19; website 38, 19.
+
+What the staging comparison does and doesn't show (corrected):
+
+- Five of the six scripts (not the website script, which was stopped before it finished) were compared by check name against a run on the staging commit `08e9e03`. All 121 outcomes matched.
+- The conditions differed: staging ran with a warm-up, while the feature branch ran on routes that were already compiled.
+- The wrapper running those scripts wasn't really stopped. It kept running after the branch was switched back, until about 21:00, and overwrote the `smoke-staging-*` files with results from the **feature branch**. The original staging output is gone, so the comparison can't be reproduced or checked independently, and those files must not be read as staging results.
+- That extra run changed only local test data.
+- Later work found that many of these checks couldn't fail or pass meaningfully at all: every page carries the whole translation file, so grepping raw HTML for translated text matches regardless of what rendered (see the [final hardening report](customer-artist-final-hardening.md#smoke-scripts)). So "the same 121 results" would have been weak evidence even with the files intact.
+
+The separate browser check of 14 restricted pages across customer, artist, staff and owner stands on its own: all showed "no access". They return HTTP 200, because the refusal renders inside the streamed page.
 
 **The clean run was not the first.** Earlier full runs each failed, and a reviewer should know why:
 

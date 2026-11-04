@@ -55,19 +55,24 @@ to fill these in themselves.
 
 1. The form sends a UUID; `@@unique([organizationId, clientRequestId])` lets one through
    even under simultaneous submits (tested with three at once).
-2. An identical request within 10 minutes (same customer, type, date, city, still an
-   inquiry) returns the first booking, which covers a reloaded form.
-3. Only a new booking notifies anyone or sends a confirmation.
+2. Only that key marks a duplicate. Two requests with identical details but different keys are
+   two bookings. (An earlier version also merged identical requests within 10 minutes; the
+   review showed that swallows real requests, such as two DJs for one venue on one day, so it
+   was removed.)
+3. Only a new booking notifies anyone. A retry may re-offer the confirmation email, which its
+   key stops from going out twice.
 
-## Decisions for you to confirm
+## Decisions
 
-- **Monthly booking limit**: not applied to customer requests, matching the public page,
-  which also takes inquiries over the limit so the agency doesn't lose them. Read-only and
-  suspended agencies are refused, with a neutral message.
-- **Booking page off**: if an agency turns its public booking page off, its customers also
-  can't request through the portal; they see a message and are pointed to contact the
-  agency. If the portal should stay open in that case, it's a one-line change in
-  `agencyTakesRequests`.
-- **Change decisions**: customers hear about these in the app only, not by email.
+Confirmed by the product owner after the review; details in the
+[final hardening report](../reports/customer-artist-final-hardening.md):
+
+- **Monthly booking limit**: not applied when a request comes in. Read-only and suspended
+  agencies are refused, with a neutral message. Whether a limit should apply at confirmation is
+  an open question: the existing billing has no such rule, and this work didn't invent one.
+- **Booking page off, or a plan without it**: customers can't request through the portal either.
+- **Change decisions**: customers are told in the app and by email, on approval and on refusal.
+- **Stale change requests**: refused when the fields concerned changed after the customer asked.
+  A reviewer can still apply it after seeing the current values, and that is audited.
 - **Budget**: the request form uses the existing budget ranges, not a free amount, to match
   the public form.
