@@ -1,11 +1,11 @@
 import { gigState, type GigState, isClosedGig, isOpenGigRequest, isUpcomingGig, todayInNetherlands } from "@stagedesk/core";
+import { currentArtistProfile, liveAssignmentOf, workingArtistProfile } from "./artist-access";
 import { prisma } from "./client";
 
 /**
  * An artist's assignments, across every agency they work for. This is an
  * explicit cross-agency read: it starts from the signed-in user's own artist
- * profiles, and only profiles at an agency they're still a member of count, so
- * removing someone from a team ends their view of its gigs.
+ * profiles, under the one access policy in artist-access.ts.
  *
  * Open assignments are never limited: a busy diary must not push a request out
  * of sight. Only the history (declined, withdrawn, cancelled) is capped.
@@ -41,9 +41,6 @@ const gigSelect = {
   },
 } as const;
 
-const artistRoles = ["artist", "solo_artist"];
-const ownProfile = (userId: string) => ({ userId, organization: { members: { some: { userId, role: { in: artistRoles } } } } });
-
 /** Soonest first, with undated gigs up front: they need sorting out and mustn't sink below a long list. */
 function byDate(a: { booking: { eventDate: Date | null } }, b: { booking: { eventDate: Date | null } }) {
   return (a.booking.eventDate?.getTime() ?? 0) - (b.booking.eventDate?.getTime() ?? 0);
@@ -52,8 +49,8 @@ function byDate(a: { booking: { eventDate: Date | null } }, b: { booking: { even
 export async function artistGigs(userId: string, now = new Date()) {
   const today = todayInNetherlands(now);
   const [open, closed] = await Promise.all([
-    prisma.bookingAssignment.findMany({ where: { artist: ownProfile(userId), status: { in: ["pending", "accepted"] } }, select: gigSelect }),
-    prisma.bookingAssignment.findMany({ where: { artist: ownProfile(userId), status: { in: ["declined", "withdrawn"] } }, select: gigSelect, orderBy: { createdAt: "desc" }, take: HISTORY }),
+    prisma.bookingAssignment.findMany({ where: liveAssignmentOf(userId), select: gigSelect }),
+    prisma.bookingAssignment.findMany({ where: { artist: currentArtistProfile(userId), status: { in: ["declined", "withdrawn"] } }, select: gigSelect, orderBy: { createdAt: "desc" }, take: HISTORY }),
   ]);
   const classify = <T extends (typeof open)[number]>(row: T) => ({
     ...row,
@@ -71,7 +68,7 @@ export async function artistGigs(userId: string, now = new Date()) {
 /** The number for the badge: requests waiting for this artist's answer. */
 export function pendingGigCount(userId: string) {
   return prisma.bookingAssignment.count({
-    where: { artist: ownProfile(userId), status: "pending", booking: { status: { notIn: ["cancelled", "declined", "expired", "completed", "settled"] } } },
+    where: { artist: workingArtistProfile(userId), status: "pending", booking: { status: { notIn: ["cancelled", "declined", "expired", "completed", "settled"] } } },
   });
 }
 

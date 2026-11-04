@@ -9,11 +9,12 @@ import { prisma } from "./client";
  * - no_account: the profile has no user linked.
  * - not_member: the user was removed from the artist's agency.
  * - disabled: the account has been disabled.
+ * - inactive: the agency or support deactivated the profile.
  * - setup_pending: an account made for them that has never had a way to sign in;
  *   they can be assigned, because the request email carries a first-password link.
  * - active: can sign in.
  */
-export const artistAccountStates = ["no_account", "not_member", "disabled", "setup_pending", "active"] as const;
+export const artistAccountStates = ["no_account", "not_member", "disabled", "inactive", "setup_pending", "active"] as const;
 export type ArtistAccountState = (typeof artistAccountStates)[number];
 
 export const artistCanBeAssigned = (state: ArtistAccountState) => state === "active" || state === "setup_pending";
@@ -21,6 +22,7 @@ export const artistCanBeAssigned = (state: ArtistAccountState) => state === "act
 const accountSelect = {
   id: true,
   organizationId: true,
+  active: true,
   user: {
     select: {
       id: true,
@@ -34,20 +36,22 @@ const accountSelect = {
 
 type ArtistWithAccount = {
   organizationId: string;
+  active: boolean;
   user: { disabledAt: Date | null; accounts: { id: string }[]; members: { organizationId: string; role: string }[] } | null;
 };
 
 /** Only an artist at the profile's agency has the pages to see a request. */
-function stateOf(artist: ArtistWithAccount): ArtistAccountState {
+export function artistStateOf(artist: ArtistWithAccount): ArtistAccountState {
   if (!artist.user) return "no_account";
   if (artist.user.disabledAt) return "disabled";
   if (!artist.user.members.some((m) => m.organizationId === artist.organizationId && (m.role === "artist" || m.role === "solo_artist"))) return "not_member";
+  if (!artist.active) return "inactive";
   return artist.user.accounts.length > 0 ? "active" : "setup_pending";
 }
 
 export async function artistAccountState(artistId: string): Promise<ArtistAccountState> {
   const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: accountSelect });
-  return artist ? stateOf(artist) : "no_account";
+  return artist ? artistStateOf(artist) : "no_account";
 }
 
 /**
@@ -67,5 +71,5 @@ export async function unlinkRemovedMember(organizationId: string, userId: string
 export async function artistAccountStatesOf(artistIds: string[]): Promise<Map<string, ArtistAccountState>> {
   if (artistIds.length === 0) return new Map();
   const rows = await prisma.artist.findMany({ where: { id: { in: artistIds } }, select: accountSelect });
-  return new Map(rows.map((a) => [a.id, stateOf(a)]));
+  return new Map(rows.map((a) => [a.id, artistStateOf(a)]));
 }

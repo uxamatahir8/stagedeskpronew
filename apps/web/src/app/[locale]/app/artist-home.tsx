@@ -2,7 +2,7 @@ import { CalendarClockIcon, CalendarIcon, HandCoinsIcon, InboxIcon, MapPinIcon, 
 import { getTranslations } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
 import { artistEarnings, compensationOf, type EventType, todayInNetherlands } from "@stagedesk/core";
-import { artistGigs, prisma } from "@stagedesk/db";
+import { artistGigs, currentArtistIds, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { GigStateBadge } from "@/components/status-badge";
@@ -56,7 +56,7 @@ export async function ArtistHome({ userId }: { userId: string }) {
     getFormatter(),
     artistGigs(userId),
     prisma.ledgerEntry.aggregate({
-      where: { type: { in: ["transfer", "transfer_reversal"] }, party: "artist", createdAt: { gte: yearStart }, artistId: { in: (await prisma.artist.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id) } },
+      where: { type: { in: ["transfer", "transfer_reversal"] }, party: "artist", createdAt: { gte: yearStart }, artistId: { in: await currentArtistIds(userId) } },
       _sum: { amountCents: true },
     }),
   ]);

@@ -1,18 +1,14 @@
 import { randomUUID } from "node:crypto";
+import { liveAssignmentOf, reachableArtistUserIds } from "./artist-access";
 import { prisma } from "./client";
 import { agencyDeskUserIds, notify } from "./notifications";
 
 export type MessageChannel = "customer" | "artist";
 export const messageChannels: MessageChannel[] = ["customer", "artist"];
 
-/** The artist user on a booking's current assignment (pending or accepted). */
+/** The artist user on a booking's current assignment, if they still have access to it. */
 async function assignedArtistUserId(bookingId: string) {
-  const assignment = await prisma.bookingAssignment.findFirst({
-    where: { bookingId, status: { in: ["pending", "accepted"] } },
-    orderBy: { createdAt: "desc" },
-    select: { artist: { select: { userId: true } } },
-  });
-  return assignment?.artist.userId ?? null;
+  return (await reachableArtistUserIds(bookingId))[0] ?? null;
 }
 
 /** Everyone in a conversation: the agency desk plus the customer or the assigned artist. */
@@ -84,7 +80,7 @@ export interface ConversationScope {
 
 /** Conversations someone can see, newest first, with unread counts. */
 export async function conversations(scope: ConversationScope, take = 50) {
-  const asArtist = { channel: "artist", booking: { assignments: { some: { status: { in: ["pending", "accepted"] }, artist: { userId: scope.artistUserId ?? "-" } } } } };
+  const asArtist = { channel: "artist", booking: { assignments: { some: liveAssignmentOf(scope.artistUserId ?? "-") } } };
   const asCustomer = { channel: "customer", booking: { customerId: scope.customerId ?? "-" } };
   // Someone can be a customer of one agency and an artist at another: they see both sides.
   const where = scope.agencyId

@@ -5,7 +5,7 @@ import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
 import { type EventType, gigState, playlistLink, todayInNetherlands } from "@stagedesk/core";
-import { prisma } from "@stagedesk/db";
+import { currentArtistProfile, liveAssignmentOnBooking, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { GigStateBadge } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,9 +31,9 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
   setRequestLocale(locale as Locale);
   const viewer = await requirePermission("artist.gigs");
 
-  // Only an assignment for one of the signed-in artist's own profiles.
+  // The one artist access policy: their own open assignment, while they still work for that profile's agency.
   const assignment = await prisma.bookingAssignment.findFirst({
-    where: { artist: { userId: viewer.user.id }, booking: { trackingCode: code.toUpperCase() }, status: { in: ["pending", "accepted"] } },
+    where: liveAssignmentOnBooking(viewer.user.id, code),
     orderBy: { createdAt: "desc" },
     include: {
       booking: {
@@ -45,7 +45,7 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
     // A link from an older notification or email: say what happened instead of a dead end. Nothing
     // about the booking is shown any more, only that this artist's own assignment ended.
     const ended = await prisma.bookingAssignment.findFirst({
-      where: { artist: { userId: viewer.user.id }, booking: { trackingCode: code.toUpperCase() } },
+      where: { artist: currentArtistProfile(viewer.user.id), booking: { trackingCode: code.toUpperCase() } },
       orderBy: { createdAt: "desc" },
       select: { status: true, createdAt: true, booking: { select: { status: true, eventDate: true, organization: { select: { name: true } } } } },
     });

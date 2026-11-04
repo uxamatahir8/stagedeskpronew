@@ -25,6 +25,7 @@ import {
   transition,
   type TransitionError,
 } from "@stagedesk/core";
+import { liveAssignmentOf, reachableArtistUserIds } from "./artist-access";
 import { artistAccountState, artistCanBeAssigned } from "./artist-accounts";
 import { auditTx } from "./audit";
 import { effectiveFeeSnapshot } from "./billing";
@@ -519,8 +520,7 @@ export async function notifyBriefChanged(
     const agency = await prisma.organization.findUnique({ where: { id: booking.organizationId }, select: { name: true } });
     const data = { name: agency?.name ?? "", code: booking.trackingCode };
     if (changed.artist) {
-      const active = await prisma.bookingAssignment.findMany({ where: { bookingId: booking.id, status: { in: ["pending", "accepted"] } }, select: { artist: { select: { userId: true } } } });
-      await notify(active.map((a) => a.artist.userId), { type: "gig_updated", data, url: `/app/gigs/${booking.trackingCode}` }, actorId);
+      await notify(await reachableArtistUserIds(booking.id), { type: "gig_updated", data, url: `/app/gigs/${booking.trackingCode}` }, actorId);
     }
     if (changed.customer) await notify([booking.customerId], { type: "booking_updated", data, url: `/app/event?booking=${booking.trackingCode}` }, actorId);
   } catch (error) {
@@ -553,7 +553,7 @@ export async function respondToAssignment(
   now = new Date(),
 ) {
   const assignment = await prisma.bookingAssignment.findFirst({
-    where: { id: assignmentId, status: "pending", artist: { userId: artistUserId } },
+    where: { ...liveAssignmentOf(artistUserId), id: assignmentId, status: "pending" },
     select: { organizationId: true, bookingId: true, id: true },
   });
   if (!assignment) throw new BookingError("no_open_assignment");

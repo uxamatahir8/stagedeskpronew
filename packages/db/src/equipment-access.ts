@@ -1,3 +1,4 @@
+import { liveAssignmentOnBooking } from "./artist-access";
 import { prisma } from "./client";
 import { tenantDb } from "./tenant";
 
@@ -54,9 +55,9 @@ export async function resolveEquipmentAccess(viewer: EquipmentViewer, code: stri
 
   const artist = async (): Promise<EquipmentAccess | null> => {
     if (!viewer.permissions.includes("artist.gigs")) return null;
-    // Only an assignment for one of the person's own artist profiles.
+    // Only an open assignment under the one artist access policy.
     const assignment = await prisma.bookingAssignment.findFirst({
-      where: { artist: { userId: viewer.userId }, booking: { trackingCode }, status: { in: ["pending", "accepted"] } },
+      where: liveAssignmentOnBooking(viewer.userId, trackingCode),
       orderBy: { createdAt: "desc" },
       select: { status: true, booking: { select: { id: true, organizationId: true, organization: { select: { artistsHandleEquipment: true } } } } },
     });

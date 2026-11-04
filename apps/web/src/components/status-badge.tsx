@@ -83,7 +83,7 @@ export function GigStateBadge({ state }: { state: GigState }) {
   return <Pill tone={gigTone[state]}>{t(state)}</Pill>;
 }
 
-const artistAccountTone: Record<ArtistAccountState, Tone> = { no_account: "danger", not_member: "danger", disabled: "danger", setup_pending: "warning", active: "success" };
+const artistAccountTone: Record<ArtistAccountState, Tone> = { no_account: "danger", not_member: "danger", disabled: "danger", inactive: "neutral", setup_pending: "warning", active: "success" };
 
 /** Whether an artist profile has someone behind it who can sign in and answer requests. */
 export function ArtistAccountBadge({ state }: { state: ArtistAccountState }) {

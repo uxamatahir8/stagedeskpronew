@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, artistEarnings, compensationOf } from "@stagedesk/core";
-import { prisma } from "@stagedesk/db";
+import { currentArtistProfile, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ConnectCard } from "@/components/connect-card";
 import { EmptyState } from "@/components/empty-state";
@@ -45,7 +45,7 @@ async function Earnings() {
     getTranslations("payments"),
     getTranslations("bookingStatus"),
     getFormatter(),
-    prisma.artist.findFirst({ where: { organizationId: organization.id, userId: viewer.user.id }, include: { connectedAccount: true } }),
+    prisma.artist.findFirst({ where: { ...currentArtistProfile(viewer.user.id), organizationId: organization.id }, include: { connectedAccount: true } }),
   ]);
   if (!artist) return <EmptyState icon={HandCoinsIcon} title={t("title")} description={t("noProfile")} />;
   if (await refreshIncompleteAccount(artist.connectedAccount)) {

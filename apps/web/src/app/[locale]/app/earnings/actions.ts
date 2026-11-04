@@ -1,7 +1,7 @@
 "use server";
 
 import { getLocale, getTranslations } from "next-intl/server";
-import { prisma } from "@stagedesk/db";
+import { currentArtistProfile, prisma } from "@stagedesk/db";
 import { connectDashboardLink, connectOnboardingLink, getStripe } from "@stagedesk/payments";
 import type { RedirectResult } from "@/components/redirect-button";
 import { paymentsErrorMessage } from "@/lib/billing";
@@ -12,7 +12,7 @@ import { requireAgency } from "@/lib/viewer";
 async function ownArtist() {
   const { viewer, organization } = await requireAgency("artist.earnings");
   const artist = await prisma.artist.findFirst({
-    where: { organizationId: organization.id, userId: viewer.user.id },
+    where: { ...currentArtistProfile(viewer.user.id), organizationId: organization.id },
     include: { connectedAccount: true },
   });
   return { viewer, organization, artist };
