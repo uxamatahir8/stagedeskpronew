@@ -21,7 +21,7 @@ import type { Locale } from "@/i18n/routing";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 import { emailArtists } from "@/lib/artist-mail";
-import { ArtistAccountError, ensureArtistAccount } from "@/lib/artist-account";
+import { ArtistAccountError, ensureArtistAccount, sendArtistSetup } from "@/lib/artist-account";
 
 const PLATFORM_ARTISTS_SLUG = "stagedesk-platform-artists";
 
@@ -49,8 +49,10 @@ export async function createPlatformArtistAction(input: { stageName: string; ema
   try {
     const account = await ensureArtistAccount({ organizationId: organization.id, email, name: stageName, locale: await getLocale() });
     await prisma.artist.create({ data: { id: randomUUID(), organizationId: organization.id, stageName, genres: [], defaultShareBps: Math.round(input.sharePct * 100), userId: account.userId } });
+    const setup = account.needsSetup ? await sendArtistSetup(organization.id, account) : null;
     revalidatePath("/[locale]/app/platform-artists", "page");
-    return { ok: true, message: account.setupSent ? t("created", { name: stageName, email }) : t("linked", { name: stageName }) };
+    if (setup === "failed") return { ok: true, message: (await getTranslations("artistAccount"))("savedEmailFailed", { name: stageName }) };
+    return { ok: true, message: setup ? t("created", { name: stageName, email }) : t("linked", { name: stageName }) };
   } catch (error) {
     if (error instanceof ArtistAccountError) return { ok: false, message: (await getTranslations("artistAccount"))(`error_${error.code}`) };
     throw error;

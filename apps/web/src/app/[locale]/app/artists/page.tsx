@@ -2,12 +2,12 @@ import { Music2Icon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { artistAccountStatesOf, prisma } from "@stagedesk/db";
+import { artistAccountStatesOf, artistCanBeAssigned, prisma } from "@stagedesk/db";
 import { ArtistAvatar } from "@/components/artist-avatar";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ArtistAccountBadge, Pill } from "@/components/status-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -50,6 +50,8 @@ async function Artists() {
     }),
   ]);
   const accountStates = await artistAccountStatesOf(artists.map((a) => a.id));
+  const needAccount = artists.filter((a) => a.active && !artistCanBeAssigned(accountStates.get(a.id) ?? "no_account")).length;
+  const ta = await getTranslations("artistAccount");
   const linked = new Set(artists.map((a) => a.userId));
   const accounts = members.filter((m) => !linked.has(m.userId)).map((m) => ({ id: m.user.id, label: `${m.user.name} · ${m.user.email}` }));
   const genres = (value: unknown) => (Array.isArray(value) ? value.join(" · ") : "");
@@ -75,6 +77,16 @@ async function Artists() {
               </div>
             ))}
           </CardContent>
+        </Card>
+      )}
+
+      {/* Requests only reach artists with a working login: the agency hears that here, before assigning. */}
+      {needAccount > 0 && (
+        <Card className="border-warning/60" data-testid="artists-need-account">
+          <CardHeader>
+            <CardTitle>{ta("needAccountTitle", { count: needAccount })}</CardTitle>
+            <CardDescription>{ta("needAccountBody")}</CardDescription>
+          </CardHeader>
         </Card>
       )}
 

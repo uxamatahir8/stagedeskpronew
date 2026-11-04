@@ -108,7 +108,7 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
         </div>
       </div>
 
-      {account !== "active" && <ArtistAccountPanel artistId={artist.id} state={account} canManage={viewerCan(viewer, "agency.artists.manage")} />}
+      {account !== "active" && <ArtistAccountPanel artistId={artist.id} state={account} canManage={viewerCan(viewer, "agency.artists.manage")} accounts={accounts.filter((a) => a.id !== artist.userId)} />}
 
       {artist.bio && <p className="max-w-prose whitespace-pre-line text-sm">{artist.bio}</p>}
 
