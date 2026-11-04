@@ -156,14 +156,19 @@ export async function requestBookingAction(form: FormData): Promise<RequestBooki
     throw error;
   }
   const { booking, duplicate } = result;
-  if (!duplicate) {
-    await prisma.user.update({ where: { id: viewer.user.id }, data: { name: d.name, phone: d.phone } });
-    const locale = userLocale(await getLocale());
-    deliver({
+  const locale = userLocale(await getLocale());
+  // Keyed by booking: a retry after a lost answer finds it stored and sends nothing twice,
+  // and one whose first try died before this point still gets its confirmation.
+  void deliver(
+    {
       kind: "inquiryReceived",
       to: viewer.user.email,
       params: { locale, name: d.name.split(/\s+/)[0] ?? d.name, agency: agency.name, code: booking.trackingCode, url: absoluteUrl(locale, `/app/event?booking=${booking.trackingCode}`) },
-    });
+    },
+    { key: `inquiry-received:${booking.id}`, agencyId: agency.id, bookingId: booking.id },
+  );
+  if (!duplicate) {
+    await prisma.user.update({ where: { id: viewer.user.id }, data: { name: d.name, phone: d.phone } });
     await announceNewBooking(agency.id, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name, viewer.user.id);
   }
   return { ok: true, code: booking.trackingCode, agency: agency.name, organizationId: agency.id };

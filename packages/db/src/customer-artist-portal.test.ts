@@ -336,11 +336,11 @@ describe("customer booking requests", () => {
     expect((await submitCustomerRequest(orgA, customer, request("dup"))).duplicate).toBe(true);
   });
 
-  it("treats an identical form sent again moments later as the same request, but allows a second event", async () => {
+  it("keeps separate forms with the same details apart, and allows a second event", async () => {
     const first = await submitCustomerRequest(orgA, customer, request("same", { venueCity: "Baarn" }));
-    const reload = await submitCustomerRequest(orgA, customer, request("same-reloaded", { venueCity: "Baarn" }));
-    expect(reload.duplicate).toBe(true);
-    expect(reload.booking.id).toBe(first.booking.id);
+    const other = await submitCustomerRequest(orgA, customer, request("same-other-form", { venueCity: "Baarn" }));
+    expect(other.duplicate).toBe(false);
+    expect(other.booking.id).not.toBe(first.booking.id);
     const second = await submitCustomerRequest(orgA, customer, request("second", { venueCity: "Baarn", eventDate: future(210) }));
     expect(second.duplicate).toBe(false);
   });

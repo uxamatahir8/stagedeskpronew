@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
-import { submitInquiry } from "@stagedesk/db";
+import { agencyBilling, publicAgency, submitInquiry } from "@stagedesk/db";
 import { announceNewBooking } from "@/lib/announce";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -61,6 +61,10 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
   const d = parsed.data;
   if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`inquiry:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
+
+  // The page is a plan feature; its action must not outlive the page for someone calling it directly.
+  const open = await publicAgency(slug);
+  if (!open || !(await agencyBilling(open.id)).limits.bookingPage) return { ok: false, message: t("notFound") };
 
   const locale = userLocale(await getLocale());
   const result = await submitInquiry(slug, { ...d, email: d.email, locale });
