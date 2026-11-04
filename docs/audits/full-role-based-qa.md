@@ -27,7 +27,20 @@ Two depths of browser evidence are kept apart below:
 `apps/web/e2e/role-crawl.spec.ts` reads each role's real sidebar, opens every link, and
 follows one example of each kind of detail page, on 1280×800 and 390×844.
 
-@@CRAWL_TABLE@@
+| Role | Account | Pages on desktop | Pages on phone |
+| ---- | ------- | ---------------- | -------------- |
+| Platform admin | demo admin | 34 | 34 |
+| Agency owner | Feestband owner | 34 | 34 |
+| Agency admin | Feestband admin | 30 | 30 |
+| Agency staff | Feestband staff | 22 | 22 |
+| Agency artist | DJ Sem | 9 | 9 |
+| Independent artist | Daan Kok (demo) | 24 | 24 |
+| Customer | Sanne | 14 | 14 |
+| Affiliate | demo partner | 7 | 7 |
+| Public | signed out | 12 | 12 |
+
+372 visits to 94 distinct paths in the final run: 0 problems, 0 responses of 400 or above.
+Phone checks found two real overflows on the way there (QA-03, QA-04).
 
 Screenshots of every crawled page are produced by setting `QA_CRAWL_OUT`; a selection is in
 `docs/reports/screenshots/customer-artist-qa/`.
@@ -145,7 +158,7 @@ and [artist-assignment-review.md](artist-assignment-review.md).
 | QA-06 | Low | Developers | Tests | `pnpm test` failed on `email-delivery.test.ts` before any change: `beforeAll` timed out at 10 s in a parallel run, skipping 9 tests. | Default hook timeout too short for its imports. | `hookTimeout: 60000`; no assertion changed. | Baseline failed, 41 of 41 web tests pass now | Fixed, verified |
 | QA-07 | Info | Developers | Crawl | Hydration errors reported on pages with forms. | The crawl's own screenshots: Playwright styles inputs, and React reported it. Not an app defect; not seen on a fresh load. | `caret: "initial"` on crawl screenshots. | Crawl reports 0 after the change | Closed, not a defect |
 | QA-09 | Low | Agency team in several agencies | Booking | A booking notification from another of their agencies ended in a 404. | The page only reads the active agency, correctly, with no way across. | Names the agency and offers the switch. Only the person's own team memberships are searched. | Typecheck; no test exercises this page state | Fixed, not specifically verified |
-| QA-10 | Low | Agency | Artists | After adding an artist the browser sometimes stayed on the list instead of opening the new artist. The artist was saved. | `router.push` followed at once by `router.refresh`; the refresh can cancel the push. Inferred from the code and one failing run, not isolated. | Refresh only when not navigating, as the inventory dialogs already do. | Seen once in a full run; subsequent run: see report | Fixed, reproduced browser defect |
+| QA-10 | Low | Agency | Artists | After adding an artist the browser sometimes stayed on the list instead of opening the new artist. The artist was saved. | `router.push` followed at once by `router.refresh`; the refresh can cancel the push. Inferred from the code and one failing run, not isolated. | Refresh only when not navigating, as the inventory dialogs already do. | Seen once in a full run; passed in the final run | Fixed, reproduced browser defect |
 | QA-08 | Low | Admin | Emails | "Blocked script execution in about:srcdoc" in the console. | The email preview iframe's empty sandbox refusing tooling's script. A sent email contains no script tags (checked in Mailpit). | None needed; ignored in the crawl with a comment. | Checked by hand | Closed, not a defect |
 
 ## Cross-module checks
@@ -192,6 +205,8 @@ and [artist-assignment-review.md](artist-assignment-review.md).
 ## Unverified observations
 
 - Refused pages return HTTP 200 with a "no access" page, because the refusal renders inside the stream. The data stays protected (14 pages checked in a browser), but monitoring or scripts can't rely on a 403 status.
+- A long-lived dev server ran out of memory after 2 h 7 min across two full suites, and its cache
+  then caused a page reload loop until cleared. Seen in `next dev` only; production was not load-tested.
 - The dev overlay reports Next.js 16.4.2 installed where 16.4.5 is current. Not assessed.
 - The demo agency has two profiles named "DJ Ruben". Looks like seed data; harmless.
 - The public booking form doesn't check `writeBlocked`, so a read-only agency still receives

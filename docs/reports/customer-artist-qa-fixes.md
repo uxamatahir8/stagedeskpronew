@@ -1,14 +1,14 @@
 # Customer and artist fixes, and role-based QA
 
 The three client reports are fixed and verified locally. A role-by-role audit found and fixed
-further defects. **Nothing has been pushed, merged, deployed or run against staging**, and
+further defects, including two in this work's own first version. **Nothing has been pushed, merged, deployed or run against staging**, and
 some real-world paths could not be tested here (see BLOCKED).
 
 | | |
 | - | - |
 | Initial staging commit | `08e9e037379e033f3d665b461a616fde883e2417` |
 | Working branch | `fix/customer-artist-portal-qa` |
-| Final commit | @@FINAL_SHA@@ |
+| Final commit | `164ba5d` tested; the commits on top add only these documents |
 | Environment | Windows, local MySQL, Redis, Mailpit, stripe-mock, demo data |
 
 Details per finding:
@@ -130,7 +130,7 @@ was empty. Rollback: drop the new table, index and columns; no existing column c
 - Removing a team member unlinks their artist profile.
 - Agency actions on details, notes and services are blocked when read-only.
 
-**Changed files:** @@CHANGED_FILES@@
+**Changed files:** 75 files against staging before this report: 4,644 lines added, 302 removed, 12 of the files tests. `git diff --stat origin/staging..HEAD` lists them.
 
 New:
 
@@ -146,11 +146,50 @@ requires one. No assertion was removed or weakened.
 
 ## Test results
 
-@@TEST_RESULTS@@
+| Check | Command | Result |
+| ----- | ------- | ------ |
+| Core rules | `turbo run test --force --concurrency=1` | 236 of 236 |
+| Database integration | same | 220 of 220, including 36 new in `customer-artist-portal.test.ts` |
+| Payments, financial regression | same | 57 of 57 |
+| Web, including real auth endpoints and email outbox | same | 41 of 41 |
+| Email templates | same | 13 of 13 |
+| Typecheck | `turbo run typecheck --force` | Pass |
+| Lint | `turbo run lint --force` | 0 errors, 1 warning that was there before (`role-has-required-aria-props`) |
+| Production build | `pnpm build` | Pass |
+| Migrations | `prisma migrate status`; applied fresh on the test database each run | 41 applied, up to date |
+| Browser suite | `pnpm --filter @stagedesk/web e2e` | **59 of 59 in one uninterrupted run**, 1.0 h, commit `164ba5d` |
+| Smoke scripts | `bash scripts/smoke-*.sh` | **Fail on this branch and on staging alike; not a usable gate.** See below |
+| Secret scan | gitleaks 8.28, all 171 commits | No leaks. `.env` is untracked |
+| Dependency audit | `pnpm audit --prod` | 1 low, 1 moderate; 0 high, 0 critical. Not fixed |
+
+Unit checks ran on `4054059`. The browser run's commit `164ba5d` differs from it only by one
+test file, and the commits after that add only documents.
+
+**Smoke scripts.** On this branch: accounts 25 passed, 11 failed; bookings 12, 12; payments 0, 18; affiliates 4, 13; dashboards 7, 19; website 38, 19. Five of the six were run on untouched staging `08e9e03` and compared by check name: all 121 checks gave the same result, so those failures aren't caused by this work. The staging comparison of the website script was stopped before it finished, so its 19 failures are **not** compared; they look stale (they expect `/en` addresses, which now redirect, and Dutch text on English pages), but that's a reading, not a measurement. The scripts date from October and `grep` raw HTML. Causes seen: a local admin password that no longer matches, exact text, and expecting a 403 status. Because some are permission checks, those were checked in a real browser: 14 restricted pages across customer, artist, staff and owner all show "no access". They return HTTP 200, because the refusal renders inside the streamed page. The scripts need updating or retiring.
+
+**The clean run was not the first.** Earlier full runs each failed, and a reviewer should know why:
+
+| Run result | Cause | Action |
+| ---------- | ------ | ------ |
+| 56 of 57 | Test opened a demo artist who already had a login | Test fixed |
+| 58 of 59 | Test reloaded before the availability save finished | Test fixed |
+| Stopped | My review found the two change-request bugs (CP-10, CP-11) | Code fixed, tests added |
+| Stopped at 29 | Adding an artist stayed on the list (QA-10) | Code fixed. Seen once; cause inferred from the code, not isolated |
+| 58 of 59 | First compile of a route took 20.7 s, past a 15 s wait | Route added to the warm-up list |
+| Stopped | Dev server out of memory after 2 h 7 min across two suites; its cache then caused a reload loop | Fresh server and cache per run |
+| 53, then stopped | Date change landed on a day DJ Sem already plays. The app correctly refused it | Test dates fixed; the refusal is now a tested step |
+| 55 of 59 | Upcoming gigs sat behind old ones on page 2 (AR-16); leftover test equipment pushed an item off page 1 | Code fixed; `pnpm db:clean-test` |
+| 58 of 59 | Test silently skipped a reset, because `isVisible()` ignores its timeout | Test fixed |
+
+No assertion was weakened to get to green. Warm-up and date changes alter when and with what
+the tests run, not what they check.
 
 ## Browser QA coverage
 
-@@BROWSER_SUMMARY@@
+Chromium through Playwright against the local app; every role signed in with a demo or
+test-domain account. Coverage per role, and what was only opened rather than exercised, is in the
+[QA document](../audits/full-role-based-qa.md#browser-coverage). **Not every button on every page was
+pressed**: the crawl proves pages render for each role, and specs prove the listed workflows.
 
 Screenshots: `docs/reports/screenshots/customer-artist-qa/`.
 
