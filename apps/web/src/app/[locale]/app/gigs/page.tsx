@@ -58,6 +58,11 @@ async function Gigs() {
   );
   const accepted = [...upcoming, ...past];
   const isUpcoming = new Set(upcoming.map((g) => g.id));
+  // What's ahead must not sink below an artist's history: undated first, then soonest, then past gigs newest first.
+  const dateOrder = (g: (typeof accepted)[number]) => {
+    const time = g.booking.eventDate?.getTime() ?? 0;
+    return isUpcoming.has(g.id) ? time : Number.MAX_SAFE_INTEGER - time;
+  };
 
   return (
     <div className="grid gap-8">
@@ -92,7 +97,7 @@ async function Gigs() {
                 items={accepted.map((g) => ({
                   id: g.id,
                   text: `${te(g.booking.eventType as EventType)} ${g.booking.venueName ?? ""} ${g.booking.venueCity ?? ""} ${g.booking.organization.name} ${g.booking.trackingCode}`,
-                  values: { date: g.booking.eventDate?.getTime() ?? null },
+                  values: { date: dateOrder(g) },
                   facets: { when: isUpcoming.has(g.id) ? "upcoming" : "past", agency: g.booking.organization.name, type: g.booking.eventType },
                   node: card(g),
                 }))}
