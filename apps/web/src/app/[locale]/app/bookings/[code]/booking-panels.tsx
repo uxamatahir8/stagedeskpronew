@@ -178,6 +178,7 @@ export function EditDetailsDialog({
     }
     return result;
   }, {} as FormState);
+  const [, startSubmit] = useTransition();
   const errors = state.fieldErrors ?? {};
 
   return (
@@ -192,7 +193,15 @@ export function EditDetailsDialog({
         <DialogHeader>
           <DialogTitle>{t("booking.eventDetails")}</DialogTitle>
         </DialogHeader>
-        <form action={action} className="grid gap-4">
+        {/* Not a form action: React resets those when they finish, which would wipe what was typed when a field is refused. */}
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            startSubmit(() => action(form));
+          }}
+        >
           <EventFields values={values} errors={errors} idPrefix="ed" />
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="ed-dos" label={t("booking.dos")} hint={t("booking.listHint")}>

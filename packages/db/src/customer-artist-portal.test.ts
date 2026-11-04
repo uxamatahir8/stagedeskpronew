@@ -268,9 +268,31 @@ describe("customer changes to contract details", () => {
     expect((await prisma.bookingChangeRequest.findUniqueOrThrow({ where: { id: other.requestId! } })).status).toBe("withdrawn");
   });
 
+  it("recognises a repeat of a change to several fields, whatever order the database keeps them in", async () => {
+    const date = future(128);
+    const booking = await bookedBooking(date);
+    const many = details({ eventDate: future(129), venueCity: "Maarn", venueName: "De Schuur", guestCount: 80, startTime: "19:00" });
+    const first = await submitEventChange(orgA, booking.id, customer, many, "Graag");
+    const desk = await notifications(owner, "change_requested");
+    const again = await submitEventChange(orgA, booking.id, customer, many, "Graag");
+    expect(again.requestId).toBe(first.requestId);
+    expect(await notifications(owner, "change_requested")).toBe(desk);
+    expect(await prisma.bookingChangeRequest.count({ where: { bookingId: booking.id } })).toBe(1);
+  });
+
+  it("closes a waiting change when the booking is cancelled, so nobody can approve it", async () => {
+    const date = future(130);
+    const booking = await bookedBooking(date);
+    const { requestId } = await submitEventChange(orgA, booking.id, customer, details({ eventDate: future(131) }), null);
+    await changeBookingStatus(orgA, booking.id, "cancel", { actor: "agency", actorId: owner });
+    expect((await prisma.bookingChangeRequest.findUniqueOrThrow({ where: { id: requestId! } })).status).toBe("superseded");
+    await expect(decideChangeRequest(orgA, requestId!, owner, { approve: true })).rejects.toMatchObject({ code: "not_pending" });
+  });
+
   it("refuses bad input, someone else's booking and finished bookings", async () => {
     const date = future(127);
     const booking = await bookedBooking(date);
+    await expect(submitEventChange(orgA, booking.id, customer, details({ eventDate: "2031-02-31" }), null)).rejects.toMatchObject({ code: "invalid_details" });
     await expect(submitEventChange(orgA, booking.id, stranger, details(), null)).rejects.toMatchObject({ code: "not_found" });
     await expect(submitEventChange(orgA, booking.id, customer, details({ eventDate: "2020-01-01" }), null)).rejects.toMatchObject({ code: "invalid_date" });
     await expect(submitEventChange(orgA, booking.id, customer, details({ eventDate: null }), null)).rejects.toMatchObject({ code: "date_required" });

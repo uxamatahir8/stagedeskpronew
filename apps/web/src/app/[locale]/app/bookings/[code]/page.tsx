@@ -21,6 +21,8 @@ import { artistAccountStatesOf, artistCanBeAssigned, bookableArtists, bookingEqu
 import { changeRows } from "@/lib/change-requests";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
+import { SwitchAgencyLink } from "@/components/booking/switch-agency-link";
+import { EmptyState } from "@/components/empty-state";
 import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -80,7 +82,25 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       changeRequests: { where: { status: "pending" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
-  if (!booking) notFound();
+  if (!booking) {
+    // A link from a notification, with another of their agencies active: offer the way there. Only their own
+    // team memberships are searched, and only the agency's name is shown.
+    const teams = viewer.memberships.filter((m) => m.id !== organization.id && m.role !== "customer" && m.role !== "artist").map((m) => m.id);
+    const elsewhere = teams.length > 0 ? await prisma.booking.findFirst({ where: { trackingCode: code.toUpperCase(), organizationId: { in: teams } }, select: { organization: { select: { id: true, name: true } } } }) : null;
+    if (!elsewhere) notFound();
+    const tb = await getTranslations("booking");
+    return (
+      <EmptyState
+        icon={CalendarIcon}
+        title={tb("atOtherAgency", { agency: elsewhere.organization.name })}
+        action={
+          <SwitchAgencyLink organizationId={elsewhere.organization.id} href={`/app/bookings/${code.toUpperCase()}`}>
+            {tb("switchToAgency", { agency: elsewhere.organization.name })}
+          </SwitchAgencyLink>
+        }
+      />
+    );
+  }
 
   const [t, format, catalog, defaults, people] = await Promise.all([
     getTranslations(),

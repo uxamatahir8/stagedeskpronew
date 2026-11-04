@@ -706,7 +706,9 @@
     "rejectChange": "Refuse",
     "artistUnreachable": "This artist can't see this request: {state}.",
     "artistUnreachableFix": "Sort this out on their artist page.",
-    "artistSetupPending": "They haven't set a password yet; the request email has a link to do so."
+    "artistSetupPending": "They haven't set a password yet; the request email has a link to do so.",
+    "atOtherAgency": "This booking is at {agency}",
+    "switchToAgency": "Switch to {agency} and open it"
   },
   "timeline": {
     "created": "Booking created",

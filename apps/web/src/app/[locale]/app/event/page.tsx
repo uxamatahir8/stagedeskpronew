@@ -64,7 +64,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
   const requested = query["booking"];
   // Their bookings at other agencies (they can be a customer of several): reachable from here, never mixed in.
   const elsewhere = await prisma.booking.findMany({
-    where: { customerId: viewer.user.id, organizationId: { not: organization.id } },
+    where: { customerId: viewer.user.id, organizationId: { not: organization.id, in: viewer.memberships.filter((m) => m.role === "customer").map((m) => m.id) } },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: { trackingCode: true, eventType: true, eventDate: true, organization: { select: { id: true, name: true } } },
@@ -77,15 +77,13 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
         </CardHeader>
         <CardContent>
           <ul className="grid gap-2 text-sm">
-            {elsewhere
-              .filter((b) => viewer.memberships.some((m) => m.id === b.organization.id))
-              .map((b) => (
-                <li key={b.trackingCode}>
-                  <SwitchAgencyLink organizationId={b.organization.id} href={`/app/event?booking=${b.trackingCode}`}>
-                    {t(`eventTypes.${b.eventType as EventType}`)} · {eventDate(format, b.eventDate, "short") ?? t("bookings.noDate")} · {b.organization.name}
-                  </SwitchAgencyLink>
-                </li>
-              ))}
+            {elsewhere.map((b) => (
+              <li key={b.trackingCode}>
+                <SwitchAgencyLink organizationId={b.organization.id} href={`/app/event?booking=${b.trackingCode}`}>
+                  {t(`eventTypes.${b.eventType as EventType}`)} · {eventDate(format, b.eventDate, "short") ?? t("bookings.noDate")} · {b.organization.name}
+                </SwitchAgencyLink>
+              </li>
+            ))}
           </ul>
         </CardContent>
       </Card>

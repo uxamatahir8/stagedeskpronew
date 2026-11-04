@@ -124,7 +124,8 @@ const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 function checkDetails(input: EventDetailsInput, today: string, hadDate: boolean) {
   if (!(eventTypes as readonly string[]).includes(String(input.eventType))) throw new CustomerEventError("invalid_details");
   const date = input.eventDate === null ? null : String(input.eventDate);
-  if (date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)))) throw new CustomerEventError("invalid_details");
+  // Round-tripped, so 31 February isn't quietly read as 3 March.
+  if (date !== null && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`)) || new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date)) throw new CustomerEventError("invalid_details");
   if (date !== null && date < today) throw new CustomerEventError("invalid_date");
   if (date === null && hadDate) throw new CustomerEventError("date_required");
   for (const time of [input.startTime, input.endTime]) if (time !== null && !timePattern.test(String(time))) throw new CustomerEventError("invalid_details");
@@ -138,6 +139,12 @@ function diffDetails(current: Record<QuoteEventField, string | number | null>, w
   const changes: EventChanges = {};
   for (const field of quoteEventFields) if (norm(current[field]) !== norm(wanted[field])) changes[field] = wanted[field];
   return changes;
+}
+
+/** Compared key by key: MySQL stores JSON objects with their keys reordered. */
+function sameChanges(stored: unknown, changes: EventChanges) {
+  const entries = (value: object) => JSON.stringify(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)));
+  return entries((stored ?? {}) as object) === entries(changes);
 }
 
 /** Turns stored changes into what the booking's update takes, keeping the date when it isn't one of them. */
@@ -182,7 +189,7 @@ export async function submitEventChange(organizationId: string, bookingId: strin
 
     const open = await tx.bookingChangeRequest.findFirst({ where: { bookingId, status: "pending" }, orderBy: { createdAt: "desc" } });
     const trimmedNote = clean(note, 2000);
-    if (open && JSON.stringify(open.changes) === JSON.stringify(changes) && (open.note ?? null) === trimmedNote) {
+    if (open && sameChanges(open.changes, changes) && (open.note ?? null) === trimmedNote) {
       return { mode, booking, isNew: false, requestId: open.id };
     }
     await tx.bookingChangeRequest.updateMany({ where: { bookingId, status: "pending" }, data: { status: "superseded", decidedAt: now } });

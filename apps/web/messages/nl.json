@@ -706,7 +706,9 @@
     "rejectChange": "Weigeren",
     "artistUnreachable": "Deze artiest kan deze aanvraag niet zien: {state}.",
     "artistUnreachableFix": "Los dit op via de artiestenpagina.",
-    "artistSetupPending": "De artiest heeft nog geen wachtwoord gekozen; de e-mail met de aanvraag bevat daarvoor een link."
+    "artistSetupPending": "De artiest heeft nog geen wachtwoord gekozen; de e-mail met de aanvraag bevat daarvoor een link.",
+    "atOtherAgency": "Deze boeking hoort bij {agency}",
+    "switchToAgency": "Wissel naar {agency} en open de boeking"
   },
   "timeline": {
     "created": "Boeking aangemaakt",

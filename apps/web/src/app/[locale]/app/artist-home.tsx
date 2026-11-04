@@ -14,8 +14,8 @@ import { euro, eventDate } from "@/lib/format";
 const listOf = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "") : []);
 
 /** Requests waiting for an answer, on any agency's home: someone can be an artist elsewhere. */
-export async function GigRequestsCard({ userId }: { userId: string }) {
-  const [t, te, format, { requests }] = await Promise.all([getTranslations("artistHome"), getTranslations("eventTypes"), getFormatter(), artistGigs(userId)]);
+export async function GigRequestsCard({ userId, known }: { userId: string; known?: Awaited<ReturnType<typeof artistGigs>>["requests"] }) {
+  const [t, te, format, requests] = await Promise.all([getTranslations("artistHome"), getTranslations("eventTypes"), getFormatter(), known ?? artistGigs(userId).then((g) => g.requests)]);
   if (requests.length === 0) return null;
   return (
     <Card className="border-warning/60" data-testid="gig-requests">
@@ -74,7 +74,7 @@ export async function ArtistHome({ userId }: { userId: string }) {
         <StatCard index={3} label={t("paidThisYear")} value={euro(format, paid._sum.amountCents ?? 0, currency)} icon={WalletIcon} />
       </section>
 
-      <GigRequestsCard userId={userId} />
+      <GigRequestsCard userId={userId} known={requests} />
 
       <Card>
         <CardHeader>

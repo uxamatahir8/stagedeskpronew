@@ -593,6 +593,8 @@ export async function changeBookingStatus(
     const booking = await loadBooking(tx, bookingId);
     const extra = action === "cancel" || action === "decline" ? { cancelReason: by.reason ?? null } : {};
     const to = await applyTransition(tx, booking, action, by.actor, by.actorId, now, extra, by.reason ? { reason: by.reason } : undefined);
+    // Every one of these ends the event's planning: a change still waiting for an answer is moot.
+    await tx.bookingChangeRequest.updateMany({ where: { bookingId, status: "pending" }, data: { status: "superseded", decidedAt: now } });
     let withdrawn: string[] = [];
     if (to === "cancelled" || to === "declined") {
       await tx.quote.updateMany({ where: { bookingId, status: "sent" }, data: { status: "declined" } });
