@@ -1,12 +1,17 @@
 "use client";
 
+import { useLocale } from "next-intl";
 import { useTransition } from "react";
 import { switchOrganization } from "@/app/[locale]/app/actions";
-import { useRouter } from "@/i18n/navigation";
+import { localePath } from "@/lib/paths";
 
-/** Opens a page at another agency the person belongs to, making that agency active first. */
+/**
+ * Opens a page at another agency the person belongs to, making that agency
+ * active first. A full page load: the whole shell belongs to the other agency,
+ * and a client push followed by a refresh can lose the push.
+ */
 export function SwitchAgencyLink({ organizationId, href, children }: { organizationId: string; href: string; children: React.ReactNode }) {
-  const router = useRouter();
+  const locale = useLocale();
   const [pending, start] = useTransition();
   return (
     <button
@@ -16,8 +21,7 @@ export function SwitchAgencyLink({ organizationId, href, children }: { organizat
       onClick={() =>
         start(async () => {
           await switchOrganization(organizationId);
-          router.push(href);
-          router.refresh();
+          window.location.assign(localePath(locale, href));
         })
       }
     >
