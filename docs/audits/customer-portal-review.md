@@ -19,6 +19,9 @@ Status legend and evidence rules are in [full-role-based-qa.md](full-role-based-
 | CP-07 | Medium | Customer, Artist | Bookings | When the agency changed an event, nobody was told. | `updateBookingDetails` only logged the event. | `notifyBriefChanged`: artist on any brief change, customer on contract changes, nobody when nothing changed. | "tells the artist and customer when the event changes" | Fixed, code defect |
 | CP-08 | Medium | Customer | Dashboard | With several open bookings only the next was shown. | The home used a single booking. | "Your other bookings" list. | Crawl opens the page; the list itself has no assertion | Fixed, not specifically verified |
 | CP-09 | Low | Agency | Bookings | "Bookings from the customer portal" had no label. | New source. | `via_customer_portal`, shown on the booking. | e2e "via klantportaal" | Fixed, code defect |
+| CP-10 | Medium | Customer, Agency | Change requests | Found in review of this work, before release: retrying a change to several fields made a new request and told the agency again. | The retry check compared JSON as text, and MySQL reorders the keys. | Compared key by key. | "recognises a repeat of a change to several fields" (the test was not run against the old comparison) | Fixed, code defect |
+| CP-11 | Medium | Customer, Agency | Change requests | Found in the same review: a change still waiting when a booking was cancelled kept an Approve button that could only fail. | Nothing closed it. | Cancelling, declining, completing or settling closes it. | "closes a waiting change when the booking is cancelled" | Fixed, code defect |
+| CP-12 | Low | Agency | Edit details | Everything typed was wiped when a field was refused, which the stricter playlist check makes more likely. | React resets a form action when it finishes. | Submits without a form action. | Existing specs use the dialog; the kept-values case isn't asserted here | Fixed, not specifically verified |
 
 ## What customers can and can't change
 
@@ -39,7 +42,8 @@ to fill these in themselves.
 - The services take named fields only; nothing from the form reaches a generic update.
 - Approving a change goes through the same checks as an agency edit: a date the assigned
   artist or the reserved equipment can't follow is refused and the request stays open
-  (tested for the artist; the equipment check is the existing `checkEquipmentReschedule`).
+  (tested for the artist, in the database and the browser; the equipment check is the
+  existing `checkEquipmentReschedule`).
 - `requestBookingAction` takes the agency from the person's own memberships, never from the
   form alone; the service checks the customer membership again.
 - Saving nothing new records nothing and notifies nobody, so retries don't duplicate.

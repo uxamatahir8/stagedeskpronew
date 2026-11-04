@@ -31,6 +31,8 @@ Beats" are active profiles with no user, and the old picker offered both.
 | AR-14 | Medium | Artist | Sidebar | No pending-request count anywhere in the navigation. | Missing feature. | Badge next to Gigs from `pendingGigCount()`. | e2e `nav-badge-gigs` | Fixed, missing feature |
 | AR-15 | Medium | Independent artist | Gigs | An independent artist assigned by another agency (platform admins can do this) had no page to see it on. | `solo_artist` has no `artist.gigs`. | Granted when they have a live gig from another agency. | "gives an independent artist a way to a request from another agency" (the grant rule, not the page in a browser) | Fixed, code defect |
 
+| AR-16 | High | Artist | Gigs | With a long history, upcoming and undated gigs were on later pages behind the artist's oldest past gigs. | The list sorted everything by date ascending, past included. | Undated first, then soonest, then past gigs newest first. | Reproduced in a full browser run at 39 gigs on 2 pages; e2e "an undated request stays visible" now passes with that history | Fixed, reproduced browser defect |
+
 ## Profile, account, membership, assignment
 
 | State | Meaning | Assignable | What the agency sees |
