@@ -15,8 +15,10 @@ test("an owner's custom role takes effect for staff, and can be reset", async ({
 
   const reset = async () => {
     await owner.goto("/nl/app/team?tab=roles");
+    // The page streams in: wait for the editor, then the reset button is there only if the roles are custom.
+    await expect(owner.getByRole("button", { name: "Rechten opslaan" })).toBeVisible();
     const button = owner.getByRole("button", { name: "Standaard herstellen" });
-    if (await button.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    if (await button.isVisible()) {
       await button.click();
       await expect(owner.getByRole("button", { name: "Standaard herstellen" })).toHaveCount(0, { timeout: 30_000 });
     }
