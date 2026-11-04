@@ -28,6 +28,7 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { emailQuote } from "@/lib/quote-email";
 import { emailArtists } from "@/lib/artist-mail";
+import { emailChangeDecision } from "@/lib/change-requests";
 import { absoluteUrl, accepted, deliver } from "@/lib/mail";
 import { sendStored } from "@/lib/deliver";
 import { agencySender, agencySenderSelect } from "@/lib/correspondence";
@@ -191,14 +192,20 @@ export async function assignArtistAction(bookingId: string, artistId: string, pa
 }
 
 /** The agency approves or refuses a customer's requested change. Approving runs the same checks as an edit. */
-export async function decideChangeRequestAction(requestId: string, approve: boolean, note: string | null): Promise<ActionResult> {
+export async function decideChangeRequestAction(requestId: string, approve: boolean, note: string | null, acknowledge: string | null = null): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.bookings.edit");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
   return runAction(async () => {
-    await decideChangeRequest(organization.id, String(requestId).slice(0, 64), viewer.user.id, { approve, note: note?.slice(0, 2000) ?? null });
-    return approve ? t("changeApproved") : t("changeRejected");
+    const decision = await decideChangeRequest(organization.id, String(requestId).slice(0, 64), viewer.user.id, { approve, note: note?.slice(0, 2000) ?? null, acknowledge: acknowledge?.slice(0, 4000) ?? null });
+    // The decision stands from here on; the agency hears if the customer's email couldn't be handed on.
+    const mailed = await emailChangeDecision(decision).catch((error: unknown) => {
+      console.error("[bookings] change decision email failed", decision.requestId, error);
+      return false;
+    });
+    const said = approve ? t("changeApproved") : t("changeRejected");
+    return mailed ? said : `${said} ${t("changeEmailFailed")}`;
   });
 }
 

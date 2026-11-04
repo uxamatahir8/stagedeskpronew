@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
 import type { FormState } from "@/lib/validation";
 import {
@@ -116,30 +116,55 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
 }
 
 /** A customer's requested change: what would change, and the agency's answer. */
-export function ChangeRequestPanel({ requestId, rows, note, customer, requested }: { requestId: string; rows: { field: string; label: string; from: string; to: string }[]; note: string | null; customer: string; requested: string }) {
+export function ChangeRequestPanel({ requestId, rows, conflictFields, acknowledge, note, customer, requested }: { requestId: string; rows: { field: string; label: string; from: string; to: string; now?: string }[]; conflictFields: string[]; acknowledge: string | null; note: string | null; customer: string; requested: string }) {
   const t = useTranslations("booking");
+  const router = useRouter();
   const [pending, run] = useRun();
   const [reason, setReason] = useState("");
+  const stale = conflictFields.length > 0;
+  // Refused because someone changed the booking meanwhile: show them what it says now.
+  const decide = (approve: boolean, ack: string | null = null) =>
+    run(async () => {
+      const result = await decideChangeRequestAction(requestId, approve, reason || null, ack);
+      if (!result.ok) router.refresh();
+      return result;
+    });
   return (
     <div className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4 text-sm" data-testid="change-request">
       <p className="font-medium">{t("changeRequestTitle", { name: customer, date: requested })}</p>
       <ul className="grid gap-1">
         {rows.map((r) => (
-          <li key={r.field}>
+          <li key={r.field} data-testid={conflictFields.includes(r.field) ? "change-conflict" : undefined}>
             {r.label}: <span className="text-muted-foreground line-through">{r.from}</span> → <span className="font-medium">{r.to}</span>
+            {conflictFields.includes(r.field) && (
+              <span className="ml-1 font-medium text-destructive">
+                ({t("changeCurrent")}: {r.now})
+              </span>
+            )}
           </li>
         ))}
       </ul>
+      {stale && (
+        <p className="rounded-lg border border-warning/50 bg-warning/10 p-2" data-testid="change-stale">
+          {t("changeStale")}
+        </p>
+      )}
       {note && <p className="whitespace-pre-line rounded-lg bg-muted/60 p-2">{note}</p>}
       <FormField id="change-reason" label={t("changeReason")}>
         <Input id="change-reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
       </FormField>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={pending} onClick={() => run(() => decideChangeRequestAction(requestId, true, reason || null))}>
-          <CheckIcon />
-          {t("approveChange")}
-        </Button>
-        <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => decideChangeRequestAction(requestId, false, reason || null))}>
+        {stale ? (
+          <Button size="sm" variant="destructive" disabled={pending} onClick={() => window.confirm(t("applyAnywayConfirm")) && decide(true, acknowledge)}>
+            {t("applyAnyway")}
+          </Button>
+        ) : (
+          <Button size="sm" disabled={pending} onClick={() => decide(true)}>
+            <CheckIcon />
+            {t("approveChange")}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => decide(false)}>
           {t("rejectChange")}
         </Button>
       </div>
@@ -413,6 +438,14 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
         </div>
       )}
       <p className="text-xs text-muted-foreground">{t("assignHint")}</p>
+      {options.some((a) => a.blocked) && (
+        <p className="text-xs text-muted-foreground" data-testid="assign-need-account">
+          {t("assignNeedsAccount", { count: options.filter((a) => a.blocked).length })}{" "}
+          <Link href="/app/artists" className="underline underline-offset-4">
+            {t("assignOpenArtists")}
+          </Link>
+        </p>
+      )}
       <Button
         disabled={!artistId || pending || (pay !== "default" && !payValue.trim())}
         onClick={() =>

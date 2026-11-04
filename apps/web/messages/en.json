@@ -708,7 +708,16 @@
     "artistUnreachableFix": "Sort this out on their artist page.",
     "artistSetupPending": "They haven't set a password yet; the request email has a link to do so.",
     "atOtherAgency": "This booking is at {agency}",
-    "switchToAgency": "Switch to {agency} and open it"
+    "switchToAgency": "Switch to {agency} and open it",
+    "changeStale": "These details changed after the customer asked. Approving now would overwrite the newer values.",
+    "changeOriginal": "When asked",
+    "changeRequested": "Requested",
+    "changeCurrent": "Now",
+    "applyAnyway": "Apply the request anyway",
+    "applyAnywayConfirm": "This replaces the current values shown here with what the customer asked for.",
+    "changeEmailFailed": "The customer's email could not be stored for sending; send it again from the booking's email list.",
+    "assignNeedsAccount": "{count, plural, one {# artist can't be picked} other {# artists can't be picked}} until they have a working login.",
+    "assignOpenArtists": "Open artists"
   },
   "timeline": {
     "created": "Booking created",
@@ -2185,7 +2194,8 @@
         "customer_details": "Customer changed event details",
         "change_requested": "Customer asked to change event details",
         "change_approved": "Change request approved",
-        "change_rejected": "Change request refused"
+        "change_rejected": "Change request refused",
+        "change_conflict": "Approval stopped: details had changed since the request"
       },
       "support": {
         "start": "Started support mode in an agency",
@@ -3789,7 +3799,9 @@
     "kind_bookingDetailsRequest": "Event details request",
     "kind_bookingDetailsRequestHint": "To the customer, with a private link to fill in the event details",
     "kind_senderTest": "Sender test",
-    "kind_senderTestHint": "To the agency, to check how its customer emails arrive"
+    "kind_senderTestHint": "To the agency, to check how its customer emails arrive",
+    "kind_changeDecision": "Change request answered",
+    "kind_changeDecisionHint": "To the customer, when the agency approves or refuses a change they asked for"
   },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
@@ -6296,10 +6308,10 @@
     "state_not_member": "No longer on the team",
     "state_disabled": "Account disabled",
     "state_setup_pending": "Password not set yet",
-    "state_active": "Can sign in",
-    "explain_no_account": "This artist can't sign in, so they wouldn't see any request you send. Invite them by email: they get a link to choose a password, and anything already waiting for them shows up straight away.",
-    "explain_not_member": "The account linked to this profile was removed from your team, so it can't see gigs here. Add the person back as an artist, or link another account.",
-    "explain_disabled": "The account linked to this profile has been disabled and can't sign in. Link another account or contact support.",
+    "state_active": "Ready for requests",
+    "explain_no_account": "This artist can't sign in, so they wouldn't see a request. StageDesk needs a working login before you can assign them. Invite them by email and they'll get a link to choose a password; anything already waiting then shows up straight away. Or link an artist who's already on your team.",
+    "explain_not_member": "The account linked to this profile no longer has the artist role in your team, so it can't see gigs here and can't be assigned. Invite the artist again, link another account, or give the person the artist role back.",
+    "explain_disabled": "The account linked to this profile has been disabled and can't sign in, so it can't be assigned. Invite the artist with another address, link another account, or contact support.",
     "explain_setup_pending": "This artist has an account but hasn't chosen a password yet. Request emails carry a link to do it; you can also send a new one (a link works for 24 hours).",
     "explain_active": "This artist can sign in and answer requests.",
     "emailLabel": "Artist's email address",
@@ -6314,7 +6326,18 @@
     "alreadyActive": "This artist can already sign in.",
     "rateLimited": "Too many attempts. Try again in a while.",
     "error_other_role": "This email already belongs to someone with another role in this agency.",
-    "error_already_linked": "This account is already linked to an artist in this agency."
+    "error_already_linked": "This account is already linked to an artist in this agency.",
+    "state_inactive": "Deactivated",
+    "explain_inactive": "This profile is deactivated, so it can't get requests and its account can't see open gigs here. Earlier gigs and payouts stay on record. Reactivate it to work with this artist again.",
+    "savedEmailFailed": "{name} is saved, but the password email could not be stored for sending. Open the artist's page and send a new password link.",
+    "setupAlreadySent": "{name} is linked. A password email to {email} was already on its way; send a new one from this page if it didn't arrive.",
+    "linkLabel": "Or link an artist on your team",
+    "linkChoose": "Choose an account",
+    "link": "Link account",
+    "error_disabled": "That account has been disabled, so it can't be linked. Use another address or contact support.",
+    "error_not_allowed": "That account can't be used for an artist. Use another address.",
+    "needAccountTitle": "{count, plural, one {# artist can't receive requests yet} other {# artists can't receive requests yet}}",
+    "needAccountBody": "StageDesk only sends a request to an artist who can sign in and answer it. Open these artists to invite them, link an existing account or send a new password link."
   },
   "customerEventErrors": {
     "not_found": "This booking was not found.",
@@ -6326,7 +6349,8 @@
     "no_changes": "You haven't changed anything.",
     "not_pending": "This request has already been dealt with.",
     "date_required": "A booked date can't be left empty. Choose a new date, or message your agency.",
-    "agency_unavailable": "Changes can't be made right now. Contact your agency directly."
+    "agency_unavailable": "Changes can't be made right now. Contact your agency directly.",
+    "stale_change": "The booking's details changed after the customer asked for this. Check the current values below, then decide."
   },
   "customerRequest": {
     "title": "Request a booking",

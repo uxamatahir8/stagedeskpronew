@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
+  type ChangeConflict,
+  changeConflicts,
+  conflictFingerprint,
   customerChangeMode,
   customerPreferencesOpen,
   eventTypes,
@@ -9,7 +12,8 @@ import {
   quoteEventSnapshot,
   todayInNetherlands,
 } from "@stagedesk/core";
-import { auditTx } from "./audit";
+import { reachableArtistUserIds } from "./artist-access";
+import { audit, auditTx } from "./audit";
 import { applyBookingDetails, type BookingTx as Tx, fromDateOnly, notifyBriefChanged, toDateOnly } from "./bookings";
 import { equipmentTx } from "./booking-equipment";
 import { prisma } from "./client";
@@ -25,10 +29,14 @@ import { tenantDb } from "./tenant";
  * artist pay or equipment.
  */
 
-export type CustomerEventErrorCode = "not_found" | "closed" | "locked_by_agency" | "invalid_playlist" | "invalid_date" | "invalid_details" | "no_changes" | "not_pending" | "date_required";
+export type CustomerEventErrorCode = "not_found" | "closed" | "locked_by_agency" | "invalid_playlist" | "invalid_date" | "invalid_details" | "no_changes" | "not_pending" | "date_required" | "stale_change";
 
 export class CustomerEventError extends Error {
-  constructor(readonly code: CustomerEventErrorCode) {
+  constructor(
+    readonly code: CustomerEventErrorCode,
+    /** For stale_change: what someone else changed since the customer asked. */
+    readonly conflicts: ChangeConflict[] = [],
+  ) {
     super(`Customer event: ${code}`);
     this.name = "CustomerEventError";
   }
@@ -100,8 +108,7 @@ export async function updateCustomerPreferences(organizationId: string, bookingI
     const b = result.booking;
     await safeNotify(async () => {
       await notify(await agencyDeskUserIds(organizationId), { type: "preferences_updated", data: { name: b.customer?.name ?? "", code: b.trackingCode }, url: `/app/bookings/${b.trackingCode}` }, customerId);
-      const active = await prisma.bookingAssignment.findMany({ where: { bookingId: b.id, status: { in: ["pending", "accepted"] } }, select: { artist: { select: { userId: true } } } });
-      await notify(active.map((a) => a.artist.userId), { type: "preferences_updated", data: { name: b.customer?.name ?? "", code: b.trackingCode }, url: `/app/gigs/${b.trackingCode}` }, customerId);
+      await notify(await reachableArtistUserIds(b.id), { type: "preferences_updated", data: { name: b.customer?.name ?? "", code: b.trackingCode }, url: `/app/gigs/${b.trackingCode}` }, customerId);
     });
   }
   return { changed: result.changed };
@@ -215,10 +222,13 @@ export async function submitEventChange(organizationId: string, bookingId: strin
 export async function withdrawChangeRequest(organizationId: string, requestId: string, customerId: string, now = new Date()) {
   const db = tenantDb(organizationId);
   await db.$transaction(async (tx) => {
+    const found = await tx.bookingChangeRequest.findFirst({ where: { id: requestId, requestedById: customerId }, select: { bookingId: true } });
+    if (!found) throw new CustomerEventError("not_pending");
+    // The same lock as a decision, so the two can't cross: whichever comes second finds it answered.
+    await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${found.bookingId} FOR UPDATE`;
     const { count } = await tx.bookingChangeRequest.updateMany({ where: { id: requestId, requestedById: customerId, status: "pending" }, data: { status: "withdrawn", decidedAt: now } });
     if (count !== 1) throw new CustomerEventError("not_pending");
-    const row = await tx.bookingChangeRequest.findFirstOrThrow({ where: { id: requestId }, select: { bookingId: true } });
-    await tx.bookingEvent.create({ data: { bookingId: row.bookingId, type: "change_withdrawn", actorId: customerId, data: Prisma.JsonNull, organizationId: "" } });
+    await tx.bookingEvent.create({ data: { bookingId: found.bookingId, type: "change_withdrawn", actorId: customerId, data: Prisma.JsonNull, organizationId: "" } });
   });
 }
 
@@ -226,9 +236,31 @@ export async function withdrawChangeRequest(organizationId: string, requestId: s
  * The agency answers. Approving applies the changes in one transaction, through
  * the same checks as an agency edit: a date the artist or the reserved equipment
  * can't follow is refused and the request stays open.
+ *
+ * Approving never overwrites something newer without saying so: when someone
+ * changed a requested field after the customer asked, it's refused (stale_change)
+ * and nothing changes. A reviewer who has seen the current values can still apply
+ * the request by acknowledging them (`acknowledge`, from conflictFingerprint);
+ * if the values moved again in between, it's refused again. Audited either way.
  */
-export async function decideChangeRequest(organizationId: string, requestId: string, actorId: string, decision: { approve: boolean; note?: string | null }, now = new Date()) {
-  const result = await tenantDb(organizationId).$transaction(async (tx) => {
+export async function decideChangeRequest(organizationId: string, requestId: string, actorId: string, decision: { approve: boolean; note?: string | null; acknowledge?: string | null }, now = new Date()) {
+  const result = await decide(organizationId, requestId, actorId, decision, now).catch(async (error: unknown) => {
+    if (error instanceof CustomerEventError && error.code === "stale_change") {
+      await audit({ actorId, action: "booking.change_conflict", agencyId: organizationId, targetType: "booking_change_request", targetId: requestId, data: { conflicts: error.conflicts as unknown as Record<string, unknown>[] } });
+    }
+    throw error;
+  });
+  const b = result.booking;
+  await safeNotify(async () => {
+    const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+    await notify([result.requestedById], { type: decision.approve ? "change_approved" : "change_rejected", data: { name: agency?.name ?? "", code: b.trackingCode }, url: `/app/event?booking=${b.trackingCode}` }, actorId);
+  });
+  if (decision.approve) await notifyBriefChanged(b, { artist: true, customer: false }, actorId);
+  return { bookingId: b.id, trackingCode: b.trackingCode, approved: decision.approve, requestId, requestedById: result.requestedById, changes: result.changes, baseline: result.baseline, note: result.note };
+}
+
+function decide(organizationId: string, requestId: string, actorId: string, decision: { approve: boolean; note?: string | null; acknowledge?: string | null }, now: Date) {
+  return tenantDb(organizationId).$transaction(async (tx) => {
     const found = await tx.bookingChangeRequest.findFirst({ where: { id: requestId }, select: { bookingId: true } });
     if (!found) throw new CustomerEventError("not_found");
     await tx.$queryRaw`SELECT id FROM bookings WHERE id = ${found.bookingId} FOR UPDATE`;
@@ -238,19 +270,19 @@ export async function decideChangeRequest(organizationId: string, requestId: str
     if (request.status !== "pending") throw new CustomerEventError("not_pending");
     const changes = request.changes as EventChanges;
     const note = clean(decision.note, 2000);
+    const conflicts = decision.approve ? changeConflicts(changes, request.baseline, quoteEventSnapshot(booking)) : [];
+    const overridden = conflicts.length > 0 && decision.acknowledge === conflictFingerprint(conflicts);
+    if (conflicts.length > 0 && !overridden) throw new CustomerEventError("stale_change", conflicts);
     if (decision.approve) {
+      // A date that has passed while the request waited isn't a valid new date any more.
+      if (changes.eventDate && String(changes.eventDate) < todayInNetherlands(now)) throw new CustomerEventError("invalid_date");
       await applyBookingDetails(tx, organizationId, booking, changesToData(changes, booking.eventDate), actorId, { type: "change_approved", data: { fields: Object.keys(changes) } });
     } else {
       await tx.bookingEvent.create({ data: { bookingId: booking.id, type: "change_rejected", actorId, data: { reason: note ?? "" }, organizationId: "" } });
     }
-    await tx.bookingChangeRequest.updateMany({ where: { id: requestId }, data: { status: decision.approve ? "approved" : "rejected", decidedById: actorId, decidedAt: now, decisionNote: note } });
-    await auditTx(tx, { actorId, action: decision.approve ? "booking.change_approved" : "booking.change_rejected", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { requestId, fields: Object.keys(changes), note } });
-    return { booking, requestedById: request.requestedById };
+    const { count } = await tx.bookingChangeRequest.updateMany({ where: { id: requestId, status: "pending" }, data: { status: decision.approve ? "approved" : "rejected", decidedById: actorId, decidedAt: now, decisionNote: note } });
+    if (count !== 1) throw new CustomerEventError("not_pending");
+    await auditTx(tx, { actorId, action: decision.approve ? "booking.change_approved" : "booking.change_rejected", agencyId: organizationId, targetType: "booking", targetId: booking.id, data: { requestId, fields: Object.keys(changes), note, ...(overridden ? { overrodeConflicts: conflicts } : {}) } as Record<string, unknown> });
+    return { booking, requestedById: request.requestedById, changes, baseline: request.baseline, note };
   }, equipmentTx);
-  const b = result.booking;
-  await safeNotify(async () => {
-    const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
-    await notify([result.requestedById], { type: decision.approve ? "change_approved" : "change_rejected", data: { name: agency?.name ?? "", code: b.trackingCode }, url: `/app/event?booking=${b.trackingCode}` }, actorId);
-  });
-  if (decision.approve) await notifyBriefChanged(b, { artist: true, customer: false }, actorId);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { customerChangeMode, customerPreferencesOpen, playlistLink } from "./customer-event";
+import { changeConflicts, conflictFingerprint, customerChangeMode, customerPreferencesOpen, playlistLink } from "./customer-event";
 
 const today = "2027-05-10";
 
@@ -73,5 +73,40 @@ describe("playlistLink", () => {
     ]) {
       expect(playlistLink(bad)).toBeNull();
     }
+  });
+});
+
+describe("changeConflicts", () => {
+  const now = { eventDate: "2027-06-20", venueCity: "Utrecht", guestCount: 100 };
+
+  it("finds a field someone else changed since the customer asked", () => {
+    expect(changeConflicts({ eventDate: "2027-06-15" }, { eventDate: "2027-06-10" }, now)).toEqual([{ field: "eventDate", original: "2027-06-10", requested: "2027-06-15", current: "2027-06-20" }]);
+  });
+
+  it("is not a conflict when nothing changed, or when another field did", () => {
+    expect(changeConflicts({ eventDate: "2027-06-25" }, { eventDate: "2027-06-20" }, now)).toEqual([]);
+    expect(changeConflicts({ guestCount: 120 }, { guestCount: 100 }, now)).toEqual([]);
+  });
+
+  it("is not a conflict when the booking already holds the requested value", () => {
+    expect(changeConflicts({ eventDate: "2027-06-20" }, { eventDate: "2027-06-10" }, now)).toEqual([]);
+  });
+
+  it("compares like the quote snapshot: case, spaces and empty values don't count", () => {
+    expect(changeConflicts({ venueCity: "Zeist" }, { venueCity: " utrecht " }, now)).toEqual([]);
+    expect(changeConflicts({ venueName: "Tivoli" }, { venueName: "" }, { venueName: null })).toEqual([]);
+  });
+
+  it("doesn't depend on the order of the keys", () => {
+    const a = changeConflicts({ eventDate: "2027-06-15", guestCount: 80 }, { guestCount: 90, eventDate: "2027-06-10" }, now);
+    const b = changeConflicts({ guestCount: 80, eventDate: "2027-06-15" }, { eventDate: "2027-06-10", guestCount: 90 }, now);
+    expect(a).toEqual(b);
+    expect(a.map((c) => c.field)).toEqual(["eventDate", "guestCount"]);
+  });
+
+  it("gives a fingerprint that changes when the current value does", () => {
+    const first = conflictFingerprint(changeConflicts({ eventDate: "2027-06-15" }, { eventDate: "2027-06-10" }, now));
+    const second = conflictFingerprint(changeConflicts({ eventDate: "2027-06-15" }, { eventDate: "2027-06-10" }, { eventDate: "2027-07-01" }));
+    expect(first).not.toBe(second);
   });
 });

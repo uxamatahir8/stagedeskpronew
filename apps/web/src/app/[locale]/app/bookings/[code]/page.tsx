@@ -8,6 +8,8 @@ import { getFormatter } from "@/lib/formatter";
 import {
   availableActions,
   type BookingStatus,
+  changeConflicts,
+  conflictFingerprint,
   depositRuleOf,
   quoteChangedFields,
   quoteEventSnapshot,
@@ -197,7 +199,9 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
   );
   const activeAccount = activeAssignment ? (accounts.get(activeAssignment.artistId) ?? "no_account") : null;
   const pendingChange = booking.changeRequests[0] ?? null;
-  const pendingChangeRows = pendingChange ? await changeRows(pendingChange.changes, pendingChange.baseline, format) : [];
+  const nowSnapshot = quoteEventSnapshot(booking);
+  const pendingChangeRows = pendingChange ? await changeRows(pendingChange.changes, pendingChange.baseline, format, nowSnapshot) : [];
+  const pendingConflicts = pendingChange ? changeConflicts(pendingChange.changes, pendingChange.baseline, nowSnapshot) : [];
 
   // Equipment for this gig: only for people who handle gig equipment.
   const equipment = viewerCan(viewer, "agency.inventory.gigs") ? await bookingEquipmentSummary(organization.id, booking.id) : null;
@@ -288,7 +292,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
             <CardContent className="grid gap-4">
               {pendingChange &&
                 (viewerCan(viewer, "agency.bookings.edit") ? (
-                  <ChangeRequestPanel requestId={pendingChange.id} rows={pendingChangeRows} note={pendingChange.note} customer={booking.customer?.name ?? ""} requested={dateTime(format, pendingChange.createdAt)} />
+                  <ChangeRequestPanel requestId={pendingChange.id} rows={pendingChangeRows} conflictFields={pendingConflicts.map((c) => c.field)} acknowledge={pendingConflicts.length > 0 ? conflictFingerprint(pendingConflicts) : null} note={pendingChange.note} customer={booking.customer?.name ?? ""} requested={dateTime(format, pendingChange.createdAt)} />
                 ) : (
                   <p className="rounded-lg border border-info/30 bg-info/5 p-3 text-sm">{t("booking.changeRequestTitle", { name: booking.customer?.name ?? "", date: dateTime(format, pendingChange.createdAt) })}</p>
                 ))}

@@ -73,3 +73,34 @@ export function playlistLink(input: string | null | undefined): { url: string; p
   if (parsed.pathname === "/" || parsed.pathname === "") return null;
   return { url: parsed.toString(), provider };
 }
+
+export interface ChangeConflict {
+  field: string;
+  /** When the customer asked. */
+  original: string | number | null;
+  requested: string | number | null;
+  /** What the booking says now, which someone else put there since. */
+  current: string | number | null;
+}
+
+const sameValue = (a: unknown, b: unknown) => {
+  const norm = (v: unknown) => (v === null || v === undefined || v === "" ? "" : String(v).trim().toLowerCase());
+  return norm(a) === norm(b);
+};
+
+/**
+ * Fields of a change request that someone else changed since it was asked. A
+ * different field changing isn't a conflict, nor is the booking already holding
+ * the requested value. Compared field by field: the database reorders JSON keys.
+ */
+export function changeConflicts(changes: unknown, baseline: unknown, current: Record<string, string | number | null>): ChangeConflict[] {
+  const requested = (changes ?? {}) as Record<string, string | number | null>;
+  const original = (baseline ?? {}) as Record<string, string | number | null>;
+  return Object.keys(requested)
+    .sort()
+    .filter((field) => !sameValue(current[field], original[field]) && !sameValue(current[field], requested[field]))
+    .map((field) => ({ field, original: original[field] ?? null, requested: requested[field] ?? null, current: current[field] ?? null }));
+}
+
+/** Identifies what a reviewer saw: overriding is only accepted for exactly these current values. */
+export const conflictFingerprint = (conflicts: ChangeConflict[]) => JSON.stringify(conflicts.map((c) => [c.field, c.current]));

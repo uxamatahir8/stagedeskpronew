@@ -708,7 +708,16 @@
     "artistUnreachableFix": "Los dit op via de artiestenpagina.",
     "artistSetupPending": "De artiest heeft nog geen wachtwoord gekozen; de e-mail met de aanvraag bevat daarvoor een link.",
     "atOtherAgency": "Deze boeking hoort bij {agency}",
-    "switchToAgency": "Wissel naar {agency} en open de boeking"
+    "switchToAgency": "Wissel naar {agency} en open de boeking",
+    "changeStale": "Deze gegevens zijn gewijzigd nadat de klant dit vroeg. Nu goedkeuren zou de nieuwere waarden overschrijven.",
+    "changeOriginal": "Bij het verzoek",
+    "changeRequested": "Gevraagd",
+    "changeCurrent": "Nu",
+    "applyAnyway": "Verzoek toch doorvoeren",
+    "applyAnywayConfirm": "Dit vervangt de huidige waarden hier door wat de klant vroeg.",
+    "changeEmailFailed": "De e-mail aan de klant kon niet worden opgeslagen voor verzending; verstuur hem opnieuw via de e-maillijst van de boeking.",
+    "assignNeedsAccount": "{count, plural, one {# artiest is niet te kiezen} other {# artiesten zijn niet te kiezen}} tot ze een werkende login hebben.",
+    "assignOpenArtists": "Artiesten openen"
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -2185,7 +2194,8 @@
         "customer_details": "Klant heeft evenementgegevens gewijzigd",
         "change_requested": "Klant vroeg om evenementgegevens te wijzigen",
         "change_approved": "Wijzigingsverzoek goedgekeurd",
-        "change_rejected": "Wijzigingsverzoek geweigerd"
+        "change_rejected": "Wijzigingsverzoek geweigerd",
+        "change_conflict": "Goedkeuring gestopt: gegevens zijn gewijzigd sinds het verzoek"
       },
       "support": {
         "start": "Supportmodus gestart in een bureau",
@@ -3789,7 +3799,9 @@
     "kind_bookingDetailsRequest": "Verzoek om evenementgegevens",
     "kind_bookingDetailsRequestHint": "Aan de klant, met een privélink om de evenementgegevens in te vullen",
     "kind_senderTest": "Afzendertest",
-    "kind_senderTestHint": "Aan het bureau, om te zien hoe klantmails aankomen"
+    "kind_senderTestHint": "Aan het bureau, om te zien hoe klantmails aankomen",
+    "kind_changeDecision": "Wijzigingsverzoek beantwoord",
+    "kind_changeDecisionHint": "Aan de klant, als het bureau een gevraagde wijziging goedkeurt of weigert"
   },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
@@ -6296,10 +6308,10 @@
     "state_not_member": "Niet meer in het team",
     "state_disabled": "Account uitgeschakeld",
     "state_setup_pending": "Nog geen wachtwoord",
-    "state_active": "Kan inloggen",
-    "explain_no_account": "Deze artiest kan niet inloggen en zou een aanvraag dus niet zien. Nodig de artiest per e-mail uit: die krijgt een link om een wachtwoord te kiezen, en alles wat al klaarstaat is meteen zichtbaar.",
-    "explain_not_member": "Het account van dit profiel is uit je team verwijderd en kan hier geen optredens meer zien. Voeg de persoon opnieuw toe als artiest, of koppel een ander account.",
-    "explain_disabled": "Het account van dit profiel is uitgeschakeld en kan niet inloggen. Koppel een ander account of neem contact op met support.",
+    "state_active": "Klaar voor aanvragen",
+    "explain_no_account": "Deze artiest kan niet inloggen en zou een aanvraag dus niet zien. StageDesk heeft een werkende login nodig voordat je kunt toewijzen. Nodig de artiest per e-mail uit: die krijgt een link om een wachtwoord te kiezen, en alles wat al klaarstaat is meteen zichtbaar. Of koppel een artiest die al in je team zit.",
+    "explain_not_member": "Het account van dit profiel heeft geen artiestenrol meer in je team, dus het ziet hier geen optredens en kan niet worden toegewezen. Nodig de artiest opnieuw uit, koppel een ander account of geef de persoon de artiestenrol terug.",
+    "explain_disabled": "Het account van dit profiel is uitgeschakeld en kan niet inloggen, dus toewijzen kan niet. Nodig de artiest uit met een ander adres, koppel een ander account of neem contact op met support.",
     "explain_setup_pending": "Deze artiest heeft een account maar nog geen wachtwoord gekozen. E-mails met een aanvraag bevatten daarvoor een link; je kunt ook een nieuwe sturen (een link werkt 24 uur).",
     "explain_active": "Deze artiest kan inloggen en aanvragen beantwoorden.",
     "emailLabel": "E-mailadres van de artiest",
@@ -6314,7 +6326,18 @@
     "alreadyActive": "Deze artiest kan al inloggen.",
     "rateLimited": "Te veel pogingen. Probeer het later opnieuw.",
     "error_other_role": "Dit e-mailadres hoort al bij iemand met een andere rol in dit bureau.",
-    "error_already_linked": "Dit account is al gekoppeld aan een artiest in dit bureau."
+    "error_already_linked": "Dit account is al gekoppeld aan een artiest in dit bureau.",
+    "state_inactive": "Gedeactiveerd",
+    "explain_inactive": "Dit profiel is gedeactiveerd, dus het krijgt geen aanvragen en het account ziet hier geen open optredens. Eerdere optredens en uitbetalingen blijven bewaard. Activeer het weer om opnieuw met deze artiest te werken.",
+    "savedEmailFailed": "{name} is opgeslagen, maar de wachtwoordmail kon niet worden opgeslagen voor verzending. Open de artiestenpagina en stuur een nieuwe wachtwoordlink.",
+    "setupAlreadySent": "{name} is gekoppeld. Er was al een wachtwoordmail onderweg naar {email}; stuur vanaf deze pagina een nieuwe als die niet is aangekomen.",
+    "linkLabel": "Of koppel een artiest uit je team",
+    "linkChoose": "Kies een account",
+    "link": "Account koppelen",
+    "error_disabled": "Dat account is uitgeschakeld en kan niet worden gekoppeld. Gebruik een ander adres of neem contact op met support.",
+    "error_not_allowed": "Dat account kan niet voor een artiest worden gebruikt. Gebruik een ander adres.",
+    "needAccountTitle": "{count, plural, one {# artiest kan nog geen aanvragen krijgen} other {# artiesten kunnen nog geen aanvragen krijgen}}",
+    "needAccountBody": "StageDesk stuurt een aanvraag alleen naar een artiest die kan inloggen en antwoorden. Open deze artiesten om ze uit te nodigen, een bestaand account te koppelen of een nieuwe wachtwoordlink te sturen."
   },
   "customerEventErrors": {
     "not_found": "Deze boeking is niet gevonden.",
@@ -6326,7 +6349,8 @@
     "no_changes": "Je hebt niets gewijzigd.",
     "not_pending": "Dit verzoek is al afgehandeld.",
     "date_required": "Een geboekte datum kan niet leeg blijven. Kies een nieuwe datum of stuur je bureau een bericht.",
-    "agency_unavailable": "Wijzigen kan op dit moment niet. Neem rechtstreeks contact op met je bureau."
+    "agency_unavailable": "Wijzigen kan op dit moment niet. Neem rechtstreeks contact op met je bureau.",
+    "stale_change": "De gegevens van de boeking zijn gewijzigd nadat de klant dit vroeg. Bekijk hieronder de huidige waarden en beslis dan."
   },
   "customerRequest": {
     "title": "Boeking aanvragen",
