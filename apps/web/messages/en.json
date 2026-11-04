@@ -132,7 +132,8 @@
     "attentionTitle": "Needs attention",
     "attentionEmpty": "Nothing needs your attention right now.",
     "activityTitle": "Recent activity",
-    "activityEmpty": "Activity shows up here once bookings start coming in."
+    "activityEmpty": "Activity shows up here once bookings start coming in.",
+    "requestAnother": "Request another booking"
   },
   "bookingStatus": {
     "inquiry": "Inquiry",

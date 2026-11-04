@@ -132,7 +132,8 @@
     "attentionTitle": "Heeft aandacht nodig",
     "attentionEmpty": "Er is nu niets dat je aandacht nodig heeft.",
     "activityTitle": "Recente activiteit",
-    "activityEmpty": "Activiteit verschijnt hier zodra er boekingen binnenkomen."
+    "activityEmpty": "Activiteit verschijnt hier zodra er boekingen binnenkomen.",
+    "requestAnother": "Nog een boeking aanvragen"
   },
   "bookingStatus": {
     "inquiry": "Aanvraag",

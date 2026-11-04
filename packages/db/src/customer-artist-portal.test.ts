@@ -3,7 +3,7 @@ import { acceptQuote, assignArtist, changeBookingStatus, createBooking, respondT
 import { artistAccountState, artistCanBeAssigned } from "./artist-accounts";
 import { prisma } from "./client";
 import { CustomerEventError, decideChangeRequest, submitEventChange, updateCustomerPreferences, withdrawChangeRequest } from "./customer-event";
-import { artistGigs, hasArtistProfileAt, pendingGigCount } from "./gigs";
+import { artistGigs, hasArtistProfileAt, hasGigsOutside, pendingGigCount } from "./gigs";
 import { CustomerRequestError, submitCustomerRequest } from "./inquiries";
 
 /**
@@ -433,6 +433,52 @@ describe("what an artist sees", () => {
     const { requests } = await artistGigs(removedUser);
     expect(requests).toEqual([]);
     expect(await pendingGigCount(removedUser)).toBe(0);
+  });
+
+  it("shows a platform-managed artist their gig at the agency it was shared with", async () => {
+    const platformOrg = `${run}-platform`;
+    const managedUser = `${run}-managed`;
+    const managed = `${run}-managed-dj`;
+    await prisma.organization.create({ data: { id: platformOrg, name: "StageDesk managed", slug: `${run}-platform`, kind: "platform" } });
+    await prisma.user.create({ data: { id: managedUser, name: managedUser, email: `${managedUser}@test.local`, emailVerified: true } });
+    await prisma.account.create({ data: { id: `${managedUser}-acc`, accountId: managedUser, providerId: "credential", userId: managedUser, password: "x" } });
+    await prisma.member.create({ data: { id: `${run}-m11`, organizationId: platformOrg, userId: managedUser, role: "artist" } });
+    await prisma.artist.create({ data: { id: managed, organizationId: platformOrg, userId: managedUser, stageName: "DJ Managed", genres: [], defaultShareBps: 4000 } });
+    await prisma.artistShare.create({ data: { id: `${run}-s3`, organizationId: platformOrg, artistId: managed, partnerOrganizationId: orgA, status: "accepted" } });
+
+    const booking = await bookedBooking(future(158));
+    const { assignmentId } = await assignArtist(orgA, booking.id, managed, owner);
+    expect((await artistGigs(managedUser)).requests.map((g) => g.id)).toContain(assignmentId);
+
+    await prisma.bookingAssignment.delete({ where: { id: assignmentId } });
+    await prisma.artistShare.delete({ where: { id: `${run}-s3` } });
+    await prisma.artist.delete({ where: { id: managed } });
+    await prisma.member.delete({ where: { id: `${run}-m11` } });
+    await prisma.organization.delete({ where: { id: platformOrg } });
+  });
+
+  it("gives an independent artist a way to a request from another agency, and not for their own gigs", async () => {
+    const soloOrg = `${run}-solo`;
+    const soloUser = `${run}-solo-user`;
+    const solo = `${run}-solo-dj`;
+    await prisma.organization.create({ data: { id: soloOrg, name: "Solo", slug: `${run}-solo`, kind: "solo" } });
+    await prisma.user.create({ data: { id: soloUser, name: soloUser, email: `${soloUser}@test.local`, emailVerified: true } });
+    await prisma.account.create({ data: { id: `${soloUser}-acc`, accountId: soloUser, providerId: "credential", userId: soloUser, password: "x" } });
+    await prisma.member.create({ data: { id: `${run}-m12`, organizationId: soloOrg, userId: soloUser, role: "solo_artist" } });
+    await prisma.artist.create({ data: { id: solo, organizationId: soloOrg, userId: soloUser, stageName: "DJ Solo", genres: [], defaultShareBps: 0 } });
+    await prisma.artistShare.create({ data: { id: `${run}-s4`, organizationId: soloOrg, artistId: solo, partnerOrganizationId: orgA, status: "accepted" } });
+
+    expect(await hasGigsOutside(soloUser, [soloOrg])).toBe(false);
+    const booking = await bookedBooking(future(159));
+    const { assignmentId } = await assignArtist(orgA, booking.id, solo, owner);
+    expect(await hasGigsOutside(soloUser, [soloOrg])).toBe(true);
+    expect((await artistGigs(soloUser)).requests.map((g) => g.id)).toContain(assignmentId);
+
+    await prisma.bookingAssignment.delete({ where: { id: assignmentId } });
+    await prisma.artistShare.delete({ where: { id: `${run}-s4` } });
+    await prisma.artist.delete({ where: { id: solo } });
+    await prisma.member.delete({ where: { id: `${run}-m12` } });
+    await prisma.organization.delete({ where: { id: soloOrg } });
   });
 
   it("files a reassigned request as withdrawn and tells the first artist", async () => {

@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/empty-state";
 import { StatCard } from "@/components/stat-card";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { euro, eventDate } from "@/lib/format";
 
@@ -25,16 +25,24 @@ export async function CustomerHome({ db, userId, agency }: { db: TenantDb; userI
       include: { assignments: { where: { status: "accepted" }, take: 1, select: { artist: { select: { stageName: true } } } } },
     }),
   ]);
-  const request = (label: string, variant: "default" | "outline" = "default") => (
-    <Button asChild variant={variant} data-testid="request-booking">
-      <Link href="/app/event/request">
-        <PlusIcon />
-        {label}
-      </Link>
-    </Button>
-  );
   const next = bookings.find((b) => b.eventDate && b.eventDate.toISOString().slice(0, 10) >= today) ?? bookings[0];
-  if (!next) return <EmptyState icon={PartyPopperIcon} title={t("noBooking", { agency })} description={t("noBookingBody")} action={request(t("requestBooking"))} />;
+  if (!next) {
+    return (
+      <EmptyState
+        icon={PartyPopperIcon}
+        title={t("noBooking", { agency })}
+        description={t("noBookingBody")}
+        action={
+          <Button asChild data-testid="request-booking">
+            <Link href="/app/event/request">
+              <PlusIcon />
+              {t("requestBooking")}
+            </Link>
+          </Button>
+        }
+      />
+    );
+  }
 
   const days = next.eventDate ? Math.round((next.eventDate.getTime() - new Date(`${today}T00:00:00Z`).getTime()) / 86_400_000) : null;
   const artist = next.assignments[0]?.artist.stageName;
@@ -54,7 +62,6 @@ export async function CustomerHome({ db, userId, agency }: { db: TenantDb; userI
             {te(next.eventType as EventType)}
             <BookingStatusBadge status={next.status as BookingStatus} />
           </CardTitle>
-          <CardAction>{request(t("requestAnother"), "outline")}</CardAction>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild>

@@ -502,10 +502,11 @@ test.describe.serial("customer portal and artist assignments", () => {
     await owner.getByPlaceholder("Zoek op naam of genre").fill("Lotte Sax");
     await expect(owner.getByRole("link", { name: /Lotte Sax/ })).toContainText("Nog geen login");
     await owner.getByPlaceholder("Zoek op naam of genre").fill("DJ Ruben");
-    // Not the bulk demo artists called "DJ Ruben 034".
-    await owner.getByRole("link", { name: /DJ Ruben(?!\s*\d)/ }).first().click();
+    // The demo has more than one "DJ Ruben": take one without a working login. Earlier runs may have
+    // invited it already, until `pnpm db:clean-test` unlinks that test account.
+    await owner.getByRole("link", { name: /DJ Ruben/ }).filter({ hasText: /Nog geen login|Nog geen wachtwoord/ }).first().click();
     const panel = owner.getByTestId("artist-account-panel");
-    // Earlier runs may have invited DJ Ruben already (until `pnpm db:clean-test` unlinks that test account).
+    await expect(panel).toBeVisible();
     if (await panel.getByRole("button", { name: "Uitnodiging versturen" }).isVisible()) {
       const email = `ruben.${run}@test.local`;
       await panel.locator("#artist-invite-email").fill(email);
