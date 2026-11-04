@@ -85,6 +85,9 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
             {t("share")}: {artist.compensationType === "fixed" && artist.defaultFixedFeeCents !== null ? t("fixedPerBooking", { amount: euro(format, artist.defaultFixedFeeCents, organization.currency) }) : percent(format, artist.defaultShareBps)}
             {artist.user && ` · ${artist.user.name} (${artist.user.email})`}
           </p>
+          <div data-testid="artist-account-state">
+            <ArtistAccountBadge state={account} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <ArtistDialog
               currency={organization.currency}

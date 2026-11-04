@@ -38,7 +38,7 @@ const warmRoutes = [
   "/nl/app/website", "/nl/app/website/domain", "/nl/app/pages", "/nl/app/pages/new", "/nl/app/content", "/nl/app/content/new",
   "/nl/app/texts", "/nl/app/emails", "/nl/app/links", "/nl/app/agencies", "/nl/app/agencies/x", "/nl/app/users",
   "/nl/app/affiliates", "/nl/app/audit", "/nl/app/admin-bookings", "/nl/app/payouts", "/nl/q/x", "/nl/invite/x",
-  "/nl/app/platform-artists", "/nl/app/platform-artists/x", "/nl/app/availability", "/nl/app/listings", "/nl/app/earnings",
+  "/nl/app/platform-artists", "/nl/app/platform-artists/x", "/nl/app/availability", "/nl/app/listings", "/nl/app/earnings", "/nl/app/booking-page", "/nl/app/gigs/XXXXXXXX/equipment",
 ];
 
 async function warmUp(base: string) {

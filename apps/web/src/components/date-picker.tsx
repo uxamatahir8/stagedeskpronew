@@ -161,7 +161,12 @@ export function DatePicker({
     fpRef.current = fp;
     // Text typed before hydration: flatpickr parses what's in the field without reporting a change.
     if (fp.selectedDates[0]) changed(fp.selectedDates[0], false);
+    // Same when a mouse press outside ends the typing: it takes the text silently and its own blur
+    // handler then sees nothing new, so a click on Save would submit the old date. Blur comes before the click.
+    const commit = () => changed(fp.selectedDates[0]);
+    input.addEventListener("blur", commit);
     return () => {
+      input.removeEventListener("blur", commit);
       window.removeEventListener("keydown", closeOnEscape, true);
       fp.destroy();
       fpRef.current = null;
