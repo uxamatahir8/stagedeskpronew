@@ -15,10 +15,13 @@ const OWNER = "eigenaar@feestband.local";
 const DJ = "dj.sem@feestband.local";
 const SPOTIFY = "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M";
 
-/** A date some weeks ahead, different per run so artists are free. */
+// Fixed once per run, and further ahead than the dates other specs use: their gigs stay on the demo
+// artists between runs, and a clash would (rightly) make an assignment or a date change be refused.
+const firstDay = 1_000 + (Math.floor(Date.now() / 60_000) % 2_000);
+
+/** A date years ahead, different per run so artists are free. */
 function futureDate(offsetDays: number) {
-  const days = 45 + (Math.floor(Date.now() / 60_000) % 400) + offsetDays;
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Amsterdam" }).format(new Date(Date.now() + days * 86_400_000));
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Amsterdam" }).format(new Date(Date.now() + (firstDay + offsetDays) * 86_400_000));
 }
 
 async function newPage(browser: Browser) {
@@ -301,12 +304,28 @@ test.describe.serial("customer portal and artist assignments", () => {
       const panel = owner.getByTestId("change-request");
       await expect(panel).toBeVisible();
       await expect(panel.getByText("De locatie is verzet")).toBeVisible();
+
+      // A date the artist can't make is refused, with the reason, and the request stays open.
+      await signIn(dj, DJ);
+      const setUnavailable = async () => {
+        await dj.goto(`/nl/app/availability?month=${moved.slice(0, 7)}`);
+        const saved = dj.waitForResponse((r) => r.request().method() === "POST" && Boolean(r.request().headers()["next-action"]));
+        await dj.locator(`button[aria-label^="${moved}"]`).click();
+        expect((await saved).ok()).toBe(true);
+      };
+      await setUnavailable();
       await panel.getByRole("button", { name: "Goedkeuren en doorvoeren" }).click();
+      await expect(owner.getByText("Deze artiest is op die datum niet beschikbaar.")).toBeVisible();
+      await owner.reload();
+      await expect(owner.getByTestId("change-request")).toBeVisible();
+      // Free again (the same button toggles the date back).
+      await setUnavailable();
+
+      await owner.getByTestId("change-request").getByRole("button", { name: "Goedkeuren en doorvoeren" }).click();
       await expect(owner.getByText("Wijziging goedgekeurd en doorgevoerd", { exact: false })).toBeVisible();
       await expect(owner.getByTestId("change-request")).toHaveCount(0);
       await customer.reload();
       await expect(customer.getByTestId("last-change-decision")).toContainText("goedgekeurd");
-      await signIn(dj, DJ);
       await dj.goto("/nl/app/notifications");
       await expect(dj.getByText(new RegExp(`heeft de gegevens van optreden ${code} gewijzigd`)).first()).toBeVisible();
     });
