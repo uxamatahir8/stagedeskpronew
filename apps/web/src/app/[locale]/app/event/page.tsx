@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
 import { type BookingStatus, customerChangeMode, customerPreferencesOpen, type EventType, paymentStatus, playlistLink, todayInNetherlands, localePrefix } from "@stagedesk/core";
-import { fromDateOnly, prisma } from "@stagedesk/db";
+import { availableBookingTypes, fromDateOnly, prisma } from "@stagedesk/db";
 import { PayPanel } from "@/components/booking/pay-panel";
 import { SwitchAgencyLink } from "@/components/booking/switch-agency-link";
 import { MessageThread } from "@/components/messages/message-thread";
@@ -46,7 +46,8 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
   const { viewer, organization, db } = await requireAgency("customer.event");
   // Back from paying online: record it now rather than waiting for the webhook.
   await confirmCheckoutReturn((await searchParams)["session_id"], { organizationId: organization.id });
-  const [t, format, locale] = await Promise.all([getTranslations(), getFormatter(), getLocale()]);
+  const [t, format, locale, bookingTypes] = await Promise.all([getTranslations(), getFormatter(), getLocale(), availableBookingTypes(organization.id, true)]);
+  const typeName = new Map(bookingTypes.map((type) => [type.key, locale === "nl" ? type.nameNl : type.nameEn]));
 
   // Only the signed-in customer's own bookings at this agency.
   const bookings = await db.booking.findMany({
@@ -136,7 +137,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
   return (
     <div className="grid gap-6">
       <PageHeader
-        title={t(`eventTypes.${booking.eventType as EventType}`)}
+        title={typeName.get(booking.eventType) ?? booking.eventType}
         description={t(`customerEvent.status_${status}`, { agency: organization.name })}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -178,6 +179,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
                       venueCity: booking.venueCity ?? "",
                       guestCount: booking.guestCount?.toString() ?? "",
                     }}
+                    bookingTypes={bookingTypes.filter((type) => type.active || type.key === booking.eventType).map((type) => ({ key: type.key, label: typeName.get(type.key) ?? type.key }))}
                   />
                 </CardAction>
               )}
@@ -186,7 +188,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
               <dl className="grid gap-3 sm:grid-cols-2">
                 <Item icon={HashIcon} label={t("customerEvent.reference")}><span className="font-mono">{booking.trackingCode}</span></Item>
                 <Item icon={ContactIcon} label={t("customerEvent.agency")}>{organization.name}</Item>
-                <Item icon={PartyPopperIcon} label={t("newBooking.eventType")}>{t(`eventTypes.${booking.eventType as EventType}`)}</Item>
+                <Item icon={PartyPopperIcon} label={t("newBooking.eventType")}>{typeName.get(booking.eventType) ?? booking.eventType}</Item>
                 <Item icon={CalendarIcon} label={t("newBooking.eventDate")}>{eventDate(format, booking.eventDate) ?? t("bookings.noDate")}</Item>
                 <Item icon={ClockIcon} label={t("newBooking.startTime")}>{booking.startTime ? `${booking.startTime}${booking.endTime ? ` – ${booking.endTime}` : ""}` : "—"}</Item>
                 <Item icon={MapPinIcon} label={t("newBooking.venue")}>{[booking.venueName, booking.venueAddress, booking.venueCity].filter(Boolean).join(", ") || "—"}</Item>

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { requireAgency } from "@/lib/viewer";
 import { ArrowLeftIcon } from "lucide-react";
-import { toDateOnly } from "@stagedesk/db";
+import { availableBookingTypes, toDateOnly } from "@stagedesk/db";
 import { Link } from "@/i18n/navigation";
 import { NewBookingForm } from "./new-booking-form";
 
@@ -40,12 +40,12 @@ async function Form({ searchParams }: Pick<PageProps<"/[locale]/app/bookings/new
   const date = dateParam(query["date"]);
   const fromCalendar = query["from"] === "calendar";
   const t = await getTranslations("newBooking");
-  const { db } = await requireAgency("agency.bookings.create");
-  const customers = await db.member.findMany({
+  const { db, organization } = await requireAgency("agency.bookings.create");
+  const [customers, bookingTypes, locale] = await Promise.all([db.member.findMany({
     where: { role: "customer" },
     include: { user: { select: { id: true, name: true, email: true } } },
     orderBy: { user: { name: "asc" } },
-  });
+  }), availableBookingTypes(organization.id), getLocale()]);
   // Same-day bookings are allowed (two artists, two events); the form says how many there are already.
   const sameDay = date ? await db.booking.count({ where: { eventDate: toDateOnly(date), status: { notIn: ["declined", "cancelled", "expired"] } } }) : 0;
   return (
@@ -57,7 +57,7 @@ async function Form({ searchParams }: Pick<PageProps<"/[locale]/app/bookings/new
         </Link>
       )}
       {sameDay > 0 && <p className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">{t("sameDay", { count: sameDay })}</p>}
-      <NewBookingForm initialDate={date} customers={customers.map((c) => ({ id: c.user.id, name: c.user.name, email: c.user.email }))} />
+      <NewBookingForm initialDate={date} bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))} customers={customers.map((c) => ({ id: c.user.id, name: c.user.name, email: c.user.email }))} />
     </>
   );
 }

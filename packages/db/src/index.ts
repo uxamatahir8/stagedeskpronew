@@ -31,6 +31,7 @@ export * from "./guides";
 export * from "./bookings";
 export * from "./inventory";
 export * from "./booking-equipment";
+export * from "./booking-types";
 export * from "./shared-inventory";
 export * from "./equipment-access";
 export * from "./inquiries";

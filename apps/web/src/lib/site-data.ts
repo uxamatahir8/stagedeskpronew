@@ -1,6 +1,6 @@
 import "server-only";
 import { todayInNetherlands } from "@stagedesk/core";
-import { agencyFullyBookedDates, approvedReviews, prisma, publicArtists } from "@stagedesk/db";
+import { agencyFullyBookedDates, approvedReviews, availableBookingTypes, prisma, publicArtists } from "@stagedesk/db";
 import { turnstileSiteKey } from "./turnstile";
 
 /**
@@ -12,7 +12,7 @@ export async function loadSiteData(organizationId: string) {
   const today = todayInNetherlands();
   const horizon = new Date(`${today}T12:00:00Z`);
   horizon.setUTCMonth(horizon.getUTCMonth() + 18);
-  const [agency, artists, packages, reviews, fullyBooked] = await Promise.all([
+  const [agency, artists, packages, reviews, fullyBooked, bookingTypes] = await Promise.all([
     prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
       select: { name: true, slug: true, logo: true, currency: true, city: true, contactEmail: true, phone: true, addressLine: true, postalCode: true, website: true },
@@ -21,6 +21,7 @@ export async function loadSiteData(organizationId: string) {
     prisma.serviceItem.findMany({ where: { organizationId, active: true }, orderBy: [{ position: "asc" }, { name: "asc" }], select: { id: true, name: true, description: true, unit: true, unitPriceCents: true, vatBps: true } }),
     approvedReviews(organizationId, 12),
     agencyFullyBookedDates(organizationId, today, horizon.toISOString().slice(0, 10)),
+    availableBookingTypes(organizationId),
   ]);
   return {
     agency,
@@ -28,7 +29,7 @@ export async function loadSiteData(organizationId: string) {
     // Prices are shown including VAT: customers are mostly consumers.
     packages: packages.map((p) => ({ id: p.id, name: p.name, description: p.description, unit: p.unit, priceCents: Math.round((p.unitPriceCents * (10_000 + p.vatBps)) / 10_000) })),
     reviews: { average: reviews.average, count: reviews.count, items: reviews.reviews.map((r) => ({ id: r.id, rating: r.rating, comment: r.comment, author: r.customer?.name?.split(/\s+/)[0] ?? "" })) },
-    booking: { slug: agency.slug, siteKey: turnstileSiteKey(), today, fullyBooked },
+    booking: { slug: agency.slug, siteKey: turnstileSiteKey(), today, fullyBooked, types: bookingTypes.map((type) => ({ key: type.key, nameNl: type.nameNl, nameEn: type.nameEn })) },
   };
 }
 export type SiteData = Awaited<ReturnType<typeof loadSiteData>>;

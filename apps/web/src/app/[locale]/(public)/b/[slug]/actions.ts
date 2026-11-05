@@ -3,8 +3,8 @@
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
-import { agencyBilling, publicAgency, submitInquiry } from "@stagedesk/db";
+import { generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
+import { agencyBilling, bookingTypeExists, publicAgency, submitInquiry } from "@stagedesk/db";
 import { announceNewBooking } from "@/lib/announce";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -19,7 +19,7 @@ const schema = z.object({
   name: z.string().trim().min(2).max(191),
   email: z.email().max(191),
   phone: text(32),
-  eventType: z.enum(eventTypes),
+  eventType: z.string().trim().min(1).max(64),
   eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.preprocess((v) => (v === "" ? null : v), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable()),
   venueName: text(191),
@@ -65,9 +65,10 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
   // The page is a plan feature; its action must not outlive the page for someone calling it directly.
   const open = await publicAgency(slug);
   if (!open || !(await agencyBilling(open.id)).limits.bookingPage) return { ok: false, message: t("notFound") };
+  if (!(await bookingTypeExists(d.eventType, open.id))) return { ok: false, message: t("errorRequired") };
 
   const locale = userLocale(await getLocale());
-  const result = await submitInquiry(slug, { ...d, email: d.email, locale });
+  const result = await submitInquiry(slug, { ...d, eventType: d.eventType as Parameters<typeof submitInquiry>[1]["eventType"], email: d.email, locale });
   if (!result) return { ok: false, message: t("notFound") };
   const { agency, booking } = result;
 

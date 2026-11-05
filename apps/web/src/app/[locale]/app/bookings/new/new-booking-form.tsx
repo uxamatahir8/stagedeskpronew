@@ -23,12 +23,14 @@ export function NewBookingForm({
   submitAction = createBookingAction,
   extra,
   initialDate,
+  bookingTypes,
 }: {
   customers: { id: string; name: string; email: string }[];
   /** Event date to start with (picked in the calendar); it can still be changed. */
   initialDate?: string;
   submitAction?: (prev: FormState, form: FormData) => Promise<FormState>;
   extra?: React.ReactNode;
+  bookingTypes?: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const [state, action, pending] = useActionState(submitAction, {} as FormState);
@@ -88,7 +90,7 @@ export function NewBookingForm({
           <CardTitle>{t("newBooking.event")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <EventFields values={initialDate ? { ...emptyEvent, eventDate: initialDate } : emptyEvent} errors={errors} idPrefix="nb" />
+          <EventFields values={initialDate ? { ...emptyEvent, eventDate: initialDate } : emptyEvent} errors={errors} idPrefix="nb" bookingTypes={bookingTypes} />
           <FormField id="nb-message" label={t("newBooking.message")} error={errors["message"]}>
             <Textarea id="nb-message" name="message" rows={4} maxLength={5000} />
           </FormField>

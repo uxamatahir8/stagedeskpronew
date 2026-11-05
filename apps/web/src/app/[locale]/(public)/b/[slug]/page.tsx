@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { parseBookingTheme, todayInNetherlands } from "@stagedesk/core";
-import { agencyBilling, agencyFullyBookedDates, publicAgency } from "@stagedesk/db";
+import { agencyBilling, agencyFullyBookedDates, availableBookingTypes, publicAgency } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import { BookingFrame, BookingPageView } from "@/components/booking-page/booking-page-view";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,7 +53,7 @@ async function Page({ params }: Pick<PageProps<"/[locale]/b/[slug]">, "params">)
   // Availability hints cover the next 18 months.
   const until = new Date(`${today}T00:00:00Z`);
   until.setUTCMonth(until.getUTCMonth() + 18);
-  const [data, fullyBooked] = await Promise.all([bookingPageData(agency), agencyFullyBookedDates(agency.id, today, until.toISOString().slice(0, 10))]);
+  const [data, fullyBooked, bookingTypes] = await Promise.all([bookingPageData(agency), agencyFullyBookedDates(agency.id, today, until.toISOString().slice(0, 10)), availableBookingTypes(agency.id)]);
   const theme = parseBookingTheme(agency.bookingTheme);
   const rated = data.reviews && data.reviews.count > 0 && data.reviews.average;
 
@@ -83,6 +83,7 @@ async function Page({ params }: Pick<PageProps<"/[locale]/b/[slug]">, "params">)
             fullyBooked={fullyBooked}
             siteKey={turnstileSiteKey()}
             today={today}
+            bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
           />
         }
       />

@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, parseEuros } from "@stagedesk/core";
-import { deleteListing, getSetting, ListingError, saveListing } from "@stagedesk/db";
+import { parseEuros, type EventType } from "@stagedesk/core";
+import { bookingTypeExists, deleteListing, getSetting, ListingError, saveListing } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { requireAgency } from "@/lib/viewer";
 
@@ -16,7 +16,7 @@ const schema = z.object({
   vatBps: z.number().int(),
   depositPct: z.number().min(0).max(100),
   hours: z.string().max(5),
-  eventTypes: z.array(z.enum(eventTypes)).min(1).nullable(),
+  eventTypes: z.array(z.string().trim().min(1).max(64)).min(1).nullable(),
   active: z.boolean(),
 });
 
@@ -27,6 +27,7 @@ export async function saveListingAction(input: z.input<typeof schema>): Promise<
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, message: t("invalid") };
   const d = parsed.data;
+  if (d.eventTypes && !(await Promise.all(d.eventTypes.map((key) => bookingTypeExists(key, organization.id)))).every(Boolean)) return { ok: false, message: t("invalid") };
   const priceCents = parseEuros(d.price);
   const { vatRatesBps } = await getSetting("bookings.defaults");
   if (priceCents === null || priceCents <= 0) return { ok: false, message: t("invalidPrice") };
@@ -41,7 +42,7 @@ export async function saveListingAction(input: z.input<typeof schema>): Promise<
       vatBps: d.vatBps,
       depositBps: Math.round(d.depositPct * 100),
       durationMinutes: hours === null ? null : Math.round(hours * 60),
-      eventTypes: d.eventTypes,
+      eventTypes: d.eventTypes as EventType[] | null,
       active: d.active,
     });
   } catch (error) {

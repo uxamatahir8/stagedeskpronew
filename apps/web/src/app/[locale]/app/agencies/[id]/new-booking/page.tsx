@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { prisma, tenantDb } from "@stagedesk/db";
+import { availableBookingTypes, prisma, tenantDb } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,11 +35,11 @@ async function NewAgencyBooking({ params }: Pick<PageProps<"/[locale]/app/agenci
   if (!agency) notFound();
   const t = await getTranslations("agencyAdmin");
   // Platform admins pick from this agency's customers only: the view is scoped to it.
-  const customers = await tenantDb(agency.id).member.findMany({
+  const [customers, bookingTypes] = await Promise.all([tenantDb(agency.id).member.findMany({
     where: { role: "customer" },
     include: { user: { select: { id: true, name: true, email: true } } },
     orderBy: { user: { name: "asc" } },
-  });
+  }), availableBookingTypes(agency.id)]);
 
   return (
     <div className="grid max-w-3xl gap-6">
@@ -50,6 +50,7 @@ async function NewAgencyBooking({ params }: Pick<PageProps<"/[locale]/app/agenci
       <PageHeader title={t("newBookingTitle")} description={t("newBookingHint", { agency: agency.name })} />
       <NewBookingForm
         customers={customers.map((c) => ({ id: c.user.id, name: c.user.name, email: c.user.email }))}
+        bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
         submitAction={createBookingForAgencyAction.bind(null, agency.id)}
         extra={
           <Card>

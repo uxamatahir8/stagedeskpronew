@@ -35,7 +35,7 @@ export const emptyEvent: EventValues = {
 };
 
 /** Event, venue and wedding fields shared by "new booking" and "edit details". */
-export function EventFields({ values, errors, idPrefix }: { values: EventValues; errors: Record<string, string>; idPrefix: string }) {
+export function EventFields({ values, errors, idPrefix, bookingTypes }: { values: EventValues; errors: Record<string, string>; idPrefix: string; bookingTypes?: { key: string; label: string }[] }) {
   const t = useTranslations();
   const [type, setType] = useState<EventType>(values.eventType);
   const id = (name: string) => `${idPrefix}-${name}`;
@@ -59,9 +59,9 @@ export function EventFields({ values, errors, idPrefix }: { values: EventValues;
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {eventTypes.map((e) => (
-              <SelectItem key={e} value={e}>
-                {t(`eventTypes.${e}`)}
+            {(bookingTypes ?? eventTypes.map((key) => ({ key, label: t(`eventTypes.${key}`) }))).map((e) => (
+              <SelectItem key={e.key} value={e.key}>
+                {e.label}
               </SelectItem>
             ))}
           </SelectContent>

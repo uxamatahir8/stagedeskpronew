@@ -2,8 +2,9 @@ import { FileTextIcon, HandshakeIcon, type LucideIcon, SendIcon } from "lucide-r
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { todayInNetherlands } from "@stagedesk/core";
+import { availableBookingTypes } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
@@ -65,5 +66,6 @@ export default async function RequestPage({ params }: PageProps<"/[locale]/reque
 async function LeadForm() {
   // Reads the date (for the earliest allowed event day), so it renders per request.
   await connection();
-  return <InquiryForm kind="platform" submitAction={submitLeadAction} artists={[]} fullyBooked={[]} siteKey={turnstileSiteKey()} today={todayInNetherlands()} />;
+  const [types, locale] = await Promise.all([availableBookingTypes(), getLocale()]);
+  return <InquiryForm kind="platform" submitAction={submitLeadAction} artists={[]} fullyBooked={[]} siteKey={turnstileSiteKey()} today={todayInNetherlands()} bookingTypes={types.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))} />;
 }

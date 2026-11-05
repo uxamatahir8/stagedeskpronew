@@ -21,7 +21,7 @@ export const deskRoles = ["agency_owner", "agency_admin", "agency_staff", "solo_
 
 /** What an agency owner can hand out, grouped as on the permissions screen. */
 export const agencyPermissionGroups = {
-  bookings: ["agency.bookings", "agency.bookings.create", "agency.bookings.edit", "agency.bookings.status", "agency.leads"],
+  bookings: ["agency.bookings", "agency.bookings.create", "agency.bookings.edit", "agency.bookings.status", "agency.booking-types", "agency.leads"],
   quotes: ["agency.quotes", "agency.quotes.send", "agency.quotes.accept", "agency.services"],
   planning: ["agency.calendar", "agency.artists", "agency.artists.manage"],
   inventory: ["agency.inventory", "agency.inventory.manage", "agency.inventory.gigs", "agency.inventory.admin"],
@@ -55,7 +55,7 @@ export const permissions = [
   "platform.users",
   "platform.audit",
   "platform.support",
-  "platform.newsletter",
+    "platform.newsletter",
   ...agencyPermissions,
   ...ownerOnlyPermissions,
   "artist.gigs",
@@ -71,6 +71,7 @@ export const permissions = [
   "affiliate.payouts",
   "messages",
   "support",
+  "blog.submit",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -83,6 +84,7 @@ export const defaultAgencyGrants: Record<"agency_admin" | "agency_staff", readon
     "agency.bookings.create",
     "agency.bookings.edit",
     "agency.bookings.status",
+    "agency.booking-types",
     "agency.leads",
     "agency.quotes",
     "agency.quotes.send",
@@ -96,7 +98,7 @@ export const defaultAgencyGrants: Record<"agency_admin" | "agency_staff", readon
   ],
 };
 
-const always = ["messages", "support"] as const;
+const always = ["messages", "support", "blog.submit"] as const;
 
 const grants: Record<Role, readonly Permission[]> = {
   platform_admin: [
@@ -110,6 +112,7 @@ const grants: Record<Role, readonly Permission[]> = {
     "platform.audit",
     "platform.support",
   "platform.newsletter",
+    "blog.submit",
     "support",
   ],
   agency_owner: [...agencyPermissions, ...ownerOnlyPermissions, ...always],
@@ -149,7 +152,7 @@ const grants: Record<Role, readonly Permission[]> = {
     "solo.listings",
     ...always,
   ],
-  affiliate: ["affiliate.dashboard", "affiliate.links", "affiliate.payouts", "support"],
+  affiliate: ["affiliate.dashboard", "affiliate.links", "affiliate.payouts", "blog.submit", "support"],
 };
 
 /**
@@ -169,6 +172,7 @@ export type RolePermissions = Partial<Record<"agency_admin" | "agency_staff", st
  * access. Owners always have everything; admin-only stays admin-only.
  */
 export const laterPermissions: Partial<Record<AgencyPermission, AgencyPermission>> = {
+  "agency.booking-types": "agency.bookings",
   "agency.inventory": "agency.bookings",
   "agency.inventory.gigs": "agency.bookings.edit",
   "agency.inventory.manage": "agency.artists.manage",

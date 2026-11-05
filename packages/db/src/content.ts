@@ -4,7 +4,7 @@ import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 
 export class ContentError extends Error {
-  constructor(readonly code: "not_found" | "slug_taken" | "invalid" | "category_in_use") {
+  constructor(readonly code: "not_found" | "slug_taken" | "invalid" | "category_in_use" | "not_allowed" | "not_editable") {
     super(`Content: ${code}`);
     this.name = "ContentError";
   }
@@ -72,6 +72,8 @@ export interface ArticleInput {
   en: unknown | null;
 }
 
+export type ContributorArticleInput = Omit<ArticleInput, "status" | "featured" | "publishedAt" | "position">;
+
 function checkArticle(input: ArticleInput) {
   const slug = contentSlug.safeParse(input.slug);
   const nl = articleLocaleSchema.safeParse(input.nl);
@@ -127,6 +129,79 @@ export async function listContentArticlesAdmin(kind: ContentKind, { q = "", stat
 
 export async function getContentArticle(id: string) {
   return prisma.contentArticle.findUnique({ where: { id }, include: { category: true } });
+}
+
+/** A contributor can save only their own non-published blog draft. */
+export async function saveContributorArticle(authorId: string, id: string | null, input: ContributorArticleInput) {
+  const data = checkArticle({ ...input, status: "draft", featured: false, publishedAt: null, position: 0 });
+  const clash = await prisma.contentArticle.findFirst({ where: { kind: "blog", slug: data.slug, ...(id ? { id: { not: id } } : {}) }, select: { id: true } });
+  if (clash) throw new ContentError("slug_taken");
+  if (data.categoryId && !(await prisma.contentCategory.findFirst({ where: { id: data.categoryId, kind: "blog" }, select: { id: true } }))) throw new ContentError("invalid");
+  const en = data.en ?? null;
+  if (!id) {
+    return prisma.contentArticle.create({
+      data: { id: randomUUID(), kind: "blog", ...data, status: "draft", featured: false, publishedAt: null, authorId, en: en ?? undefined },
+    });
+  }
+  const existing = await prisma.contentArticle.findFirst({ where: { id, kind: "blog", authorId }, select: { id: true, status: true } });
+  if (!existing) throw new ContentError("not_found");
+  if (!['draft', 'rejected'].includes(existing.status)) throw new ContentError("not_editable");
+  return prisma.contentArticle.update({
+    where: { id },
+    data: { ...data, status: "draft", featured: false, publishedAt: null, submittedAt: null, reviewedAt: null, reviewedById: null, rejectionReason: null, en: en ?? (null as unknown as Prisma.InputJsonValue) },
+  });
+}
+
+export async function contributorArticles(authorId: string) {
+  return prisma.contentArticle.findMany({
+    where: { kind: "blog", authorId },
+    orderBy: { updatedAt: "desc" },
+    include: { category: { select: { nameNl: true, nameEn: true } } },
+  });
+}
+
+export async function contributorArticle(authorId: string, id: string) {
+  return prisma.contentArticle.findFirst({ where: { id, kind: "blog", authorId }, include: { category: true } });
+}
+
+export async function submitContributorArticle(authorId: string, id: string, now = new Date()) {
+  const row = await prisma.contentArticle.findFirst({ where: { id, kind: "blog", authorId }, select: { id: true, status: true } });
+  if (!row) throw new ContentError("not_found");
+  if (!['draft', 'rejected'].includes(row.status)) throw new ContentError("not_editable");
+  return prisma.contentArticle.update({ where: { id }, data: { status: "pending", submittedAt: now, reviewedAt: null, reviewedById: null, rejectionReason: null } });
+}
+
+export async function withdrawContributorArticle(authorId: string, id: string) {
+  const row = await prisma.contentArticle.findFirst({ where: { id, kind: "blog", authorId, status: "pending" }, select: { id: true } });
+  if (!row) throw new ContentError("not_editable");
+  return prisma.contentArticle.update({ where: { id }, data: { status: "draft", submittedAt: null } });
+}
+
+export async function deleteContributorArticle(authorId: string, id: string) {
+  const row = await prisma.contentArticle.findFirst({ where: { id, kind: "blog", authorId }, select: { status: true } });
+  if (!row) throw new ContentError("not_found");
+  if (!['draft', 'rejected'].includes(row.status)) throw new ContentError("not_editable");
+  await prisma.contentArticle.delete({ where: { id } });
+}
+
+export async function pendingBlogArticles() {
+  return prisma.contentArticle.findMany({
+    where: { kind: "blog", status: "pending" },
+    orderBy: { submittedAt: "asc" },
+    include: { author: { select: { id: true, name: true, email: true } }, category: true },
+  });
+}
+
+export async function reviewBlogArticle(id: string, reviewerId: string, decision: "approve" | "reject", reason = "", now = new Date()) {
+  const row = await prisma.contentArticle.findFirst({ where: { id, kind: "blog", status: "pending" }, select: { id: true } });
+  if (!row) throw new ContentError("not_editable");
+  if (decision === "reject" && !reason.trim()) throw new ContentError("invalid");
+  return prisma.contentArticle.update({
+    where: { id },
+    data: decision === "approve"
+      ? { status: "published", publishedAt: now, reviewedById: reviewerId, reviewedAt: now, rejectionReason: null }
+      : { status: "rejected", publishedAt: null, reviewedById: reviewerId, reviewedAt: now, rejectionReason: reason.trim().slice(0, 500) },
+  });
 }
 
 // ── Public ────────────────────────────────────────────────────────────────

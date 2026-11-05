@@ -19,7 +19,7 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { artistAccountStatesOf, artistCanBeAssigned, bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
+import { artistAccountStatesOf, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
 import { changeRows } from "@/lib/change-requests";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
@@ -104,7 +104,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     );
   }
 
-  const [t, format, catalog, defaults, people] = await Promise.all([
+  const [t, format, catalog, defaults, people, bookingTypes] = await Promise.all([
     getTranslations(),
     getFormatter(),
     db.serviceItem.findMany({ where: { active: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
@@ -113,7 +113,9 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       where: { id: { in: [...new Set([...(booking.createdById ? [booking.createdById] : []), ...booking.notes.map((n) => n.authorId), ...booking.events.flatMap((e) => (e.actorId ? [e.actorId] : []))])] } },
       select: { id: true, name: true },
     }),
+    availableBookingTypes(organization.id, true),
   ]);
+  const eventTypeLabel = bookingTypes.find((type) => type.key === booking.eventType)?.[locale === "nl" ? "nameNl" : "nameEn"] ?? booking.eventType;
   const nameOf = (id: string | null) => people.find((p) => p.id === id)?.name ?? null;
   // The requested artist can belong to a partner agency, so this isn't tenant-scoped.
   const preferredArtist = booking.preferredArtistId
@@ -257,7 +259,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
           <div className="grid gap-1">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">
-                {t(`eventTypes.${booking.eventType as EventType}`)} · {booking.customer?.name ?? t("bookings.noCustomer")}
+                {eventTypeLabel} · {booking.customer?.name ?? t("bookings.noCustomer")}
               </h1>
               <BookingStatusBadge status={status} />
             </div>
@@ -285,6 +287,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     preferredGenre={booking.preferredGenre ?? ""}
                     musicRequests={booking.musicRequests ?? ""}
                     specialRequests={booking.specialRequests ?? ""}
+                    bookingTypes={bookingTypes.filter((type) => type.active || type.key === booking.eventType).map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
                   />
                 </CardAction>
               )}

@@ -4,7 +4,7 @@ import { PencilIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { eventTypes, type EventType } from "@stagedesk/core";
+import { type EventType } from "@stagedesk/core";
 import { FormMessage } from "@/components/auth/auth-card";
 import { DatePicker } from "@/components/date-picker";
 import { FormField } from "@/components/form-field";
@@ -116,7 +116,7 @@ export interface EventDetailValues {
 }
 
 /** Date, times, venue, type and guests. `direct`: saved at once (no quote yet); otherwise it goes to the agency to decide. */
-export function ChangeDetailsDialog({ bookingId, values, direct, today }: { bookingId: string; values: EventDetailValues; direct: boolean; today: string }) {
+export function ChangeDetailsDialog({ bookingId, values, direct, today, bookingTypes }: { bookingId: string; values: EventDetailValues; direct: boolean; today: string; bookingTypes: { key: string; label: string }[] }) {
   const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<EventType>(values.eventType);
@@ -144,9 +144,9 @@ export function ChangeDetailsDialog({ bookingId, values, direct, today }: { book
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {eventTypes.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {t(`eventTypes.${e}`)}
+                {bookingTypes.map((e) => (
+                  <SelectItem key={e.key} value={e.key}>
+                    {e.label}
                   </SelectItem>
                 ))}
               </SelectContent>
