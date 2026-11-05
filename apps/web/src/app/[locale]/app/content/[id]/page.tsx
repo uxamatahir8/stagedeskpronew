@@ -46,7 +46,7 @@ async function Editor({ params, searchParams }: Pick<PageProps<"/[locale]/app/co
     ? {
         slug: article.slug,
         categoryId: article.categoryId ?? "",
-        status: article.status === "published" ? "published" : "draft",
+        status: (["draft", "pending", "published", "rejected"].includes(article.status) ? article.status : "draft") as ArticleValues["status"],
         featured: article.featured,
         publishedAt: article.publishedAt?.toISOString() ?? "",
         coverImage: article.coverImage ?? "",
@@ -86,6 +86,7 @@ async function Editor({ params, searchParams }: Pick<PageProps<"/[locale]/app/co
         initial={initial}
         categories={categories.map((c) => ({ id: c.id, name: locale === "en" ? c.nameEn : c.nameNl }))}
         siteUrl={appUrl.replace(/^https?:\/\//, "")}
+        rejectionReason={article?.rejectionReason}
       />
     </div>
   );

@@ -1,7 +1,6 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import type { EventType } from "@stagedesk/core";
-import { fromDateOnly, prisma } from "@stagedesk/db";
+import { bookingTypeName, fromDateOnly, prisma } from "@stagedesk/db";
 import { absoluteUrl, accepted, deliver, userLocale } from "./mail";
 import { hasPassword, passwordSetupUrl } from "./password-setup";
 
@@ -36,7 +35,7 @@ export async function emailArtists(assignmentIds: string[], status: "new" | "wit
       continue;
     }
     const locale = userLocale(user.locale);
-    const te = await getTranslations({ locale, namespace: "eventTypes" });
+    const eventName = await bookingTypeName(row.booking.eventType, locale, row.organizationId);
     const noDate = (await getTranslations({ locale, namespace: "artistHome" }))("dateNotScheduled");
     const day = fromDateOnly(row.booking.eventDate);
     const intl = locale === "en" ? "en-GB" : "nl-NL";
@@ -58,7 +57,7 @@ export async function emailArtists(assignmentIds: string[], status: "new" | "wit
           status,
           name: row.artist.stageName || user.name,
           agency: row.organization.name,
-          event: te(row.booking.eventType as EventType).toLowerCase(),
+          event: eventName.toLowerCase(),
           date,
           venue: [row.booking.venueName, row.booking.venueCity].filter(Boolean).join(", "),
           url,

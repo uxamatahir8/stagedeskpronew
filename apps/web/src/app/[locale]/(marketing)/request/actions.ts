@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
-import { notify, platformAdminIds, submitLead } from "@stagedesk/db";
+import { generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
+import { bookingTypeExists, notify, platformAdminIds, submitLead } from "@stagedesk/db";
 import type { InquiryResult } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { runLeadBroadcast } from "@/lib/lead-market";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
@@ -19,7 +19,7 @@ const schema = z.object({
   name: z.string().trim().min(2).max(191),
   email: z.email().max(191),
   phone: text(32),
-  eventType: z.enum(eventTypes),
+  eventType: z.string().trim().min(1).max(64),
   eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.preprocess((v) => (v === "" ? null : v), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable()),
   venueName: text(191),
@@ -55,11 +55,12 @@ export async function submitLeadAction(form: FormData): Promise<InquiryResult> {
   const parsed = schema.safeParse(fields);
   if (!parsed.success) return { ok: false, message: t("errorRequired") };
   const d = parsed.data;
+  if (!(await bookingTypeExists(d.eventType))) return { ok: false, message: t("errorRequired") };
   if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`lead:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
 
   const locale = userLocale(await getLocale());
-  const lead = await submitLead({ ...d, locale });
+  const lead = await submitLead({ ...d, eventType: d.eventType as Parameters<typeof submitLead>[0]["eventType"], locale });
   const first = d.name.split(/\s+/)[0] ?? d.name;
   deliver({ kind: "leadReceived", to: d.email, params: { locale, name: first, reference: lead.reference, url: absoluteUrl(locale, `/request/${lead.reference}?t=${lead.accessToken}`) } });
   await notify(await platformAdminIds(), { type: "lead_new", data: { name: d.name, code: lead.reference }, url: `/app/leads/${lead.id}` });

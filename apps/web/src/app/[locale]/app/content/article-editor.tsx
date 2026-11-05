@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
-import { deleteArticleAction, saveArticleAction, uploadContentImageAction } from "./actions";
+import { deleteArticleAction, deleteMyArticleAction, reviewArticleAction, saveArticleAction, saveMyArticleAction, submitMyArticleAction, uploadContentImageAction } from "./actions";
 import type { ArticleValues, LocaleText } from "./article-values";
 import { NativeSelect } from "@/components/ui/native-select";
 
@@ -47,12 +47,16 @@ export function ArticleEditor({
   initial,
   categories,
   siteUrl,
+  contributor = false,
+  rejectionReason = null,
 }: {
   kind: ContentKind;
   id: string | null;
   initial: ArticleValues;
   categories: { id: string; name: string }[];
   siteUrl: string;
+  contributor?: boolean;
+  rejectionReason?: string | null;
 }) {
   const t = useTranslations("contentAdmin");
   const router = useRouter();
@@ -125,22 +129,21 @@ export function ArticleEditor({
   function save(publish: boolean | null) {
     const status = publish === null ? v.status : publish ? "published" : "draft";
     start(async () => {
-      const r = await saveArticleAction(kind, id, {
+      const values = {
         slug: v.slug,
         categoryId: v.categoryId || null,
-        status,
-        featured: v.featured,
-        publishedAt: v.publishedAt ? new Date(v.publishedAt).toISOString() : null,
         coverImage: v.coverImage,
         authorName: v.authorName,
-        position: v.position,
         nl: v.nl,
         en: hasText(v.en) ? v.en : null,
-      });
+      };
+      const r = contributor
+        ? await saveMyArticleAction(id, values)
+        : await saveArticleAction(kind, id, { ...values, status: status === "published" ? "published" : "draft", featured: v.featured, publishedAt: v.publishedAt ? new Date(v.publishedAt).toISOString() : null, position: v.position });
       if (!r.ok) return void toast.error(r.message);
       toast.success(r.message);
       setV((prev) => ({ ...prev, status }));
-      if (!id) router.replace(`/app/content/${r.id}`);
+      if (!id) router.replace(contributor ? `/app/blog-posts/${r.id}` : `/app/content/${r.id}`);
       else router.refresh();
     });
   }
@@ -288,22 +291,43 @@ export function ArticleEditor({
             <p className="text-sm">
               {t("currentStatus")}: <span className="font-medium">{t(`status_${v.status}`)}</span>
             </p>
-            <FormField id="published-at" label={t("publishedAt")} hint={t("publishedAtHint")}>
+            {rejectionReason && <p className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">{t("rejectionReason")}: {rejectionReason}</p>}
+            {!contributor && <FormField id="published-at" label={t("publishedAt")} hint={t("publishedAtHint")}>
               <DatePicker id="published-at" mode="datetime" suppressHydrationWarning value={v.publishedAt} onChange={(publishedAt) => setV({ ...v, publishedAt })} />
-            </FormField>
+            </FormField>}
             <div className="grid gap-2">
-              <Button onClick={() => save(true)} disabled={pending || uploading}>
-                {v.status === "published" ? t("update") : t("publish")}
-              </Button>
+              {contributor ? <>
+                <Button onClick={() => save(false)} disabled={pending || uploading}>{t("saveDraft")}</Button>
+                {id && <Button variant="outline" disabled={pending || uploading} onClick={() => start(async () => {
+                  const r = await submitMyArticleAction(id);
+                  if (!r.ok) return void toast.error(r.message);
+                  toast.success(r.message);
+                  router.replace("/app/blog-posts");
+                })}>{t("submitForReview")}</Button>}
+              </> : <>
+                {v.status === "pending" ? <>
+                  <Button disabled={pending} onClick={() => start(async () => {
+                    const r = await reviewArticleAction(id!, "approve");
+                    if (!r.ok) return void toast.error(r.message);
+                    toast.success(r.message); router.refresh();
+                  })}>{t("approve")}</Button>
+                  <Button variant="outline" disabled={pending} onClick={() => {
+                    const reason = window.prompt(t("rejectPrompt"));
+                    if (!reason) return;
+                    start(async () => { const r = await reviewArticleAction(id!, "reject", reason); if (!r.ok) return void toast.error(r.message); toast.success(r.message); router.refresh(); });
+                  }}>{t("reject")}</Button>
+                </> : <Button onClick={() => save(true)} disabled={pending || uploading}>
+                  {v.status === "published" ? t("update") : t("publish")}
+                </Button>}
               {v.status === "published" ? (
                 <Button variant="outline" onClick={() => save(false)} disabled={pending}>
                   {t("unpublish")}
                 </Button>
-              ) : (
+              ) : v.status !== "pending" && (
                 <Button variant="outline" onClick={() => save(false)} disabled={pending}>
                   {t("saveDraft")}
                 </Button>
-              )}
+              )}</>}
               {id && (
                 <Button
                   variant="ghost"
@@ -312,9 +336,10 @@ export function ArticleEditor({
                   onClick={() => {
                     if (!window.confirm(t("deleteConfirm"))) return;
                     start(async () => {
-                      const r = await deleteArticleAction(id);
+                      const r = contributor ? await deleteMyArticleAction(id) : await deleteArticleAction(id);
+                      if (!r.ok) return void toast.error(r.message);
                       if (r.message) toast.success(r.message);
-                      router.replace(`/app/content${kind === "blog" ? "" : `?kind=${kind}`}`);
+                      router.replace(contributor ? "/app/blog-posts" : `/app/content${kind === "blog" ? "" : `?kind=${kind}`}`);
                     });
                   }}
                 >
@@ -361,10 +386,10 @@ export function ArticleEditor({
                     <span>{t("featured")}</span>
                     <span className="text-xs font-normal text-muted-foreground">{t("featuredFieldHint")}</span>
                   </Label>
-                  <Switch id="featured" checked={v.featured} onCheckedChange={(featured) => setV({ ...v, featured })} />
+                  <Switch id="featured" checked={v.featured} disabled={contributor} onCheckedChange={(featured) => setV({ ...v, featured })} />
                 </div>
                 <FormField id="author" label={t("author")}>
-                  <Input id="author" maxLength={120} value={v.authorName} onChange={(e) => setV({ ...v, authorName: e.target.value })} />
+                  <Input id="author" maxLength={120} value={v.authorName} disabled={contributor} onChange={(e) => setV({ ...v, authorName: e.target.value })} />
                 </FormField>
               </>
             )}

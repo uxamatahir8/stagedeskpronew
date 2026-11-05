@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   AgencyAdminError,
   audit,
+  bookingTypeExists,
   createAgencyForOwner,
   createBooking,
   prisma,
@@ -187,6 +188,7 @@ export async function createBookingForAgencyAction(organizationId: string, _prev
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const d = parsed.data;
+  if (!(await bookingTypeExists(d.eventType, agency.id))) return { fieldErrors: { eventType: tb("invalidEventType") } };
 
   const customerId = await resolveBookingCustomer(
     agency.id,

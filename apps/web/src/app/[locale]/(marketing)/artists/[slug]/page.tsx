@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { type EventType, mediaEmbed, todayInNetherlands } from "@stagedesk/core";
-import { artistProfile } from "@stagedesk/db";
+import { artistProfile, availableBookingTypes } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,6 +42,7 @@ async function Profile({ params }: Pick<PageProps<"/[locale]/artists/[slug]">, "
   setRequestLocale(locale as Locale);
   const [profile, t, te, format] = await Promise.all([artistProfile(slug), getTranslations("artistDirectory"), getTranslations("eventTypes"), getFormatter()]);
   if (!profile) notFound();
+  const bookingTypes = await availableBookingTypes(profile.organizationId);
   const siteKey = turnstileSiteKey();
   const today = todayInNetherlands();
 
@@ -186,7 +187,7 @@ async function Profile({ params }: Pick<PageProps<"/[locale]/artists/[slug]">, "
           </h2>
           <p className="text-muted-foreground">{t("askBody")}</p>
         </div>
-        <InquiryForm slug={slug} artists={[]} fullyBooked={[]} siteKey={siteKey} today={today} submitAction={requestArtistPriceAction.bind(null, slug)} />
+        <InquiryForm slug={slug} artists={[]} fullyBooked={[]} siteKey={siteKey} today={today} submitAction={requestArtistPriceAction.bind(null, slug)} bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))} />
       </section>
     </>
   );

@@ -2,8 +2,9 @@
 
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, isPastInNetherlands, playlistLink } from "@stagedesk/core";
+import { isPastInNetherlands, playlistLink } from "@stagedesk/core";
 import {
+  bookingTypeExists,
   CustomerRequestError,
   prisma,
   submitCustomerRequest,
@@ -55,7 +56,7 @@ export async function savePreferencesAction(bookingId: string, form: FormData): 
 const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
 
 const changeSchema = z.object({
-  eventType: z.enum(eventTypes),
+  eventType: z.string().trim().min(1).max(64),
   eventDate: z.preprocess(blankToNull, z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "invalidDate").nullable()),
   startTime: time,
   endTime: time,
@@ -78,8 +79,9 @@ export async function requestEventChangeAction(bookingId: string, form: FormData
   }
   if (!(await allow(`customer-event:${viewer.user.id}`, 60, 3600))) return { message: t("rateLimited") };
   const { note, ...details } = parsed.data;
+  if (!(await bookingTypeExists(details.eventType, organization.id))) return { fieldErrors: { eventType: (await getTranslations("newBooking"))("invalidEventType") } };
   return attempt(organization.id, async () => {
-    const { mode } = await submitEventChange(organization.id, String(bookingId).slice(0, 64), viewer.user.id, details, note);
+    const { mode } = await submitEventChange(organization.id, String(bookingId).slice(0, 64), viewer.user.id, { ...details, eventType: details.eventType as Parameters<typeof submitEventChange>[3]["eventType"] }, note);
     return mode === "direct" ? t("changeSaved") : t("changeRequested");
   });
 }
@@ -99,7 +101,7 @@ const requestSchema = z.object({
   clientRequestId: z.uuid(),
   name: z.string().trim().min(2).max(191),
   phone: optionalText(32),
-  eventType: z.enum(eventTypes),
+  eventType: z.string().trim().min(1).max(64),
   eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: time,
   venueName: optionalText(191),
@@ -130,6 +132,7 @@ export async function requestBookingAction(form: FormData): Promise<RequestBooki
   const d = parsed.data;
   const agency = viewer.memberships.find((m) => m.id === d.organizationId && m.role === "customer");
   if (!agency) return { ok: false, message: t("notCustomer") };
+  if (!(await bookingTypeExists(d.eventType, agency.id))) return { ok: false, message: tp("errorRequired") };
   if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: tp("errorDate") };
   if (!(await allow(`customer-request:${viewer.user.id}`, 10, 3600))) return { ok: false, message: tp("errorRate") };
   if (await writeBlocked(agency.id)) return { ok: false, message: t("closed", { agency: agency.name }) };
@@ -138,7 +141,7 @@ export async function requestBookingAction(form: FormData): Promise<RequestBooki
   try {
     result = await submitCustomerRequest(agency.id, viewer.user.id, {
       clientRequestId: d.clientRequestId,
-      eventType: d.eventType,
+      eventType: d.eventType as Parameters<typeof submitCustomerRequest>[2]["eventType"],
       eventDate: d.eventDate,
       startTime: d.startTime,
       venueName: d.venueName,

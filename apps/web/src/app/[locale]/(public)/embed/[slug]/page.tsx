@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 import { parseBookingTheme, todayInNetherlands } from "@stagedesk/core";
-import { agencyBilling, agencyFullyBookedDates, publicAgency, publicArtists } from "@stagedesk/db";
+import { agencyBilling, agencyFullyBookedDates, availableBookingTypes, publicAgency, publicArtists } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import type { Locale } from "@/i18n/routing";
 import { BookingFrame } from "@/components/booking-page/booking-page-view";
@@ -34,9 +34,10 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
   const today = todayInNetherlands();
   const until = new Date(`${today}T00:00:00Z`);
   until.setUTCMonth(until.getUTCMonth() + 18);
-  const [artists, fullyBooked] = await Promise.all([
+  const [artists, fullyBooked, bookingTypes] = await Promise.all([
     publicArtists(agency.id),
     agencyFullyBookedDates(agency.id, today, until.toISOString().slice(0, 10)),
+    availableBookingTypes(agency.id),
   ]);
 
   return (
@@ -48,6 +49,7 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
         fullyBooked={fullyBooked}
         siteKey={turnstileSiteKey()}
         today={today}
+        bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
       />
     </BookingFrame>
   );

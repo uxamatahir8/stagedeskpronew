@@ -51,6 +51,9 @@ model User {
   supportTickets   SupportTicket[]
   ticketMessages   TicketMessage[]
   legalAcceptances LegalAcceptance[]
+  contentArticles  ContentArticle[]  @relation("ContentAuthor")
+  contentReviews   ContentArticle[]  @relation("ContentReviewer")
+  bookingTypesCreated BookingType[]  @relation("BookingTypeCreator")
 
   @@map("users")
 }
@@ -208,6 +211,7 @@ model Organization {
   gigListings         GigListing[]
   artistRequestsMade  ArtistRequest[]  @relation("ArtistRequestBorrower")
   artistRequestsIn    ArtistRequest[]  @relation("ArtistRequestLender")
+  bookingTypes        BookingType[]
 
   /// Language for customer emails and documents when the customer hasn't chosen one (nl | en).
   correspondenceLocale        String                 @default("nl") @db.VarChar(8)
@@ -1583,13 +1587,20 @@ model ContentArticle {
   slug        String           @db.VarChar(120)
   categoryId  String?          @db.VarChar(64)
   category    ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  /// draft | published
+  /// draft | pending | published | rejected
   status      String           @default("draft") @db.VarChar(16)
   /// Shown first (blog: the lead story).
   featured    Boolean          @default(false)
   publishedAt DateTime?
   coverImage  String?          @db.VarChar(500)
   authorName  String?          @db.VarChar(120)
+  authorId    String?          @db.VarChar(64)
+  author      User?            @relation("ContentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  submittedAt DateTime?
+  reviewedById String?         @db.VarChar(64)
+  reviewedBy  User?            @relation("ContentReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt  DateTime?
+  rejectionReason String?      @db.VarChar(500)
   /// ArticleLocale (packages/core/src/content.ts); English is optional.
   nl          Json
   en          Json?
@@ -1599,7 +1610,31 @@ model ContentArticle {
 
   @@unique([kind, slug])
   @@index([kind, status, publishedAt])
+  @@index([authorId, kind, status])
   @@map("content_articles")
+}
+
+/// A booking/event type. Platform rows have no organization; agencies and
+/// independent artists own their custom rows. Historical bookings keep their
+/// stable `eventType` key, so types in use are archived rather than removed.
+model BookingType {
+  id             String        @id @db.VarChar(64)
+  key            String        @db.VarChar(64)
+  nameNl         String        @db.VarChar(80)
+  nameEn         String        @db.VarChar(80)
+  organizationId String?       @db.VarChar(64)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String?       @db.VarChar(64)
+  createdBy      User?         @relation("BookingTypeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  active         Boolean       @default(true)
+  protected      Boolean       @default(false)
+  position       Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId, active, position])
+  @@map("booking_types")
 }
 
 /// A website or app text changed in the admin panel, merged over the

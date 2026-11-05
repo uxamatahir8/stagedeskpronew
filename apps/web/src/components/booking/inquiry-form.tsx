@@ -30,6 +30,7 @@ export function InquiryForm({
   today,
   submitAction,
   kind = "agency",
+  bookingTypes,
 }: {
   slug?: string;
   artists: { id: string; stageName: string }[];
@@ -38,6 +39,7 @@ export function InquiryForm({
   today: string;
   submitAction?: (form: FormData) => Promise<InquiryResult>;
   kind?: "agency" | "platform";
+  bookingTypes?: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -116,9 +118,9 @@ export function InquiryForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {eventTypes.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {t(`eventTypes.${e}`)}
+              {(bookingTypes ?? eventTypes.map((key) => ({ key, label: t(`eventTypes.${key}`) }))).map((e) => (
+                <SelectItem key={e.key} value={e.key}>
+                  {e.label}
                 </SelectItem>
               ))}
             </SelectContent>

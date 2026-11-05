@@ -7,6 +7,7 @@ import { type Compensation, parseEuros, playlistLink } from "@stagedesk/core";
 import {
   acceptQuote,
   assignArtist,
+  bookingTypeExists,
   BookingError,
   changeBookingStatus,
   createBooking,
@@ -47,6 +48,7 @@ export async function createBookingAction(_prev: FormState, form: FormData): Pro
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const d = parsed.data;
+  if (!(await bookingTypeExists(d.eventType, organization.id))) return { fieldErrors: { eventType: (await getTranslations("newBooking"))("invalidEventType") } };
 
   const customerId = await resolveBookingCustomer(
     organization.id,
@@ -102,6 +104,7 @@ export async function updateDetailsAction(bookingId: string, _prev: FormState, f
   const parsed = detailsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const { eventDate, budget, ...rest } = parsed.data;
+  if (!(await bookingTypeExists(rest.eventType, organization.id))) return { fieldErrors: { eventType: (await getTranslations("newBooking"))("invalidEventType") } };
 
   // A new date is refused when the booking's reserved equipment doesn't fit on it.
   const result = await runAction(() =>

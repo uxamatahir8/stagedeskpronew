@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import type { EventType } from "@stagedesk/core";
-import { artistProfile, getSetting, prisma } from "@stagedesk/db";
+import { artistProfile, availableBookingTypes, getSetting, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Pill } from "@/components/status-badge";
@@ -33,17 +33,18 @@ export default async function ListingsPage({ params }: PageProps<"/[locale]/app/
 
 async function Listings() {
   const { organization } = await requireAgency("solo.listings");
-  const [t, te, format, locale, listings, defaults, org] = await Promise.all([
+  const [t, format, locale, listings, defaults, org, bookingTypes] = await Promise.all([
     getTranslations("listings"),
-    getTranslations("eventTypes"),
     getFormatter(),
     getLocale(),
     prisma.gigListing.findMany({ where: { organizationId: organization.id }, orderBy: [{ position: "asc" }, { createdAt: "asc" }], include: { _count: { select: { bookings: true } } } }),
     getSetting("bookings.defaults"),
     prisma.organization.findUniqueOrThrow({ where: { id: organization.id }, select: { slug: true, currency: true } }),
+    availableBookingTypes(organization.id, true),
   ]);
+  const typeName = new Map(bookingTypes.map((type) => [type.key, locale === "nl" ? type.nameNl : type.nameEn]));
   const listed = Boolean(await artistProfile(org.slug));
-  const dialog = { vatRates: defaults.vatRatesBps, defaultDepositBps: defaults.depositBps, currency: org.currency };
+  const dialog = { vatRates: defaults.vatRatesBps, defaultDepositBps: defaults.depositBps, currency: org.currency, bookingTypes: bookingTypes.filter((type) => type.active).map((type) => ({ key: type.key, label: typeName.get(type.key) ?? type.key })) };
 
   return (
     <div className="grid gap-6">
@@ -78,7 +79,7 @@ async function Listings() {
                       {!l.active && <Pill>{t("inactive")}</Pill>}
                     </CardTitle>
                     <CardDescription>
-                      {types ? types.map((x) => te(x)).join(", ") : t("allTypes")}
+                      {types ? types.map((x) => typeName.get(x) ?? x).join(", ") : t("allTypes")}
                       {l.durationMinutes ? ` · ${t("hoursShort", { hours: format.number(l.durationMinutes / 60, { maximumFractionDigits: 1 }) })}` : ""}
                     </CardDescription>
                   </div>

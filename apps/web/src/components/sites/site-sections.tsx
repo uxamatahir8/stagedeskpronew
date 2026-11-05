@@ -1,5 +1,5 @@
 import { CheckIcon, MailIcon, MapPinIcon, MenuIcon, PhoneIcon, StarIcon } from "lucide-react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { iconKind, mediaEmbed, type Section, type SiteTheme } from "@stagedesk/core";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import { Inline } from "@/components/site/blocks";
@@ -291,6 +291,7 @@ export function SiteSection({
   const t = useTranslations("agencySite");
   const tu = useTranslations("units");
   const format = useFormatter();
+  const lang = useLocale();
   const card = siteCard(theme);
   const button = siteButton(theme);
   const align = section.headingAlign ?? "center";
@@ -822,7 +823,7 @@ export function SiteSection({
                 <p className="text-sm">{t("formPreviewHint")}</p>
               </div>
             ) : (
-              <InquiryForm slug={data.booking.slug} artists={data.artists.map((a) => ({ id: a.id, stageName: a.stageName }))} fullyBooked={data.booking.fullyBooked} siteKey={data.booking.siteKey} today={data.booking.today} />
+              <InquiryForm slug={data.booking.slug} artists={data.artists.map((a) => ({ id: a.id, stageName: a.stageName }))} fullyBooked={data.booking.fullyBooked} siteKey={data.booking.siteKey} today={data.booking.today} bookingTypes={data.booking.types.map((type) => ({ key: type.key, label: lang === "nl" ? type.nameNl : type.nameEn }))} />
             )}
           </div>
         </>,

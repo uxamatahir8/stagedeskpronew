@@ -181,6 +181,7 @@ export function EditDetailsDialog({
   preferredGenre,
   musicRequests,
   specialRequests,
+  bookingTypes,
 }: {
   bookingId: string;
   values: EventValues;
@@ -190,6 +191,7 @@ export function EditDetailsDialog({
   preferredGenre: string;
   musicRequests: string;
   specialRequests: string;
+  bookingTypes: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -227,7 +229,7 @@ export function EditDetailsDialog({
             startSubmit(() => action(form));
           }}
         >
-          <EventFields values={values} errors={errors} idPrefix="ed" />
+          <EventFields values={values} errors={errors} idPrefix="ed" bookingTypes={bookingTypes} />
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="ed-dos" label={t("booking.dos")} hint={t("booking.listHint")}>
               <Textarea id="ed-dos" name="dos" defaultValue={dos.join("\n")} rows={4} />

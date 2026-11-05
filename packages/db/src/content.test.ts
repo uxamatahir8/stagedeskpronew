@@ -1,9 +1,11 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "./client";
-import { ContentError, deleteContentCategory, publishedArticle, publishedArticles, saveContentArticle, saveContentCategory } from "./content";
+import { ContentError, contributorArticle, deleteContentCategory, publishedArticle, publishedArticles, reviewBlogArticle, saveContentArticle, saveContentCategory, saveContributorArticle, submitContributorArticle } from "./content";
 
 // Slugs carry the run id, so tests never touch the real content.
 const run = `t${Date.now().toString(36)}`;
+const author = `${run}-author`;
+const reviewer = `${run}-reviewer`;
 const text = (title: string) => ({ title, excerpt: "", body: `Body of ${title}`, seoTitle: "", seoDescription: "" });
 const input = (slug: string, extra: Partial<Parameters<typeof saveContentArticle>[2]> = {}) => ({
   slug,
@@ -21,9 +23,20 @@ const input = (slug: string, extra: Partial<Parameters<typeof saveContentArticle
 afterAll(async () => {
   await prisma.contentArticle.deleteMany({ where: { slug: { startsWith: run } } });
   await prisma.contentCategory.deleteMany({ where: { slug: { startsWith: run } } });
+  await prisma.user.deleteMany({ where: { id: { in: [author, reviewer] } } });
 });
 
 describe("content", () => {
+  it("keeps contributor posts private until an admin approves them", async () => {
+    await prisma.user.createMany({ data: [{ id: author, name: "Author", email: `${run}-author@test.local` }, { id: reviewer, name: "Reviewer", email: `${run}-reviewer@test.local` }] });
+    const row = await saveContributorArticle(author, null, { slug: `${run}-contribution`, categoryId: null, coverImage: "", authorName: "Author", nl: text("Contribution"), en: null });
+    expect(await publishedArticle("blog", row.slug)).toBeNull();
+    await submitContributorArticle(author, row.id);
+    expect((await contributorArticle(author, row.id))?.status).toBe("pending");
+    await expect(saveContributorArticle(author, row.id, { slug: row.slug, categoryId: null, coverImage: "", authorName: "Author", nl: text("Changed"), en: null })).rejects.toMatchObject({ code: "not_editable" });
+    await reviewBlogArticle(row.id, reviewer, "approve");
+    expect((await publishedArticle("blog", row.slug))?.status).toBe("published");
+  });
   it("rejects a slug that's taken and unsafe cover images", async () => {
     await saveContentArticle("blog", null, input(`${run}-a`));
     await expect(saveContentArticle("blog", null, input(`${run}-a`))).rejects.toThrow(ContentError);

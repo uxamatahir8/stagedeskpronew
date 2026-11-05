@@ -2,9 +2,9 @@ import { CalendarXIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { forbidden } from "next/navigation";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { todayInNetherlands } from "@stagedesk/core";
-import { agencyFullyBookedDates, agencyTakesRequests, prisma, publicArtists } from "@stagedesk/db";
+import { agencyFullyBookedDates, agencyTakesRequests, availableBookingTypes, prisma, publicArtists } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,10 +40,12 @@ async function Request({ searchParams }: Pick<PageProps<"/[locale]/app/event/req
   const open = (await agencyTakesRequests(agency.id)) && !(await writeBlocked(agency.id));
   const until = new Date(`${today}T00:00:00Z`);
   until.setUTCMonth(until.getUTCMonth() + 18);
-  const [artists, fullyBooked, me] = await Promise.all([
+  const [artists, fullyBooked, me, bookingTypes, locale] = await Promise.all([
     open ? publicArtists(agency.id) : [],
     open ? agencyFullyBookedDates(agency.id, today, until.toISOString().slice(0, 10)) : [],
     prisma.user.findUniqueOrThrow({ where: { id: viewer.user.id }, select: { name: true, email: true, phone: true } }),
+    availableBookingTypes(agency.id),
+    getLocale(),
   ]);
 
   return (
@@ -58,6 +60,7 @@ async function Request({ searchParams }: Pick<PageProps<"/[locale]/app/event/req
           today={today}
           contact={{ name: me.name, email: me.email, phone: me.phone ?? "" }}
           isActiveAgency={viewer.organization?.id === agency.id}
+          bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
         />
       ) : (
         <EmptyState icon={CalendarXIcon} title={t("closed", { agency: agency.name })} description={t("closedBody")} />

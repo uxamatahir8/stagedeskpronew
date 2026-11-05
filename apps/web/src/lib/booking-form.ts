@@ -28,7 +28,7 @@ export const lines = z.preprocess(
 );
 
 export const eventFields = {
-  eventType: z.enum(eventTypes),
+  eventType: z.string().trim().min(1).max(64).transform((value) => value as (typeof eventTypes)[number]),
   eventDate: date,
   startTime: time,
   endTime: time,

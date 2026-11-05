@@ -88,6 +88,7 @@ export const navigation: NavGroup[] = [
       { key: "users", href: "/app/users", icon: UsersRoundIcon, permission: "platform.users" },
       { key: "audit", href: "/app/audit", icon: ScrollTextIcon, permission: "platform.audit" },
       { key: "settings", href: "/app/settings", icon: SlidersHorizontalIcon, permission: "platform.settings" },
+      { key: "bookingTypes", href: "/app/booking-types", icon: TagIcon, permission: "platform.settings" },
       { key: "paymentSetup", href: "/app/settings/payments", icon: CreditCardIcon, permission: "platform.settings" },
     ],
   },
@@ -95,6 +96,7 @@ export const navigation: NavGroup[] = [
     key: "agency",
     items: [
       { key: "bookings", href: "/app/bookings", icon: CalendarCheckIcon, permission: "agency.bookings" },
+      { key: "bookingTypes", href: "/app/booking-types", icon: TagIcon, permission: "agency.booking-types" },
       { key: "leadOffers", href: "/app/lead-offers", icon: SparklesIcon, permission: "agency.leads" },
       { key: "quotes", href: "/app/quotes", icon: ReceiptIcon, permission: "agency.quotes" },
       { key: "calendar", href: "/app/calendar", icon: CalendarDaysIcon, permission: "agency.calendar" },
@@ -134,6 +136,7 @@ export const navigation: NavGroup[] = [
   {
     key: "manage",
     items: [
+      { key: "blogPosts", href: "/app/blog-posts", icon: NewspaperIcon, permission: "blog.submit" },
       { key: "messages", href: "/app/messages", icon: MessagesSquareIcon, permission: "messages" },
       { key: "team", href: "/app/team", icon: UsersIcon, permission: "agency.team" },
       { key: "referrals", href: "/app/referrals", icon: GiftIcon, permission: "agency.referrals" },

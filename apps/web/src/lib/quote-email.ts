@@ -1,7 +1,7 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import { type EventType, type VatGroup } from "@stagedesk/core";
-import { fromDateOnly, prisma } from "@stagedesk/db";
+import { type VatGroup } from "@stagedesk/core";
+import { bookingTypeName, fromDateOnly, prisma } from "@stagedesk/db";
 import { agencySender, agencySenderSelect, customerMailLocale, type MailLocale } from "./correspondence";
 import { absoluteUrl, appUrl, deliver } from "./mail";
 import type { DeliveryReceipt } from "./deliver";
@@ -45,7 +45,7 @@ export async function emailQuote(quoteId: string, displayName?: string): Promise
   const pct = (bps: number) => new Intl.NumberFormat(intl, { style: "percent", maximumFractionDigits: 2 }).format(bps / 10_000);
   const snap = quote.eventSnapshot as { eventDate?: string | null; startTime?: string | null; endTime?: string | null; venueName?: string | null; venueCity?: string | null } | null;
   const day = snap ? (snap.eventDate ?? null) : fromDateOnly(quote.booking.eventDate);
-  const te = await getTranslations({ locale, namespace: "eventTypes" });
+  const eventName = await bookingTypeName(quote.booking.eventType, locale, quote.organizationId);
   const tb = await getTranslations({ locale, namespace: "booking" });
   const b = { ...quote.booking, ...(snap ? { startTime: snap.startTime ?? null, endTime: snap.endTime ?? null, venueName: snap.venueName ?? null, venueCity: snap.venueCity ?? null } : {}) };
   const date = day
@@ -68,7 +68,7 @@ export async function emailQuote(quoteId: string, displayName?: string): Promise
       // No password yet: invite them to make their own account from the quote page.
       accountUrl: customer.accounts.length === 0 ? absoluteUrl(locale, `/q/${quote.token}#account`) : undefined,
       reference: b.trackingCode,
-      event: te(b.eventType as EventType),
+      event: eventName,
       date,
       venue: [b.venueName, b.venueCity].filter(Boolean).join(", ") || undefined,
       lines: quote.items.map((i) => ({ description: i.description, quantity: qty(i.quantityHundredths), unitPrice: money(i.unitPriceCents), total: money(i.subtotalCents) })),

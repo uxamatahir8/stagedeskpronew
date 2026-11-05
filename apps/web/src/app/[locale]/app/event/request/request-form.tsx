@@ -3,7 +3,7 @@
 import { CalendarXIcon, PartyPopperIcon, SendIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState, useTransition } from "react";
-import { budgetRanges, eventTypes, timeInNetherlands, type EventType } from "@stagedesk/core";
+import { budgetRanges, timeInNetherlands, type EventType } from "@stagedesk/core";
 import { FormMessage } from "@/components/auth/auth-card";
 import { SwitchAgencyLink } from "@/components/booking/switch-agency-link";
 import { DatePicker } from "@/components/date-picker";
@@ -27,6 +27,7 @@ export function RequestForm({
   today,
   contact,
   isActiveAgency,
+  bookingTypes,
 }: {
   agencies: { id: string; name: string }[];
   agency: { id: string; name: string };
@@ -35,6 +36,7 @@ export function RequestForm({
   today: string;
   contact: { name: string; email: string; phone: string };
   isActiveAgency: boolean;
+  bookingTypes: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -127,9 +129,9 @@ export function RequestForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {eventTypes.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {t(`eventTypes.${e}`)}
+              {bookingTypes.map((e) => (
+                <SelectItem key={e.key} value={e.key}>
+                  {e.label}
                 </SelectItem>
               ))}
             </SelectContent>
