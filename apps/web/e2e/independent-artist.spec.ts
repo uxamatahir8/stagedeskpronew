@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { closeBrowserContexts, signUpSoloArtist } from "./helpers";
+import { closeBrowserContexts, enterAppAsNewAccount, signUpSoloArtist } from "./helpers";
 
 const run = Date.now().toString(36);
 
@@ -15,15 +15,8 @@ test("an independent artist signs up, sets up their business and offers a gig", 
   });
 
   await test.step("the menu is their own business's, without another agency's team pages", async () => {
-    await page.goto("/nl/app");
-    const gate = page.getByLabel(/Ik ga akkoord/);
+    await enterAppAsNewAccount(page);
     const shell = page.locator('[data-slot="sidebar"]').first();
-    await expect(gate.or(shell)).toBeVisible({ timeout: 30_000 });
-    if (await gate.isVisible()) {
-      await gate.check();
-      await page.getByRole("button", { name: "Doorgaan" }).click();
-      await expect(shell).toBeVisible({ timeout: 60_000 });
-    }
     await expect(shell.getByRole("link", { name: "Boekingen" })).toBeVisible();
     await expect(shell.getByRole("link", { name: "Team" })).toHaveCount(0);
   });
