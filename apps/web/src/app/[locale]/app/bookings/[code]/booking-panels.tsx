@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
 import type { FormState } from "@/lib/validation";
 import {
@@ -32,6 +32,7 @@ import {
   addNoteAction,
   assignArtistAction,
   changeStatusAction,
+  decideChangeRequestAction,
   issueInvoiceAction,
   recordPaymentAction,
   requestDetailsAction,
@@ -114,18 +115,81 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
   );
 }
 
+/** A customer's requested change: what would change, and the agency's answer. */
+export function ChangeRequestPanel({ requestId, rows, conflictFields, acknowledge, note, customer, requested }: { requestId: string; rows: { field: string; label: string; from: string; to: string; now?: string }[]; conflictFields: string[]; acknowledge: string | null; note: string | null; customer: string; requested: string }) {
+  const t = useTranslations("booking");
+  const router = useRouter();
+  const [pending, run] = useRun();
+  const [reason, setReason] = useState("");
+  const stale = conflictFields.length > 0;
+  // Refused because someone changed the booking meanwhile: show them what it says now.
+  const decide = (approve: boolean, ack: string | null = null) =>
+    run(async () => {
+      const result = await decideChangeRequestAction(requestId, approve, reason || null, ack);
+      if (!result.ok) router.refresh();
+      return result;
+    });
+  return (
+    <div className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4 text-sm" data-testid="change-request">
+      <p className="font-medium">{t("changeRequestTitle", { name: customer, date: requested })}</p>
+      <ul className="grid gap-1">
+        {rows.map((r) => (
+          <li key={r.field} data-testid={conflictFields.includes(r.field) ? "change-conflict" : undefined}>
+            {r.label}: <span className="text-muted-foreground line-through">{r.from}</span> → <span className="font-medium">{r.to}</span>
+            {conflictFields.includes(r.field) && (
+              <span className="ml-1 font-medium text-destructive">
+                ({t("changeCurrent")}: {r.now})
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {stale && (
+        <p className="rounded-lg border border-warning/50 bg-warning/10 p-2" data-testid="change-stale">
+          {t("changeStale")}
+        </p>
+      )}
+      {note && <p className="whitespace-pre-line rounded-lg bg-muted/60 p-2">{note}</p>}
+      <FormField id="change-reason" label={t("changeReason")}>
+        <Input id="change-reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+      </FormField>
+      <div className="flex flex-wrap gap-2">
+        {stale ? (
+          <Button size="sm" variant="destructive" disabled={pending} onClick={() => window.confirm(t("applyAnywayConfirm")) && decide(true, acknowledge)}>
+            {t("applyAnyway")}
+          </Button>
+        ) : (
+          <Button size="sm" disabled={pending} onClick={() => decide(true)}>
+            <CheckIcon />
+            {t("approveChange")}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => decide(false)}>
+          {t("rejectChange")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function EditDetailsDialog({
   bookingId,
   values,
   dos,
   donts,
   playlistUrl,
+  preferredGenre,
+  musicRequests,
+  specialRequests,
 }: {
   bookingId: string;
   values: EventValues;
   dos: string[];
   donts: string[];
   playlistUrl: string;
+  preferredGenre: string;
+  musicRequests: string;
+  specialRequests: string;
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -139,6 +203,7 @@ export function EditDetailsDialog({
     }
     return result;
   }, {} as FormState);
+  const [, startSubmit] = useTransition();
   const errors = state.fieldErrors ?? {};
 
   return (
@@ -153,7 +218,15 @@ export function EditDetailsDialog({
         <DialogHeader>
           <DialogTitle>{t("booking.eventDetails")}</DialogTitle>
         </DialogHeader>
-        <form action={action} className="grid gap-4">
+        {/* Not a form action: React resets those when they finish, which would wipe what was typed when a field is refused. */}
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            startSubmit(() => action(form));
+          }}
+        >
           <EventFields values={values} errors={errors} idPrefix="ed" />
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="ed-dos" label={t("booking.dos")} hint={t("booking.listHint")}>
@@ -164,6 +237,15 @@ export function EditDetailsDialog({
             </FormField>
             <FormField id="ed-playlist" label={t("booking.playlist")} error={errors["playlistUrl"]} className="sm:col-span-2">
               <Input id="ed-playlist" name="playlistUrl" type="url" defaultValue={playlistUrl} placeholder="https://open.spotify.com/…" />
+            </FormField>
+            <FormField id="ed-genre" label={t("bookingPage.genre")} className="sm:col-span-2">
+              <Input id="ed-genre" name="preferredGenre" maxLength={96} defaultValue={preferredGenre} />
+            </FormField>
+            <FormField id="ed-music" label={t("customerEvent.musicRequests")}>
+              <Textarea id="ed-music" name="musicRequests" rows={3} maxLength={4000} defaultValue={musicRequests} />
+            </FormField>
+            <FormField id="ed-special" label={t("customerEvent.specialRequests")}>
+              <Textarea id="ed-special" name="specialRequests" rows={3} maxLength={4000} defaultValue={specialRequests} />
             </FormField>
           </div>
           <FormMessage>{state.message && !state.ok ? state.message : null}</FormMessage>
@@ -302,6 +384,10 @@ export interface ArtistOption {
   free: boolean;
   /** The artist's default pay, e.g. "40%" or "€ 250,00 per booking". */
   payLabel: string;
+  /** Null when the artist can get a request; otherwise why not, shown next to the name. */
+  blocked: string | null;
+  /** Shown next to the name for an artist who still has to set a password. */
+  note: string | null;
 }
 
 export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: string; options: ArtistOption[]; hasArtist: boolean }) {
@@ -321,10 +407,12 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
         </SelectTrigger>
         <SelectContent>
           {options.map((a) => (
-            <SelectItem key={a.id} value={a.id} disabled={!a.free}>
+            <SelectItem key={a.id} value={a.id} disabled={!a.free || a.blocked !== null}>
               {a.stageName}
               {a.agency && <span className="text-muted-foreground"> · {t("sharedFrom", { agency: a.agency })}</span>}
               {!a.free && <span className="text-muted-foreground"> · {t("unavailable")}</span>}
+              {a.blocked && <span className="text-muted-foreground"> · {a.blocked}</span>}
+              {a.note && <span className="text-muted-foreground"> · {a.note}</span>}
             </SelectItem>
           ))}
         </SelectContent>
@@ -350,6 +438,14 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
         </div>
       )}
       <p className="text-xs text-muted-foreground">{t("assignHint")}</p>
+      {options.some((a) => a.blocked) && (
+        <p className="text-xs text-muted-foreground" data-testid="assign-need-account">
+          {t("assignNeedsAccount", { count: options.filter((a) => a.blocked).length })}{" "}
+          <Link href="/app/artists" className="underline underline-offset-4">
+            {t("assignOpenArtists")}
+          </Link>
+        </p>
+      )}
       <Button
         disabled={!artistId || pending || (pay !== "default" && !payValue.trim())}
         onClick={() =>

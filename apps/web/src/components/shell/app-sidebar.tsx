@@ -21,6 +21,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -33,7 +34,9 @@ import { UserMenu } from "./user-menu";
 
 export type ShellViewer = Pick<Viewer, "user" | "organization" | "memberships" | "permissions" | "impersonatedBy"> & { role: Role };
 
-export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
+type NavBadges = Partial<Record<NavItem["key"], number>>;
+
+export function AppSidebar({ viewer, badges = {} }: { viewer: ShellViewer; badges?: NavBadges }) {
   const t = useTranslations();
   const groups = navigationFor(viewer.permissions, viewer.role);
   const footer = footerNavigationFor(viewer.permissions);
@@ -53,7 +56,7 @@ export function AppSidebar({ viewer }: { viewer: ShellViewer }) {
           <SidebarGroup key={group.key}>
             {group.key !== "overview" && <SidebarGroupLabel>{t(`navGroups.${group.key}`)}</SidebarGroupLabel>}
             <SidebarGroupContent>
-              <NavMenu items={group.items} />
+              <NavMenu items={group.items} badges={badges} />
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
@@ -146,7 +149,7 @@ function WorkspaceSwitcher({ viewer }: { viewer: ShellViewer }) {
   );
 }
 
-function NavMenu({ items }: { items: NavItem[] }) {
+function NavMenu({ items, badges = {} }: { items: NavItem[]; badges?: NavBadges }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
 
@@ -162,6 +165,7 @@ function NavMenu({ items }: { items: NavItem[] }) {
                 <span>{t(item.key)}</span>
               </Link>
             </SidebarMenuButton>
+            {Boolean(badges[item.key]) && <SidebarMenuBadge data-testid={`nav-badge-${item.key}`}>{badges[item.key]}</SidebarMenuBadge>}
           </SidebarMenuItem>
         );
       })}

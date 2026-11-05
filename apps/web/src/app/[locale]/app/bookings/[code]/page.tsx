@@ -8,6 +8,8 @@ import { getFormatter } from "@/lib/formatter";
 import {
   availableActions,
   type BookingStatus,
+  changeConflicts,
+  conflictFingerprint,
   depositRuleOf,
   quoteChangedFields,
   quoteEventSnapshot,
@@ -17,9 +19,12 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
+import { artistAccountStatesOf, artistCanBeAssigned, bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
+import { changeRows } from "@/lib/change-requests";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
+import { SwitchAgencyLink } from "@/components/booking/switch-agency-link";
+import { EmptyState } from "@/components/empty-state";
 import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +40,7 @@ import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
   AssignArtist,
+  ChangeRequestPanel,
   RetryEmailButton,
   DetailRequestPanel,
   EditDetailsDialog,
@@ -75,9 +81,28 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       notes: { orderBy: { createdAt: "desc" } },
       events: { orderBy: { createdAt: "desc" }, take: 50 },
       invoices: true,
+      changeRequests: { where: { status: "pending" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
-  if (!booking) notFound();
+  if (!booking) {
+    // A link from a notification, with another of their agencies active: offer the way there. Only their own
+    // team memberships are searched, and only the agency's name is shown.
+    const teams = viewer.memberships.filter((m) => m.id !== organization.id && m.role !== "customer" && m.role !== "artist").map((m) => m.id);
+    const elsewhere = teams.length > 0 ? await prisma.booking.findFirst({ where: { trackingCode: code.toUpperCase(), organizationId: { in: teams } }, select: { organization: { select: { id: true, name: true } } } }) : null;
+    if (!elsewhere) notFound();
+    const tb = await getTranslations("booking");
+    return (
+      <EmptyState
+        icon={CalendarIcon}
+        title={tb("atOtherAgency", { agency: elsewhere.organization.name })}
+        action={
+          <SwitchAgencyLink organizationId={elsewhere.organization.id} href={`/app/bookings/${code.toUpperCase()}`}>
+            {tb("switchToAgency", { agency: elsewhere.organization.name })}
+          </SwitchAgencyLink>
+        }
+      />
+    );
+  }
 
   const [t, format, catalog, defaults, people] = await Promise.all([
     getTranslations(),
@@ -152,20 +177,31 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     orderBy: { createdAt: "desc" },
     include: { artist: { select: { stageName: true } }, lender: { select: { name: true } } },
   });
-  const artistOptions = canAssign
-    ? await Promise.all(
-        (await bookableArtists(organization.id)).map(async (a) => ({
-          id: a.id,
-          stageName: a.stageName,
-          agency: a.organizationId === organization.id ? null : a.organization.name,
-          free: booking.eventDate ? await isArtistFree(a.id, booking.eventDate, booking.id) : true,
-          payLabel:
-            a.compensationType === "fixed" && a.defaultFixedFeeCents !== null
-              ? t("artists.fixedPerBooking", { amount: euro(format, a.defaultFixedFeeCents, a.organization.currency) })
-              : percent(format, a.defaultShareBps),
-        })),
-      )
-    : [];
+  const bookable = canAssign ? await bookableArtists(organization.id) : [];
+  // Whether there's someone behind each profile who can read and answer a request.
+  const accounts = await artistAccountStatesOf([...bookable.map((a) => a.id), ...(activeAssignment ? [activeAssignment.artistId] : [])]);
+  const artistOptions = await Promise.all(
+    bookable.map(async (a) => {
+      const account = accounts.get(a.id) ?? "no_account";
+      return {
+        id: a.id,
+        stageName: a.stageName,
+        agency: a.organizationId === organization.id ? null : a.organization.name,
+        free: booking.eventDate ? await isArtistFree(a.id, booking.eventDate, booking.id) : true,
+        payLabel:
+          a.compensationType === "fixed" && a.defaultFixedFeeCents !== null
+            ? t("artists.fixedPerBooking", { amount: euro(format, a.defaultFixedFeeCents, a.organization.currency) })
+            : percent(format, a.defaultShareBps),
+        blocked: artistCanBeAssigned(account) ? null : t(`artistAccount.state_${account}`),
+        note: account === "setup_pending" ? t("artistAccount.state_setup_pending") : null,
+      };
+    }),
+  );
+  const activeAccount = activeAssignment ? (accounts.get(activeAssignment.artistId) ?? "no_account") : null;
+  const pendingChange = booking.changeRequests[0] ?? null;
+  const nowSnapshot = quoteEventSnapshot(booking);
+  const pendingChangeRows = pendingChange ? await changeRows(pendingChange.changes, pendingChange.baseline, format, nowSnapshot) : [];
+  const pendingConflicts = pendingChange ? changeConflicts(pendingChange.changes, pendingChange.baseline, nowSnapshot) : [];
 
   // Equipment for this gig: only for people who handle gig equipment.
   const equipment = viewerCan(viewer, "agency.inventory.gigs") ? await bookingEquipmentSummary(organization.id, booking.id) : null;
@@ -246,11 +282,20 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     dos={dos}
                     donts={donts}
                     playlistUrl={booking.playlistUrl ?? ""}
+                    preferredGenre={booking.preferredGenre ?? ""}
+                    musicRequests={booking.musicRequests ?? ""}
+                    specialRequests={booking.specialRequests ?? ""}
                   />
                 </CardAction>
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {pendingChange &&
+                (viewerCan(viewer, "agency.bookings.edit") ? (
+                  <ChangeRequestPanel requestId={pendingChange.id} rows={pendingChangeRows} conflictFields={pendingConflicts.map((c) => c.field)} acknowledge={pendingConflicts.length > 0 ? conflictFingerprint(pendingConflicts) : null} note={pendingChange.note} customer={booking.customer?.name ?? ""} requested={dateTime(format, pendingChange.createdAt)} />
+                ) : (
+                  <p className="rounded-lg border border-info/30 bg-info/5 p-3 text-sm">{t("booking.changeRequestTitle", { name: booking.customer?.name ?? "", date: dateTime(format, pendingChange.createdAt) })}</p>
+                ))}
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
                 <Detail icon={CalendarIcon} label={t("newBooking.eventDate")}>
                   {eventDate(format, booking.eventDate) ?? t("bookings.noDate")}
@@ -296,6 +341,8 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   )}
                 </div>
               )}
+              {booking.musicRequests && <TextBlock title={t("customerEvent.musicRequests")} body={booking.musicRequests} />}
+              {booking.specialRequests && <TextBlock title={t("customerEvent.specialRequests")} body={booking.specialRequests} />}
             </CardContent>
           </Card>
 
@@ -557,6 +604,18 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   <div>
                     <AssignmentStatusBadge status={activeAssignment.status as "pending"} />
                   </div>
+                  {/* A request made before this rule, or the account changed since: nobody can answer it until that's fixed. */}
+                  {activeAccount && !artistCanBeAssigned(activeAccount) && (
+                    <p className="mt-2 rounded-lg border border-warning/50 bg-warning/10 p-2" data-testid="artist-unreachable">
+                      {t("booking.artistUnreachable", { state: t(`artistAccount.state_${activeAccount}`) })}{" "}
+                      {activeAssignment.artist.organizationId === organization.id && (
+                        <Link href={`/app/artists/${activeAssignment.artistId}`} className="underline underline-offset-4">
+                          {t("booking.artistUnreachableFix")}
+                        </Link>
+                      )}
+                    </p>
+                  )}
+                  {activeAccount === "setup_pending" && activeAssignment.status === "pending" && <p className="mt-2 text-muted-foreground">{t("booking.artistSetupPending")}</p>}
                 </div>
               ) : (
                 <p className="text-muted-foreground">{t("booking.noArtist")}</p>
@@ -650,6 +709,15 @@ function Detail({ icon: Icon, label, children }: { icon?: React.ComponentType<{ 
         {label}
       </dt>
       <dd>{children}</dd>
+    </div>
+  );
+}
+
+function TextBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="text-sm">
+      <p className="mb-1 font-medium">{title}</p>
+      <p className="whitespace-pre-line text-muted-foreground">{body}</p>
     </div>
   );
 }

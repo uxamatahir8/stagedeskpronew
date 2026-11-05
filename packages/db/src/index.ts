@@ -39,4 +39,8 @@ export * from "./newsletter";
 export * from "./dashboards";
 export * from "./artist-admin";
 export * from "./detail-requests";
+export * from "./customer-event";
+export * from "./gigs";
+export * from "./artist-accounts";
+export * from "./artist-access";
 export * from "./email-outbox";

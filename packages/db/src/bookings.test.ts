@@ -43,12 +43,19 @@ beforeAll(async () => {
       { id: owner, name: "Owner", email: `${run}-o@test.local` },
       { id: customer, name: "Customer", email: `${run}-c@test.local` },
       { id: artistUser, name: "Artist", email: `${run}-ar@test.local` },
+      { id: `${run}-artist-user-b`, name: "Artist B", email: `${run}-arb@test.local` },
+    ],
+  });
+  await prisma.member.createMany({
+    data: [
+      { id: `${run}-m1`, organizationId: orgA, userId: artistUser, role: "artist" },
+      { id: `${run}-m2`, organizationId: orgB, userId: `${run}-artist-user-b`, role: "artist" },
     ],
   });
   await prisma.artist.createMany({
     data: [
       { id: artistA, organizationId: orgA, userId: artistUser, stageName: "DJ A", genres: [], defaultShareBps: 4_000 },
-      { id: artistB, organizationId: orgB, stageName: "DJ B", genres: [] },
+      { id: artistB, organizationId: orgB, userId: `${run}-artist-user-b`, stageName: "DJ B", genres: [] },
     ],
   });
 });
@@ -60,7 +67,7 @@ afterAll(async () => {
   await prisma.bookingAssignment.deleteMany({ where: { organizationId: { in: [orgA, orgB] } } });
   await prisma.booking.deleteMany({ where: { organizationId: { in: [orgA, orgB] } } });
   await prisma.organization.deleteMany({ where: { id: { in: [orgA, orgB] } } });
-  await prisma.user.deleteMany({ where: { id: { in: [owner, customer, artistUser] } } });
+  await prisma.user.deleteMany({ where: { id: { in: [owner, customer, artistUser, `${run}-artist-user-b`] } } });
   await prisma.$disconnect();
 });
 

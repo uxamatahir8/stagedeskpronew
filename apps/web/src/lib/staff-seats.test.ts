@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 // No email leaves the tests: invitations, verification links and the like are only recorded.
 vi.mock("./deliver", () => ({ deliver: vi.fn() }));
 
-import { grantPlan, prisma } from "@stagedesk/db";
+import { artistAccountState, grantPlan, prisma } from "@stagedesk/db";
 // Not exported by the package: the plans every test database needs.
 import { seedPlans } from "../../../../packages/db/src/seed-plans";
 import { auth } from "./auth-config";
@@ -336,5 +336,18 @@ describe("invitations over the limit", () => {
     await member(a.id, "agency_staff");
     expect(await confirmInvitationSeat(a.id, created.id)).toBe(true);
     expect((await prisma.invitation.findUniqueOrThrow({ where: { id: created.id } })).status).toBe("pending");
+  });
+});
+
+describe("artists leaving the team", () => {
+  it("unlinks their artist profile through Better Auth's real endpoint, and the agency can see it", async () => {
+    const a = await agency();
+    const artist = await member(a.id, "artist");
+    const profile = `${run}-profile${n++}`;
+    await prisma.artist.create({ data: { id: profile, organizationId: a.id, userId: artist.userId, stageName: "DJ Leaving", genres: [] } });
+    await auth.api.removeMember({ headers: a.owner.headers, body: { memberIdOrEmail: artist.id, organizationId: a.id } });
+    expect((await prisma.artist.findUniqueOrThrow({ where: { id: profile } })).userId).toBeNull();
+    expect(await artistAccountState(profile)).toBe("no_account");
+    await prisma.artist.delete({ where: { id: profile } });
   });
 });

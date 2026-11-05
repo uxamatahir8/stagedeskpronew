@@ -11,7 +11,7 @@ import { hasPassword, passwordSetupUrl } from "./password-setup";
  * booking being cancelled. Each email has an outbox key per assignment and
  * kind, so a repeated action (or a retry) stores and sends it once. Artists
  * without an account get nothing (there is no one to write to). Returns
- * false when an email couldn't be stored or queued.
+ * false when a new request has no one to reach or its email couldn't be stored or queued.
  */
 export async function emailArtists(assignmentIds: string[], status: "new" | "withdrawn" | "cancelled") {
   /** How many of the artists' emails are stored or queued (false: one couldn't be accepted). */
@@ -30,14 +30,19 @@ export async function emailArtists(assignmentIds: string[], status: "new" | "wit
   });
   for (const row of rows) {
     const user = row.artist.user;
-    if (!user || user.disabledAt) continue;
+    if (!user || user.disabledAt) {
+      // Never report a request as sent when nobody can receive it.
+      if (status === "new") allAccepted = false;
+      continue;
+    }
     const locale = userLocale(user.locale);
     const te = await getTranslations({ locale, namespace: "eventTypes" });
+    const noDate = (await getTranslations({ locale, namespace: "artistHome" }))("dateNotScheduled");
     const day = fromDateOnly(row.booking.eventDate);
     const intl = locale === "en" ? "en-GB" : "nl-NL";
     const date = day
       ? `${new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}${row.booking.startTime ? `, ${row.booking.startTime}` : ""}`
-      : te("other").toLowerCase();
+      : noDate;
     const url = absoluteUrl(locale, status === "new" ? `/app/gigs/${row.booking.trackingCode}` : "/app/gigs");
     const key = `gig-${status}-${row.id}`;
     // Already stored (a repeated action): don't make another setup link either.

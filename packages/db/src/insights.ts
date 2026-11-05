@@ -1,3 +1,4 @@
+import { currentArtistIds } from "./artist-access";
 import { lastMonths } from "./analytics";
 import { prisma } from "./client";
 import { Prisma } from "./generated/prisma/client";
@@ -197,9 +198,8 @@ export async function businessInsights(organizationId: string, now = new Date())
 
 /** An artist's gigs by weekday, and how many are coming up in each of the next six months. */
 export async function artistInsights(userId: string, now = new Date()) {
-  const artists = await prisma.artist.findMany({ where: { userId }, select: { id: true } });
-  if (artists.length === 0) return null;
-  const ids = artists.map((a) => a.id);
+  const ids = await currentArtistIds(userId);
+  if (ids.length === 0) return null;
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const ahead = Array.from({ length: 6 }, (_, i) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + i, 1)).toISOString().slice(0, 7));
   const [weekdayRows, upcomingRows] = await Promise.all([

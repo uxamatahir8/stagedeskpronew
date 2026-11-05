@@ -25,6 +25,8 @@ import {
   transition,
   type TransitionError,
 } from "@stagedesk/core";
+import { liveAssignmentOf, reachableArtistUserIds } from "./artist-access";
+import { artistAccountState, artistCanBeAssigned } from "./artist-accounts";
 import { auditTx } from "./audit";
 import { effectiveFeeSnapshot } from "./billing";
 import { checkEquipmentReschedule, equipmentAfterTransition, equipmentTx, notifyUnreservedEquipment } from "./booking-equipment";
@@ -49,6 +51,8 @@ export type BookingErrorCode =
   | "invalid_amount"
   | "invalid_compensation"
   | "compensation_currency"
+  | "artist_no_account"
+  | "artist_account_disabled"
   | "invoice_number_invalid"
   | "invoice_number_taken"
   | "manual_numbers_off"
@@ -62,6 +66,7 @@ export class BookingError extends Error {
 }
 
 type Tx = Parameters<Parameters<TenantDb["$transaction"]>[0]>[0];
+export type BookingTx = Tx;
 
 export const toDateOnly = (d: string) => new Date(`${d}T00:00:00Z`);
 export const fromDateOnly = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null);
@@ -133,7 +138,7 @@ async function logEvent(tx: Tx, bookingId: string, type: string, actorId: string
 }
 
 /** How a booking came in. */
-export const bookingSources = ["manual", "booking_page", "platform_admin", "lead", "gig", "profile"] as const;
+export const bookingSources = ["manual", "booking_page", "platform_admin", "lead", "gig", "profile", "customer_portal"] as const;
 export type BookingSource = (typeof bookingSources)[number];
 
 export interface NewBooking {
@@ -153,8 +158,10 @@ export interface NewBooking {
   preferredGenre?: string | null;
   budgetRange?: string | null;
   ceremony?: boolean | null;
-  /** manual: the agency; booking_page: the public form; platform_admin: created by a platform admin; lead: a platform lead an agency accepted. */
+  /** manual: the agency; booking_page: the public form; platform_admin: created by a platform admin; lead: a platform lead an agency accepted; customer_portal: a signed-in customer. */
   source?: BookingSource;
+  /** The form's key: a second submit with the same one is refused by a unique index. */
+  clientRequestId?: string | null;
 }
 
 export type CustomerChoice =
@@ -431,6 +438,10 @@ export async function assignArtist(
 ) {
   const allowed = (await bookableArtists(organizationId)).find((a) => a.id === artistId);
   if (!allowed) throw new BookingError("artist_not_available_to_agency");
+  // A request needs someone who can read and answer it; without a login it would sit there unseen.
+  const account = await artistAccountState(artistId);
+  if (account === "disabled") throw new BookingError("artist_account_disabled");
+  if (!artistCanBeAssigned(account)) throw new BookingError("artist_no_account");
 
   const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
@@ -456,13 +467,65 @@ export async function assignArtist(
   });
   const artistUser = await prisma.artist.findUnique({ where: { id: artistId }, select: { userId: true, organization: { select: { name: true } } } });
   const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
-  await notify([artistUser?.userId], {
-    type: "gig_request",
-    data: { name: agency?.name ?? "", code: booking.trackingCode },
-    url: `/app/gigs/${booking.trackingCode}`,
-  });
-  await notifyArtistsOff(booking.withdrawnIds, "gig_withdrawn", agency?.name ?? "", booking.trackingCode, artistId);
-  return { assignmentId: booking.assignmentId, withdrawnIds: booking.withdrawnIds };
+  // The assignment stands from here on; the caller says plainly if the artist couldn't be told.
+  let notified = false;
+  try {
+    notified =
+      (await notify([artistUser?.userId], {
+        type: "gig_request",
+        data: { name: agency?.name ?? "", code: booking.trackingCode },
+        url: `/app/gigs/${booking.trackingCode}`,
+      })) > 0;
+    await notifyArtistsOff(booking.withdrawnIds, "gig_withdrawn", agency?.name ?? "", booking.trackingCode, artistId);
+  } catch (error) {
+    console.error("[bookings] assignment notification failed", booking.assignmentId, error);
+  }
+  return { assignmentId: booking.assignmentId, withdrawnIds: booking.withdrawnIds, notified };
+}
+
+/**
+ * Applies details under the booking lock, after checking that the assigned
+ * artist and the reserved equipment can follow a new date. The event type names
+ * who did it on the timeline.
+ */
+export async function applyBookingDetails(
+  tx: Tx,
+  organizationId: string,
+  booking: Awaited<ReturnType<typeof loadBooking>>,
+  data: Omit<Prisma.BookingUpdateManyMutationInput, "eventDate" | "status"> & { eventDate: Date | null },
+  actorId: string | null,
+  event: { type: string; data?: Prisma.InputJsonValue } = { type: "details_updated" },
+) {
+  // A new date must suit the artist on the booking too, not only the equipment.
+  if (data.eventDate && fromDateOnly(booking.eventDate) !== fromDateOnly(data.eventDate)) {
+    const assigned = await tx.bookingAssignment.findFirst({ where: { bookingId: booking.id, status: { in: ["pending", "accepted"] } }, select: { artistId: true } });
+    if (assigned) {
+      await lockArtist(tx, assigned.artistId);
+      if (!(await isArtistFree(assigned.artistId, data.eventDate, booking.id))) throw new BookingError("artist_unavailable");
+    }
+  }
+  await checkEquipmentReschedule(tx, organizationId, booking.id, data.eventDate ? data.eventDate.toISOString().slice(0, 10) : null);
+  const updated = await tx.booking.updateMany({ where: { id: booking.id, status: { in: ["inquiry", "quoted", "booked", "confirmed", "expired"] } }, data });
+  if (updated.count === 0) throw new BookingError("invalid_status");
+  await logEvent(tx, booking.id, event.type, actorId, event.data);
+}
+
+/** People who should hear that a booking's brief changed: the artist on it, and optionally the customer. Never throws. */
+export async function notifyBriefChanged(
+  booking: { id: string; organizationId: string; trackingCode: string; customerId: string | null },
+  changed: { artist: boolean; customer: boolean },
+  actorId: string | null,
+) {
+  try {
+    const agency = await prisma.organization.findUnique({ where: { id: booking.organizationId }, select: { name: true } });
+    const data = { name: agency?.name ?? "", code: booking.trackingCode };
+    if (changed.artist) {
+      await notify(await reachableArtistUserIds(booking.id), { type: "gig_updated", data, url: `/app/gigs/${booking.trackingCode}` }, actorId);
+    }
+    if (changed.customer) await notify([booking.customerId], { type: "booking_updated", data, url: `/app/event?booking=${booking.trackingCode}` }, actorId);
+  } catch (error) {
+    console.error("[bookings] brief-change notification failed", booking.trackingCode, error);
+  }
 }
 
 /**
@@ -490,7 +553,7 @@ export async function respondToAssignment(
   now = new Date(),
 ) {
   const assignment = await prisma.bookingAssignment.findFirst({
-    where: { id: assignmentId, status: "pending", artist: { userId: artistUserId } },
+    where: { ...liveAssignmentOf(artistUserId), id: assignmentId, status: "pending" },
     select: { organizationId: true, bookingId: true, id: true },
   });
   if (!assignment) throw new BookingError("no_open_assignment");
@@ -530,6 +593,8 @@ export async function changeBookingStatus(
     const booking = await loadBooking(tx, bookingId);
     const extra = action === "cancel" || action === "decline" ? { cancelReason: by.reason ?? null } : {};
     const to = await applyTransition(tx, booking, action, by.actor, by.actorId, now, extra, by.reason ? { reason: by.reason } : undefined);
+    // Every one of these ends the event's planning: a change still waiting for an answer is moot.
+    await tx.bookingChangeRequest.updateMany({ where: { bookingId, status: "pending" }, data: { status: "superseded", decidedAt: now } });
     let withdrawn: string[] = [];
     if (to === "cancelled" || to === "declined") {
       await tx.quote.updateMany({ where: { bookingId, status: "sent" }, data: { status: "declined" } });
@@ -556,21 +621,18 @@ export async function updateBookingDetails(
   data: Omit<Prisma.BookingUpdateManyMutationInput, "eventDate" | "status"> & { eventDate: Date | null },
   actorId: string,
 ) {
-  return tenantDb(organizationId).$transaction(async (tx) => {
+  const result = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
-    // A new date must suit the artist on the booking too, not only the equipment.
-    if (data.eventDate && fromDateOnly(booking.eventDate) !== fromDateOnly(data.eventDate)) {
-      const assigned = await tx.bookingAssignment.findFirst({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { artistId: true } });
-      if (assigned) {
-        await lockArtist(tx, assigned.artistId);
-        if (!(await isArtistFree(assigned.artistId, data.eventDate, bookingId))) throw new BookingError("artist_unavailable");
-      }
-    }
-    await checkEquipmentReschedule(tx, organizationId, bookingId, data.eventDate ? data.eventDate.toISOString().slice(0, 10) : null);
-    const updated = await tx.booking.updateMany({ where: { id: bookingId, status: { in: ["inquiry", "quoted", "booked", "confirmed", "expired"] } }, data });
-    if (updated.count === 0) throw new BookingError("invalid_status");
-    await logEvent(tx, bookingId, "details_updated", actorId);
+    await applyBookingDetails(tx, organizationId, booking, data, actorId);
+    const after = await tx.booking.findFirstOrThrow({ where: { id: bookingId } });
+    return {
+      booking: after,
+      // Compared on the values that matter to each of them; a save without changes tells nobody.
+      contract: quoteChangedFields(quoteEventSnapshot(booking), quoteEventSnapshot(after)).length > 0,
+      brief: JSON.stringify([booking.dos, booking.donts, booking.playlistUrl, booking.preferredGenre, booking.musicRequests, booking.specialRequests]) !== JSON.stringify([after.dos, after.donts, after.playlistUrl, after.preferredGenre, after.musicRequests, after.specialRequests]),
+    };
   }, equipmentTx);
+  await notifyBriefChanged(result.booking, { artist: result.contract || result.brief, customer: result.contract }, actorId);
 }
 
 export interface PaymentInput {

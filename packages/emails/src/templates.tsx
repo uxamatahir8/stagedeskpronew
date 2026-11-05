@@ -583,6 +583,28 @@ export function BookingDetailsRequest({ locale, name, agency, message, until, ur
   );
 }
 
+/** The agency's answer to a change the customer asked for on their event. */
+export function ChangeDecision({ locale, name, agency, code, event, approved, changes, details, note, contact, url }: { locale: EmailLocale; name: string; agency: string; code: string; event: string; approved: boolean; changes: string[]; details: string[]; note?: string | null; contact?: string | null; url: string }) {
+  const c = copy[locale].changeDecision;
+  return (
+    <EmailLayout locale={locale} preview={c.preview(approved, code)} heading={c.heading(approved)}>
+      <Paragraph>{c.body(approved, name, agency, event, code)}</Paragraph>
+      <Paragraph>{c.changesTitle(approved)}</Paragraph>
+      {changes.map((line) => (
+        <Paragraph key={line}>{line}</Paragraph>
+      ))}
+      {note && <Paragraph>{c.note(agency, note)}</Paragraph>}
+      {details.length > 0 && <Paragraph>{c.detailsTitle(approved)}</Paragraph>}
+      {details.map((line) => (
+        <Paragraph key={line}>{line}</Paragraph>
+      ))}
+      <ActionButton href={url}>{c.button}</ActionButton>
+      {contact && <Paragraph>{c.contact(agency, contact)}</Paragraph>}
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
 /** Sent from the agency settings to check how customer emails arrive. */
 export function SenderTest({ locale, agency, replyTo }: { locale: EmailLocale; agency: string; replyTo: string }) {
   const c = copy[locale].senderTest;

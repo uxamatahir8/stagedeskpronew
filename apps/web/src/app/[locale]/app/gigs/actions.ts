@@ -1,7 +1,7 @@
 "use server";
 
 import { getTranslations } from "next-intl/server";
-import { changeBookingStatus, prisma, respondToAssignment } from "@stagedesk/db";
+import { changeBookingStatus, liveAssignmentOf, prisma, respondToAssignment } from "@stagedesk/db";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 
@@ -24,7 +24,7 @@ export async function respondGigAction(assignmentId: string, accept: boolean, re
 export async function completeGigAction(assignmentId: string): Promise<ActionResult> {
   const viewer = await requirePermission("artist.gigs");
   const assignment = await prisma.bookingAssignment.findFirst({
-    where: { id: assignmentId, status: "accepted", artist: { userId: viewer.user.id } },
+    where: { ...liveAssignmentOf(viewer.user.id), id: assignmentId, status: "accepted" },
     select: { organizationId: true, bookingId: true },
   });
   if (!assignment) return { ok: false, message: (await getTranslations("bookingErrors"))("no_open_assignment") };

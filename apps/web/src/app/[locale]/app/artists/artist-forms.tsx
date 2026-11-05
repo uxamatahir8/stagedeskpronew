@@ -38,13 +38,13 @@ import {
 function useRun() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const run = (task: () => Promise<ActionResult>, after?: (r: ActionResult) => void) =>
+  // `after` returns true when it navigated: a refresh right after a push can cancel the push.
+  const run = (task: () => Promise<ActionResult>, after?: (r: ActionResult) => boolean | void) =>
     startTransition(async () => {
       const result = await task();
       if (!result.ok) return void (result.message && toast.error(result.message));
       if (result.message) toast.success(result.message);
-      after?.(result);
-      router.refresh();
+      if (!after?.(result)) router.refresh();
     });
   return [pending, run] as const;
 }
@@ -96,7 +96,10 @@ export function ArtistDialog({ artist, accounts, currency = "EUR" }: { artist?: 
         }),
       (result) => {
         setOpen(false);
-        if (!artist && "id" in result && result.id) router.push(`/app/artists/${result.id}`);
+        if (!artist && "id" in result && result.id) {
+          router.push(`/app/artists/${result.id}`);
+          return true;
+        }
       },
     );
   }

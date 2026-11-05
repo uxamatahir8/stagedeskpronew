@@ -9,5 +9,7 @@ export default defineConfig({
     globalSetup: ["../../packages/db/src/test/global-setup.ts"],
     fileParallelism: false,
     testTimeout: 60_000,
+    // Suites import the whole server stack in beforeAll; slower than the default 10 s when the repo is tested in parallel.
+    hookTimeout: 60_000,
   },
 });

@@ -1,3 +1,4 @@
+import { currentArtistIds } from "./artist-access";
 import { lastMonths } from "./analytics";
 import { prisma } from "./client";
 import { Prisma } from "./generated/prisma/client";
@@ -194,7 +195,7 @@ export async function adminDashboard(now = new Date()) {
 export async function artistDashboard(userId: string, now = new Date()) {
   const months = lastMonths(12, now);
   const since = new Date(`${months[0]}-01T00:00:00Z`);
-  const artistIds = (await prisma.artist.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id);
+  const artistIds = await currentArtistIds(userId);
   if (artistIds.length === 0) return null;
   const ids = Prisma.join(artistIds);
   const [earnRows, gigRows, answered, types, agencies, rating] = await Promise.all([

@@ -33,6 +33,12 @@ beforeAll(async () => {
       { id: `${run}-artb`, organizationId: orgB, userId: u.djB, stageName: "DJ B", genres: [] },
     ],
   });
+  await prisma.member.createMany({
+    data: [
+      { id: `${run}-m-dj`, organizationId: orgA, userId: u.dj, role: "artist" },
+      { id: `${run}-m-djb`, organizationId: orgB, userId: u.djB, role: "artist" },
+    ],
+  });
   speaker = await createItem(orgA, equipmentItemSchema.parse({ code: "GATE-1", name: "Speaker", serialNumber: "SN-PRIVATE" }), u.owner);
   const b = await createBooking(orgA, { customerId: u.cust, eventType: "wedding", eventDate: "2027-06-12" }, u.owner);
   const q = await sendQuote(orgA, b.id, { lines: [{ description: "DJ", quantityHundredths: 100, unitPriceCents: 10_000, vatBps: 2_100 }], depositBps: 0, expiresInDays: 14 }, u.owner, may1);

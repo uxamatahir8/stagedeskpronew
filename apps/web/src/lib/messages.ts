@@ -1,5 +1,5 @@
 import "server-only";
-import { type MessageChannel, prisma } from "@stagedesk/db";
+import { isLiveArtistOnBooking, type MessageChannel, prisma } from "@stagedesk/db";
 import type { Viewer } from "./viewer";
 
 /**
@@ -20,14 +20,14 @@ export async function messageAccess(viewer: Viewer & { role: NonNullable<Viewer[
       eventDate: true,
       customer: { select: { name: true } },
       organization: { select: { name: true } },
-      assignments: { where: { status: { in: ["pending", "accepted"] } }, select: { artist: { select: { userId: true, stageName: true } } } },
+      assignments: { where: { status: { in: ["pending", "accepted"] } }, select: { artist: { select: { stageName: true } } } },
     },
   });
   if (!booking) return null;
   const channels: MessageChannel[] = [];
   if (viewer.organization?.id === booking.organizationId && viewer.permissions.includes("agency.bookings")) channels.push("customer", "artist");
   else {
-    if (booking.assignments.some((a) => a.artist.userId === viewer.user.id)) channels.push("artist");
+    if (await isLiveArtistOnBooking(viewer.user.id, booking.id)) channels.push("artist");
     if (booking.customerId === viewer.user.id) channels.push("customer");
   }
   return channels.length ? { booking, channels, isDesk: channels.length === 2 } : null;
@@ -37,5 +37,7 @@ export async function messageAccess(viewer: Viewer & { role: NonNullable<Viewer[
 export function conversationScope(viewer: Viewer & { role: NonNullable<Viewer["role"]> }) {
   if (viewer.organization && viewer.permissions.includes("agency.bookings")) return { userId: viewer.user.id, agencyId: viewer.organization.id };
   if (viewer.role === "artist") return { userId: viewer.user.id, artistUserId: viewer.user.id };
+  // A customer here who is an artist at another agency also has their gig conversations.
+  if (viewer.permissions.includes("artist.gigs")) return { userId: viewer.user.id, artistUserId: viewer.user.id, customerId: viewer.user.id };
   return { userId: viewer.user.id, customerId: viewer.user.id };
 }

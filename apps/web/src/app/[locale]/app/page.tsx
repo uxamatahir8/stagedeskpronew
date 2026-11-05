@@ -1,9 +1,12 @@
+import { PlusIcon } from "lucide-react";
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { prisma, tenantDb } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { requireViewer } from "@/lib/viewer";
 import { AdminAnalytics } from "./admin-analytics";
@@ -13,7 +16,7 @@ import { AffiliateHome } from "./affiliate-home";
 import { AgencyAnalytics } from "./agency-analytics";
 import { AgencyHome } from "./agency-home";
 import { AgencyInsights } from "./agency-insights";
-import { ArtistHome } from "./artist-home";
+import { ArtistHome, GigRequestsCard } from "./artist-home";
 import { CustomerHome } from "./customer-home";
 import { AffiliateAnalytics, ArtistAnalytics, CustomerProgress } from "./role-analytics";
 
@@ -38,7 +41,26 @@ export default async function DashboardHome({ params, searchParams }: PageProps<
 async function RoleHome({ searchParams }: Pick<PageProps<"/[locale]/app">, "searchParams">) {
   const [{ role, user, organization, permissions }, t, query] = await Promise.all([requireViewer(), getTranslations("home"), searchParams]);
   const firstName = user.name.split(/\s+/)[0] ?? user.name;
-  const header = <PageHeader hero title={t("greeting", { name: firstName })} description={t(`subtitle.${role}`)} />;
+  // A returning customer's way to a new booking: the first thing on the page, also on a phone. Without
+  // a booking, the page's empty state offers it instead.
+  const returningCustomer = role === "customer" && organization && (await tenantDb(organization.id).booking.count({ where: { customerId: user.id, status: { notIn: ["cancelled", "declined", "expired"] } } })) > 0;
+  const header = (
+    <PageHeader
+      hero
+      title={t("greeting", { name: firstName })}
+      description={t(`subtitle.${role}`)}
+      actions={
+        returningCustomer ? (
+          <Button asChild variant="secondary" data-testid="request-booking">
+            <Link href="/app/event/request">
+              <PlusIcon />
+              {t("requestAnother")}
+            </Link>
+          </Button>
+        ) : undefined
+      }
+    />
+  );
 
   let body: React.ReactNode = null;
   if (organization && permissions.includes("agency.bookings")) {
@@ -103,6 +125,8 @@ async function RoleHome({ searchParams }: Pick<PageProps<"/[locale]/app">, "sear
   return (
     <div className="grid gap-8">
       {header}
+      {/* An artist at another agency: their requests are on every home, whichever agency is active. */}
+      {role !== "artist" && permissions.includes("artist.gigs") && <GigRequestsCard userId={user.id} />}
       {body}
     </div>
   );

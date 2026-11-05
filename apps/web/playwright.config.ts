@@ -16,6 +16,8 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
     locale: "nl-NL",
     timezoneId: "Europe/Amsterdam",
+    // An action waiting for something that never comes fails here and names it, instead of using up the test's whole budget.
+    actionTimeout: 30_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

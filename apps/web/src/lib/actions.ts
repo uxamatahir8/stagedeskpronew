@@ -1,6 +1,6 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import { BookingError, EquipmentError, InventoryError } from "@stagedesk/db";
+import { BookingError, CustomerEventError, EquipmentError, InventoryError } from "@stagedesk/db";
 
 export interface ActionResult {
   ok: boolean;
@@ -18,6 +18,10 @@ export async function runAction(task: () => Promise<string | void>, success?: st
   } catch (error) {
     // Next uses thrown errors for redirect() and notFound(); let those through.
     if (error instanceof Error && "digest" in error) throw error;
+    if (error instanceof CustomerEventError) {
+      const t = await getTranslations("customerEventErrors");
+      return { ok: false, message: t(error.code) };
+    }
     if (error instanceof BookingError) {
       const t = await getTranslations("bookingErrors");
       return { ok: false, message: t(error.code) };

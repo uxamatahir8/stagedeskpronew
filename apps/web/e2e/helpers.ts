@@ -1,6 +1,7 @@
-import { expect, type Browser, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 
 export const DEMO_PASSWORD = "StageDesk-demo-2026";
+const MAILPIT = "http://localhost:8025/api/v1";
 
 /**
  * The platform admin the specs sign in as. Locally the demo admin may have its
@@ -57,8 +58,6 @@ export async function submitSignIn(page: Page, email: string) {
   throw new Error("Sign-in still rate limited after waiting a minute");
 }
 
-const MAILPIT = "http://localhost:8025/api/v1";
-
 /** The code tab of the sign-in page, with the newest code Mailpit received for `email`. */
 async function signInWithMailedCode(page: Page, email: string) {
   const ids = async () => {
@@ -66,7 +65,7 @@ async function signInWithMailedCode(page: Page, email: string) {
     return (search.messages ?? []) as { ID: string }[];
   };
   const seen = new Set((await ids()).map((m) => m.ID));
-  await page.getByRole("tab", { name: "Code per e-mail" }).click();
+  await openCodeTab(page);
   await page.locator("#signin-code-email").fill(email);
   await page.getByRole("button", { name: "Mail me een code" }).click();
   let code = "";
@@ -81,6 +80,57 @@ async function signInWithMailedCode(page: Page, email: string) {
   }).toPass({ timeout: 20_000 });
   await page.locator("#signin-code").fill(code);
   await page.getByRole("button", { name: "Inloggen met code" }).click();
+}
+
+/**
+ * The code tab of the sign-in page. A click before the page has hydrated does nothing, and the
+ * field behind the tab then never appears, so this tries again until the tab has really opened.
+ */
+export async function openCodeTab(page: Page) {
+  await expect(async () => {
+    await page.getByRole("tab", { name: "Code per e-mail" }).click();
+    await expect(page.locator("#signin-code-email")).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
+}
+
+/**
+ * A new independent artist, from sign-up to their own account. The confirmation link may or may not
+ * leave them signed in, so this waits for whichever page comes up. (`isVisible` can't do that: it
+ * ignores its timeout and answers at once, also while the page is still loading.)
+ */
+export async function signUpSoloArtist(page: Page, request: APIRequestContext, { name, email, stage }: { name: string; email: string; stage: string }) {
+  await page.goto(`/nl/sign-up?next=${encodeURIComponent("/onboarding?start=artist")}`);
+  await page.locator("#signup-name").fill(name);
+  await page.locator("#signup-email").fill(email);
+  await page.locator("#signup-password").fill(DEMO_PASSWORD);
+  await page.locator("#signup-confirm").fill(DEMO_PASSWORD);
+  await page.locator('form button[type="submit"]').click();
+  let link = "";
+  await expect(async () => {
+    const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:${email}`)}`)).json();
+    for (const m of search.messages ?? []) {
+      const hit = ((await (await request.get(`${MAILPIT}/message/${m.ID}`)).json()).Text as string).match(/https?:\/\/\S*verify-email\S+/);
+      if (hit) link = hit[0];
+    }
+    expect(link).not.toBe("");
+  }).toPass({ timeout: 20_000 });
+  await page.goto(link);
+
+  await page.goto("/nl/onboarding?start=artist");
+  const form = page.locator("#solo-name");
+  const signInField = page.locator("#signin-email");
+  await expect(form.or(signInField)).toBeVisible({ timeout: 60_000 });
+  if (await signInField.isVisible()) {
+    await signInField.fill(email);
+    await page.locator("#signin-password").fill(DEMO_PASSWORD);
+    await page.getByRole("button", { name: "Inloggen", exact: true }).click();
+    await expect(form).toBeVisible({ timeout: 60_000 });
+  }
+  await form.fill(stage);
+  await page.locator("#solo-city").fill("Utrecht");
+  await page.locator("#solo-genres").fill("House, Disco");
+  await page.getByRole("button", { name: "Mijn artiestenaccount maken" }).click();
+  await expect(page).toHaveURL(/\/app/, { timeout: 60_000 });
 }
 
 /**

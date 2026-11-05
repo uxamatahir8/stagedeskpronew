@@ -7,7 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
 import { passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
-import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmInvitationSeat, confirmJoinedSeat, confirmMemberSeat, confirmPendingForEmail, getSetting, notify, prisma, takesStaffSeat } from "@stagedesk/db";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmInvitationSeat, confirmJoinedSeat, confirmMemberSeat, confirmPendingForEmail, getSetting, notify, prisma, takesStaffSeat, unlinkRemovedMember } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
@@ -229,6 +229,10 @@ export const auth = betterAuth({
             throw error;
           }
           if (!kept) throw seatsFull((await agencyBilling(organization.id)).limits.maxStaff ?? 0, "en");
+        },
+        // Off the team: their account no longer answers for this agency's artist profiles.
+        afterRemoveMember: async ({ member, organization }) => {
+          await unlinkRemovedMember(organization.id, member.userId);
         },
       },
       schema: {

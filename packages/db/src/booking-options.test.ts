@@ -30,13 +30,20 @@ beforeAll(async () => {
       { id: owner, name: "Owner", email: `${run}-o@test.local` },
       { id: customer, name: "Customer", email: `${run}-c@test.local` },
       { id: artistUser, name: "Artist", email: `${run}-ar@test.local` },
+      { id: `${run}-artist-pct`, name: "Artist Pct", email: `${run}-arp@test.local` },
     ],
   });
-  await prisma.member.create({ data: { id: `${run}-m`, organizationId: org, userId: customer, role: "customer" } });
+  await prisma.member.createMany({
+    data: [
+      { id: `${run}-m`, organizationId: org, userId: customer, role: "customer" },
+      { id: `${run}-m2`, organizationId: org, userId: artistUser, role: "artist" },
+      { id: `${run}-m3`, organizationId: org, userId: `${run}-artist-pct`, role: "artist" },
+    ],
+  });
   await prisma.artist.createMany({
     data: [
       { id: fixedArtist, organizationId: org, userId: artistUser, stageName: "DJ Fixed", genres: [], compensationType: "fixed", defaultFixedFeeCents: 25_000 },
-      { id: pctArtist, organizationId: org, stageName: "DJ Pct", genres: [], defaultShareBps: 4_000 },
+      { id: pctArtist, organizationId: org, userId: `${run}-artist-pct`, stageName: "DJ Pct", genres: [], defaultShareBps: 4_000 },
     ],
   });
 });
@@ -169,6 +176,7 @@ describe("artist notifications", () => {
   it("tells the artist about a request, about being taken off it, and about a cancellation", async () => {
     const otherUser = `${run}-artist2`;
     await prisma.user.create({ data: { id: otherUser, name: "Artist 2", email: `${run}-ar2@test.local` } });
+    await prisma.member.create({ data: { id: `${run}-m4`, organizationId: org, userId: otherUser, role: "artist" } });
     await prisma.artist.create({ data: { id: `${run}-second`, organizationId: org, userId: otherUser, stageName: "DJ Second", genres: [] } });
     const count = (userId: string, type: string) => prisma.notification.count({ where: { userId, type } });
 

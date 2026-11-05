@@ -31,6 +31,7 @@ import {
   QuoteSent,
   GigAssigned,
   BookingDetailsRequest,
+  ChangeDecision,
   SenderTest,
   ResetPassword,
   TicketReply,
@@ -173,6 +174,10 @@ export function sendBookingDetailsRequest(to: string, p: Parameters<typeof Booki
   return send(to, copy[p.locale].detailsRequest.subject(p.agency), createElement(BookingDetailsRequest, p));
 }
 
+export function sendChangeDecision(to: string, p: Parameters<typeof ChangeDecision>[0]) {
+  return send(to, copy[p.locale].changeDecision.subject(p.approved, p.agency, p.code), createElement(ChangeDecision, p));
+}
+
 export function sendSenderTest(to: string, p: Parameters<typeof SenderTest>[0]) {
   return send(to, copy[p.locale].senderTest.subject, createElement(SenderTest, p));
 }
@@ -296,6 +301,7 @@ const senders = {
   quote: sendQuote,
   gigAssigned: sendGigAssigned,
   bookingDetailsRequest: sendBookingDetailsRequest,
+  changeDecision: sendChangeDecision,
   senderTest: sendSenderTest,
   invitation: sendInvitation,
   affiliateApproved: sendAffiliateApproved,

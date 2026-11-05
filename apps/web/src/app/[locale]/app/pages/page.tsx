@@ -68,7 +68,7 @@ async function Pages({ searchParams }: Pick<PageProps<"/[locale]/app/pages">, "s
           ) : undefined
         }
       />
-      <nav className="flex w-fit gap-1 rounded-lg bg-muted p-1 text-sm" aria-label={t("sections")}>
+      <nav className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-lg bg-muted p-1 text-sm whitespace-nowrap" aria-label={t("sections")}>
         {tabs.map((x) => (
           <Link
             key={x}

@@ -25,6 +25,7 @@ beforeAll(async () => {
       { id: artistUser, name: "Artist", email: `${run}-ar@test.local` },
     ],
   });
+  await prisma.member.create({ data: { id: `${run}-m`, organizationId: org, userId: artistUser, role: "artist" } });
   await prisma.artist.create({ data: { id: artist, organizationId: org, userId: artistUser, stageName: "DJ Race", genres: [], defaultShareBps: 4_000 } });
 });
 

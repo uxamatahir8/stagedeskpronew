@@ -29,7 +29,8 @@ export function MonthGrid({
 }) {
   const days = monthDays(month);
   return (
-    <div className="overflow-x-auto">
+    // Positioned, so hidden labels inside the cells scroll with it instead of widening the whole page on a phone.
+    <div className="relative overflow-x-auto">
       <div className="grid min-w-[640px] grid-cols-7 overflow-hidden rounded-xl border bg-border [gap:1px]">
         {weekdays.map((d) => (
           <div key={d} className="bg-muted px-2 py-1.5 text-xs font-medium text-muted-foreground">
