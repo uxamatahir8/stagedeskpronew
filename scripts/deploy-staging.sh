@@ -185,6 +185,9 @@ run_pnpm install --frozen-lockfile
 echo "Generating the Prisma client."
 run_pnpm db:generate
 
+echo "Applying production database migrations."
+run_pnpm --filter @stagedesk/db run deploy
+
 echo "Building StageDesk."
 env \
   HOME="$SITE_HOME" \
@@ -192,9 +195,6 @@ env \
   CI=true \
   NODE_ENV=production \
   "$NODE" --env-file="$SHARED_ENV" "$PNPM_JS" --dir "$RELEASE_DIR" build
-
-echo "Applying production database migrations."
-run_pnpm --filter @stagedesk/db run deploy
 
 write_ecosystem
 activate_release "$RELEASE_DIR"
