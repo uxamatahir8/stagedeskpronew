@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { ADMIN_EMAIL, closeBrowserContexts, signIn, signUpSoloArtist } from "./helpers";
+import { ADMIN_EMAIL, closeBrowserContexts, enterAppAsNewAccount, signIn, signUpSoloArtist } from "./helpers";
 
 /**
  * Walks every role through every page its sidebar and account menu offer, on a
@@ -117,13 +117,13 @@ test.describe("every role opens every page", () => {
   for (const account of accounts) {
     test(`${account.role} on desktop and phone`, async ({ browser, request }) => {
       test.setTimeout(1_800_000);
-      if (account.email === SOLO) {
-        const setup = await (await browser.newContext()).newPage();
-        await signUpSoloArtist(setup, request, { name: `Solo Crawl ${run}`, email: SOLO, stage: `E2E Crawl ${run}` });
-        await setup.context().close();
-      }
       const desktop = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
-      await signIn(desktop, account.email);
+      if (account.email === SOLO) {
+        await signUpSoloArtist(desktop, request, { name: `Solo Crawl ${run}`, email: SOLO, stage: `E2E Crawl ${run}` });
+        await enterAppAsNewAccount(desktop);
+      } else {
+        await signIn(desktop, account.email);
+      }
       const paths = await menuLinks(desktop);
       expect(paths.length).toBeGreaterThan(2);
       const storage = await desktop.context().storageState();

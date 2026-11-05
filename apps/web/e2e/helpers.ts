@@ -134,6 +134,22 @@ export async function signUpSoloArtist(page: Page, request: APIRequestContext, {
 }
 
 /**
+ * Into the app for someone who just made their account: past the Terms if they're put to them.
+ * A new account can land elsewhere than /app afterwards (billing, for instance), so this waits for the app itself.
+ */
+export async function enterAppAsNewAccount(page: Page) {
+  await page.goto("/nl/app");
+  const gate = page.getByLabel(/Ik ga akkoord/);
+  const shell = page.locator('[data-slot="sidebar"]').first();
+  await expect(gate.or(shell)).toBeVisible({ timeout: 30_000 });
+  if (await gate.isVisible()) {
+    await acceptTerms(page);
+    await expect(shell).toBeVisible({ timeout: 60_000 });
+  }
+  await skipTour(page);
+}
+
+/**
  * Waits until the dashboard is really there. New Terms are put to the user
  * at the first sign-in after they're published; that redirect can arrive
  * after the URL already shows /app (it's decided inside the streamed shell).

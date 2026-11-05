@@ -2101,7 +2101,8 @@
     "resentSetup": "Dit account heeft nog geen wachtwoord: er is een link om er een te kiezen (die ook het adres bevestigt) verstuurd naar {email}",
     "resendDisabled": "Dit account is geblokkeerd. Deblokkeer het eerst.",
     "resendAlreadyVerified": "Dit e-mailadres is al bevestigd.",
-    "resendTooMany": "Al een paar keer verstuurd dit uur. Probeer het later opnieuw."
+    "resendTooMany": "Al een paar keer verstuurd dit uur. Probeer het later opnieuw.",
+    "resendFailed": "De bevestigingsmail kon niet worden verstuurd. Probeer het later opnieuw."
   },
   "audit": {
     "title": "Auditlog",

@@ -2101,7 +2101,8 @@
     "resentSetup": "This account has no password yet: a link to choose one (it also confirms the address) was sent to {email}",
     "resendDisabled": "This account is disabled. Enable it first.",
     "resendAlreadyVerified": "This email address is already confirmed.",
-    "resendTooMany": "Already sent a few times this hour. Try again later."
+    "resendTooMany": "Already sent a few times this hour. Try again later.",
+    "resendFailed": "The confirmation email couldn't be sent. Please try again later."
   },
   "audit": {
     "title": "Audit log",

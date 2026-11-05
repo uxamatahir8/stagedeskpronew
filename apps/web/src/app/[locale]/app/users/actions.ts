@@ -148,7 +148,13 @@ export async function resendConfirmationAction(userId: string): Promise<ActionRe
   let kind: "verification" | "setup";
   if (await hasPassword(user.id)) {
     kind = "verification";
-    await auth.api.sendVerificationEmail({ body: { email: user.email, callbackURL: "/app" }, headers: requestHeaders });
+    // Without the admin's cookies: with a session, Better Auth only sends to that session's own address.
+    try {
+      await auth.api.sendVerificationEmail({ body: { email: user.email, callbackURL: "/app" } });
+    } catch (error) {
+      console.error("[users] resending the confirmation failed", user.id, error);
+      return { ok: false, message: t("resendFailed") };
+    }
   } else {
     kind = "setup";
     const url = await passwordSetupUrl(user.id, locale);

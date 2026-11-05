@@ -184,6 +184,36 @@ test("an account the admin creates gets a one-time link to choose its password",
   });
 });
 
+test("the admin resends the confirmation to someone who signed up but never confirmed", async ({ browser, request }) => {
+  const email = `unconfirmed.${run}@test.local`;
+  const person = await freshPage(browser, "nl-NL");
+  await person.goto("/nl/sign-up");
+  await person.locator("#signup-name").fill(`Niet Bevestigd ${run}`);
+  await person.locator("#signup-email").fill(email);
+  await person.locator("#signup-password").fill(PASSWORD);
+  await person.locator("#signup-confirm").fill(PASSWORD);
+  await person.locator('form button[type="submit"]').click();
+  const LINK = /(https?:\/\/\S*verify-email\S+)/;
+  await fromMail(request, email, LINK, new Set());
+  const seen = await mailIds(request, email);
+
+  const admin = await freshPage(browser, "nl-NL");
+  await signInWithCode(admin, request, ADMIN_EMAIL);
+  await settleOnDashboard(admin);
+  await admin.goto(`/nl/app/users?q=${encodeURIComponent(email)}`);
+  await admin.getByRole("button", { name: /Acties|Actions|Meer/ }).first().click();
+  await admin.getByRole("menuitem", { name: "Bevestigingsmail opnieuw sturen" }).click();
+  await expect(admin.getByText(`Bevestigingsmail verstuurd naar ${email}`)).toBeVisible();
+
+  // It went to them, not to the admin, and its link confirms their address.
+  const link = await fromMail(request, email, LINK, seen);
+  const opened = await freshPage(browser, "nl-NL");
+  await opened.goto(link);
+  await admin.reload();
+  await admin.getByRole("button", { name: /Acties|Actions|Meer/ }).first().click();
+  await expect(admin.getByRole("menuitem", { name: "Bevestigingsmail opnieuw sturen" })).toHaveCount(0);
+});
+
 test("a new platform admin gets the account setup email", async ({ browser, request }) => {
   const admin = await freshPage(browser, "nl-NL");
   await signInWithCode(admin, request, ADMIN_EMAIL);
