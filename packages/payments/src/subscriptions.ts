@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
 import { referralPromotionCode } from "./affiliates";
+import { isMissingStripePrice, syncPlanToStripe } from "./plans";
 
 export class PaymentsError extends Error {
   constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount" | "operation_in_progress" | "refund_refused") {
@@ -27,6 +28,19 @@ export async function ensureCustomer(stripe: Stripe, organizationId: string, ema
  * carries over; otherwise a plan with a trial gives its free days, once per agency.
  */
 export async function subscriptionCheckout(
+  stripe: Stripe,
+  input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
+) {
+  try {
+    return await subscriptionCheckoutOnce(stripe, input);
+  } catch (error) {
+    if (!isMissingStripePrice(error)) throw error;
+    await syncPlanToStripe(stripe, input.planId);
+    return subscriptionCheckoutOnce(stripe, input);
+  }
+}
+
+async function subscriptionCheckoutOnce(
   stripe: Stripe,
   input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
 ) {
@@ -71,6 +85,16 @@ export async function liveStripeSubscription(organizationId: string) {
  * prorates the difference on the next invoice; a running trial continues.
  */
 export async function changeSubscriptionPlan(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year" }) {
+  try {
+    return await changeSubscriptionPlanOnce(stripe, input);
+  } catch (error) {
+    if (!isMissingStripePrice(error)) throw error;
+    await syncPlanToStripe(stripe, input.planId);
+    return changeSubscriptionPlanOnce(stripe, input);
+  }
+}
+
+async function changeSubscriptionPlanOnce(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year" }) {
   const current = await liveStripeSubscription(input.organizationId);
   if (!current?.stripeSubscriptionId) throw new PaymentsError("not_found");
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
