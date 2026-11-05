@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { ADMIN_EMAIL, closeBrowserContexts, signIn } from "./helpers";
+import { ADMIN_EMAIL, closeBrowserContexts, signIn, signUpSoloArtist } from "./helpers";
 
 /**
  * Walks every role through every page its sidebar and account menu offer, on a
@@ -11,13 +11,17 @@ import { ADMIN_EMAIL, closeBrowserContexts, signIn } from "./helpers";
  * screenshot of each page next to it, as evidence for the QA report.
  */
 
+const run = Date.now().toString(36);
+// The seed has no independent artist, so that account is made by the test. On a test domain.
+const SOLO = `solo.crawl.${run}@test.local`;
+
 const accounts = [
   { role: "platform_admin", email: ADMIN_EMAIL },
   { role: "agency_owner", email: "eigenaar@feestband.local" },
   { role: "agency_admin", email: "beheer@feestband.local" },
   { role: "agency_staff", email: "planning@feestband.local" },
   { role: "artist", email: "dj.sem@feestband.local" },
-  { role: "solo_artist", email: "daan.kok@example.nl" },
+  { role: "solo_artist", email: SOLO },
   { role: "customer", email: "sanne@klant.local" },
   { role: "affiliate", email: "partner@stagedesk.local" },
 ] as const;
@@ -111,8 +115,13 @@ test.describe("every role opens every page", () => {
   });
 
   for (const account of accounts) {
-    test(`${account.role} on desktop and phone`, async ({ browser }) => {
+    test(`${account.role} on desktop and phone`, async ({ browser, request }) => {
       test.setTimeout(1_800_000);
+      if (account.email === SOLO) {
+        const setup = await (await browser.newContext()).newPage();
+        await signUpSoloArtist(setup, request, { name: `Solo Crawl ${run}`, email: SOLO, stage: `E2E Crawl ${run}` });
+        await setup.context().close();
+      }
       const desktop = await (await browser.newContext({ viewport: { width: 1280, height: 800 } })).newPage();
       await signIn(desktop, account.email);
       const paths = await menuLinks(desktop);

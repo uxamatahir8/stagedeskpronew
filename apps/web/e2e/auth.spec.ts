@@ -1,5 +1,5 @@
 import { type APIRequestContext, type Browser, expect, type Page, test } from "@playwright/test";
-import { ADMIN_EMAIL, passwordFor, settleOnDashboard } from "./helpers";
+import { ADMIN_EMAIL, openCodeTab, passwordFor, settleOnDashboard } from "./helpers";
 
 /**
  * Account onboarding and email-code sign-in, through the real emails in
@@ -40,7 +40,7 @@ async function fromMail(request: APIRequestContext, to: string, pattern: RegExp,
 /** Requests a sign-in code; the code step must start empty, whatever was typed as the address. */
 async function requestCode(page: Page, email: string) {
   await page.goto("/nl/sign-in");
-  await page.getByRole("tab", { name: "Code per e-mail" }).click();
+  await openCodeTab(page);
   await page.locator("#signin-code-email").fill(email);
   await page.getByRole("button", { name: "Mail me een code" }).click();
   await expect(page.getByText(`Als er een account bestaat voor ${email}`)).toBeVisible();

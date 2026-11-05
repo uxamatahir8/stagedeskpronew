@@ -1,24 +1,7 @@
-import { expect, type APIRequestContext, test } from "@playwright/test";
-import { closeBrowserContexts, DEMO_PASSWORD, signIn } from "./helpers";
+import { expect, test } from "@playwright/test";
+import { closeBrowserContexts, signUpSoloArtist } from "./helpers";
 
-const MAILPIT = "http://localhost:8025/api/v1";
 const run = Date.now().toString(36);
-
-async function fromMail(request: APIRequestContext, to: string, pattern: RegExp) {
-  let found = "";
-  await expect(async () => {
-    const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:${to}`)}`)).json();
-    for (const m of search.messages ?? []) {
-      const hit = ((await (await request.get(`${MAILPIT}/message/${m.ID}`)).json()).Text as string).match(pattern);
-      if (hit) {
-        found = hit[1] ?? hit[0];
-        break;
-      }
-    }
-    expect(found).not.toBe("");
-  }).toPass({ timeout: 20_000 });
-  return found;
-}
 
 /** An independent artist starts on their own: sign-up, onboarding, profile, availability and a listing. Test domain only. */
 test("an independent artist signs up, sets up their business and offers a gig", async ({ browser, request }) => {
@@ -27,28 +10,8 @@ test("an independent artist signs up, sets up their business and offers a gig", 
   const email = `solo.${run}@test.local`;
   const stage = `E2E Solo ${run}`;
 
-  await test.step("signs up and confirms their address", async () => {
-    await page.goto(`/nl/sign-up?next=${encodeURIComponent("/onboarding?start=artist")}`);
-    await page.locator("#signup-name").fill(`Solo ${run}`);
-    await page.locator("#signup-email").fill(email);
-    await page.locator("#signup-password").fill(DEMO_PASSWORD);
-    await page.locator("#signup-confirm").fill(DEMO_PASSWORD);
-    await page.locator('form button[type="submit"]').click();
-    const link = await fromMail(request, email, /(https?:\/\/\S*verify-email\S+)/);
-    await page.goto(link);
-  });
-
-  await test.step("makes their artist account", async () => {
-    await page.goto("/nl/onboarding?start=artist");
-    if (!(await page.locator("#solo-name").isVisible({ timeout: 10_000 }).catch(() => false))) {
-      await signIn(page, email).catch(() => undefined);
-      await page.goto("/nl/onboarding?start=artist");
-    }
-    await page.locator("#solo-name").fill(stage);
-    await page.locator("#solo-city").fill("Utrecht");
-    await page.locator("#solo-genres").fill("House, Disco");
-    await page.getByRole("button", { name: "Mijn artiestenaccount maken" }).click();
-    await expect(page).toHaveURL(/\/app/, { timeout: 60_000 });
+  await test.step("signs up, confirms their address and makes their artist account", async () => {
+    await signUpSoloArtist(page, request, { name: `Solo ${run}`, email, stage });
   });
 
   await test.step("the menu is their own business's, without another agency's team pages", async () => {
