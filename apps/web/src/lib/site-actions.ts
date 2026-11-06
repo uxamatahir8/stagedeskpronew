@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { isCurrency, parseViaCookie, viaCookie } from "@stagedesk/core";
+import { AUTOMATIC, isCurrency, parseViaCookie, viaCookie } from "@stagedesk/core";
 import { enabledCurrencies, notify, platformAdminIds, prisma, publishedArticle } from "@stagedesk/db";
 import { DISPLAY_CURRENCY_COOKIE } from "@/lib/display-currency";
 import { deliver, userLocale } from "@/lib/mail";
@@ -111,8 +111,12 @@ export async function commentAction(form: FormData): Promise<FormResult> {
   return { ok: true };
 }
 
-/** Remembers the currency a visitor wants to see prices in, for a year. */
+/** Remembers the currency a visitor wants to see prices in, for a year; AUTOMATIC goes back to detecting it. Display only: nothing billed reads this. */
 export async function setDisplayCurrencyAction(currency: string) {
+  if (currency === AUTOMATIC) {
+    (await cookies()).delete(DISPLAY_CURRENCY_COOKIE);
+    return;
+  }
   if (!isCurrency(currency) || !(await enabledCurrencies()).includes(currency)) return;
   (await cookies()).set(DISPLAY_CURRENCY_COOKIE, currency, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
 }

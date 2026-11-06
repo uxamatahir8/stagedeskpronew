@@ -2526,6 +2526,7 @@
     "languageCurrent": "Taal: {language}. Kies een andere taal",
     "currencyCurrent": "Prijzen in {currency}. Kies een andere valuta",
     "currencyHint": "Prijzen tonen in",
+    "automatic": "Automatisch (op basis van locatie)",
     "dashboard": "Naar je dashboard",
     "profile": "Profiel",
     "signOut": "Uitloggen",

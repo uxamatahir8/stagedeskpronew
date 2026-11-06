@@ -1,7 +1,7 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { cookies, headers } from "next/headers";
-import { type Currency, convertCents, isCurrency, visitorCountry, visitorCurrency } from "@stagedesk/core";
+import { chosenCurrency, type Currency, convertCents, visitorCountry, visitorCurrency } from "@stagedesk/core";
 import { enabledCurrencies, exchangeRates } from "@stagedesk/db";
 import { SITE_TAGS } from "./site";
 
@@ -14,9 +14,15 @@ import { SITE_TAGS } from "./site";
 export const DISPLAY_CURRENCY_COOKIE = "display_currency";
 
 export async function displayCurrency(): Promise<Currency> {
+  return (await displayCurrencyState()).currency;
+}
+
+/** The currency to show, and whether the visitor picked it (false: detected, so the menu marks "Automatic"). */
+export async function displayCurrencyState(): Promise<{ currency: Currency; chosen: boolean }> {
   const [value, offered, h] = await Promise.all([cookies().then((c) => c.get(DISPLAY_CURRENCY_COOKIE)?.value), siteCurrencies(), headers()]);
-  if (isCurrency(value) && offered.includes(value)) return value;
-  return visitorCurrency({ country: visitorCountry((name) => h.get(name)), acceptLanguage: h.get("accept-language") }, offered);
+  const chosen = chosenCurrency(value, offered);
+  if (chosen) return { currency: chosen, chosen: true };
+  return { currency: visitorCurrency({ country: visitorCountry((name) => h.get(name)), acceptLanguage: h.get("accept-language") }, offered), chosen: false };
 }
 
 /** The currencies the admin enabled; changes call updateTag(SITE_TAGS.settings). */

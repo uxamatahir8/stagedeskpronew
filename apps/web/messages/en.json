@@ -2526,6 +2526,7 @@
     "languageCurrent": "Language: {language}. Choose another language",
     "currencyCurrent": "Prices in {currency}. Choose another currency",
     "currencyHint": "Show prices in",
+    "automatic": "Automatic (based on location)",
     "dashboard": "Go to dashboard",
     "profile": "Profile",
     "signOut": "Sign out",
