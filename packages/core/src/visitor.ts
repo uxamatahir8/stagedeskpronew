@@ -1,18 +1,31 @@
 import { type Currency, currencies } from "./currency";
-import type { AppLocale } from "./locale";
+import { type AppLocale, locales } from "./locale";
 
 /**
  * First guesses for a visitor who hasn't chosen yet: Dutch for visitors in
  * the Netherlands, English for everyone else; prices in their own country's
  * currency when it's offered. The country comes from the edge (Cloudflare,
- * Vercel, CloudFront or a reverse proxy adding a header); without one, the
- * browser's language list stands in.
+ * Vercel, CloudFront or a reverse proxy adding a header, see
+ * docs/operations/visitor-country.md); without one, the browser's language
+ * list stands in.
+ *
+ * A guess is never stored: it is worked out again on every page load, so
+ * someone who moves to another country isn't stuck with the old one. Only what
+ * a visitor picks themselves goes in a cookie, and it always wins.
  */
 
-/** The language someone chose (or was given on their first visit); the language switchers update it. */
-export const LOCALE_COOKIE = "visitor_locale";
+/** The language a visitor picked themselves. Nothing else may write this cookie. */
+export const LOCALE_COOKIE = "locale_choice";
+/** Held the first-visit guess as well as real choices, so it can't be trusted: read by nothing, removed on sight. */
+export const LEGACY_LOCALE_COOKIE = "visitor_locale";
+/** The value a selector sends to go back to detecting language or currency. */
+export const AUTOMATIC = "auto";
 
-/** Country headers set by common CDNs and proxies, most specific first. */
+/**
+ * Country headers set by common CDNs and proxies, most specific first. A client
+ * can send these too unless the edge overwrites them, so a country is only good
+ * for choosing what to display: never use it for tax, billing or access.
+ */
 const countryHeaders = ["cf-ipcountry", "x-vercel-ip-country", "cloudfront-viewer-country", "x-country-code", "x-geo-country"];
 
 /** The visitor's country (ISO 3166 alpha-2, upper case), or null when no edge told us. */
@@ -51,6 +64,20 @@ export function visitorLocale(input: { country: string | null; acceptLanguage: s
   return browserDutch ? "nl" : "en";
 }
 
+/** A language picked by the visitor, or null when the cookie is absent or isn't one of ours. */
+export function chosenLocale(cookie: string | null | undefined): AppLocale | null {
+  return (locales as readonly string[]).includes(cookie ?? "") ? (cookie as AppLocale) : null;
+}
+
+/**
+ * The language for an address without a language prefix: the visitor's own
+ * choice, else the country, else the browser. An address with a prefix (/nl)
+ * is itself explicit and never gets here.
+ */
+export function visitorLanguage(input: { choice: string | null | undefined; country: string | null; acceptLanguage: string | null | undefined }): AppLocale {
+  return chosenLocale(input.choice) ?? visitorLocale(input);
+}
+
 const euroCountries = new Set([
   "AT", "BE", "CY", "DE", "EE", "ES", "FI", "FR", "GR", "HR", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK",
   "AD", "MC", "SM", "VA", "ME", "XK",
@@ -76,6 +103,11 @@ export function visitorCurrency(input: { country: string | null; acceptLanguage:
   const country = input.country ?? acceptedLanguages(input.acceptLanguage).find((l) => l.region)?.region ?? null;
   const guess = currencyForCountry(country);
   return guess && offered.includes(guess) && (currencies as readonly string[]).includes(guess) ? guess : "EUR";
+}
+
+/** A currency picked by the visitor, or null when the cookie is absent, invalid or no longer offered. */
+export function chosenCurrency(cookie: string | null | undefined, offered: readonly string[]): Currency | null {
+  return (currencies as readonly string[]).includes(cookie ?? "") && offered.includes(cookie!) ? (cookie as Currency) : null;
 }
 
 /** Search engines and link previews: they always get the address they asked for. */

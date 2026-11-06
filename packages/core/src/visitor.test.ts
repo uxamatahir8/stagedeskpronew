@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { acceptedLanguages, currencyForCountry, isCrawler, visitorCountry, visitorCurrency, visitorLocale } from "./visitor";
+import { acceptedLanguages, chosenCurrency, chosenLocale, currencyForCountry, isCrawler, visitorCountry, visitorCurrency, visitorLanguage, visitorLocale } from "./visitor";
 
 const headers = (h: Record<string, string>) => (name: string) => h[name] ?? null;
 
@@ -67,6 +67,60 @@ describe("visitorCurrency", () => {
     expect(currencyForCountry("BE")).toBe("EUR");
     expect(currencyForCountry("GB")).toBe("GBP");
     expect(currencyForCountry(null)).toBeNull();
+  });
+});
+
+describe("first visit by country and browser", () => {
+  const offered = ["EUR", "USD", "GBP", "CHF", "PKR", "INR"];
+  const cases: [country: string | null, browser: string, locale: string, currency: string][] = [
+    ["NL", "en-GB,en;q=0.9", "nl", "EUR"],
+    ["NL", "nl-NL,nl;q=0.9", "nl", "EUR"],
+    ["GB", "en-GB,en;q=0.9", "en", "GBP"],
+    ["US", "en-US,en;q=0.9", "en", "USD"],
+    ["BE", "nl-BE,nl;q=0.9", "nl", "EUR"],
+    ["BE", "en-GB,en;q=0.9", "en", "EUR"],
+    ["DE", "de-DE,de;q=0.9", "en", "EUR"],
+    ["CH", "de-CH", "en", "CHF"],
+    ["PK", "en-PK", "en", "PKR"],
+    ["IN", "en-IN", "en", "INR"],
+    [null, "nl-NL,nl;q=0.9", "nl", "EUR"],
+    [null, "nl", "nl", "EUR"],
+    [null, "en-GB,en;q=0.9", "en", "GBP"],
+  ];
+  it.each(cases)("%s with %s gets %s and %s", (country, acceptLanguage, locale, currency) => {
+    expect(visitorLanguage({ choice: null, country, acceptLanguage })).toBe(locale);
+    expect(visitorCurrency({ country, acceptLanguage }, offered)).toBe(currency);
+  });
+
+  it("the country beats the browser's region: a UK browser in the Netherlands sees euros", () => {
+    expect(visitorCurrency({ country: "NL", acceptLanguage: "en-GB" }, offered)).toBe("EUR");
+  });
+
+  it("falls back to euros when the regional currency isn't offered", () => {
+    expect(visitorCurrency({ country: "GB", acceptLanguage: "en-GB" }, ["EUR", "USD"])).toBe("EUR");
+    expect(visitorCurrency({ country: null, acceptLanguage: "en-GB" }, ["EUR", "USD"])).toBe("EUR");
+  });
+});
+
+describe("explicit choices", () => {
+  it("a chosen language beats the country and the browser", () => {
+    expect(visitorLanguage({ choice: "en", country: "NL", acceptLanguage: "nl-NL" })).toBe("en");
+    expect(visitorLanguage({ choice: "nl", country: "US", acceptLanguage: "en-US" })).toBe("nl");
+  });
+
+  it("an invalid language cookie counts as no choice", () => {
+    expect(chosenLocale("xx")).toBeNull();
+    expect(chosenLocale("")).toBeNull();
+    expect(chosenLocale(undefined)).toBeNull();
+    expect(visitorLanguage({ choice: "xx", country: "NL", acceptLanguage: "en-GB" })).toBe("nl");
+  });
+
+  it("a chosen currency counts only while it's valid and offered", () => {
+    expect(chosenCurrency("GBP", ["EUR", "GBP"])).toBe("GBP");
+    expect(chosenCurrency("GBP", ["EUR"])).toBeNull();
+    expect(chosenCurrency("XXX", ["EUR", "XXX"])).toBeNull();
+    expect(chosenCurrency("auto", ["EUR"])).toBeNull();
+    expect(chosenCurrency(undefined, ["EUR"])).toBeNull();
   });
 });
 

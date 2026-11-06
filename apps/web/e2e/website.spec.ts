@@ -53,8 +53,8 @@ test("pages, comments and legal acceptance on the website", async ({ browser }) 
     await visitor.getByRole("contentinfo").getByRole("link", { name: `Werken bij ${run}` }).click();
     await expect(visitor).toHaveURL(new RegExp(`/e2e-${run}-nl$`));
     await expect(visitor.getByText("We zoeken nog een DJ-planner.")).toBeVisible();
-    // English has no prefix since 118f67c, and the saved language wins over the address: choose English first.
-    await visitor.context().addCookies([{ name: "visitor_locale", value: "en", url: new URL("/", visitor.url()).href }]);
+    // English has no prefix since 118f67c, and this visitor's Dutch browser goes to /nl unless they chose English.
+    await visitor.context().addCookies([{ name: "locale_choice", value: "en", url: new URL("/", visitor.url()).href }]);
     await visitor.goto(`/e2e-${run}-en`);
     await expect(visitor.getByRole("heading", { name: `Werken bij ${run} (EN)` })).toBeVisible();
   });

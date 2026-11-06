@@ -49,9 +49,9 @@ test("blog posts and categories from the admin panel", async ({ browser }) => {
     await reader.getByRole("link", { name: `Uitgelicht ${run}` }).first().click();
     await expect(reader.getByRole("heading", { level: 1 })).toHaveText(`Uitgelicht ${run}`);
     await expect(reader.getByRole("navigation", { name: "In dit artikel" }).getByRole("link", { name: "Tweede kop" })).toBeVisible();
-    // English has no prefix since 118f67c; Dutch lives under /nl. The reader's saved language
-    // (visitor_locale, set while reading in Dutch) wins over the address, so they choose English first.
-    await reader.context().addCookies([{ name: "visitor_locale", value: "en", url: new URL("/", reader.url()).href }]);
+    // English has no prefix since 118f67c; Dutch lives under /nl. This reader's Dutch browser
+    // sends unprefixed addresses to /nl unless they chose English, so they do that first.
+    await reader.context().addCookies([{ name: "locale_choice", value: "en", url: new URL("/", reader.url()).href }]);
     await reader.goto(reader.url().replace("/nl/blog/", "/blog/"));
     await expect(reader.getByRole("heading", { level: 1 })).toHaveText(`Featured ${run}`);
   });

@@ -5,7 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navigationFor } from "@/config/navigation";
-import { displayCurrency, siteCurrencies } from "@/lib/display-currency";
+import { displayCurrencyState, siteCurrencies } from "@/lib/display-currency";
 import { getViewer } from "@/lib/viewer";
 import { CurrencySwitch } from "./currency-switch";
 import { SiteAccountMenu } from "./site-account-menu";
@@ -72,7 +72,7 @@ async function HeaderActions() {
     getTranslations("roles"),
     navEntries(),
     primaryCta(),
-    displayCurrency(),
+    displayCurrencyState(),
     getViewer(),
     siteCurrencies(),
   ]);
@@ -91,7 +91,7 @@ async function HeaderActions() {
       <NavLinks entries={entries} />
       <div className="ml-auto flex min-w-0 items-center gap-0 sm:gap-1">
         <LocaleSwitch />
-        <CurrencySwitch current={currency} options={currencyOptions} />
+        <CurrencySwitch current={currency.currency} chosen={currency.chosen} options={currencyOptions} />
         <ThemeToggle />
         {signedIn ? (
           <>

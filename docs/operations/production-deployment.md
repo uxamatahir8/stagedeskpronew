@@ -14,6 +14,7 @@ Production has not been set up or deployed from this branch. This describes what
 | Stripe live keys, Connect enabled, webhook endpoint `/api/webhooks/stripe` sending exactly `handledStripeEvents` | NOT VERIFIED |
 | Cloudflare Turnstile production keys | NOT VERIFIED |
 | Wildcard DNS/TLS for agency sites (`SITES_BASE_DOMAIN`), CNAME target for custom domains | NOT VERIFIED |
+| Visitor country header from the edge (`docs/operations/visitor-country.md`); without it, visitors in the Netherlands aren't detected | NOT VERIFIED |
 | Error tracking (e.g. Sentry) and uptime/alerting on `/api/health` | Not integrated (no DSN available) |
 
 ## Environment
