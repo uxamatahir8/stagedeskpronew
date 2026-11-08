@@ -1322,7 +1322,7 @@
     "status_free": "Free: answering requests and taking bookings costs nothing. The Artist plan adds your public profile and direct booking.",
     "readOnlyNoPlan": "Choose a plan under Subscription to start using StageDesk. Until then you can look around but not make changes.",
     "yourChoice": "Your choice",
-    "exclVat": "Excl. VAT"
+    "inclVat": "Incl. VAT"
   },
   "plans": {
     "title": "Plans & limits",
@@ -1417,12 +1417,7 @@
     "saved": "Settings saved.",
     "invalid": "Some values aren't valid. Check the numbers and try again.",
     "waitlistMode": "Waitlist mode",
-    "waitlistModeHint": "Before launch: the website collects sign-ups for the waitlist instead of offering a trial.",
-    "subscriptionTax": "VAT on subscriptions",
-    "subscriptionTax_automatic": "Automatic, through Stripe Tax",
-    "subscriptionTax_off": "Off: charge the plan price only",
-    "subscriptionTax_automaticHint": "Stripe adds the right VAT at checkout and handles EU VAT numbers. Needs Stripe Tax set up in your Stripe account, or checkout is refused.",
-    "subscriptionTax_offHint": "No VAT is added. Only use this for testing: the website says plans exclude VAT."
+    "waitlistModeHint": "Before launch: the website collects sign-ups for the waitlist instead of offering a trial."
   },
   "agencyFee": {
     "deal": "Fee deal",
@@ -1485,8 +1480,7 @@
     "errors_no_customer": "There's no payment account yet.",
     "searchPlaceholder": "Search by customer, code or reference",
     "errors_connect_not_enabled": "Online payments through Stripe aren’t switched on for the platform yet. The platform admin needs to enable Stripe Connect in the Stripe dashboard (dashboard.stripe.com/connect).",
-    "errors_stripe_keys": "The platform’s Stripe keys aren’t valid. The platform admin can check them under Payment setup.",
-    "errors_stripe_tax": "Subscribing isn't available right now because VAT isn't set up in Stripe yet. Please contact StageDesk."
+    "errors_stripe_keys": "The platform’s Stripe keys aren’t valid. The platform admin can check them under Payment setup."
   },
   "pay": {
     "payDeposit": "Pay deposit {amount}",
@@ -2778,8 +2772,8 @@
     "yearly": "Yearly",
     "recommended": "Most chosen",
     "perMonth": "per month",
-    "billedMonthly": "Billed monthly, excl. VAT",
-    "billedYearly": "{amount} billed yearly, excl. VAT",
+    "billedMonthly": "Billed monthly, incl. VAT",
+    "billedYearly": "{amount} billed yearly, incl. VAT",
     "save": "Save {amount}",
     "trialNote": "On plans with a trial you pay only after the free days, and you can cancel any time.",
     "feeTitle": "Platform fee on online payments",
@@ -2792,7 +2786,7 @@
     "proof1": "Cancel monthly",
     "proof2": "No credit card to try",
     "proof3": "Hosted in the EU",
-    "proof4": "Prices exclude VAT",
+    "proof4": "Prices include VAT",
     "compareTitle": "Compare plans",
     "compareIntro": "Every plan has the same features. The difference is the number of artists, team members and bookings.",
     "compareFeature": "What you get",

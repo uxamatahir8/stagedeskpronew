@@ -53,7 +53,6 @@ export async function paymentsErrorMessage(error: unknown): Promise<string> {
   const stripe = error as { type?: string; message?: string } | null;
   if (stripe?.type === "StripeInvalidRequestError" && /signed up for Connect/i.test(stripe.message ?? "")) return t("errors_connect_not_enabled");
   if (stripe?.type === "StripeAuthenticationError") return t("errors_stripe_keys");
-  if (stripe?.type === "StripeInvalidRequestError" && /tax/i.test(stripe.message ?? "")) return t("errors_stripe_tax");
   return (await getTranslations("auth"))("generic");
 }
 

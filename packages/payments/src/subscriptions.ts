@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { getSetting, markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
+import { markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
 import { referralPromotionCode } from "./affiliates";
 import { isMissingStripePrice, syncPlanToStripe } from "./plans";
 
@@ -60,24 +60,11 @@ async function subscriptionCheckoutOnce(
 
   // A referred agency gets its partner's discount automatically; others may type a code.
   const promotionCode = await referralPromotionCode(input.organizationId);
-  // Plans are priced excluding VAT. Stripe Tax adds the right amount for where the customer is, and
-  // a valid EU VAT number gets reverse charge. If Stripe Tax isn't set up, Stripe refuses the session:
-  // better no sale than one that silently charges no VAT.
-  const { subscriptionTax } = await getSetting("billing.defaults");
-  if (subscriptionTax === "automatic") await markPriceExclusive(stripe, price);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer,
     line_items: [{ price, quantity: 1 }],
     locale: input.locale,
-    ...(subscriptionTax === "automatic"
-      ? {
-          automatic_tax: { enabled: true },
-          tax_id_collection: { enabled: true },
-          billing_address_collection: "required" as const,
-          customer_update: { address: "auto" as const, name: "auto" as const },
-        }
-      : {}),
     ...(promotionCode ? { discounts: [{ promotion_code: promotionCode }] } : { allow_promotion_codes: true }),
     subscription_data: { metadata: { organizationId: input.organizationId, planId: plan.id }, ...trial },
     metadata: { organizationId: input.organizationId, planId: plan.id },
@@ -85,19 +72,6 @@ async function subscriptionCheckoutOnce(
     cancel_url: input.cancelUrl,
   });
   return session.url!;
-}
-
-/** Prices made before VAT was handled say nothing about tax; Stripe Tax needs to know the amount excludes it. */
-async function markPriceExclusive(stripe: Stripe, priceId: string) {
-  try {
-    const current = await stripe.prices.retrieve(priceId);
-    if (current.tax_behavior === "unspecified" || current.tax_behavior === null || current.tax_behavior === undefined) {
-      await stripe.prices.update(priceId, { tax_behavior: "exclusive" });
-    }
-  } catch (error) {
-    // A price from another Stripe account: creating the session reports it, and subscriptionCheckout recovers from that.
-    if (!isMissingStripePrice(error)) throw error;
-  }
 }
 
 /** A Stripe subscription that is still running; switching plans changes it instead of starting another. */

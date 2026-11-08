@@ -1322,7 +1322,7 @@
     "status_free": "Gratis: aanvragen beantwoorden en boekingen aannemen kost niets. Het Artiest-abonnement voegt je openbare profiel en direct boeken toe.",
     "readOnlyNoPlan": "Kies een abonnement onder Abonnement om StageDesk te gebruiken. Tot die tijd kun je rondkijken maar niets wijzigen.",
     "yourChoice": "Jouw keuze",
-    "exclVat": "Excl. btw"
+    "inclVat": "Incl. btw"
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -1417,12 +1417,7 @@
     "saved": "Instellingen opgeslagen.",
     "invalid": "Sommige waarden kloppen niet. Controleer de getallen en probeer het opnieuw.",
     "waitlistMode": "Wachtlijstmodus",
-    "waitlistModeHint": "Vóór de lancering: de website verzamelt aanmeldingen voor de wachtlijst in plaats van een proefperiode aan te bieden.",
-    "subscriptionTax": "Btw op abonnementen",
-    "subscriptionTax_automatic": "Automatisch, via Stripe Tax",
-    "subscriptionTax_off": "Uit: alleen de abonnementsprijs rekenen",
-    "subscriptionTax_automaticHint": "Stripe rekent bij het afrekenen de juiste btw en verwerkt EU-btw-nummers. Stripe Tax moet zijn ingesteld in je Stripe-account, anders wordt het afrekenen geweigerd.",
-    "subscriptionTax_offHint": "Er wordt geen btw gerekend. Gebruik dit alleen om te testen: op de website staat dat abonnementen exclusief btw zijn."
+    "waitlistModeHint": "Vóór de lancering: de website verzamelt aanmeldingen voor de wachtlijst in plaats van een proefperiode aan te bieden."
   },
   "agencyFee": {
     "deal": "Kostenafspraak",
@@ -1485,8 +1480,7 @@
     "errors_no_customer": "Er is nog geen betaalaccount.",
     "searchPlaceholder": "Zoek op klant, code of kenmerk",
     "errors_connect_not_enabled": "Online betalen via Stripe is nog niet ingeschakeld voor het platform. De platformbeheerder moet Stripe Connect aanzetten in het Stripe-dashboard (dashboard.stripe.com/connect).",
-    "errors_stripe_keys": "De Stripe-sleutels van het platform kloppen niet. De platformbeheerder kan ze controleren onder Betaalinstellingen.",
-    "errors_stripe_tax": "Abonneren kan nu niet, omdat btw nog niet is ingesteld in Stripe. Neem contact op met StageDesk."
+    "errors_stripe_keys": "De Stripe-sleutels van het platform kloppen niet. De platformbeheerder kan ze controleren onder Betaalinstellingen."
   },
   "pay": {
     "payDeposit": "Aanbetaling betalen: {amount}",
@@ -2778,8 +2772,8 @@
     "yearly": "Per jaar",
     "recommended": "Meest gekozen",
     "perMonth": "per maand",
-    "billedMonthly": "Maandelijks gefactureerd, excl. btw",
-    "billedYearly": "{amount} per jaar gefactureerd, excl. btw",
+    "billedMonthly": "Maandelijks gefactureerd, incl. btw",
+    "billedYearly": "{amount} per jaar gefactureerd, incl. btw",
     "save": "Bespaar {amount}",
     "trialNote": "Bij abonnementen met een proefperiode betaal je pas na de gratis dagen; je kunt op elk moment opzeggen.",
     "feeTitle": "Platformkosten op online betalingen",
@@ -2792,7 +2786,7 @@
     "proof1": "Maandelijks opzegbaar",
     "proof2": "Geen creditcard om te proberen",
     "proof3": "Hosting in de EU",
-    "proof4": "Prijzen exclusief btw",
+    "proof4": "Prijzen inclusief btw",
     "compareTitle": "Abonnementen vergelijken",
     "compareIntro": "Alle abonnementen hebben dezelfde functies. Het verschil zit in het aantal artiesten, teamleden en boekingen.",
     "compareFeature": "Wat je krijgt",

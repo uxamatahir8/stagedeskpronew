@@ -90,7 +90,7 @@ export function PlanPicker({
               <p className="text-3xl font-semibold tracking-tight tabular-nums">
                 {interval === "month" ? p.monthly : p.yearly}
                 <span className="text-base font-normal text-muted-foreground">{interval === "month" ? t("perMonth") : t("perYear")}</span>
-                <span className="block text-xs font-normal tracking-normal text-muted-foreground">{t("exclVat")}</span>
+                <span className="block text-xs font-normal tracking-normal text-muted-foreground">{t("inclVat")}</span>
               </p>
               <ul className="grid gap-1.5 text-sm">
                 {p.features.map((f) => (

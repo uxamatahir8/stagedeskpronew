@@ -47,11 +47,6 @@ export const billingDefaultsSchema = z.object({
   graceDays: z.int().min(0).max(60),
   /** Plan new agencies start their trial on. */
   trialPlanKey: z.string().min(1).max(48),
-  /**
-   * VAT on subscriptions: "automatic" lets Stripe Tax add it at checkout and handle
-   * EU VAT numbers (needs Stripe Tax set up in the Stripe account), "off" charges the bare price.
-   */
-  subscriptionTax: z.enum(["automatic", "off"]).default("automatic"),
 });
 
 export const siteGeneralSchema = z.object({
@@ -179,7 +174,7 @@ export const settingsRegistry = {
   },
   "billing.defaults": {
     schema: billingDefaultsSchema,
-    defaults: { graceDays: 7, trialPlanKey: "pro", subscriptionTax: "automatic" },
+    defaults: { graceDays: 7, trialPlanKey: "pro" },
   },
   "payments.methods": {
     schema: paymentMethodsSchema,

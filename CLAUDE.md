@@ -68,7 +68,7 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - Forms: `<form {...keepValues(action)}>` (`lib/keep-values.ts`) keeps what was typed when an action reports an error; a plain `<form action={fn}>` is wiped by React. Only forms without typed input (uploads, one-button actions) use `action=`.
 - Quote amounts: `quoteAmountProblem()` in core; discount lines may be negative, a total never. Typed payments above what's due need confirmation (`recordPayment` with `allowOverpayment`); money that really arrived uses `recordPaymentTx`.
 - Refunds on an invoiced booking write a credit note in the same transaction (`creditRefundTx`, `packages/db/src/credit-notes.ts`), except for the part that only returns an overpayment.
-- Subscription VAT: `billing.defaults.subscriptionTax` (Settings). On "automatic" Stripe refuses checkout until Stripe Tax is set up in the Stripe account; that's deliberate.
+- Plan prices include VAT; checkout adds no tax (Stripe Tax is not used for subscriptions).
 - What an agency owes an artist for offline money: `artistBalanceOnBooking` (`packages/db/src/artist-settlement.ts`), paid through `markArtistPaid`, an append-only ledger row.
 - New bookings can't have a past date, also for staff; a past date already on a booking may stay when it's edited.
 - Booking step emails: `mailCustomer` / `mailAgencyTeam` (`lib/booking-mail.ts`), one template (`BookingUpdate`) with one sender per step, so each has its own preview.
