@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { bookingPageData } from "@/lib/booking-page";
 import { appUrl } from "@/lib/mail";
+import { showBranding } from "@/lib/site-request";
 import { requireAgency } from "@/lib/viewer";
 import { BookingPageForm } from "./booking-page-form";
 
@@ -51,7 +52,7 @@ async function Settings() {
     },
   });
   // Reviews are loaded even when hidden, so switching the section on shows them in the preview.
-  const preview = await bookingPageData({ ...agency, showReviews: true });
+  const [preview, branding] = await Promise.all([bookingPageData({ ...agency, showReviews: true }), showBranding(agency.id)]);
   const theme = parseBookingTheme(agency.bookingTheme);
   // Agencies that hid reviews before sections existed keep them hidden.
   if (!agency.showReviews) theme.sections = theme.sections.map((s) => (s.key === "reviews" ? { ...s, visible: false } : s));
@@ -64,6 +65,7 @@ async function Settings() {
         pageUrl={`${appUrl}${prefix}/b/${agency.slug}`}
         embedCode={`<script src="${appUrl}/embed.js" data-agency="${agency.slug}" data-lang="${locale}" async></script>`}
         preview={preview}
+        branding={branding}
         values={{
           enabled: agency.bookingPageEnabled,
           intro: agency.bookingIntro ?? "",

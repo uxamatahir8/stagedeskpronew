@@ -88,6 +88,7 @@ export function emailSamples(locale: EmailLocale, appUrl: string): { [K in Email
     },
     contactMessage: { locale, name: "Lotte Jansen", email: "lotte@example.nl", company: "Lotte Events", message: nl ? "Ik wil graag een demo voor ons bureau met 12 DJ's." : "I'd like a demo for our agency with 12 DJs." },
     agencyCreated: { locale, name: "Olga", agency: "Feestbureau Noord", url: url("/reset-password?token=example&setup=1"), setup: true },
+    agencyInvite: { locale, inviter: "Olga de Boer", agency: "Feestbureau Noord", url: url("/sign-up?via=r-example") },
     leadReceived: { locale, name: "Lotte", reference: "L-7KQ2M9", url: url("/") },
     artistRequest: { locale, status: "new", other: "Feestband Utrecht", artist: "DJ Daan K", event: nl ? "bruiloft" : "wedding", fee: "€ 600,00", url: url("/app/artist-requests") },
     leadQuote: { locale, name: "Lotte", provider: "Feestband Utrecht", event: nl ? "bruiloft" : "wedding", total: "€ 1.450,00", url: url("/request/L-7KQ2M9?t=preview") },

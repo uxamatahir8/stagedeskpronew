@@ -1,7 +1,8 @@
 "use server";
 
 import { getLocale, getTranslations } from "next-intl/server";
-import { audit, prisma } from "@stagedesk/db";
+import { isCancellationReason } from "@stagedesk/core";
+import { audit, prisma, recordCancellationFeedback } from "@stagedesk/db";
 import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, setCancelAtPeriodEnd, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions";
@@ -59,14 +60,24 @@ export async function billingPortalAction(): Promise<RedirectResult> {
   }
 }
 
-/** Cancel at the end of the paid period, or undo that while it's still running. */
-export async function setCancelPlanAction(cancel: boolean): Promise<ActionResult> {
+/**
+ * Cancel at the end of the paid period, or undo that while it's still running.
+ * Cancelling asks why (one of cancellationReasons, plus an optional note).
+ */
+export async function setCancelPlanAction(cancel: boolean, feedback?: { reason: string; note: string }): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.billing");
   const t = await getTranslations("billing");
+  if (cancel && !isCancellationReason(feedback?.reason)) return { ok: false, message: t("cancelReasonRequired") };
   const stripe = await getStripe();
   if (!stripe) return { ok: false, message: t("stripeMissing") };
   try {
     const sub = await setCancelAtPeriodEnd(stripe, organization.id, cancel);
+    if (cancel && feedback && isCancellationReason(feedback.reason)) {
+      // Feedback never blocks the cancellation itself.
+      await recordCancellationFeedback({ agencyId: organization.id, userId: viewer.user.id, reason: feedback.reason, note: feedback.note.slice(0, 2000) }).catch((error) =>
+        console.error("[billing] cancellation feedback not stored", error),
+      );
+    }
     await audit({ actorId: viewer.user.id, action: cancel ? "billing.cancel" : "billing.resume", agencyId: organization.id, targetType: "subscription", targetId: sub?.id ?? null });
     revalidatePath("/[locale]/app/billing", "page");
     return { ok: true, message: cancel ? t("cancelDone") : t("resumeDone") };

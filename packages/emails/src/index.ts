@@ -20,6 +20,7 @@ import {
   LeadOffer,
   LeadQuote,
   LeadWon,
+  AgencyInvite,
   LeadReceived,
   LoginCode,
   NewInquiry,
@@ -239,6 +240,10 @@ export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: st
   return send(to, copy[p.locale].agencyCreated.subject(p.agency), createElement(AgencyCreated, p));
 }
 
+export function sendAgencyInvite(to: string, p: { locale: EmailLocale; inviter: string; agency: string | null; url: string }) {
+  return send(to, copy[p.locale].agencyInvite.subject(p.inviter), createElement(AgencyInvite, p));
+}
+
 export function sendLeadReceived(to: string, p: { locale: EmailLocale; name: string; reference: string; url: string }) {
   return send(to, copy[p.locale].leadReceived.subject(p.reference), createElement(LeadReceived, p));
 }
@@ -328,6 +333,7 @@ const senders = {
   ticketReply: sendTicketReply,
   contactMessage: sendContactMessage,
   agencyCreated: sendAgencyCreated,
+  agencyInvite: sendAgencyInvite,
   leadReceived: sendLeadReceived,
   leadOffer: sendLeadOffer,
   leadQuote: sendLeadQuote,

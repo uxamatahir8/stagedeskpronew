@@ -72,3 +72,7 @@ See README.md for layout, commands and conventions. Build plan: https://claude.a
 - What an agency owes an artist for offline money: `artistBalanceOnBooking` (`packages/db/src/artist-settlement.ts`), paid through `markArtistPaid`, an append-only ledger row.
 - New bookings can't have a past date, also for staff; a past date already on a booking may stay when it's edited.
 - Booking step emails: `mailCustomer` / `mailAgencyTeam` (`lib/booking-mail.ts`), one template (`BookingUpdate`) with one sender per step, so each has its own preview.
+- Marketplace launch: the `marketplace` setting (on/off, event types, places) gates `/request` (`marketplaceAccepts()` in `packages/db/src/marketplace.ts`, rule `marketplaceCovers()` in core `geo.ts`); off hides it from the menu and sitemap. The agency homepage has no consumer blocks.
+- Website proof (`site.proof` setting: logos, quotes, founder note, tour video) renders through `components/site/social-proof.tsx` and stays hidden while empty; never put invented testimonials there. Uploads via `uploadProofImageAction`.
+- Growth records are platform-level (`packages/db/src/growth.ts`): `AgencyInvite` (agencies and artists invite agencies; marked joined by `markInvitesJoined` when an agency is created) and `CancellationFeedback` (reason required in the cancel dialog). Admin activation funnel: `agencyActivation()` in `dashboards.ts`.
+- Booking pages show "Bookings by StageDesk" unless the plan has `removeBranding`. Payment copy says "iDEAL | Wero".

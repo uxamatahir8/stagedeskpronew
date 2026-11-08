@@ -26,7 +26,7 @@ export const featurePages = ["booking-page", "quotes-invoices", "payments-payout
 const featureIcons = { "booking-page": "globe", "quotes-invoices": "file", "payments-payouts": "coins", "artist-management": "music" } as const;
 
 async function navEntries(): Promise<NavEntry[]> {
-  const [t, locale, pages] = await Promise.all([getTranslations("site"), getLocale(), sitePages()]);
+  const [t, locale, pages, { marketplace }] = await Promise.all([getTranslations("site"), getLocale(), sitePages(), siteSettings()]);
   return [
     {
       label: t("nav.product"),
@@ -42,7 +42,7 @@ async function navEntries(): Promise<NavEntry[]> {
         { href: "/for-agencies", label: t("nav.forAgencies"), description: t("nav.forAgenciesHint"), icon: "users" },
         { href: "/solutions/weddings-events", label: t("nav.weddingsEvents"), description: t("nav.weddingsEventsHint"), icon: "heart" },
         { href: "/solutions/band-agencies", label: t("nav.bandAgencies"), description: t("nav.bandAgenciesHint"), icon: "calendar" },
-        { href: "/request", label: t("nav.request"), description: t("nav.requestHint"), icon: "sparkles" },
+        ...(marketplace.enabled ? [{ href: "/request", label: t("nav.request"), description: t("nav.requestHint"), icon: "sparkles" as const }] : []),
         { href: "/artists", label: t("nav.artists"), description: t("nav.artistsHint"), icon: "music" },
         { href: "/for-artists", label: t("nav.forArtists"), description: t("nav.forArtistsHint"), icon: "music" },
       ],

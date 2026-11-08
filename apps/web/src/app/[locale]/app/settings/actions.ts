@@ -1,14 +1,16 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 import { feeRuleSchema, type SettingKey } from "@stagedesk/core";
 import { updateTag } from "next/cache";
 import { audit, Prisma, prisma, updateSetting } from "@stagedesk/db";
 import { SITE_TAGS } from "@/lib/site";
+import { detectImage, putPublicFile } from "@/lib/storage";
 import type { ActionResult } from "@/lib/actions";
 import { requirePermission } from "@/lib/viewer";
 
-const editable: SettingKey[] = ["fees.platform", "bookings.defaults", "billing.defaults", "site.general", "affiliates.program", "payments.methods", "currencies"];
+const editable: SettingKey[] = ["fees.platform", "bookings.defaults", "billing.defaults", "site.general", "affiliates.program", "payments.methods", "currencies", "marketplace", "site.proof"];
 
 /** Saves one platform setting; the registry schema validates it and the change is logged. */
 export async function saveSettingAction(key: SettingKey, value: unknown): Promise<ActionResult> {
@@ -34,4 +36,18 @@ export async function setAgencyFeeAction(organizationId: string, rule: unknown):
   await prisma.organization.update({ where: { id: organizationId }, data: { feeRule: parsed ? parsed.data : Prisma.DbNull } });
   await audit({ actorId: viewer.user.id, action: "agency.fee_deal", agencyId: organizationId, data: { rule: parsed ? parsed.data : null } });
   return { ok: true, message: (await getTranslations("agencyFee"))("saved") };
+}
+
+export type ProofUploadResult = { ok: true; url: string } | { ok: false; message: string };
+
+/** A logo or portrait for the website proof section, stored with the other public files. */
+export async function uploadProofImageAction(form: FormData): Promise<ProofUploadResult> {
+  await requirePermission("platform.settings");
+  const t = await getTranslations("siteProofSettings");
+  const file = form.get("image");
+  if (!(file instanceof File) || file.size === 0 || file.size > 2 * 1024 * 1024) return { ok: false, message: t("invalidImage") };
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const image = detectImage(bytes);
+  if (!image) return { ok: false, message: t("invalidImage") };
+  return { ok: true, url: await putPublicFile(`site/${randomUUID()}.${image.ext}`, bytes, image.mime) };
 }

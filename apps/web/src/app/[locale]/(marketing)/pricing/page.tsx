@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { convertCents, countLimits, featureFlags, feeRuleSchema, type FeeRule } from "@stagedesk/core";
+import { SocialProof } from "@/components/site/social-proof";
 import { container, CtaBand, FaqList, Proofs, SectionHeading } from "@/components/site/marketing-blocks";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
@@ -78,6 +79,10 @@ export default async function PricingPage({ params }: PageProps<"/[locale]/prici
           </Link>
         </div>
       </section>
+
+      <Suspense fallback={null}>
+        <SocialProof />
+      </Suspense>
 
       <Suspense fallback={null}>
         <PricingCta />
@@ -210,6 +215,8 @@ async function FeeExample() {
   const parsed = plan ? feeRuleSchema.safeParse(plan.feeRule) : null;
   const rule = plan?.feeRule && parsed?.success ? parsed.data : fees.defaultRule;
   const fee = feeCents(rule, EXAMPLE_CENTS);
+  // Stripe's own cost, when the agency carries it: shown so nobody discovers it later.
+  const stripe = fees.stripeFeePaidBy === "agency" ? fees.exampleStripeFeeCents : 0;
   return (
     <div className="grid content-start gap-5 rounded-2xl border bg-card p-6 sm:p-8">
       <h2 className="text-2xl font-bold tracking-tight">{t("feeTitle")}</h2>
@@ -229,12 +236,19 @@ async function FeeExample() {
                 <dt className="text-muted-foreground">{t("feeExampleFee")}</dt>
                 <dd>− {money(fee)}</dd>
               </div>
+              {stripe > 0 && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">{t("feeExampleStripe")}</dt>
+                  <dd>− {money(stripe)}</dd>
+                </div>
+              )}
               <div className="flex justify-between gap-4 border-t pt-1.5 font-semibold">
                 <dt>{t("feeExampleRest")}</dt>
-                <dd>{money(EXAMPLE_CENTS - fee)}</dd>
+                <dd>{money(EXAMPLE_CENTS - fee - stripe)}</dd>
               </div>
             </dl>
             <p className="text-sm text-muted-foreground">{t("feeExampleBody", { amount: money(EXAMPLE_CENTS), fee: money(fee) })}</p>
+            {stripe > 0 && <p className="text-sm text-muted-foreground">{t("feeExampleStripeBody", { stripe: money(stripe) })}</p>}
           </>
         )}
         <p className="text-sm text-muted-foreground">{t("feeExampleOffline")}</p>

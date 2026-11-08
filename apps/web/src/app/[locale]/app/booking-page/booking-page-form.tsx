@@ -36,7 +36,7 @@ const DESKTOP_WIDTH = 1280;
  * Booking page settings: the look, texts and section order on the left, a
  * live preview of the real page on the right. Nothing is public until saved.
  */
-export function BookingPageForm({ pageUrl, embedCode, preview, values }: { pageUrl: string; embedCode: string; preview: BookingPageData; values: Values }) {
+export function BookingPageForm({ pageUrl, embedCode, preview, branding, values }: { pageUrl: string; embedCode: string; preview: BookingPageData; branding: boolean; values: Values }) {
   const t = useTranslations("bookingPageSettings");
   const tp = useTranslations("bookingPage");
   const router = useRouter();
@@ -368,13 +368,13 @@ export function BookingPageForm({ pageUrl, embedCode, preview, values }: { pageU
         </div>
       </div>
 
-      <Preview data={data} theme={theme} />
+      <Preview data={data} theme={theme} branding={branding} />
     </div>
   );
 }
 
 /** The real page, laid out at desktop width and scaled to fit, or at phone width. */
-function Preview({ data, theme }: { data: BookingPageData; theme: BookingTheme }) {
+function Preview({ data, theme, branding }: { data: BookingPageData; theme: BookingTheme; branding: boolean }) {
   const t = useTranslations("bookingPageSettings");
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const box = useRef<HTMLDivElement>(null);
@@ -420,7 +420,7 @@ function Preview({ data, theme }: { data: BookingPageData; theme: BookingTheme }
           {/* Links in the preview don't leave the settings. */}
           <div style={{ width: device === "desktop" ? DESKTOP_WIDTH : undefined, zoom }} onClickCapture={(e) => (e.target as HTMLElement).closest("a[href^='/'], a[href^='http']") && e.preventDefault()}>
             <BookingFrame theme={theme} brandColor={data.brandColor}>
-              <BookingPageView data={data} theme={theme} preview form={<FormStandIn />} />
+              <BookingPageView data={data} theme={theme} preview branding={branding} form={<FormStandIn />} />
             </BookingFrame>
           </div>
         </div>

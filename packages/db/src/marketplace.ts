@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { computeQuote, quoteAmountProblem, type QuoteLineInput, type ServiceArea, servesRequest, subscriptionAccess } from "@stagedesk/core";
+import { computeQuote, marketplaceCovers, quoteAmountProblem, type QuoteLineInput, type ServiceArea, servesRequest, subscriptionAccess } from "@stagedesk/core";
 import { acceptQuote, BookingError, sendQuote } from "./bookings";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
@@ -12,6 +12,18 @@ import { getSetting } from "./settings";
  * provider serving its area, each may send a price, and the customer
  * accepts one, which becomes a booking with that provider.
  */
+
+/**
+ * Whether the platform's request form takes a request now (the `marketplace`
+ * setting). Only looks the place up on the map when launch regions are set.
+ */
+export async function marketplaceAccepts(eventType: string, venueCity: string) {
+  const setting = await getSetting("marketplace");
+  const quick = marketplaceCovers(setting, { eventType, places: [venueCity] });
+  if (quick !== "region") return quick;
+  const hit = await geocode(venueCity);
+  return marketplaceCovers(setting, { eventType, places: [venueCity, hit?.city, hit?.region] });
+}
 
 export class MarketError extends Error {
   constructor(readonly code: "not_found" | "closed" | "not_offered" | "invalid_quote" | "expired") {

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { subscriptionAccess } from "@stagedesk/core";
 import { startTrial } from "./billing";
 import { prisma } from "./client";
+import { markInvitesJoined } from "./growth";
 import { purgeInventory } from "./inventory";
 import type { Prisma } from "./generated/prisma/client";
 import { getSetting } from "./settings";
@@ -115,6 +116,7 @@ export async function createAgencyForOwner(input: { name: string; city: string |
     await tx.member.create({ data: { id: randomUUID(), organizationId, userId, role: "agency_owner" } });
   });
   const organization = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
+  await markInvitesJoined(email, organizationId);
   return { organization, ownerId: userId, newUser: !existing, email };
 }
 

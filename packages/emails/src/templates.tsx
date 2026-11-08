@@ -401,6 +401,18 @@ export function AgencyCreated({ locale, name, agency, url, setup = false }: { lo
   );
 }
 
+/** An agency or an artist asks someone to start an agency on StageDesk. `agency` is the inviting agency (null for an artist). */
+export function AgencyInvite({ locale, inviter, agency, url }: { locale: EmailLocale; inviter: string; agency: string | null; url: string }) {
+  const c = copy[locale].agencyInvite;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{agency ? c.bodyAgency(inviter, agency) : c.bodyArtist(inviter)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
 export function LeadReceived({ locale, name, reference, url }: { locale: EmailLocale; name: string; reference: string; url: string }) {
   const c = copy[locale].leadReceived;
   return (

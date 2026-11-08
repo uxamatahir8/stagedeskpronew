@@ -1,7 +1,9 @@
 import { CheckIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { type ScreenKey, Screenshot, screens } from "@/components/site/screenshot";
+import { TourVideo } from "@/components/site/social-proof";
 import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
 import { pageMetadata } from "@/lib/seo";
@@ -25,6 +27,9 @@ export default async function TourPage({ params }: PageProps<"/[locale]/tour">) 
           <p className="text-sm font-medium text-magenta">{t("eyebrow")}</p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t.rich("title", { hl: (c) => <span className="text-brand-gradient">{c}</span> })}</h1>
           <p className="max-w-2xl text-lg text-muted-foreground">{t("intro")}</p>
+          <Suspense fallback={null}>
+            <TourVideo />
+          </Suspense>
           <Screenshot name="hero-collage" priority className="mt-6 rounded-3xl shadow-2xl shadow-primary/20" />
         </div>
       </section>

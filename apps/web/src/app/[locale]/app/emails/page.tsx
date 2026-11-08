@@ -35,7 +35,7 @@ const groups: { key: "account" | "bookings" | "leads" | "team" | "partners" | "p
   { key: "bookings", kinds: ["inquiryReceived", "newInquiry", "quote", "quoteAcceptedNotice", "artistAcceptedNotice", "artistDeclinedNotice", "bookingConfirmed", "bookingCancelled", "invoiceIssued", "reviewInvitation", "quoteExpiring", "balanceDue", "eventReminder", "newMessage", "paymentReported", "paymentReceipt", "paymentNotReceived"] },
   { key: "leads", kinds: ["leadReceived", "leadOffer", "leadQuote", "leadWon", "leadLost"] },
   { key: "team", kinds: ["invitation", "gigReminder", "agencyCreated", "artistRequest"] },
-  { key: "partners", kinds: ["affiliateApproved", "affiliatePayout"] },
+  { key: "partners", kinds: ["affiliateApproved", "affiliatePayout", "agencyInvite"] },
   { key: "platform", kinds: ["ticketReply", "contactMessage"] },
 ];
 const kinds = groups.flatMap((g) => g.kinds);

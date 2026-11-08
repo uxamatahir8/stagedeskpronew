@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanRegions, distanceKm, normalizePlace, servesRequest } from "./geo";
+import { cleanRegions, distanceKm, marketplaceCovers, normalizePlace, servesRequest } from "./geo";
 
 const utrecht = { latitude: 52.0907, longitude: 5.1214 };
 const amsterdam = { latitude: 52.3676, longitude: 4.9041 };
@@ -37,5 +37,25 @@ describe("servesRequest", () => {
   });
   it("respects the event types offered", () => {
     expect(servesRequest({ ...area, eventTypes: ["corporate"] }, { places: ["Utrecht"], location: null, eventType: "wedding" })).toBe(false);
+  });
+});
+
+describe("marketplaceCovers", () => {
+  const open = { enabled: true, eventTypes: [] as string[], regions: [] as string[] };
+  it("refuses everything while the marketplace is off", () => {
+    expect(marketplaceCovers({ ...open, enabled: false }, { eventType: "wedding", places: ["Utrecht"] })).toBe("closed");
+  });
+  it("takes any request without limits", () => {
+    expect(marketplaceCovers(open, { eventType: "wedding", places: [] })).toBe("ok");
+  });
+  it("starts with chosen event types only", () => {
+    expect(marketplaceCovers({ ...open, eventTypes: ["wedding"] }, { eventType: "corporate", places: ["Utrecht"] })).toBe("event_type");
+    expect(marketplaceCovers({ ...open, eventTypes: ["wedding"] }, { eventType: "wedding", places: ["Utrecht"] })).toBe("ok");
+  });
+  it("matches a launch region on the city or province, in either language", () => {
+    const brabant = { ...open, regions: ["Noord-Brabant"] };
+    expect(marketplaceCovers(brabant, { eventType: "wedding", places: ["Eindhoven", "Eindhoven", "North Brabant|Noord-Brabant"] })).toBe("ok");
+    expect(marketplaceCovers(brabant, { eventType: "wedding", places: ["Utrecht", null, "Utrecht"] })).toBe("region");
+    expect(marketplaceCovers({ ...open, regions: ["s-Hertogenbosch"] }, { eventType: "wedding", places: ["'s-Hertogenbosch"] })).toBe("ok");
   });
 });

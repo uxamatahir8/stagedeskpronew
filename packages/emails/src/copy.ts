@@ -159,6 +159,16 @@ export const copy = {
         `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook). Je proefperiode loopt al.`,
       buttonSetup: "Wachtwoord kiezen",
     },
+    agencyInvite: {
+      subject: (inviter: string) => `${inviter} nodigt je uit voor StageDesk`,
+      preview: "Boekingssoftware voor DJ- en bandbureaus.",
+      heading: "Je bent uitgenodigd voor StageDesk",
+      bodyAgency: (inviter: string, agency: string) =>
+        `${inviter} van ${agency} werkt met StageDesk en nodigt je uit om het ook te proberen. Je beheert aanvragen, offertes, artiesten en betalingen op één plek, en als jullie allebei op StageDesk zitten, kunnen jullie elkaars artiesten boeken.`,
+      bodyArtist: (inviter: string) =>
+        `${inviter} treedt op via StageDesk en nodigt je bureau uit. Je beheert aanvragen, offertes, artiesten en betalingen op één plek, en artiesten worden na het optreden automatisch uitbetaald.`,
+      button: "StageDesk bekijken",
+    },
     leadReceived: {
       subject: (reference: string) => `We hebben je aanvraag ontvangen (${reference})`,
       preview: "Bureaus en artiesten in de buurt sturen je hun prijs.",
@@ -493,6 +503,16 @@ export const copy = {
       bodySetup: (name: string, agency: string) =>
         `Hi ${name}, we've set up ${agency} for you on StageDesk. Choose your password within 24 hours to sign in (signing in with an emailed code works too). Your trial has started.`,
       buttonSetup: "Choose password",
+    },
+    agencyInvite: {
+      subject: (inviter: string) => `${inviter} invites you to StageDesk`,
+      preview: "Booking software for DJ and band agencies.",
+      heading: "You're invited to StageDesk",
+      bodyAgency: (inviter: string, agency: string) =>
+        `${inviter} from ${agency} works with StageDesk and invites you to try it too. You manage requests, quotes, artists and payments in one place, and when you're both on StageDesk you can book each other's artists.`,
+      bodyArtist: (inviter: string) =>
+        `${inviter} performs through StageDesk and invites your agency. You manage requests, quotes, artists and payments in one place, and artists are paid automatically after the event.`,
+      button: "Have a look at StageDesk",
     },
     leadReceived: {
       subject: (reference: string) => `We've received your request (${reference})`,

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { platformFeeSettingsSchema } from "./fees";
 import { currencies } from "../currency";
 import { dateFormats, defaultDatePrefs, isTimeZone, timeFormats } from "../datetime";
+import { mediaEmbed } from "../inquiries";
 
 const tierSchema = z.object({
   name: z.string().min(1),
@@ -47,6 +48,50 @@ export const billingDefaultsSchema = z.object({
   graceDays: z.int().min(0).max(60),
   /** Plan new agencies start their trial on. */
   trialPlanKey: z.string().min(1).max(48),
+});
+
+/**
+ * The platform's own request form (/request), which sends a customer's event to
+ * every agency serving it. Off until there are enough agencies; when on, it can
+ * start small: only these event types and only these places (cities or
+ * provinces). Empty lists mean no limit.
+ */
+export const marketplaceSchema = z.object({
+  enabled: z.boolean(),
+  eventTypes: z.array(z.string().trim().min(1).max(64)).max(50),
+  regions: z.array(z.string().trim().min(1).max(96)).max(50),
+});
+
+/** A local upload (/files/…) or an https address. */
+const imageRef = z.string().trim().max(500).refine((v) => v === "" || /^\/files\/[\w./-]+$/.test(v) || /^https:\/\/\S+$/.test(v));
+const httpsLink = z.string().trim().max(500).refine((v) => v === "" || /^https?:\/\/\S+$/.test(v));
+
+/**
+ * Proof on the public website, filled in by the platform admin. Sections stay
+ * hidden while empty, so nothing is shown that isn't real.
+ */
+export const siteProofSchema = z.object({
+  logos: z.array(z.object({ name: z.string().trim().min(1).max(96), imageUrl: imageRef, url: httpsLink })).max(24),
+  quotes: z
+    .array(
+      z.object({
+        textNl: z.string().trim().max(600),
+        textEn: z.string().trim().max(600),
+        name: z.string().trim().min(1).max(96),
+        role: z.string().trim().max(120),
+        photoUrl: imageRef,
+      }),
+    )
+    .max(12),
+  founder: z.object({
+    name: z.string().trim().max(96),
+    role: z.string().trim().max(120),
+    photoUrl: imageRef,
+    textNl: z.string().trim().max(1500),
+    textEn: z.string().trim().max(1500),
+  }),
+  /** YouTube or Vimeo link shown on the product tour; must pass mediaEmbed(). */
+  tourVideoUrl: z.string().trim().max(500).refine((v) => v === "" || mediaEmbed(v)?.provider === "youtube" || mediaEmbed(v)?.provider === "vimeo"),
 });
 
 export const siteGeneralSchema = z.object({
@@ -146,6 +191,7 @@ export const settingsRegistry = {
       defaultRule: { type: "percentage", percentageBps: 200, fixedCents: 0, minCents: null, maxCents: null },
       stripeFeePaidBy: "agency",
       customerServiceFeeCents: 0,
+      exampleStripeFeeCents: 58,
     },
   },
   "affiliates.program": {
@@ -175,6 +221,19 @@ export const settingsRegistry = {
   "billing.defaults": {
     schema: billingDefaultsSchema,
     defaults: { graceDays: 7, trialPlanKey: "pro" },
+  },
+  marketplace: {
+    schema: marketplaceSchema,
+    defaults: { enabled: true, eventTypes: [], regions: [] },
+  },
+  "site.proof": {
+    schema: siteProofSchema,
+    defaults: {
+      logos: [],
+      quotes: [],
+      founder: { name: "", role: "", photoUrl: "", textNl: "", textEn: "" },
+      tourVideoUrl: "",
+    },
   },
   "payments.methods": {
     schema: paymentMethodsSchema,
