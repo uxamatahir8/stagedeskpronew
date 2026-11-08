@@ -21,6 +21,7 @@ export {
   changeSubscriptionPlan,
   ensureCustomer,
   liveStripeSubscription,
+  liveStripeSubscriptionHere,
   setCancelAtPeriodEnd,
   PaymentsError,
   subscriptionCheckout,

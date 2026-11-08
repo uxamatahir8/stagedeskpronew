@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type Stripe from "stripe";
 import { prisma } from "@stagedesk/db";
-import { billingPortal, PaymentsError, setCancelAtPeriodEnd, subscriptionCheckout } from "./subscriptions";
+import { billingPortal, liveStripeSubscriptionHere, PaymentsError, setCancelAtPeriodEnd, subscriptionCheckout } from "./subscriptions";
 import { agencyWithAccounts, cleanup } from "./test/fixtures";
 
 const run = `plan-recovery-${Date.now().toString(36)}`;
@@ -120,6 +120,8 @@ describe("Stripe plan recovery", () => {
     await expect(setCancelAtPeriodEnd(stripe, agency.organizationId, true)).rejects.toSatisfy((e) => e instanceof PaymentsError && e.code === "other_stripe_account");
     await expect(billingPortal(stripe, agency.organizationId, "https://example.test")).rejects.toSatisfy((e) => e instanceof PaymentsError && e.code === "other_stripe_account");
 
+    // Billing's choose-plan action asks this first: the old subscription doesn't count as running here.
+    expect(await liveStripeSubscriptionHere(stripe, agency.organizationId)).toBeNull();
     await expect(subscriptionCheckout(stripe, input)).resolves.toBe("https://checkout.stripe.test/new-account");
     expect(sessions[0]).toMatchObject({ mode: "subscription", customer: "cus_new_account" });
     expect(created[0]?.["key"]).toBe(`customer-${agency.organizationId}-replaces-cus_old_account`);

@@ -91,10 +91,7 @@ async function subscriptionCheckoutOnce(
   // Never a second subscription: a running one is switched instead (changeSubscriptionPlan). One made
   // with another Stripe account (the keys were changed) can't be changed from here; a new checkout
   // replaces it, and its webhook overwrites the agency's subscription row.
-  const live = await liveStripeSubscription(input.organizationId);
-  if (live?.stripeSubscriptionId && (await existsInThisAccount(() => stripe.subscriptions.retrieve(live.stripeSubscriptionId!)))) {
-    return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
-  }
+  if (await liveStripeSubscriptionHere(stripe, input.organizationId)) return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
   const price = input.interval === "year" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
   if (!price) throw new PaymentsError("plan_not_synced");
@@ -121,6 +118,16 @@ async function subscriptionCheckoutOnce(
     cancel_url: input.cancelUrl,
   });
   return session.url!;
+}
+
+/**
+ * The running subscription, if it exists in the Stripe account the current
+ * keys belong to. One made with other keys (the platform changed accounts)
+ * can't be switched from here, so choosing a plan starts a new checkout.
+ */
+export async function liveStripeSubscriptionHere(stripe: Stripe, organizationId: string) {
+  const live = await liveStripeSubscription(organizationId);
+  return live?.stripeSubscriptionId && (await existsInThisAccount(() => stripe.subscriptions.retrieve(live.stripeSubscriptionId!))) ? live : null;
 }
 
 /** A Stripe subscription that is still running; switching plans changes it instead of starting another. */

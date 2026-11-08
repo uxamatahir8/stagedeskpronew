@@ -3,7 +3,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { isCancellationReason } from "@stagedesk/core";
 import { audit, prisma, recordCancellationFeedback } from "@stagedesk/db";
-import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscription, setCancelAtPeriodEnd, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
+import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscriptionHere, setCancelAtPeriodEnd, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions";
 import type { RedirectResult } from "@/components/redirect-button";
@@ -27,8 +27,9 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
     // Artist plans are for independent artists only, and agency plans for agencies.
     if (!plan?.active || plan.audience !== (org.kind === "solo" ? "artist" : "agency")) return { message: (await getTranslations("billing"))("planNotSynced") };
     if (!plan.stripeMonthlyPriceId || !plan.stripeYearlyPriceId) await syncPlanToStripe(stripe, planId);
-    // A running Stripe subscription is switched in place, never doubled.
-    if (await liveStripeSubscription(organization.id)) {
+    // A running Stripe subscription is switched in place, never doubled. One made with other Stripe keys
+    // can't be switched from here: subscriptionCheckout starts a new one instead.
+    if (await liveStripeSubscriptionHere(stripe, organization.id)) {
       await audit({ actorId: viewer.user.id, action: "billing.switch_plan", targetType: "plan", targetId: planId });
       await changeSubscriptionPlan(stripe, { organizationId: organization.id, planId, interval });
       return { url: absoluteUrl(locale, "/app/billing?checkout=switched") };
