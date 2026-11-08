@@ -1,7 +1,9 @@
 import { getPublicFile } from "@/lib/storage";
 
-// Only these folders in the public bucket are served.
-const servedPrefixes = ["organizations/"];
+// Only these folders in the public bucket are served: agency uploads, blog and help
+// images (content/), and the website proof logos and photos (site/). All are images
+// checked by their first bytes on upload (detectImage).
+const servedPrefixes = ["organizations/", "content/", "site/"];
 
 export async function GET(_request: Request, { params }: RouteContext<"/files/[...key]">) {
   const key = (await params).key.join("/");
