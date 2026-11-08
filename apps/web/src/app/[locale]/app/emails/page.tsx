@@ -32,7 +32,7 @@ export default async function EmailsPage({ params, searchParams }: PageProps<"/[
 /** The emails grouped by who receives them, in the order the list shows. */
 const groups: { key: "account" | "bookings" | "leads" | "team" | "partners" | "platform"; kinds: EmailKind[] }[] = [
   { key: "account", kinds: ["verifyEmail", "loginCode", "resetPassword", "accountSetup", "artistAccountSetup"] },
-  { key: "bookings", kinds: ["inquiryReceived", "newInquiry", "quote", "quoteExpiring", "balanceDue", "eventReminder", "newMessage", "paymentReported", "paymentReceipt", "paymentNotReceived"] },
+  { key: "bookings", kinds: ["inquiryReceived", "newInquiry", "quote", "quoteAcceptedNotice", "artistAcceptedNotice", "artistDeclinedNotice", "bookingConfirmed", "bookingCancelled", "invoiceIssued", "reviewInvitation", "quoteExpiring", "balanceDue", "eventReminder", "newMessage", "paymentReported", "paymentReceipt", "paymentNotReceived"] },
   { key: "leads", kinds: ["leadReceived", "leadOffer", "leadQuote", "leadWon", "leadLost"] },
   { key: "team", kinds: ["invitation", "gigReminder", "agencyCreated", "artistRequest"] },
   { key: "partners", kinds: ["affiliateApproved", "affiliatePayout"] },

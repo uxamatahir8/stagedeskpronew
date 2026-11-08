@@ -29,6 +29,11 @@ export function eventDate(format: Formatter, value: string | Date | null, style:
   );
 }
 
+/** A moment shown as a day, for things that end or renew "on a date"; the hour would only distract. */
+export function dayOf(format: Formatter, value: Date) {
+  return format.dateTime(value, { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function dateTime(format: Formatter, value: Date) {
   return format.dateTime(value, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }

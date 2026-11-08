@@ -68,6 +68,7 @@ export function SettingsForms({
     vat: bookings.vatRatesBps.map((r) => bpsToPct(r, locale)).join(", "),
   });
   const [grace, setGrace] = useState(String(billing.graceDays));
+  const [subscriptionTax, setSubscriptionTax] = useState<"automatic" | "off">(billing.subscriptionTax);
   const [trialPlan, setTrialPlan] = useState(billing.trialPlanKey);
   const [s, setS] = useState(site);
 
@@ -172,8 +173,19 @@ export function SettingsForms({
               </SelectContent>
             </Select>
           </FormField>
+          <FormField id="set-subscription-tax" label={t("subscriptionTax")} hint={t(`subscriptionTax_${subscriptionTax}Hint`)} className="sm:col-span-2">
+            <Select value={subscriptionTax} onValueChange={(v) => setSubscriptionTax(v as "automatic" | "off")}>
+              <SelectTrigger id="set-subscription-tax" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="automatic">{t("subscriptionTax_automatic")}</SelectItem>
+                <SelectItem value="off">{t("subscriptionTax_off")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
           <div className="sm:col-span-2">
-            <Button disabled={pending} onClick={() => save("billing.defaults", int(grace) !== null ? { graceDays: int(grace)!, trialPlanKey: trialPlan } : null, t("invalid"))}>
+            <Button disabled={pending} onClick={() => save("billing.defaults", int(grace) !== null ? { graceDays: int(grace)!, trialPlanKey: trialPlan, subscriptionTax } : null, t("invalid"))}>
               {t("save")}
             </Button>
           </div>

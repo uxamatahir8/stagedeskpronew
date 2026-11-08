@@ -13,6 +13,7 @@ export const tenantModels = [
   "ArtistUnavailability",
   "ArtistShare",
   "Booking",
+  "CreditNote",
   "BookingMessage",
   "BookingAssignment",
   "BookingEvent",

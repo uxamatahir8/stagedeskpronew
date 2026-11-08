@@ -25,6 +25,7 @@ import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
+import { keepValues } from "@/lib/keep-values";
 import type { ActionResult } from "@/lib/actions";
 import type { FormState } from "@/lib/validation";
 import {
@@ -34,6 +35,7 @@ import {
   changeStatusAction,
   decideChangeRequestAction,
   issueInvoiceAction,
+  markArtistPaidAction,
   recordPaymentAction,
   requestDetailsAction,
   retryEmailAction,
@@ -473,18 +475,31 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
   const [pending, run] = useRun();
   const [kind, setKind] = useState<"deposit" | "balance" | "other">(suggestedKind);
   const [method, setMethod] = useState<"bank_transfer" | "cash" | "card" | "other">("bank_transfer");
+  // Above what's still due: the entered payment waits here until they confirm or change it.
+  const [overpayment, setOverpayment] = useState<{ form: FormData; message?: string } | null>(null);
 
-  function submit(form: FormData) {
+  function submit(form: FormData, confirmed = false) {
     run(
-      () =>
-        recordPaymentAction(bookingId, {
-          amount: String(form.get("amount")),
-          kind,
-          method,
-          receivedAt: String(form.get("receivedAt")),
-          reference: String(form.get("reference") ?? ""),
-        }),
-      () => setOpen(false),
+      async () => {
+        const result = await recordPaymentAction(
+          bookingId,
+          {
+            amount: String(form.get("amount")),
+            kind,
+            method,
+            receivedAt: String(form.get("receivedAt")),
+            reference: String(form.get("reference") ?? ""),
+          },
+          confirmed,
+        );
+        if (!result.confirmOverpayment) return result;
+        setOverpayment({ form, message: result.message });
+        return { ok: false };
+      },
+      () => {
+        setOverpayment(null);
+        setOpen(false);
+      },
     );
   }
 
@@ -500,9 +515,9 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
         <DialogHeader>
           <DialogTitle>{t("booking.recordPayment")}</DialogTitle>
         </DialogHeader>
-        <form action={submit} className="grid gap-4 sm:grid-cols-2">
+        <form {...keepValues((form) => submit(form))} className="grid gap-4 sm:grid-cols-2">
           <FormField id="pay-amount" label={t("booking.amount")}>
-            <Input id="pay-amount" name="amount" inputMode="decimal" required placeholder="0,00" />
+            <Input id="pay-amount" name="amount" inputMode="decimal" required placeholder="0,00" onChange={() => setOverpayment(null)} />
           </FormField>
           <FormField id="pay-date" label={t("booking.receivedAt")}>
             <DatePicker id="pay-date" name="receivedAt" defaultValue={today} required />
@@ -538,19 +553,44 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
           <FormField id="pay-ref" label={t("booking.reference")} className="sm:col-span-2">
             <Input id="pay-ref" name="reference" maxLength={191} />
           </FormField>
+          {overpayment && (
+            <p role="alert" className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm sm:col-span-2">
+              {overpayment.message}
+            </p>
+          )}
           <DialogFooter className="sm:col-span-2">
             <DialogClose asChild>
               <Button type="button" variant="outline">
                 {t("ui.secondary")}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
-              {t("booking.recordPayment")}
-            </Button>
+            {overpayment ? (
+              <Button type="button" disabled={pending} onClick={() => submit(overpayment.form, true)}>
+                {t("booking.recordAnyway")}
+              </Button>
+            ) : (
+              <Button type="submit" disabled={pending}>
+                {t("booking.recordPayment")}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Offline money came in and the event is done: the agency pays the artist itself and says so here. */
+export function ArtistBalanceNotice({ bookingId, stageName, amount }: { bookingId: string; stageName: string; amount: string }) {
+  const t = useTranslations("booking");
+  const [pending, run] = useRun();
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+      <p>{t("artistBalanceDue", { artist: stageName, amount })}</p>
+      <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => markArtistPaidAction(bookingId))}>
+        {t("artistBalanceMarkPaid")}
+      </Button>
+    </div>
   );
 }
 

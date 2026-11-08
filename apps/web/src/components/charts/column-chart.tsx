@@ -66,7 +66,7 @@ export function ColumnChart({
   const ticks = empty ? [0] : [0, 1, 2, 3, 4].map((i) => i * step);
   const value = (v: number, compact = false) =>
     unit === "cents"
-      ? format.number(v / 100, { style: "currency", currency, maximumFractionDigits: 0, ...(compact ? { notation: "compact" } : {}) })
+      ? format.number(v / 100, { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: compact ? 1 : 0, ...(compact ? { notation: "compact" } : {}) })
       : format.number(v, compact ? { notation: "compact" } : {});
   const month = (m: string, style: "short" | "long") =>
     format.dateTime(new Date(`${m}-15T12:00:00Z`), style === "short" ? { month: "short" } : { month: "long", year: "numeric" });

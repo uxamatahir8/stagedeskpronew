@@ -57,6 +57,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
       quotes: { where: { status: { in: ["sent", "accepted"] } }, orderBy: { version: "desc" }, include: { items: { orderBy: { position: "asc" } } } },
       assignments: { where: { status: "accepted" }, include: { artist: { select: { stageName: true, photoUrl: true } } } },
       invoices: { select: { id: true, number: true } },
+      creditNotes: { select: { id: true, number: true }, orderBy: { issuedAt: "asc" } },
       review: true,
       changeRequests: { where: { status: { in: ["pending", "approved", "rejected"] } }, orderBy: { createdAt: "desc" }, take: 2 },
     },
@@ -349,6 +350,14 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
                     <a href={`/api/pdf/invoice/${inv.id}?lang=${locale}`} target="_blank" rel="noopener">
                       <FileDownIcon />
                       {t("customerEvent.invoice", { number: inv.number })}
+                    </a>
+                  </Button>
+                ))}
+                {booking.creditNotes.map((note) => (
+                  <Button key={note.id} variant="outline" size="sm" asChild className="w-fit">
+                    <a href={`/api/pdf/credit-note/${note.id}?lang=${locale}`} target="_blank" rel="noopener">
+                      <FileDownIcon />
+                      {t("customerEvent.creditNote", { number: note.number })}
                     </a>
                   </Button>
                 ))}

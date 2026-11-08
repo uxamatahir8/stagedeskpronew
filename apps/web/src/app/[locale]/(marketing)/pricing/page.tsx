@@ -36,7 +36,9 @@ export default async function PricingPage({ params }: PageProps<"/[locale]/prici
           <p className="text-sm font-medium text-primary">{t("eyebrow")}</p>
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">{t("title")}</h1>
           <p className="max-w-2xl text-lg text-muted-foreground">{t("intro")}</p>
-          <Proofs items={[t("proof1"), t("proof2"), t("proof3"), t("proof4")]} className="justify-center" />
+          <Suspense fallback={<Proofs items={[t("proof1"), t("proof3"), t("proof4")]} className="justify-center" />}>
+            <PricingProofs />
+          </Suspense>
         </div>
       </section>
 
@@ -78,7 +80,7 @@ export default async function PricingPage({ params }: PageProps<"/[locale]/prici
       </section>
 
       <Suspense fallback={null}>
-        <CtaBand title={t("ctaTitle")} body={t("ctaBody")} />
+        <PricingCta />
       </Suspense>
     </main>
   );
@@ -89,6 +91,17 @@ function feeCents(rule: FeeRule, amount: number) {
   const pct = rule.type === "percentage" || rule.type === "percentage_plus_fixed" ? Math.round((amount * rule.percentageBps) / 10_000) : 0;
   const fixed = rule.type === "fixed" || rule.type === "percentage_plus_fixed" ? rule.fixedCents : 0;
   return pct + fixed;
+}
+
+/** "No credit card to try" is only true while a plan offers free days (Plans & limits). */
+async function PricingProofs() {
+  const { t, trialDays } = await buildPricing();
+  return <Proofs items={[t("proof1"), ...(trialDays > 0 ? [t("proof2")] : []), t("proof3"), t("proof4")]} className="justify-center" />;
+}
+
+async function PricingCta() {
+  const { t, trialDays } = await buildPricing();
+  return <CtaBand title={t("ctaTitle")} body={trialDays > 0 ? t("ctaBody") : t("ctaBodyNoTrial")} />;
 }
 
 async function Plans() {

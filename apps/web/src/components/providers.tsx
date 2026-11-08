@@ -5,6 +5,7 @@ import { Suspense, useSyncExternalStore } from "react";
 import { ActivityBar } from "@/components/activity-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { UploadGuard } from "@/components/upload-guard";
 
 const noop = () => () => {};
 
@@ -29,6 +30,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         </Suspense>
         {children}
         <Toaster position="bottom-right" />
+        <UploadGuard />
       </TooltipProvider>
     </ThemeProvider>
   );

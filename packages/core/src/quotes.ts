@@ -112,6 +112,19 @@ export function computeQuote(lines: QuoteLineInput[], deposit: DepositRule | Bas
   return { lines: priced, vatGroups, subtotalCents, vatCents, totalCents, depositCents, balanceCents: totalCents - depositCents };
 }
 
+/** The highest amount a quote or line can hold: below the money columns' limit, and far above any real booking. */
+export const MAX_QUOTE_CENTS = 1_000_000_000;
+
+/**
+ * Why these totals can't go to a customer, or null when they can. Single
+ * discount lines may be negative, but what the customer pays never is.
+ */
+export function quoteAmountProblem(totals: Pick<QuoteTotals, "lines" | "subtotalCents" | "totalCents">): "negative_total" | "amount_too_high" | null {
+  if (totals.totalCents < 0 || totals.subtotalCents < 0) return "negative_total";
+  if (totals.totalCents > MAX_QUOTE_CENTS || totals.lines.some((l) => Math.abs(l.subtotalCents) > MAX_QUOTE_CENTS || Math.abs(l.unitPriceCents) > MAX_QUOTE_CENTS)) return "amount_too_high";
+  return null;
+}
+
 /** "1,5" or "1.5" → 150. Returns null for anything that isn't a positive amount with ≤2 decimals. */
 export function parseQuantity(value: string): number | null {
   const match = value.trim().replace(",", ".").match(/^(\d+)(?:\.(\d{1,2}))?$/);

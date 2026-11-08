@@ -58,7 +58,11 @@ export async function createAgency(_prev: FormState, form: FormData): Promise<Fo
       console.error("[affiliates] referral not recorded", error),
     );
   }
-  // No automatic trial: the owner chooses a plan first (plans may offer free days).
+  // No automatic trial: the owner chooses a plan first (plans may offer free days), starting from the one they picked on the pricing page.
+  const plan = String(form.get("plan") ?? "");
+  const interval = form.get("interval") === "year" ? "year" : "month";
+  // In a cookie, since the terms step can come between here and the billing page. It only preselects a plan.
+  if (organization && /^[a-z0-9_-]{1,48}$/.test(plan)) (await cookies()).set("chosen_plan", `${plan}:${interval}`, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 3600 });
   redirect({ href: organization ? "/app/billing?welcome=1" : "/app", locale: (await getLocale()) as Locale });
   return { ok: true };
 }

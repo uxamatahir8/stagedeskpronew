@@ -34,7 +34,7 @@ test("agency books the event and the customer reports the balance transfer", asy
   await test.step("owner records an inquiry for a new customer", async () => {
     await agency.goto("/nl/app/bookings/new");
     await agency.getByRole("tab", { name: "Nieuwe klant" }).click();
-    await agency.getByLabel("Je naam").fill(`E2E Klant ${run}`);
+    await agency.getByLabel("Naam van de klant").fill(`E2E Klant ${run}`);
     await agency.getByLabel("E-mailadres").fill(`klant.${run}@test.local`);
     await agency.getByLabel("Datum").fill(todayNl());
     await agency.getByLabel("Naam locatie").fill("Theater Kikker");

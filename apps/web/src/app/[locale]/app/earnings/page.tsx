@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type BookingStatus, artistEarnings, compensationOf } from "@stagedesk/core";
+import { type BookingStatus, artistEarnings, artistShareOfReceived, compensationOf } from "@stagedesk/core";
+import { ARTIST_PAID_BY_AGENCY } from "@stagedesk/db";
 import { currentArtistProfile, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ConnectCard } from "@/components/connect-card";
@@ -53,17 +54,23 @@ async function Earnings() {
   }
 
   // The artist's own bookings at this agency; shares are a fixed percentage of the booking total.
-  const [assignments, ledger] = await Promise.all([
+  const [assignments, ledger, offlinePayments] = await Promise.all([
     prisma.bookingAssignment.findMany({
       where: { artistId: artist.id, status: "accepted", booking: { status: { in: [...done, ...upcoming] } } },
       include: { booking: { select: { id: true, trackingCode: true, currency: true, eventType: true, eventDate: true, status: true, totalCents: true } } },
       orderBy: { booking: { eventDate: "desc" } },
     }),
     prisma.ledgerEntry.findMany({
-      where: { artistId: artist.id, type: { in: ["transfer", "transfer_reversal", "owed_by_agency"] } },
+      where: { artistId: artist.id, type: { in: ["transfer", "transfer_reversal", "owed_by_agency", ARTIST_PAID_BY_AGENCY] } },
       select: { bookingId: true, type: true, amountCents: true },
     }),
+    // Money the agency received itself: nothing goes through Stripe, so it pays the artist directly.
+    prisma.payment.findMany({
+      where: { kind: { not: "refund" }, method: { not: "stripe" }, booking: { assignments: { some: { artistId: artist.id, status: "accepted" } } } },
+      select: { bookingId: true, amountCents: true, refundedCents: true },
+    }),
   ]);
+  const receivedOffline = (bookingId: string) => offlinePayments.filter((p) => p.bookingId === bookingId).reduce((sum, p) => sum + p.amountCents - p.refundedCents, 0);
   const ledgerFor = (bookingId: string, types: string[]) =>
     ledger.filter((l) => l.bookingId === bookingId && types.includes(l.type)).reduce((sum, l) => sum + l.amountCents, 0);
   const rows = assignments.map((a) => ({
@@ -73,7 +80,9 @@ async function Earnings() {
     // A share of the booking, or the fixed fee agreed for it.
     share: artistEarnings(compensationOf(a), a.booking.totalCents),
     paidOut: ledgerFor(a.booking.id, ["transfer", "transfer_reversal"]),
-    owed: ledgerFor(a.booking.id, ["owed_by_agency"]),
+    owed: (done as readonly string[]).includes(a.booking.status)
+      ? Math.max(0, artistShareOfReceived(compensationOf(a), receivedOffline(a.booking.id), a.booking.totalCents) + ledgerFor(a.booking.id, ["owed_by_agency"]) - ledgerFor(a.booking.id, [ARTIST_PAID_BY_AGENCY]))
+      : 0,
   }));
   // Totals are in the currency most gigs are in; an artist working across currencies sees each gig in its own below.
   const counts = new Map<string, number>();

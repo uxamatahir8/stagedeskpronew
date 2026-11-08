@@ -1,3 +1,15 @@
+/** What the booking update emails can mention. */
+export interface BookingUpdateCopy {
+  name: string;
+  agency: string;
+  customer: string;
+  artist: string;
+  code: string;
+  event: string;
+  date: string;
+  reason: string;
+}
+
 export type EmailLocale = "nl" | "en";
 
 /** All email text in both languages. Templates only arrange it. */
@@ -249,6 +261,50 @@ export const copy = {
       body: (name: string, agency: string) => `Hoi ${name}, ${agency} heeft nog een paar gegevens nodig om je offerte te maken. Het invullen duurt een paar minuten.`,
       button: "Gegevens invullen",
       until: (until: string) => `De link werkt tot ${until} en is alleen voor jou.`,
+    },
+    bookingUpdate: {
+      quoteAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.customer} heeft de offerte geaccepteerd (${p.code})`,
+        heading: "Offerte geaccepteerd",
+        body: (p: BookingUpdateCopy) => `${p.customer} heeft de offerte voor de ${p.event}${p.date ? ` op ${p.date}` : ""} geaccepteerd. Wijs nu een artiest toe als dat nog niet is gebeurd.`,
+        button: "Boeking openen",
+      },
+      artistAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} treedt op (${p.code})`,
+        heading: "Artiest heeft geaccepteerd",
+        body: (p: BookingUpdateCopy) => `${p.artist} heeft het optreden voor de ${p.event}${p.date ? ` op ${p.date}` : ""} geaccepteerd.`,
+        button: "Boeking openen",
+      },
+      artistDeclined: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} kan niet optreden (${p.code})`,
+        heading: "Artiest heeft afgezegd",
+        body: (p: BookingUpdateCopy) => `${p.artist} kan niet optreden op de ${p.event}${p.date ? ` op ${p.date}` : ""}. Kies een andere artiest.${p.reason ? ` Reden: ${p.reason}` : ""}`,
+        button: "Andere artiest kiezen",
+      },
+      bookingConfirmed: {
+        subject: (p: BookingUpdateCopy) => `Je boeking bij ${p.agency} is bevestigd (${p.code})`,
+        heading: "Je boeking is bevestigd",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, alles staat klaar voor je ${p.event}${p.date ? ` op ${p.date}` : ""}. De artiest heeft bevestigd.`,
+        button: "Bekijk je boeking",
+      },
+      bookingCancelled: {
+        subject: (p: BookingUpdateCopy) => `Je boeking bij ${p.agency} is geannuleerd (${p.code})`,
+        heading: "Je boeking is geannuleerd",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, ${p.agency} heeft je ${p.event}${p.date ? ` op ${p.date}` : ""} geannuleerd.${p.reason ? ` Reden: ${p.reason}` : ""} Vragen? Neem contact op met het bureau.`,
+        button: "Bekijk je boeking",
+      },
+      invoiceIssued: {
+        subject: (p: BookingUpdateCopy) => `Factuur van ${p.agency} (${p.code})`,
+        heading: "Je factuur staat klaar",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, ${p.agency} heeft de factuur voor je ${p.event} gemaakt. Je kunt hem hier bekijken en downloaden.`,
+        button: "Factuur bekijken",
+      },
+      reviewInvitation: {
+        subject: (p: BookingUpdateCopy) => `Hoe was je ${p.event} met ${p.agency}?`,
+        heading: "Hoe was het?",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, we hopen dat je ${p.event} geweldig was. Laat ${p.agency} in een minuutje weten hoe je het vond.`,
+        button: "Beoordeling schrijven",
+      },
     },
     changeDecision: {
       subject: (approved: boolean, agency: string, code: string) => (approved ? `${agency} heeft je wijziging doorgevoerd (${code})` : `${agency} kon je wijziging niet doorvoeren (${code})`),
@@ -540,6 +596,50 @@ export const copy = {
       body: (name: string, agency: string) => `Hi ${name}, ${agency} needs a few more details to prepare your quote. It takes a couple of minutes.`,
       button: "Fill in details",
       until: (until: string) => `The link works until ${until} and is just for you.`,
+    },
+    bookingUpdate: {
+      quoteAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.customer} accepted the quote (${p.code})`,
+        heading: "Quote accepted",
+        body: (p: BookingUpdateCopy) => `${p.customer} accepted the quote for the ${p.event}${p.date ? ` on ${p.date}` : ""}. Assign an artist now if you haven't yet.`,
+        button: "Open booking",
+      },
+      artistAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} will perform (${p.code})`,
+        heading: "Artist accepted",
+        body: (p: BookingUpdateCopy) => `${p.artist} accepted the gig for the ${p.event}${p.date ? ` on ${p.date}` : ""}.`,
+        button: "Open booking",
+      },
+      artistDeclined: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} can't perform (${p.code})`,
+        heading: "Artist declined",
+        body: (p: BookingUpdateCopy) => `${p.artist} can't perform at the ${p.event}${p.date ? ` on ${p.date}` : ""}. Choose another artist.${p.reason ? ` Reason: ${p.reason}` : ""}`,
+        button: "Choose another artist",
+      },
+      bookingConfirmed: {
+        subject: (p: BookingUpdateCopy) => `Your booking with ${p.agency} is confirmed (${p.code})`,
+        heading: "Your booking is confirmed",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, everything is set for your ${p.event}${p.date ? ` on ${p.date}` : ""}. The artist has confirmed.`,
+        button: "View your booking",
+      },
+      bookingCancelled: {
+        subject: (p: BookingUpdateCopy) => `Your booking with ${p.agency} was cancelled (${p.code})`,
+        heading: "Your booking was cancelled",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, ${p.agency} cancelled your ${p.event}${p.date ? ` on ${p.date}` : ""}.${p.reason ? ` Reason: ${p.reason}` : ""} Any questions? Please contact the agency.`,
+        button: "View your booking",
+      },
+      invoiceIssued: {
+        subject: (p: BookingUpdateCopy) => `Invoice from ${p.agency} (${p.code})`,
+        heading: "Your invoice is ready",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, ${p.agency} has made the invoice for your ${p.event}. You can view and download it here.`,
+        button: "View invoice",
+      },
+      reviewInvitation: {
+        subject: (p: BookingUpdateCopy) => `How was your ${p.event} with ${p.agency}?`,
+        heading: "How was it?",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, we hope your ${p.event} was great. Take a minute to tell ${p.agency} how it went.`,
+        button: "Write a review",
+      },
     },
     changeDecision: {
       subject: (approved: boolean, agency: string, code: string) => (approved ? `${agency} has made your change (${code})` : `${agency} couldn't make your change (${code})`),

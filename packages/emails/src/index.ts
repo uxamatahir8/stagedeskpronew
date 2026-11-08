@@ -31,6 +31,7 @@ import {
   QuoteSent,
   GigAssigned,
   BookingDetailsRequest,
+  BookingUpdate,
   ChangeDecision,
   SenderTest,
   ResetPassword,
@@ -178,6 +179,12 @@ export function sendChangeDecision(to: string, p: Parameters<typeof ChangeDecisi
   return send(to, copy[p.locale].changeDecision.subject(p.approved, p.agency, p.code), createElement(ChangeDecision, p));
 }
 
+export function sendBookingUpdate(to: string, p: Parameters<typeof BookingUpdate>[0]) {
+  const c = copy[p.locale].bookingUpdate[p.update];
+  const subject = c.subject({ name: p.name ?? "", agency: p.agency ?? "", customer: p.customer ?? "", artist: p.artist ?? "", code: p.code ?? "", event: p.event ?? "", date: p.date ?? "", reason: p.reason ?? "" });
+  return send(to, subject, createElement(BookingUpdate, p));
+}
+
 export function sendSenderTest(to: string, p: Parameters<typeof SenderTest>[0]) {
   return send(to, copy[p.locale].senderTest.subject, createElement(SenderTest, p));
 }
@@ -302,6 +309,13 @@ const senders = {
   gigAssigned: sendGigAssigned,
   bookingDetailsRequest: sendBookingDetailsRequest,
   changeDecision: sendChangeDecision,
+  quoteAcceptedNotice: sendBookingUpdate,
+  artistAcceptedNotice: sendBookingUpdate,
+  artistDeclinedNotice: sendBookingUpdate,
+  bookingConfirmed: sendBookingUpdate,
+  bookingCancelled: sendBookingUpdate,
+  invoiceIssued: sendBookingUpdate,
+  reviewInvitation: sendBookingUpdate,
   senderTest: sendSenderTest,
   invitation: sendInvitation,
   affiliateApproved: sendAffiliateApproved,

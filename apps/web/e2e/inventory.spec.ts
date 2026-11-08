@@ -28,7 +28,7 @@ async function choose(page: Page, combobox: string | RegExp, option: string | Re
 async function newInquiry(page: Page, name: string) {
   await page.goto("/nl/app/bookings/new");
   await page.getByRole("tab", { name: "Nieuwe klant" }).click();
-  await page.getByLabel("Je naam").fill(name);
+  await page.getByLabel("Naam van de klant").fill(name);
   await page.getByLabel("E-mailadres").fill(`${name.toLowerCase().replace(/\W+/g, ".")}@test.local`);
   await page.getByLabel("Datum").fill(date);
   await page.getByLabel("Naam locatie").fill("Tivoli");

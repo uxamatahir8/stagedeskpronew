@@ -11,7 +11,7 @@ export interface PdfLine {
 }
 
 export interface PdfData {
-  kind: "quote" | "invoice";
+  kind: "quote" | "invoice" | "credit_note";
   locale: "nl" | "en";
   /** The booking's currency; euros when left out. */
   currency?: string;

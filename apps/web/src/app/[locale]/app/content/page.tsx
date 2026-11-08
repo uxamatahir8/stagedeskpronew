@@ -50,6 +50,7 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
   ]);
   const en = locale === "en";
   const now = new Date();
+  const waiting = articles.filter((a) => a.status === "pending").length;
   const publicBase = kind === "blog" ? "/blog" : kind === "help" ? "/help" : "/changelog";
 
   return (
@@ -78,6 +79,12 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
           </Link>
         ))}
       </nav>
+
+      {waiting > 0 && (
+        <Link href={`/app/content?${kind === "blog" ? "" : `kind=${kind}&`}status=pending`} className="flex w-fit items-center gap-2 rounded-lg border border-info/40 bg-info/10 px-3 py-2 text-sm font-medium">
+          {t("pendingApproval", { count: waiting })}
+        </Link>
+      )}
 
       <div className={cn("grid gap-6", kind !== "changelog" && "2xl:grid-cols-[minmax(0,1fr)_22rem]")}>
         <div className="grid content-start gap-4">

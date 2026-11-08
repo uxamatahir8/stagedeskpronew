@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ShieldCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type FormEvent, useState } from "react";
@@ -49,7 +50,7 @@ export function DetailsForm({ values }: { values: { name: string; email: string;
         <CardTitle>{t("profile.details")}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form action={save} className="grid gap-4 sm:grid-cols-2">
+        <form {...keepValues(save)} className="grid gap-4 sm:grid-cols-2">
           <FormField id="profile-name" label={t("auth.name")}>
             <Input id="profile-name" name="name" defaultValue={values.name} required maxLength={191} autoComplete="name" />
           </FormField>
@@ -201,7 +202,7 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
         )}
 
         {step.kind === "password" && (
-          <form action={confirmPassword} className="grid max-w-sm gap-4">
+          <form {...keepValues(confirmPassword)} className="grid max-w-sm gap-4">
             <FormField id="twofa-password" label={t("profile.confirmPassword")}>
               <PasswordInput id="twofa-password" name="password" required autoComplete="current-password" />
             </FormField>
@@ -224,7 +225,13 @@ export function TwoFactorCard({ enabled }: { enabled: boolean }) {
             </div>
             <div className="grid content-start gap-4">
               <p className="text-sm text-muted-foreground">{t("profile.scanQr")}</p>
-              <form action={verify} className="grid max-w-xs gap-3">
+              <div className="grid gap-1 text-sm">
+                <p className="text-muted-foreground">{t("profile.manualKey")}</p>
+                <code data-testid="totp-key" className="w-fit rounded bg-muted px-2 py-1 font-mono break-all select-all">
+                  {new URL(step.totpURI).searchParams.get("secret")}
+                </code>
+              </div>
+              <form {...keepValues(verify)} className="grid max-w-xs gap-3">
                 <FormField id="twofa-code" label={t("auth.code")}>
                   <Input
                     id="twofa-code"

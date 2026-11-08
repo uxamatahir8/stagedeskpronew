@@ -53,7 +53,7 @@ async function setPassword(page: Page, link: string) {
 async function newBookingFor(page: Page, name: string, email: string, date: string) {
   await page.goto("/nl/app/bookings/new");
   await page.getByRole("tab", { name: "Nieuwe klant" }).click();
-  await page.getByLabel("Je naam").fill(name);
+  await page.getByLabel("Naam van de klant").fill(name);
   await page.getByLabel("E-mailadres").fill(email);
   await page.getByLabel("Datum").fill(date);
   await page.getByLabel("Naam locatie").fill("Tivoli");

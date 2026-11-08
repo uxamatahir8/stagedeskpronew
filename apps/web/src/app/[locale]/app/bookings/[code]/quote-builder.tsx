@@ -5,7 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useFormatter } from "@/components/date-prefs";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { computeQuote, type DepositRule, type DepositType, parseEuros, parseQuantity } from "@stagedesk/core";
+import { computeQuote, type DepositRule, type DepositType, parseEuros, parseQuantity, quoteAmountProblem } from "@stagedesk/core";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -111,6 +111,24 @@ export function QuoteBuilder({
   }, [lines, depositPct, depositType, depositFixed]);
   const fixedInvalid = depositType === "fixed" && (parseEuros(depositFixed) === null || (parseEuros(depositFixed) ?? 0) < 0);
 
+  // Why it can't be sent yet, said out loud instead of a greyed-out button or a silently changed value.
+  const pctValue = Number(depositPct.replace(",", "."));
+  const pctInvalid = depositType === "percentage" && (depositPct.trim() === "" || !Number.isFinite(pctValue) || pctValue < 0 || pctValue > 100);
+  const daysValue = Number(days);
+  const daysInvalid = !Number.isInteger(daysValue) || daysValue < 1 || daysValue > 180;
+  const badLine = lines.findIndex((l) => (l.description || l.unitPrice) && (parseQuantity(l.quantity) === null || parseEuros(l.unitPrice) === null));
+  const amountProblem = quoteAmountProblem(totals);
+  const blocked =
+    badLine >= 0
+      ? t("invalidLine", { n: badLine + 1 })
+      : totals.lines.length === 0
+        ? t("needsLine")
+        : amountProblem === "negative_total"
+          ? t("totalNegative")
+          : amountProblem === "amount_too_high"
+            ? t("totalTooHigh")
+            : null;
+
   const update = (k: string, patch: Partial<BuilderLine>) => setLines((ls) => ls.map((l) => (l.key === k ? { ...l, ...patch } : l)));
   const lineTotal = (l: BuilderLine) => {
     const q = parseQuantity(l.quantity);
@@ -130,7 +148,7 @@ export function QuoteBuilder({
       const draft: QuoteDraft = {
         ...(defaults ? { depositType, depositFixed, locale: mailLocale } : {}),
         depositPct: Math.min(100, Math.max(0, Number(depositPct.replace(",", ".")) || 0)),
-        expiresInDays: Math.max(1, Math.min(180, Number(days) || 14)),
+        expiresInDays: daysValue,
         notes: notes || null,
         lines: lines.map(({ description, quantity, unitPrice, vatBps }) => ({ description, quantity, unitPrice, vatBps })),
       };
@@ -243,8 +261,8 @@ export function QuoteBuilder({
             </FormField>
           )}
           {depositType === "percentage" && (
-            <FormField required id="q-deposit" label={t("deposit")}>
-              <Input required id="q-deposit" value={depositPct} inputMode="decimal" onChange={(e) => setDepositPct(e.target.value)} />
+            <FormField required id="q-deposit" label={t("deposit")} error={pctInvalid ? t("depositPctInvalid") : undefined}>
+              <Input required id="q-deposit" value={depositPct} inputMode="decimal" onChange={(e) => setDepositPct(e.target.value)} aria-invalid={pctInvalid || undefined} />
             </FormField>
           )}
           {depositType === "fixed" && (
@@ -260,8 +278,8 @@ export function QuoteBuilder({
               </NativeSelect>
             </FormField>
           )}
-          <FormField required id="q-days" label={t("validDays")}>
-            <Input required id="q-days" value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} />
+          <FormField required id="q-days" label={t("validDays")} error={daysInvalid ? t("validDaysInvalid") : undefined}>
+            <Input required id="q-days" value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} aria-invalid={daysInvalid || undefined} />
           </FormField>
           <FormField id="q-notes" label={t("notes")} className="sm:col-span-2">
             <Textarea id="q-notes" value={notes} rows={3} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />
@@ -300,11 +318,16 @@ export function QuoteBuilder({
         </dl>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {blocked && (
+          <p role="status" className="mr-auto text-sm text-muted-foreground">
+            {blocked}
+          </p>
+        )}
         <Button variant="ghost" onClick={onDone}>
           {tu("secondary")}
         </Button>
-        <Button onClick={submit} disabled={pending || totals.lines.length === 0 || fixedInvalid}>
+        <Button onClick={submit} disabled={pending || blocked !== null || fixedInvalid || pctInvalid || daysInvalid}>
           <SendIcon />
           {submitLabel ?? t("send")}
         </Button>

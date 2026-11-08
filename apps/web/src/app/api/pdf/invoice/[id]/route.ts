@@ -1,6 +1,6 @@
 import { parseInvoiceTemplate, templateBackgroundAllowed } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
-import { canOpenBooking, type PdfLine, pdfLocale, pdfResponse, renderBookingPdf } from "@/lib/pdf/render";
+import { canOpenBooking, type PdfLine, pdfLocale, pdfResponse, quoteLinkOpens, renderBookingPdf } from "@/lib/pdf/render";
 
 interface InvoiceSnapshot {
   agency: {
@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: RouteContext<"/api/pdf/i
     where: { id },
     include: { booking: { select: { organizationId: true, customerId: true, paidCents: true, currency: true } }, organization: { select: { brandColor: true } } },
   });
-  if (!invoice || !(await canOpenBooking(request, invoice.booking))) return new Response("Not found", { status: 404 });
+  if (!invoice || !((await quoteLinkOpens(request, invoice.bookingId)) || (await canOpenBooking(request, invoice.booking)))) return new Response("Not found", { status: 404 });
 
   // The invoice is printed from its snapshot, so later edits to the agency or quote don't change it.
   const snap = invoice.data as unknown as InvoiceSnapshot;

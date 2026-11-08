@@ -12,8 +12,10 @@ import { PaymentsError } from "@stagedesk/payments";
 export async function writeBlocked(organizationId: string): Promise<string | null> {
   const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { suspendedAt: true } });
   if (org?.suspendedAt) return (await getTranslations("agencySuspended"))("title");
-  const { access } = await agencyBilling(organizationId);
-  return access.level === "read_only" ? (await getTranslations("billing"))("readOnly") : null;
+  const { access, subscription } = await agencyBilling(organizationId);
+  if (access.level !== "read_only") return null;
+  // Someone who never had a plan isn't told it "ended".
+  return (await getTranslations("billing"))(subscription ? "readOnly" : "readOnlyNoPlan");
 }
 
 /**
@@ -51,6 +53,7 @@ export async function paymentsErrorMessage(error: unknown): Promise<string> {
   const stripe = error as { type?: string; message?: string } | null;
   if (stripe?.type === "StripeInvalidRequestError" && /signed up for Connect/i.test(stripe.message ?? "")) return t("errors_connect_not_enabled");
   if (stripe?.type === "StripeAuthenticationError") return t("errors_stripe_keys");
+  if (stripe?.type === "StripeInvalidRequestError" && /tax/i.test(stripe.message ?? "")) return t("errors_stripe_tax");
   return (await getTranslations("auth"))("generic");
 }
 

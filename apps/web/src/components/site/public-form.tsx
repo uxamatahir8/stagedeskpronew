@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { CheckCircle2Icon } from "lucide-react";
 import { useLocale } from "next-intl";
 import { useState, useTransition } from "react";
@@ -29,6 +30,7 @@ export function PublicForm({
 }) {
   const locale = useLocale();
   const [result, setResult] = useState<FormResult | null>(null);
+  const [attempts, setAttempts] = useState(0);
   const [pending, startTransition] = useTransition();
 
   if (result?.ok) {
@@ -41,7 +43,17 @@ export function PublicForm({
   }
 
   return (
-    <form action={(form) => startTransition(async () => setResult(await action(form)))} className={className} aria-busy={pending}>
+    <form
+      {...keepValues((form) =>
+        startTransition(async () => {
+          const next = await action(form);
+          setResult(next);
+          if (!next.ok) setAttempts((n) => n + 1);
+        }),
+      )}
+      className={className}
+      aria-busy={pending}
+    >
       {/* Bot trap: hidden from people and assistive tech. */}
       <div aria-hidden className="absolute -left-[9999px] h-0 overflow-hidden">
         <label>
@@ -50,7 +62,7 @@ export function PublicForm({
         </label>
       </div>
       {children}
-      {turnstileKey && <Turnstile siteKey={turnstileKey} language={locale} />}
+      {turnstileKey && <Turnstile siteKey={turnstileKey} language={locale} resetCount={attempts} />}
       {result && !result.ok && <FormMessage>{result.message}</FormMessage>}
     </form>
   );

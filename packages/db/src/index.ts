@@ -2,6 +2,8 @@ export { prisma } from "./client";
 export { getSetting, updateSetting } from "./settings";
 export { tenantDb, tenantModels, TenantScopeError, type TenantDb } from "./tenant";
 export * from "./affiliates";
+export * from "./artist-settlement";
+export * from "./credit-notes";
 export * from "./agencies";
 export * from "./analytics";
 export * from "./audit";

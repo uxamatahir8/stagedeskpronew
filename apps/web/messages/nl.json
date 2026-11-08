@@ -182,7 +182,8 @@
     "emptyAction": "Nieuwe offerte",
     "tabsAll": "Alle",
     "tabsOpen": "Open",
-    "tabsDone": "Klaar"
+    "tabsDone": "Klaar",
+    "fileTooLarge": "Dit bestand is te groot. Kies een bestand kleiner dan 5 MB."
   },
   "auth": {
     "brandLine": "Boekingen, offertes en betalingen voor entertainmentbureaus.",
@@ -439,7 +440,8 @@
     "verify": "Verifiëren en aanzetten",
     "enabled": "Verificatie in twee stappen staat aan.",
     "disabled": "Verificatie in twee stappen staat uit.",
-    "statusOn": "Aan"
+    "statusOn": "Aan",
+    "manualKey": "Kun je niet scannen? Vul deze sleutel in je app in:"
   },
   "errors": {
     "forbiddenTitle": "Je hebt geen toegang tot deze pagina",
@@ -520,7 +522,11 @@
     "manual_numbers_off": "Zelf factuurnummers invullen staat uit voor je bureau (Instellingen → Facturen).",
     "quote_outdated": "De evenementgegevens zijn gewijzigd nadat deze offerte is verstuurd. Verstuur eerst een herziene offerte.",
     "artist_no_account": "Deze artiest heeft nog geen login en kan een aanvraag dus niet zien of beantwoorden. Nodig de artiest eerst uit via de artiestenpagina.",
-    "artist_account_disabled": "Het account van deze artiest is uitgeschakeld, dus een aanvraag kan niet worden gezien of beantwoord."
+    "artist_account_disabled": "Het account van deze artiest is uitgeschakeld, dus een aanvraag kan niet worden gezien of beantwoord.",
+    "negative_total": "Het totaal van een offerte kan niet onder nul zijn. Controleer de kortingsregels.",
+    "amount_too_high": "Dit bedrag is te hoog. Controleer de prijs en het aantal.",
+    "overpayment": "Dit is meer dan het openstaande bedrag. Controleer het bedrag, of leg het toch vast als de klant echt meer heeft betaald.",
+    "nothing_due": "Er staat niets meer open voor deze artiest."
   },
   "bookings": {
     "title": "Boekingen",
@@ -579,7 +585,9 @@
     "invalidDate": "Kies een datum.",
     "invalidPrice": "Vul een bedrag in zoals 125 of 125,50.",
     "backToCalendar": "Terug naar de agenda",
-    "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is."
+    "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is.",
+    "pastDate": "Deze datum is al geweest. Kies vandaag of een latere datum.",
+    "customerName": "Naam van de klant"
   },
   "booking": {
     "eventDetails": "Evenementgegevens",
@@ -720,7 +728,18 @@
     "applyAnywayConfirm": "Dit vervangt de huidige waarden hier door wat de klant vroeg.",
     "changeEmailFailed": "De e-mail aan de klant kon niet worden opgeslagen voor verzending; verstuur hem opnieuw via de e-maillijst van de boeking.",
     "assignNeedsAccount": "{count, plural, one {# artiest is niet te kiezen} other {# artiesten zijn niet te kiezen}} tot ze een werkende login hebben.",
-    "assignOpenArtists": "Artiesten openen"
+    "assignOpenArtists": "Artiesten openen",
+    "recordAnyway": "Toch vastleggen",
+    "needsLine": "Voeg minstens één regel toe met een omschrijving en een prijs.",
+    "totalNegative": "Het totaal kan niet onder nul zijn. Controleer de kortingsregels.",
+    "totalTooHigh": "Dit bedrag is te hoog. Controleer de prijs en het aantal.",
+    "depositPctInvalid": "Vul een percentage in van 0 tot 100.",
+    "validDaysInvalid": "Vul een heel aantal dagen in van 1 tot 180.",
+    "downloadCreditNote": "Creditnota {number}",
+    "artistBalanceDue": "Je moet {artist} nog {amount} betalen voor deze boeking. Betaal rechtstreeks en markeer het daarna als betaald.",
+    "artistBalanceMarkPaid": "Artiest als betaald markeren",
+    "artistBalancePaid": "{artist} als betaald gemarkeerd.",
+    "inquiryNotes": "Notities bij de aanvraag"
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -758,7 +777,8 @@
     "change_requested": "De klant heeft gevraagd de evenementgegevens te wijzigen",
     "change_withdrawn": "De klant heeft het wijzigingsverzoek ingetrokken",
     "change_approved": "Wijzigingsverzoek goedgekeurd",
-    "change_rejected": "Wijzigingsverzoek geweigerd"
+    "change_rejected": "Wijzigingsverzoek geweigerd",
+    "artist_paid": "{stageName} als betaald gemarkeerd"
   },
   "quotes": {
     "title": "Offertes",
@@ -854,7 +874,7 @@
     "payType": "Vergoeding",
     "payType_percentage": "Percentage van elke boeking",
     "payType_fixed": "Vast bedrag per boeking",
-    "payType_percentageHint": "De artiest krijgt dit deel van wat de klant betaalt.",
+    "payType_percentageHint": "De artiest krijgt dit deel van wat de klant betaalt, inclusief btw. Gebruik een vast bedrag om een bedrag af te spreken.",
     "payType_fixedHint": "Hetzelfde bedrag voor elke boeking, wat de boeking ook kost.",
     "fixedFee": "Bedrag per boeking ({currency})",
     "fixedFeeHint": "Geldt voor boekingen die je vanaf nu toewijst; al toegewezen optredens houden hun vergoeding.",
@@ -983,7 +1003,8 @@
     "provider_soundcloud": "Open op SoundCloud",
     "provider_mixcloud": "Open op Mixcloud",
     "provider_tidal": "Open op TIDAL",
-    "provider_deezer": "Open op Deezer"
+    "provider_deezer": "Open op Deezer",
+    "creditNote": "Creditnota {number} downloaden"
   },
   "quotePage": {
     "title": "Offerte {code}",
@@ -1013,7 +1034,8 @@
     "accountExists": "Je hebt al een account. Log in met je e-mailadres.",
     "haveAccount": "Heb je al een account?",
     "signIn": "Log in om je boeking te volgen",
-    "outdated": "De gegevens van je evenement zijn gewijzigd nadat deze offerte is gemaakt. Het bureau stuurt je een bijgewerkte offerte."
+    "outdated": "De gegevens van je evenement zijn gewijzigd nadat deze offerte is gemaakt. Het bureau stuurt je een bijgewerkte offerte.",
+    "agencySuspended": "{agency} kan op dit moment geen nieuwe boekingen of betalingen aannemen, dus je kunt dit hier niet accepteren of betalen. Neem rechtstreeks contact op met het bureau."
   },
   "reviews": {
     "title": "Reviews",
@@ -1048,7 +1070,10 @@
     "toPay": "Te betalen",
     "payWithin": "Graag betalen binnen 14 dagen onder vermelding van factuurnummer {number}.",
     "payTo": "Betaalgegevens",
-    "page": "{number} · pagina {page} van {pages}"
+    "page": "{number} · pagina {page} van {pages}",
+    "credit_note": "Creditnota",
+    "creditLine": "Correctie op factuur {number}",
+    "creditFooter": "Deze creditnota corrigeert factuur {number}."
   },
   "budgetRanges": {
     "lt_750": "Tot € 750",
@@ -1294,7 +1319,10 @@
     "cancelDone": "Opgezegd. Je abonnement loopt door tot het einde van de betaalde periode.",
     "resume": "Opzegging intrekken",
     "resumeDone": "Je abonnement loopt gewoon door.",
-    "status_free": "Gratis: aanvragen beantwoorden en boekingen aannemen kost niets. Het Artiest-abonnement voegt je openbare profiel en direct boeken toe."
+    "status_free": "Gratis: aanvragen beantwoorden en boekingen aannemen kost niets. Het Artiest-abonnement voegt je openbare profiel en direct boeken toe.",
+    "readOnlyNoPlan": "Kies een abonnement onder Abonnement om StageDesk te gebruiken. Tot die tijd kun je rondkijken maar niets wijzigen.",
+    "yourChoice": "Jouw keuze",
+    "exclVat": "Excl. btw"
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -1389,7 +1417,12 @@
     "saved": "Instellingen opgeslagen.",
     "invalid": "Sommige waarden kloppen niet. Controleer de getallen en probeer het opnieuw.",
     "waitlistMode": "Wachtlijstmodus",
-    "waitlistModeHint": "Vóór de lancering: de website verzamelt aanmeldingen voor de wachtlijst in plaats van een proefperiode aan te bieden."
+    "waitlistModeHint": "Vóór de lancering: de website verzamelt aanmeldingen voor de wachtlijst in plaats van een proefperiode aan te bieden.",
+    "subscriptionTax": "Btw op abonnementen",
+    "subscriptionTax_automatic": "Automatisch, via Stripe Tax",
+    "subscriptionTax_off": "Uit: alleen de abonnementsprijs rekenen",
+    "subscriptionTax_automaticHint": "Stripe rekent bij het afrekenen de juiste btw en verwerkt EU-btw-nummers. Stripe Tax moet zijn ingesteld in je Stripe-account, anders wordt het afrekenen geweigerd.",
+    "subscriptionTax_offHint": "Er wordt geen btw gerekend. Gebruik dit alleen om te testen: op de website staat dat abonnementen exclusief btw zijn."
   },
   "agencyFee": {
     "deal": "Kostenafspraak",
@@ -1452,7 +1485,8 @@
     "errors_no_customer": "Er is nog geen betaalaccount.",
     "searchPlaceholder": "Zoek op klant, code of kenmerk",
     "errors_connect_not_enabled": "Online betalen via Stripe is nog niet ingeschakeld voor het platform. De platformbeheerder moet Stripe Connect aanzetten in het Stripe-dashboard (dashboard.stripe.com/connect).",
-    "errors_stripe_keys": "De Stripe-sleutels van het platform kloppen niet. De platformbeheerder kan ze controleren onder Betaalinstellingen."
+    "errors_stripe_keys": "De Stripe-sleutels van het platform kloppen niet. De platformbeheerder kan ze controleren onder Betaalinstellingen.",
+    "errors_stripe_tax": "Abonneren kan nu niet, omdat btw nog niet is ingesteld in Stripe. Neem contact op met StageDesk."
   },
   "pay": {
     "payDeposit": "Aanbetaling betalen: {amount}",
@@ -1958,8 +1992,8 @@
     "channels": "Gesprekken",
     "conversation": "Gesprek",
     "removedUser": "Verwijderde gebruiker",
-    "empty_customer": "Nog geen berichten met de klant.",
-    "empty_artist": "Nog geen berichten met de artiest.",
+    "empty_customer": "Nog geen berichten.",
+    "empty_artist": "Nog geen berichten.",
     "write": "Schrijf een bericht",
     "placeholder": "Schrijf een bericht…",
     "sendHint": "Ctrl + Enter om te versturen",
@@ -2165,7 +2199,8 @@
         "operation_retried": "Terugbetaling of uitbetaling opnieuw geprobeerd",
         "operation_closed": "Terugbetaling geboekt met tekort op terugboeking",
         "subscription_reconciled": "Abonnementen van een bureau met Stripe gecontroleerd",
-        "incident_resolved": "Factuurincident als afgehandeld gemarkeerd"
+        "incident_resolved": "Factuurincident als afgehandeld gemarkeerd",
+        "artist_paid": "Artiest als betaald gemarkeerd"
       },
       "user": {
         "disable": "Account uitgeschakeld",
@@ -2262,6 +2297,9 @@
         "delete": "Verwijderde een artiest",
         "invite": "Artiest uitgenodigd of aan account gekoppeld",
         "setup_resent": "Wachtwoordlink artiest opnieuw verstuurd"
+      },
+      "team": {
+        "permissions": "Rolrechten gewijzigd"
       }
     },
     "group_page": "Pagina's",
@@ -2274,7 +2312,16 @@
     "group_impersonation": "Inloggen als",
     "viaAdmin": "via {name}",
     "group_inventory": "Apparatuur",
-    "group_data": "Gegevens"
+    "group_data": "Gegevens",
+    "target": {
+      "user": "Account",
+      "booking": "Boeking",
+      "payment": "Betaling",
+      "organization": "Bureau",
+      "agency": "Bureau",
+      "plan": "Abonnement",
+      "setting": "Instelling"
+    }
   },
   "charts": {
     "showChart": "Grafiek",
@@ -2626,7 +2673,7 @@
     "requestStep3": "Je ontvangt een offerte en beslist zelf",
     "requestButton": "Offerte aanvragen",
     "requestFree": "Gratis en vrijblijvend",
-    "pricingCardsIntro": "Alle functies in elk abonnement; je kiest op basis van het aantal artiesten en boekingen. Probeer gratis, zonder creditcard."
+    "pricingCardsIntro": "Elke functie in elk abonnement; je kiest op basis van het aantal artiesten en boekingen."
   },
   "featuresPage": {
     "eyebrow": "Functies",
@@ -2721,7 +2768,7 @@
     "also_partners": "Partnerbureaus",
     "also_partnersBody": "Deel artiesten en aanvragen met bureaus waar je mee samenwerkt.",
     "ctaTitle": "Zie het zelf in je eigen bureau",
-    "ctaBody": "Probeer alles gratis met je eigen artiesten en diensten. Geen creditcard nodig."
+    "ctaBody": "Zet het op met je eigen artiesten en diensten, en verstuur vandaag nog je eerste offerte."
   },
   "pricingPage": {
     "eyebrow": "Prijzen",
@@ -2792,7 +2839,8 @@
     "convertedNote": "Prijzen in {currency} zijn een schatting tegen de wisselkoers van {date}. Je betaalt in euro's.",
     "compareLink": "Alle abonnementen vergelijken",
     "trialCard": "{days} dagen gratis proberen",
-    "noRateNote": "Er is nog geen wisselkoers voor {currency}, dus prijzen staan in euro's. Je betaalt in euro's."
+    "noRateNote": "Er is nog geen wisselkoers voor {currency}, dus prijzen staan in euro's. Je betaalt in euro's.",
+    "ctaBodyNoTrial": "Zet je bureau in een paar minuten op en verstuur vandaag nog je eerste offerte."
   },
   "forAgencies": {
     "eyebrow": "Voor DJ- en bandbureaus",
@@ -3004,7 +3052,7 @@
     "copied": "Gekopieerd",
     "keepReading": "Lees verder",
     "ctaTitle": "Je boekingen op één plek, vanaf vandaag",
-    "ctaBody": "Aanvragen, offertes, artiesten en betalingen in één systeem. Probeer StageDesk gratis, zonder creditcard.",
+    "ctaBody": "Aanvragen, offertes, artiesten en betalingen in één systeem.",
     "ctaButton": "Gratis proberen",
     "ctaSecondary": "Rondleiding bekijken"
   },
@@ -3034,9 +3082,9 @@
     "intro": "De nieuwste veranderingen in StageDesk."
   },
   "acceptTerms": {
-    "title": "Bijgewerkte voorwaarden",
-    "body": "We hebben de documenten hieronder bijgewerkt. Lees en accepteer ze om verder te gaan.",
-    "updated": "Bijgewerkt op {date}",
+    "title": "Accepteer onze voorwaarden",
+    "body": "Lees en accepteer de onderstaande documenten om verder te gaan.",
+    "updated": "Versie van {date}",
     "read": "Lezen",
     "agree": "Ik ga akkoord met de documenten hierboven.",
     "continue": "Doorgaan"
@@ -3806,7 +3854,21 @@
     "kind_senderTest": "Afzendertest",
     "kind_senderTestHint": "Aan het bureau, om te zien hoe klantmails aankomen",
     "kind_changeDecision": "Wijzigingsverzoek beantwoord",
-    "kind_changeDecisionHint": "Aan de klant, als het bureau een gevraagde wijziging goedkeurt of weigert"
+    "kind_changeDecisionHint": "Aan de klant, als het bureau een gevraagde wijziging goedkeurt of weigert",
+    "kind_quoteAcceptedNotice": "Offerte geaccepteerd",
+    "kind_quoteAcceptedNoticeHint": "Aan het team, als een klant accepteert",
+    "kind_artistAcceptedNotice": "Artiest heeft geaccepteerd",
+    "kind_artistAcceptedNoticeHint": "Aan het team, als een artiest ja zegt",
+    "kind_artistDeclinedNotice": "Artiest heeft afgezegd",
+    "kind_artistDeclinedNoticeHint": "Aan het team, als een artiest nee zegt",
+    "kind_bookingConfirmed": "Boeking bevestigd",
+    "kind_bookingConfirmedHint": "Aan de klant, als de artiest heeft geaccepteerd",
+    "kind_bookingCancelled": "Boeking geannuleerd",
+    "kind_bookingCancelledHint": "Aan de klant, als het bureau annuleert",
+    "kind_invoiceIssued": "Factuur klaar",
+    "kind_invoiceIssuedHint": "Aan de klant, als de factuur is gemaakt",
+    "kind_reviewInvitation": "Uitnodiging voor beoordeling",
+    "kind_reviewInvitationHint": "Aan de klant, als het evenement is afgerond"
   },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
@@ -4681,7 +4743,8 @@
     "error_invalid": "Controleer de velden: titel en tekst zijn verplicht, het adres mag alleen kleine letters, cijfers en streepjes bevatten.",
     "error_category_in_use": "Er staan nog artikelen in deze categorie. Verplaats ze eerst.",
     "error_not_allowed": "Je kunt dit artikel niet wijzigen.",
-    "error_not_editable": "Dit artikel kan in de huidige status niet meer worden bewerkt."
+    "error_not_editable": "Dit artikel kan in de huidige status niet meer worden bewerkt.",
+    "pendingApproval": "{count, plural, one {# artikel wacht} other {# artikelen wachten}} op goedkeuring"
   },
   "blogContributions": {
     "title": "Mijn blogartikelen",

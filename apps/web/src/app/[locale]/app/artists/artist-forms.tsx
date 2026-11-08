@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ImageUpIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useFormatter } from "@/components/date-prefs";
@@ -123,7 +124,7 @@ export function ArtistDialog({ artist, accounts, currency = "EUR" }: { artist?: 
         <DialogHeader>
           <DialogTitle>{artist ? artist.stageName : t("artists.addTitle")}</DialogTitle>
         </DialogHeader>
-        <form action={save} className="grid gap-4 sm:grid-cols-2">
+        <form {...keepValues(save)} className="grid gap-4 sm:grid-cols-2">
           <FormField id="ar-name" label={t("artists.stageName")} className="sm:col-span-2">
             <Input id="ar-name" name="stageName" defaultValue={artist?.stageName} required maxLength={120} />
           </FormField>

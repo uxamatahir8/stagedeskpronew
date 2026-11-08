@@ -182,7 +182,8 @@
     "emptyAction": "New quote",
     "tabsAll": "All",
     "tabsOpen": "Open",
-    "tabsDone": "Done"
+    "tabsDone": "Done",
+    "fileTooLarge": "This file is too large. Choose one smaller than 5 MB."
   },
   "auth": {
     "brandLine": "Bookings, quotes and payments for entertainment agencies.",
@@ -439,7 +440,8 @@
     "verify": "Verify and turn on",
     "enabled": "Two-step verification is on.",
     "disabled": "Two-step verification is off.",
-    "statusOn": "On"
+    "statusOn": "On",
+    "manualKey": "Can't scan? Enter this key in your app:"
   },
   "errors": {
     "forbiddenTitle": "You don't have access to this page",
@@ -520,7 +522,11 @@
     "manual_numbers_off": "Typing invoice numbers is switched off for your agency (Settings → Invoices).",
     "quote_outdated": "The event details changed after this quote was sent. Send a revised quote first.",
     "artist_no_account": "This artist has no login yet, so they can't see or answer a request. Invite them from their artist page first.",
-    "artist_account_disabled": "This artist's account is disabled, so they can't see or answer a request."
+    "artist_account_disabled": "This artist's account is disabled, so they can't see or answer a request.",
+    "negative_total": "The total of a quote can't be below zero. Check the discount lines.",
+    "amount_too_high": "This amount is too high. Check the price and quantity.",
+    "overpayment": "This is more than the amount still due. Check the amount, or record it anyway if the customer really paid more.",
+    "nothing_due": "There's nothing left to pay this artist."
   },
   "bookings": {
     "title": "Bookings",
@@ -579,7 +585,9 @@
     "invalidDate": "Choose a date.",
     "invalidPrice": "Enter an amount like 125 or 125,50.",
     "backToCalendar": "Back to the calendar",
-    "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free."
+    "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free.",
+    "pastDate": "This date has passed. Choose today or a later date.",
+    "customerName": "Customer's name"
   },
   "booking": {
     "eventDetails": "Event details",
@@ -720,7 +728,18 @@
     "applyAnywayConfirm": "This replaces the current values shown here with what the customer asked for.",
     "changeEmailFailed": "The customer's email could not be stored for sending; send it again from the booking's email list.",
     "assignNeedsAccount": "{count, plural, one {# artist can't be picked} other {# artists can't be picked}} until they have a working login.",
-    "assignOpenArtists": "Open artists"
+    "assignOpenArtists": "Open artists",
+    "recordAnyway": "Record anyway",
+    "needsLine": "Add at least one line with a description and a price.",
+    "totalNegative": "The total can't be below zero. Check the discount lines.",
+    "totalTooHigh": "This amount is too high. Check the price and quantity.",
+    "depositPctInvalid": "Enter a percentage from 0 to 100.",
+    "validDaysInvalid": "Enter a whole number of days from 1 to 180.",
+    "downloadCreditNote": "Credit note {number}",
+    "artistBalanceDue": "You still owe {artist} {amount} for this booking. Pay them directly, then mark it as paid.",
+    "artistBalanceMarkPaid": "Mark artist as paid",
+    "artistBalancePaid": "Marked {artist} as paid.",
+    "inquiryNotes": "Notes from the inquiry"
   },
   "timeline": {
     "created": "Booking created",
@@ -758,7 +777,8 @@
     "change_requested": "The customer asked to change the event details",
     "change_withdrawn": "The customer took back their change request",
     "change_approved": "Change request approved",
-    "change_rejected": "Change request refused"
+    "change_rejected": "Change request refused",
+    "artist_paid": "{stageName} marked as paid"
   },
   "quotes": {
     "title": "Quotes",
@@ -854,7 +874,7 @@
     "payType": "Pay",
     "payType_percentage": "Percentage of each booking",
     "payType_fixed": "Fixed amount per booking",
-    "payType_percentageHint": "The artist gets this share of what the customer pays.",
+    "payType_percentageHint": "The artist gets this share of what the customer pays, including VAT. Use a fixed fee to agree an amount instead.",
     "payType_fixedHint": "The same amount for every booking, whatever the booking costs.",
     "fixedFee": "Amount per booking ({currency})",
     "fixedFeeHint": "Applies to bookings you assign from now on; gigs already assigned keep their pay.",
@@ -983,7 +1003,8 @@
     "provider_soundcloud": "Open on SoundCloud",
     "provider_mixcloud": "Open on Mixcloud",
     "provider_tidal": "Open on TIDAL",
-    "provider_deezer": "Open on Deezer"
+    "provider_deezer": "Open on Deezer",
+    "creditNote": "Download credit note {number}"
   },
   "quotePage": {
     "title": "Quote {code}",
@@ -1013,7 +1034,8 @@
     "accountExists": "You already have an account. Sign in with your email.",
     "haveAccount": "Already have an account?",
     "signIn": "Sign in to follow your booking",
-    "outdated": "The event details changed after this quote was made. The agency will send you an updated quote."
+    "outdated": "The event details changed after this quote was made. The agency will send you an updated quote.",
+    "agencySuspended": "{agency} can't take new bookings or payments at the moment, so this can't be accepted or paid here. Please contact the agency directly."
   },
   "reviews": {
     "title": "Reviews",
@@ -1048,7 +1070,10 @@
     "toPay": "To pay",
     "payWithin": "Please pay within 14 days, quoting invoice number {number}.",
     "payTo": "Payment details",
-    "page": "{number} · page {page} of {pages}"
+    "page": "{number} · page {page} of {pages}",
+    "credit_note": "Credit note",
+    "creditLine": "Correction of invoice {number}",
+    "creditFooter": "This credit note corrects invoice {number}."
   },
   "budgetRanges": {
     "lt_750": "Up to €750",
@@ -1294,7 +1319,10 @@
     "cancelDone": "Cancelled. Your plan stays active until the end of the paid period.",
     "resume": "Resume plan",
     "resumeDone": "Your plan continues as normal.",
-    "status_free": "Free: answering requests and taking bookings costs nothing. The Artist plan adds your public profile and direct booking."
+    "status_free": "Free: answering requests and taking bookings costs nothing. The Artist plan adds your public profile and direct booking.",
+    "readOnlyNoPlan": "Choose a plan under Subscription to start using StageDesk. Until then you can look around but not make changes.",
+    "yourChoice": "Your choice",
+    "exclVat": "Excl. VAT"
   },
   "plans": {
     "title": "Plans & limits",
@@ -1389,7 +1417,12 @@
     "saved": "Settings saved.",
     "invalid": "Some values aren't valid. Check the numbers and try again.",
     "waitlistMode": "Waitlist mode",
-    "waitlistModeHint": "Before launch: the website collects sign-ups for the waitlist instead of offering a trial."
+    "waitlistModeHint": "Before launch: the website collects sign-ups for the waitlist instead of offering a trial.",
+    "subscriptionTax": "VAT on subscriptions",
+    "subscriptionTax_automatic": "Automatic, through Stripe Tax",
+    "subscriptionTax_off": "Off: charge the plan price only",
+    "subscriptionTax_automaticHint": "Stripe adds the right VAT at checkout and handles EU VAT numbers. Needs Stripe Tax set up in your Stripe account, or checkout is refused.",
+    "subscriptionTax_offHint": "No VAT is added. Only use this for testing: the website says plans exclude VAT."
   },
   "agencyFee": {
     "deal": "Fee deal",
@@ -1452,7 +1485,8 @@
     "errors_no_customer": "There's no payment account yet.",
     "searchPlaceholder": "Search by customer, code or reference",
     "errors_connect_not_enabled": "Online payments through Stripe aren’t switched on for the platform yet. The platform admin needs to enable Stripe Connect in the Stripe dashboard (dashboard.stripe.com/connect).",
-    "errors_stripe_keys": "The platform’s Stripe keys aren’t valid. The platform admin can check them under Payment setup."
+    "errors_stripe_keys": "The platform’s Stripe keys aren’t valid. The platform admin can check them under Payment setup.",
+    "errors_stripe_tax": "Subscribing isn't available right now because VAT isn't set up in Stripe yet. Please contact StageDesk."
   },
   "pay": {
     "payDeposit": "Pay deposit {amount}",
@@ -1958,8 +1992,8 @@
     "channels": "Conversations",
     "conversation": "Conversation",
     "removedUser": "Removed user",
-    "empty_customer": "No messages with the customer yet.",
-    "empty_artist": "No messages with the artist yet.",
+    "empty_customer": "No messages yet.",
+    "empty_artist": "No messages yet.",
     "write": "Write a message",
     "placeholder": "Write a message…",
     "sendHint": "Ctrl + Enter to send",
@@ -2165,7 +2199,8 @@
         "operation_retried": "Retried a refund or payout",
         "operation_closed": "Closed a refund with a reversal shortfall",
         "subscription_reconciled": "Reconciled an agency's subscriptions with Stripe",
-        "incident_resolved": "Marked a billing incident as handled"
+        "incident_resolved": "Marked a billing incident as handled",
+        "artist_paid": "Marked an artist as paid"
       },
       "user": {
         "disable": "Disabled an account",
@@ -2262,6 +2297,9 @@
         "delete": "Deleted an artist",
         "invite": "Artist invited or linked to an account",
         "setup_resent": "Artist password setup link resent"
+      },
+      "team": {
+        "permissions": "Changed role permissions"
       }
     },
     "group_page": "Pages",
@@ -2274,7 +2312,16 @@
     "group_impersonation": "Log in as",
     "viaAdmin": "via {name}",
     "group_inventory": "Equipment",
-    "group_data": "Data"
+    "group_data": "Data",
+    "target": {
+      "user": "Account",
+      "booking": "Booking",
+      "payment": "Payment",
+      "organization": "Agency",
+      "agency": "Agency",
+      "plan": "Plan",
+      "setting": "Setting"
+    }
   },
   "charts": {
     "showChart": "Chart",
@@ -2626,7 +2673,7 @@
     "requestStep3": "You receive a quote and decide",
     "requestButton": "Request a quote",
     "requestFree": "Free and without obligation",
-    "pricingCardsIntro": "Every feature in every plan; you choose by the number of artists and bookings. Try it free, no credit card."
+    "pricingCardsIntro": "Every feature in every plan; you choose by the number of artists and bookings."
   },
   "featuresPage": {
     "eyebrow": "Features",
@@ -2721,7 +2768,7 @@
     "also_partners": "Partner agencies",
     "also_partnersBody": "Share artists and inquiries with agencies you work with.",
     "ctaTitle": "See it for yourself, in your own agency",
-    "ctaBody": "Try everything for free with your own artists and services. No credit card needed."
+    "ctaBody": "Set it up with your own artists and services, and send your first quote today."
   },
   "pricingPage": {
     "eyebrow": "Pricing",
@@ -2792,7 +2839,8 @@
     "convertedNote": "Prices in {currency} are an estimate at the exchange rate of {date}. You pay in euros.",
     "compareLink": "Compare all plans",
     "trialCard": "Try {days} days free",
-    "noRateNote": "There's no exchange rate for {currency} yet, so prices are shown in euros. You pay in euros."
+    "noRateNote": "There's no exchange rate for {currency} yet, so prices are shown in euros. You pay in euros.",
+    "ctaBodyNoTrial": "Set up your agency in minutes and send your first quote today."
   },
   "forAgencies": {
     "eyebrow": "For DJ and band agencies",
@@ -3004,7 +3052,7 @@
     "copied": "Copied",
     "keepReading": "Keep reading",
     "ctaTitle": "All your bookings in one place, starting today",
-    "ctaBody": "Inquiries, quotes, artists and payments in one system. Try StageDesk free, no credit card needed.",
+    "ctaBody": "Inquiries, quotes, artists and payments in one system.",
     "ctaButton": "Try it free",
     "ctaSecondary": "Take the tour"
   },
@@ -3034,9 +3082,9 @@
     "intro": "What's new in StageDesk."
   },
   "acceptTerms": {
-    "title": "Updated terms",
-    "body": "We've updated the documents below. Please read and accept them to continue.",
-    "updated": "Updated {date}",
+    "title": "Please accept our terms",
+    "body": "Read and accept the documents below to continue.",
+    "updated": "Version of {date}",
     "read": "Read",
     "agree": "I agree to the documents above.",
     "continue": "Continue"
@@ -3806,7 +3854,21 @@
     "kind_senderTest": "Sender test",
     "kind_senderTestHint": "To the agency, to check how its customer emails arrive",
     "kind_changeDecision": "Change request answered",
-    "kind_changeDecisionHint": "To the customer, when the agency approves or refuses a change they asked for"
+    "kind_changeDecisionHint": "To the customer, when the agency approves or refuses a change they asked for",
+    "kind_quoteAcceptedNotice": "Quote accepted",
+    "kind_quoteAcceptedNoticeHint": "To the agency team, when a customer accepts",
+    "kind_artistAcceptedNotice": "Artist accepted",
+    "kind_artistAcceptedNoticeHint": "To the agency team, when an artist says yes",
+    "kind_artistDeclinedNotice": "Artist declined",
+    "kind_artistDeclinedNoticeHint": "To the agency team, when an artist says no",
+    "kind_bookingConfirmed": "Booking confirmed",
+    "kind_bookingConfirmedHint": "To the customer, when the artist has accepted",
+    "kind_bookingCancelled": "Booking cancelled",
+    "kind_bookingCancelledHint": "To the customer, when the agency cancels",
+    "kind_invoiceIssued": "Invoice ready",
+    "kind_invoiceIssuedHint": "To the customer, when the invoice is made",
+    "kind_reviewInvitation": "Review invitation",
+    "kind_reviewInvitationHint": "To the customer, when the event is completed"
   },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
@@ -4681,7 +4743,8 @@
     "error_invalid": "Check the fields: title and text are required, and the address may only contain lowercase letters, numbers and hyphens.",
     "error_category_in_use": "This category still has articles. Move them first.",
     "error_not_allowed": "You cannot change this article.",
-    "error_not_editable": "This article can no longer be edited in its current status."
+    "error_not_editable": "This article can no longer be edited in its current status.",
+    "pendingApproval": "{count, plural, one {# article is} other {# articles are}} waiting for approval"
   },
   "blogContributions": {
     "title": "My blog posts",

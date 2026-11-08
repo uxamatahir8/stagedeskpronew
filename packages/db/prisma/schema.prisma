@@ -190,6 +190,7 @@ model Organization {
   quoteItems         QuoteItem[]
   payments           Payment[]
   invoices           Invoice[]
+  creditNotes        CreditNote[]
   counters           OrganizationCounter[]
   reviews            Review[]
 
@@ -460,6 +461,7 @@ model Booking {
   quotes               Quote[]
   payments             Payment[]
   invoices             Invoice[]
+  creditNotes          CreditNote[]
   review               Review?
   ledger               LedgerEntry[]
   messages             BookingMessage[]
@@ -897,10 +899,37 @@ model Invoice {
   totalCents     Int
   data           Json
   createdAt      DateTime     @default(now())
+  creditNotes    CreditNote[]
 
   @@unique([organizationId, number])
   @@index([bookingId])
   @@map("invoices")
+}
+
+/// Corrects an issued invoice when money on it is refunded. Amounts are positive; the document shows them as negative.
+model CreditNote {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  invoiceId      String       @db.VarChar(64)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// What caused it (a refund operation or a refund seen on a Stripe charge); one note per cause.
+  sourceKey      String       @unique @db.VarChar(191)
+  number         String       @db.VarChar(32)
+  issuedAt       DateTime
+  subtotalCents  Int
+  vatCents       Int
+  totalCents     Int
+  /// The VAT split, as printed.
+  vatGroups      Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, number])
+  @@index([bookingId])
+  @@index([invoiceId])
+  @@map("credit_notes")
 }
 
 /// Per-agency sequences, e.g. invoice numbers per year.

@@ -3,10 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { type Compensation, parseEuros, playlistLink } from "@stagedesk/core";
+import { type Compensation, parseEuros, playlistLink, todayInNetherlands } from "@stagedesk/core";
 import {
   acceptQuote,
   assignArtist,
+  audit,
+  markArtistPaid,
   bookingTypeExists,
   BookingError,
   changeBookingStatus,
@@ -29,6 +31,7 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { emailQuote } from "@/lib/quote-email";
 import { emailArtists } from "@/lib/artist-mail";
+import { mailCustomer } from "@/lib/booking-mail";
 import { emailChangeDecision } from "@/lib/change-requests";
 import { absoluteUrl, accepted, deliver } from "@/lib/mail";
 import { sendStored } from "@/lib/deliver";
@@ -98,12 +101,17 @@ const detailsSchema = z.object({
 });
 
 export async function updateDetailsAction(bookingId: string, _prev: FormState, form: FormData): Promise<FormState> {
-  const { viewer, organization } = await requireAgency("agency.bookings.edit");
+  const { viewer, organization, db } = await requireAgency("agency.bookings.edit");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { message: blocked };
   const parsed = detailsSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
   const { eventDate, budget, ...rest } = parsed.data;
+  // A date already on the booking may stay; a new one can't lie in the past.
+  if (eventDate && eventDate < todayInNetherlands()) {
+    const current = await db.booking.findFirst({ where: { id: bookingId }, select: { eventDate: true } });
+    if (current?.eventDate?.toISOString().slice(0, 10) !== eventDate) return { fieldErrors: { eventDate: (await getTranslations("newBooking"))("pastDate") } };
+  }
   if (!(await bookingTypeExists(rest.eventType, organization.id))) return { fieldErrors: { eventType: (await getTranslations("newBooking"))("invalidEventType") } };
 
   // A new date is refused when the booking's reserved equipment doesn't fit on it.
@@ -223,10 +231,17 @@ export async function changeStatusAction(
   const t = await getTranslations("booking");
   // Artists on the booking now; a cancel or decline takes them off it, and they're told.
   const active = action === "cancel" || action === "decline" ? await db.bookingAssignment.findMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true } }) : [];
-  return runAction(async () => {
+  const before = await db.booking.findFirst({ where: { id: bookingId }, select: { status: true } });
+  const result = await runAction(async () => {
     await changeBookingStatus(organization.id, bookingId, action, { actor: "agency", actorId: viewer.user.id, reason: reason?.trim() || null });
     await emailArtists(active.map((a) => a.id), "cancelled");
   }, t("statusChanged"));
+  if (result.ok) {
+    // An inquiry never promised anything, so only a booking that was quoted or further is worth a cancellation email.
+    if (action === "cancel" && before && before.status !== "inquiry") await mailCustomer(bookingId, "bookingCancelled", { reason: reason?.trim() || null });
+    if (action === "complete") await mailCustomer(bookingId, "reviewInvitation");
+  }
+  return result;
 }
 
 const paymentSchema = z.object({
@@ -237,7 +252,7 @@ const paymentSchema = z.object({
   reference: z.string().max(191).optional(),
 });
 
-export async function recordPaymentAction(bookingId: string, input: z.input<typeof paymentSchema>): Promise<ActionResult> {
+export async function recordPaymentAction(bookingId: string, input: z.input<typeof paymentSchema>, confirmOverpayment = false): Promise<ActionResult & { confirmOverpayment?: boolean }> {
   const { viewer, organization } = await requireAgency("agency.payments.record");
   const blocked = await suspendedBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
@@ -247,7 +262,8 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
   if (!parsed.success || !amountCents || amountCents <= 0) {
     return { ok: false, message: (await getTranslations("bookingErrors"))("invalid_amount") };
   }
-  return runAction(
+  let overpaid = false;
+  const result = await runAction(
     async () => {
       const payment = await recordPayment(
         organization.id,
@@ -260,12 +276,29 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
           reference: parsed.data.reference?.trim() || null,
         },
         viewer.user.id,
-      );
+        { allowOverpayment: confirmOverpayment },
+      ).catch((error: unknown) => {
+        overpaid = error instanceof BookingError && error.code === "overpayment";
+        throw error;
+      });
       // Offline refunds are negative amounts; only money in gets a receipt.
       if (payment.amountCents > 0) await sendReceipt(payment);
     },
     t("paymentRecorded"),
   );
+  return overpaid ? { ...result, confirmOverpayment: true } : result;
+}
+
+/** The agency paid the artist itself; the amount is worked out on the server. */
+export async function markArtistPaidAction(bookingId: string): Promise<ActionResult> {
+  const { viewer, organization } = await requireAgency("agency.payments.record");
+  const blocked = await suspendedBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
+  return runAction(async () => {
+    const balance = await markArtistPaid(organization.id, bookingId, viewer.user.id);
+    await audit({ actorId: viewer.user.id, action: "payment.artist_paid", agencyId: organization.id, targetType: "booking", targetId: bookingId, data: { cents: balance.dueCents, artistId: balance.artistId } });
+    return (await getTranslations("booking"))("artistBalancePaid", { artist: balance.stageName });
+  });
 }
 
 export async function issueInvoiceAction(bookingId: string, manualNumber: string | null = null): Promise<ActionResult> {
@@ -277,7 +310,9 @@ export async function issueInvoiceAction(bookingId: string, manualNumber: string
   if (manualNumber && !viewerCan(viewer, "agency.settings")) return { ok: false, message: (await getTranslations("bookingErrors"))("not_allowed") };
   if (manualNumber !== null && (typeof manualNumber !== "string" || manualNumber.length > 64)) return { ok: false, message: (await getTranslations("bookingErrors"))("invoice_number_invalid") };
   return runAction(async () => {
+    const alreadyIssued = await prisma.invoice.count({ where: { bookingId, organizationId: organization.id } });
     const invoice = await issueInvoice(organization.id, bookingId, viewer.user.id, new Date(), { manualNumber });
+    if (alreadyIssued === 0) await mailCustomer(bookingId, "invoiceIssued");
     return t("invoiceIssued", { number: invoice.number });
   });
 }

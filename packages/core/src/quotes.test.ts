@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeQuote, depositColumns, depositFor, depositRuleOf, lineSubtotal, parseEuros, parseQuantity, quoteChangedFields, quoteEventSnapshot } from "./quotes";
+import { computeQuote, MAX_QUOTE_CENTS, quoteAmountProblem, depositColumns, depositFor, depositRuleOf, lineSubtotal, parseEuros, parseQuantity, quoteChangedFields, quoteEventSnapshot } from "./quotes";
 
 describe("computeQuote", () => {
   it("prices a wedding quote with two VAT rates", () => {
@@ -123,5 +123,25 @@ describe("quote event snapshot", () => {
   });
   it("treats older quotes without a snapshot as matching", () => {
     expect(quoteChangedFields(null, quoteEventSnapshot(booking))).toEqual([]);
+  });
+});
+
+describe("quoteAmountProblem", () => {
+  const line = (unitPriceCents: number) => ({ description: "x", quantityHundredths: 100, unitPriceCents, vatBps: 2_100 });
+
+  it("allows a discount line while the total stays at zero or above", () => {
+    expect(quoteAmountProblem(computeQuote([line(10_000), line(-2_500)], 0))).toBeNull();
+    expect(quoteAmountProblem(computeQuote([line(1_000), line(-1_000)], 0))).toBeNull();
+  });
+
+  it("refuses a total below zero", () => {
+    expect(quoteAmountProblem(computeQuote([line(-500)], 0))).toBe("negative_total");
+    expect(quoteAmountProblem(computeQuote([line(100), line(-500)], 0))).toBe("negative_total");
+  });
+
+  it("refuses amounts above what the money columns are meant to hold", () => {
+    expect(quoteAmountProblem(computeQuote([line(MAX_QUOTE_CENTS)], 0))).toBe("amount_too_high");
+    // A huge line can't be hidden behind an equally huge discount.
+    expect(quoteAmountProblem(computeQuote([line(MAX_QUOTE_CENTS * 2), line(-MAX_QUOTE_CENTS * 2)], 0))).toBe("amount_too_high");
   });
 });

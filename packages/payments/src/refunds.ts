@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { refundReversal } from "@stagedesk/core";
-import { Prisma, prisma } from "@stagedesk/db";
+import { creditRefundTx, Prisma, prisma } from "@stagedesk/db";
 import {
   claimOperation,
   failAttempt,
@@ -234,8 +234,10 @@ async function bookRefund(tx: Prisma.TransactionClient, op: Operation, lines: Le
   if (flipped.count !== 1) throw new LeaseLostError(op.id);
   const base = { organizationId: op.organizationId, bookingId: op.bookingId, paymentId: op.paymentId, operationId: op.id };
   await tx.payment.update({ where: { id: op.paymentId! }, data: { refundedCents: { increment: op.amountCents } } });
+  const before = await tx.booking.findUniqueOrThrow({ where: { id: op.bookingId! }, select: { paidCents: true } });
   await tx.booking.update({ where: { id: op.bookingId! }, data: { paidCents: { decrement: op.amountCents } } });
   await tx.ledgerEntry.createMany({ data: lines.map((l) => ({ ...base, ...l })) });
+  await creditRefundTx(tx, { organizationId: op.organizationId, bookingId: op.bookingId!, refundCents: op.amountCents, paidBeforeRefundCents: before.paidCents, sourceKey: `operation:${op.id}`, now });
   await tx.bookingEvent.create({
     data: { organizationId: op.organizationId, bookingId: op.bookingId!, type: "refund", actorId: op.actorId, data: { amountCents: op.amountCents } },
   });
@@ -287,7 +289,15 @@ export async function syncChargeRefund(charge: Pick<Stripe.Charge, "id" | "amoun
     const extra = Math.min(charge.amount_refunded, payment.amountCents) - payment.refundedCents - (inFlight._sum.amountCents ?? 0);
     if (extra <= 0) return 0;
     await tx.payment.update({ where: { id: payment.id }, data: { refundedCents: { increment: extra } } });
+    const before = await tx.booking.findUniqueOrThrow({ where: { id: payment.bookingId }, select: { paidCents: true } });
     await tx.booking.update({ where: { id: payment.bookingId }, data: { paidCents: { decrement: extra } } });
+    await creditRefundTx(tx, {
+      organizationId: payment.organizationId,
+      bookingId: payment.bookingId,
+      refundCents: extra,
+      paidBeforeRefundCents: before.paidCents,
+      sourceKey: `charge:${charge.id}:${payment.refundedCents + extra}`,
+    });
     await tx.ledgerEntry.create({
       data: { organizationId: payment.organizationId, bookingId: payment.bookingId, paymentId: payment.id, type: "refund", party: "customer", amountCents: extra, stripeObjectId: charge.id },
     });

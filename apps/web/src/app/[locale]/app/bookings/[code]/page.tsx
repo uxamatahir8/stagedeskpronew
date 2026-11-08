@@ -19,7 +19,7 @@ import {
   todayInNetherlands,
   localePrefix,
 } from "@stagedesk/core";
-import { artistAccountStatesOf, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
+import { artistAccountStatesOf, artistBalanceOnBooking, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
 import { changeRows } from "@/lib/change-requests";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
@@ -44,6 +44,7 @@ import {
   RetryEmailButton,
   DetailRequestPanel,
   EditDetailsDialog,
+  ArtistBalanceNotice,
   IssueInvoiceButton,
   QuoteControls,
   RecordPayment,
@@ -81,6 +82,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       notes: { orderBy: { createdAt: "desc" } },
       events: { orderBy: { createdAt: "desc" }, take: 50 },
       invoices: true,
+      creditNotes: { orderBy: { issuedAt: "asc" } },
       changeRequests: { where: { status: "pending" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
@@ -148,6 +150,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
   const activeAssignment = booking.assignments.find((a) => a.status === "pending" || a.status === "accepted") ?? null;
   const lastDeclined = !activeAssignment ? booking.assignments.find((a) => a.status === "declined") : null;
   const invoice = booking.invoices[0] ?? null;
+  const artistBalance = await artistBalanceOnBooking(organization.id, booking.id);
   const pay = paymentStatus(booking.paidCents, booking.totalCents, booking.depositCents);
   // A revision starts from the current quote's upfront payment and language; a first quote from the agency's defaults.
   const agencyDefaults = await prisma.organization.findUniqueOrThrow({
@@ -329,7 +332,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               </dl>
               {booking.message && (
                 <div className="rounded-lg bg-muted/60 p-3 text-sm">
-                  <p className="mb-1 font-medium">{t("booking.customerMessage")}</p>
+                  <p className="mb-1 font-medium">{booking.source === "manual" ? t("booking.inquiryNotes") : t("booking.customerMessage")}</p>
                   <p className="whitespace-pre-line text-muted-foreground">{booking.message}</p>
                 </div>
               )}
@@ -463,6 +466,14 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   ) : (
                     ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} nextNumber={await nextInvoiceNumber(organization.id)} canTypeNumber={agencyDefaults.allowManualInvoiceNumbers && viewerCan(viewer, "agency.settings")} />
                   )}
+                  {booking.creditNotes.map((note) => (
+                    <Button key={note.id} variant="outline" size="sm" asChild>
+                      <a href={`/api/pdf/credit-note/${note.id}?lang=${locale}`} target="_blank" rel="noopener">
+                        <FileDownIcon />
+                        {t("booking.downloadCreditNote", { number: note.number })}
+                      </a>
+                    </Button>
+                  ))}
                   {status !== "settled" && status !== "cancelled" && (
                     <RecordPayment bookingId={booking.id} today={today} suggestedKind={booking.paidCents < booking.depositCents ? "deposit" : "balance"} />
                   )}
@@ -470,6 +481,9 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {canPay && artistBalance && artistBalance.dueCents > 0 && (
+                <ArtistBalanceNotice bookingId={booking.id} stageName={artistBalance.stageName} amount={euro(format, artistBalance.dueCents, booking.currency)} />
+              )}
               {booking.totalCents > 0 && (
                 <dl className="grid grid-cols-3 gap-3 text-sm">
                   <Figure label={t("booking.total")} value={euro(format, booking.totalCents, booking.currency)} />
@@ -497,7 +511,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                       <span>
                         {t(`paymentKinds.${p.kind as "deposit"}`)} · {t(`paymentMethods.${p.method as "cash"}`)}
-                        {p.reference && <span className="text-muted-foreground"> · {p.reference}</span>}
+                        {p.reference && p.kind !== "refund" && <span className="text-muted-foreground"> · {p.reference}</span>}
                       </span>
                       <span className="flex items-center gap-3 tabular-nums">
                         <span className="text-muted-foreground">{eventDate(format, p.receivedAt, "short")}</span>

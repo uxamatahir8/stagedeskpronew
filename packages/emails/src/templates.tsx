@@ -605,6 +605,21 @@ export function ChangeDecision({ locale, name, agency, code, event, approved, ch
   );
 }
 
+export type BookingUpdateName = "quoteAccepted" | "artistAccepted" | "artistDeclined" | "bookingConfirmed" | "bookingCancelled" | "invoiceIssued" | "reviewInvitation";
+
+/** A step in a booking, told to the agency's team or the customer. */
+export function BookingUpdate({ locale, update, url, name = "", agency = "", customer = "", artist = "", code = "", event = "", date = "", reason = "" }: { locale: EmailLocale; update: BookingUpdateName; url: string; name?: string; agency?: string; customer?: string; artist?: string; code?: string; event?: string; date?: string; reason?: string }) {
+  const c = copy[locale].bookingUpdate[update];
+  const text = c.body({ name, agency, customer, artist, code, event, date, reason });
+  return (
+    <EmailLayout locale={locale} preview={text} heading={c.heading}>
+      <Paragraph>{text}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
 /** Sent from the agency settings to check how customer emails arrive. */
 export function SenderTest({ locale, agency, replyTo }: { locale: EmailLocale; agency: string; replyTo: string }) {
   const c = copy[locale].senderTest;

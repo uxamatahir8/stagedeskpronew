@@ -38,7 +38,10 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
   if (!viewer) redirect({ href: "/sign-in?next=/onboarding", locale });
   if (viewer!.role) redirect({ href: "/app", locale });
   const t = await getTranslations("onboarding");
-  const start = (await searchParams)["start"];
+  const query = await searchParams;
+  const start = query["start"];
+  const chosenPlan = typeof query["plan"] === "string" ? query["plan"] : undefined;
+  const chosenInterval = query["interval"] === "year" ? "year" : undefined;
   const startAgency = start === "agency";
   const invitations = await prisma.invitation.findMany({
     where: { email: viewer!.user.email.toLowerCase(), status: "pending", expiresAt: { gt: new Date() } },
@@ -79,7 +82,7 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
     return (
       <AuthCard title={t("title")} description={t("body")}>
         <div className="grid gap-6">
-          <OnboardingForm />
+          <OnboardingForm plan={chosenPlan} interval={chosenInterval} />
           {footer}
         </div>
       </AuthCard>

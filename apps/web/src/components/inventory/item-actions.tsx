@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ArchiveIcon, ArchiveRestoreIcon, CircleCheckIcon, PackageMinusIcon, PackagePlusIcon, SearchCheckIcon, Trash2Icon, TriangleAlertIcon, WrenchIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -77,7 +78,7 @@ function NoteAction({
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
-        <form action={submit} className="grid gap-4">
+        <form {...keepValues(submit)} className="grid gap-4">
           {quantity !== undefined && (
             <FormField id="act-qty" label={t("quantity")}>
               <Input id="act-qty" name="quantity" type="number" min={1} max={Math.max(1, quantity)} defaultValue={1} required inputMode="numeric" />

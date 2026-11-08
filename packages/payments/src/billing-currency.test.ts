@@ -16,9 +16,15 @@ describe("plans are billed in euros", () => {
   let agency: Awaited<ReturnType<typeof agencyWithAccounts>>;
   const created: Record<string, unknown>[] = [];
   const sessions: Record<string, unknown>[] = [];
+  const priceUpdates: Record<string, unknown>[] = [];
   const stripe = {
     products: { create: async () => ({ id: "prod_eur" }), update: async () => ({ id: "prod_eur" }) },
     prices: {
+      retrieve: async (id: string) => ({ id, tax_behavior: "unspecified" }),
+      update: async (id: string, input: Record<string, unknown>) => {
+        priceUpdates.push({ id, ...input });
+        return { id };
+      },
       create: async (input: Record<string, unknown> & { recurring: { interval: string } }) => {
         created.push(input);
         return { id: `price_eur_${input.recurring.interval}` };
@@ -67,5 +73,13 @@ describe("plans are billed in euros", () => {
     expect(sessions).toHaveLength(1);
     expect(sessions[0]!["line_items"]).toEqual([{ price: "price_eur_month", quantity: 1 }]);
     expect(sessions[0]).not.toHaveProperty("currency");
+  });
+  it("adds VAT at checkout through Stripe Tax, on prices marked as excluding it", async () => {
+    await syncPlanToStripe(stripe, planId);
+    const session = sessions.length;
+    await subscriptionCheckout(stripe, { organizationId: agency.organizationId, planId, interval: "month", email: "owner@test.local", locale: "nl", successUrl: "https://app.test/ok", cancelUrl: "https://app.test/no" });
+    expect(sessions[session]).toMatchObject({ automatic_tax: { enabled: true }, tax_id_collection: { enabled: true }, billing_address_collection: "required", customer_update: { address: "auto", name: "auto" } });
+    expect(priceUpdates.at(-1)).toMatchObject({ tax_behavior: "exclusive" });
+    expect(created.at(-1)).toMatchObject({ tax_behavior: "exclusive" });
   });
 });

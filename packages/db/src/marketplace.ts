@@ -1,5 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { computeQuote, type QuoteLineInput, type ServiceArea, servesRequest, subscriptionAccess } from "@stagedesk/core";
+import { computeQuote, quoteAmountProblem, type QuoteLineInput, type ServiceArea, servesRequest, subscriptionAccess } from "@stagedesk/core";
 import { acceptQuote, BookingError, sendQuote } from "./bookings";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
@@ -117,7 +117,7 @@ export async function quoteLeadOffer(leadId: string, organizationId: string, inp
   } catch {
     throw new MarketError("invalid_quote");
   }
-  if (totals.totalCents <= 0) throw new MarketError("invalid_quote");
+  if (totals.totalCents <= 0 || quoteAmountProblem(totals)) throw new MarketError("invalid_quote");
   return prisma.leadOffer.update({
     where: { id: offer.id },
     data: {

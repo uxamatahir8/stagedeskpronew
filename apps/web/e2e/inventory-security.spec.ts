@@ -86,7 +86,7 @@ test.describe.serial("server actions refuse direct requests without the right ac
 
     await owner.goto("/nl/app/bookings/new");
     await owner.getByRole("tab", { name: "Nieuwe klant" }).click();
-    await owner.getByLabel("Je naam").fill(`E2E Sec ${run}`);
+    await owner.getByLabel("Naam van de klant").fill(`E2E Sec ${run}`);
     await owner.getByLabel("E-mailadres").fill(`sec.${run.toLowerCase()}@test.local`);
     await owner.getByLabel("Datum").fill(date);
     await owner.getByLabel("Naam locatie").fill("Tivoli");

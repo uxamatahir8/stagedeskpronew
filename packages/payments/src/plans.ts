@@ -56,8 +56,8 @@ export async function syncPlanToStripe(stripe: Stripe, planId: string) {
       }
     }
     const price = await stripe.prices.create(
-      { product: product.id, currency: "eur", unit_amount: amount, recurring: { interval }, metadata: { planId: plan.id } },
-      { idempotencyKey: `plan-price-${plan.id}-${interval}-${amount}` },
+      { product: product.id, currency: "eur", unit_amount: amount, recurring: { interval }, tax_behavior: "exclusive", metadata: { planId: plan.id } },
+      { idempotencyKey: `plan-price-excl-${plan.id}-${interval}-${amount}` },
     );
     return price.id;
   }

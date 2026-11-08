@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -78,7 +79,7 @@ export function PackageEditor({
   }
 
   return (
-    <form action={save} className="grid gap-6">
+    <form {...keepValues(save)} className="grid gap-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField id="pkg-name" label={t("packageName")}>
           <Input id="pkg-name" name="name" defaultValue={pkg?.name} required maxLength={120} disabled={!canManage} />

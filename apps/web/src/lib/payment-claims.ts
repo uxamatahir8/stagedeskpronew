@@ -21,11 +21,13 @@ export async function paymentOptions(organizationId: string): Promise<PaymentOpt
     getSetting("payments.methods"),
     prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { acceptOnline: true, acceptBankTransfer: true, acceptCash: true, iban: true, bankAccountName: true, paymentInstructions: true },
+      select: { suspendedAt: true, acceptOnline: true, acceptBankTransfer: true, acceptCash: true, iban: true, bankAccountName: true, paymentInstructions: true },
     }),
     prisma.connectedAccount.count({ where: { organizationId, artistId: null, chargesEnabled: true } }),
     isStripeConfigured(),
   ]);
+  // A suspended agency can't confirm or answer anything, so customers aren't offered a way to pay it.
+  if (agency.suspendedAt) return { online: false, bank: null, cash: false };
   return {
     online: allowed.online && agency.acceptOnline && stripe && connected > 0,
     bank:

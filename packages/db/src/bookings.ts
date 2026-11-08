@@ -17,6 +17,7 @@ import {
   type InvoiceNumbering,
   invoiceNumberPattern,
   normalizeInvoiceNumber,
+  quoteAmountProblem,
   quoteChangedFields,
   quoteEventSnapshot,
   type QuoteLineInput,
@@ -49,6 +50,10 @@ export type BookingErrorCode =
   | "no_open_assignment"
   | "quote_not_current"
   | "invalid_amount"
+  | "negative_total"
+  | "amount_too_high"
+  | "overpayment"
+  | "nothing_due"
   | "invalid_compensation"
   | "compensation_currency"
   | "artist_no_account"
@@ -254,6 +259,8 @@ export async function sendQuote(organizationId: string, bookingId: string, input
     if (error instanceof RangeError) throw new BookingError("invalid_amount");
     throw error;
   }
+  const amountProblem = quoteAmountProblem(totals);
+  if (amountProblem) throw new BookingError(amountProblem);
   const expiresAt = new Date(now.getTime() + input.expiresInDays * 86_400_000);
 
   return tenantDb(organizationId).$transaction(async (tx) => {
@@ -322,6 +329,8 @@ export async function acceptQuote(
     // Read again under the booking lock (READ COMMITTED): a revision or another acceptance may have just committed.
     const quote = await tx.quote.findFirstOrThrow({ where: { id: quoteId } });
     if (quote.status !== "sent") throw new BookingError("quote_not_current");
+    // A quote sent before totals below zero were refused can't become a booking either.
+    if (quote.totalCents < 0) throw new BookingError("negative_total");
     // The event changed after this quote went out (date, times, venue, guests…): what would be
     // accepted isn't what was offered, and equipment and the artist are checked for the new date.
     if (quoteChangedFields(quote.eventSnapshot, quoteEventSnapshot(booking)).length > 0) throw new BookingError("quote_outdated");
@@ -643,8 +652,21 @@ export interface PaymentInput {
   reference?: string | null;
 }
 
-export async function recordPayment(organizationId: string, bookingId: string, input: PaymentInput, actorId: string) {
-  return tenantDb(organizationId).$transaction((tx) => recordPaymentTx(tx, organizationId, bookingId, input, actorId));
+/**
+ * A payment someone types in. Money above what's still due is refused unless
+ * they confirmed it (`allowOverpayment`): a typing error shouldn't reach the
+ * books and the customer's receipt, but customers do sometimes pay too much.
+ * The check runs under the booking lock, so two people can't both slip through.
+ * Money that really arrived elsewhere (Stripe, a confirmed claim) uses recordPaymentTx directly.
+ */
+export async function recordPayment(organizationId: string, bookingId: string, input: PaymentInput, actorId: string, opts: { allowOverpayment?: boolean } = {}) {
+  return tenantDb(organizationId).$transaction(async (tx) => {
+    if (input.amountCents > 0 && !opts.allowOverpayment) {
+      const booking = await loadBooking(tx, bookingId);
+      if (input.amountCents > Math.max(0, booking.totalCents - booking.paidCents)) throw new BookingError("overpayment");
+    }
+    return recordPaymentTx(tx, organizationId, bookingId, input, actorId);
+  });
 }
 
 /** recordPayment inside a caller's transaction on the agency's tenant client (locks the booking first). */
@@ -661,7 +683,13 @@ export async function recordPaymentTx(tx: Tx, organizationId: string, bookingId:
 }
 
 /** Next value of a per-agency sequence; rows are locked so two invoices can't share a number. */
-async function nextCounter(tx: Tx, organizationId: string, key: string) {
+/** Locks a booking of this agency, for work that must see one state at a time. */
+export async function loadBookingForSettlement(tx: { $queryRaw: typeof prisma.$queryRaw }, organizationId: string, bookingId: string) {
+  const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM bookings WHERE id = ${bookingId} AND organizationId = ${organizationId} FOR UPDATE`;
+  if (rows.length === 0) throw new BookingError("not_found");
+}
+
+export async function nextCounter(tx: Tx, organizationId: string, key: string) {
   await tx.$executeRaw`INSERT INTO organization_counters (organizationId, \`key\`, value) VALUES (${organizationId}, ${key}, 0) ON DUPLICATE KEY UPDATE value = value`;
   const rows = await tx.$queryRaw<{ value: number }[]>`SELECT value FROM organization_counters WHERE organizationId = ${organizationId} AND \`key\` = ${key} FOR UPDATE`;
   const next = Number(rows[0]?.value ?? 0) + 1;

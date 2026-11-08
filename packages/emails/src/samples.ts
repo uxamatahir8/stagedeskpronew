@@ -41,6 +41,13 @@ export function emailSamples(locale: EmailLocale, appUrl: string): { [K in Email
       contactPhone: "030 123 4567",
       pdfUrl: `${appUrl}/api/pdf/quote/example`,
     },
+    quoteAcceptedNotice: { locale, update: "quoteAccepted", customer: "Sanne de Vries", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", date: nl ? "12 juni 2027" : "12 June 2027", url: `${appUrl}/app/bookings/K7Q2M9XA` },
+    artistAcceptedNotice: { locale, update: "artistAccepted", artist: "DJ Sem", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", date: nl ? "12 juni 2027" : "12 June 2027", url: `${appUrl}/app/bookings/K7Q2M9XA` },
+    artistDeclinedNotice: { locale, update: "artistDeclined", artist: "DJ Sem", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", date: nl ? "12 juni 2027" : "12 June 2027", reason: nl ? "Al geboekt die avond" : "Already booked that evening", url: `${appUrl}/app/bookings/K7Q2M9XA` },
+    bookingConfirmed: { locale, update: "bookingConfirmed", name: "Sanne", agency: "Feestband Utrecht", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", date: nl ? "12 juni 2027" : "12 June 2027", url: `${appUrl}/app/event?booking=K7Q2M9XA` },
+    bookingCancelled: { locale, update: "bookingCancelled", name: "Sanne", agency: "Feestband Utrecht", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", date: nl ? "12 juni 2027" : "12 June 2027", url: `${appUrl}/app/event?booking=K7Q2M9XA` },
+    invoiceIssued: { locale, update: "invoiceIssued", name: "Sanne", agency: "Feestband Utrecht", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", url: `${appUrl}/q/example` },
+    reviewInvitation: { locale, update: "reviewInvitation", name: "Sanne", agency: "Feestband Utrecht", code: "K7Q2M9XA", event: nl ? "bruiloft" : "wedding", url: `${appUrl}/app/event?booking=K7Q2M9XA` },
     gigAssigned: { locale, status: "new", name: "Sem", agency: "Feestband Utrecht", event: nl ? "bruiloft" : "wedding", date: nl ? "zaterdag 14 juni 2027" : "Saturday 14 June 2027", venue: "Haarzuilens", url: url("/app/gigs/K7Q2M9XA") },
     bookingDetailsRequest: { locale, name: "Sanne", agency: "Feestband Utrecht", until: nl ? "16 november 2026" : "16 November 2026", url: url("/d/example") },
     changeDecision: {
