@@ -59,6 +59,7 @@ export function SettingsForms({
   const [rule, setRule] = useState(feeRuleToDraft(fees.defaultRule, locale));
   const [paidBy, setPaidBy] = useState(fees.stripeFeePaidBy);
   const [serviceFee, setServiceFee] = useState(centsToInput(fees.customerServiceFeeCents, locale));
+  const [exampleStripeFee, setExampleStripeFee] = useState(centsToInput(fees.exampleStripeFeeCents, locale));
 
   const [b, setB] = useState({
     quoteExpiryDays: String(bookings.quoteExpiryDays),
@@ -99,6 +100,7 @@ export function SettingsForms({
               </Select>
             </FormField>
             {field("set-service", t("serviceFee"), serviceFee, setServiceFee, t("serviceFeeHint"))}
+            {field("set-example-stripe", t("exampleStripeFee"), exampleStripeFee, setExampleStripeFee, t("exampleStripeFeeHint"))}
           </div>
           <Button
             className="w-fit"
@@ -106,7 +108,12 @@ export function SettingsForms({
             onClick={() => {
               const defaultRule = draftToFeeRule(rule);
               const fee = parseEuros(serviceFee || "0");
-              save("fees.platform", defaultRule && fee !== null && fee >= 0 ? { defaultRule, stripeFeePaidBy: paidBy, customerServiceFeeCents: fee } : null, t("invalid"));
+              const example = parseEuros(exampleStripeFee || "0");
+              save(
+                "fees.platform",
+                defaultRule && fee !== null && fee >= 0 && example !== null && example >= 0 ? { defaultRule, stripeFeePaidBy: paidBy, customerServiceFeeCents: fee, exampleStripeFeeCents: example } : null,
+                t("invalid"),
+              );
             }}
           >
             {t("save")}

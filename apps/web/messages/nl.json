@@ -182,7 +182,8 @@
     "emptyAction": "Nieuwe offerte",
     "tabsAll": "Alle",
     "tabsOpen": "Open",
-    "tabsDone": "Klaar"
+    "tabsDone": "Klaar",
+    "fileTooLarge": "Dit bestand is te groot. Kies een bestand kleiner dan 5 MB."
   },
   "auth": {
     "brandLine": "Boekingen, offertes en betalingen voor entertainmentbureaus.",
@@ -260,7 +261,7 @@
     },
     "brandPoint1": "Aanvragen, offertes en betalingen op één plek",
     "brandPoint2": "Artiesten nemen optredens aan vanaf hun telefoon",
-    "brandPoint3": "iDEAL-betalingen en automatische uitbetalingen",
+    "brandPoint3": "Betalen met iDEAL | Wero en automatische uitbetalingen",
     "backToSite": "Terug naar de website",
     "terms": "Voorwaarden",
     "privacy": "Privacy",
@@ -439,7 +440,8 @@
     "verify": "Verifiëren en aanzetten",
     "enabled": "Verificatie in twee stappen staat aan.",
     "disabled": "Verificatie in twee stappen staat uit.",
-    "statusOn": "Aan"
+    "statusOn": "Aan",
+    "manualKey": "Kun je niet scannen? Vul deze sleutel in je app in:"
   },
   "errors": {
     "forbiddenTitle": "Je hebt geen toegang tot deze pagina",
@@ -520,7 +522,11 @@
     "manual_numbers_off": "Zelf factuurnummers invullen staat uit voor je bureau (Instellingen → Facturen).",
     "quote_outdated": "De evenementgegevens zijn gewijzigd nadat deze offerte is verstuurd. Verstuur eerst een herziene offerte.",
     "artist_no_account": "Deze artiest heeft nog geen login en kan een aanvraag dus niet zien of beantwoorden. Nodig de artiest eerst uit via de artiestenpagina.",
-    "artist_account_disabled": "Het account van deze artiest is uitgeschakeld, dus een aanvraag kan niet worden gezien of beantwoord."
+    "artist_account_disabled": "Het account van deze artiest is uitgeschakeld, dus een aanvraag kan niet worden gezien of beantwoord.",
+    "negative_total": "Het totaal van een offerte kan niet onder nul zijn. Controleer de kortingsregels.",
+    "amount_too_high": "Dit bedrag is te hoog. Controleer de prijs en het aantal.",
+    "overpayment": "Dit is meer dan het openstaande bedrag. Controleer het bedrag, of leg het toch vast als de klant echt meer heeft betaald.",
+    "nothing_due": "Er staat niets meer open voor deze artiest."
   },
   "bookings": {
     "title": "Boekingen",
@@ -579,7 +585,9 @@
     "invalidDate": "Kies een datum.",
     "invalidPrice": "Vul een bedrag in zoals 125 of 125,50.",
     "backToCalendar": "Terug naar de agenda",
-    "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is."
+    "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is.",
+    "pastDate": "Deze datum is al geweest. Kies vandaag of een latere datum.",
+    "customerName": "Naam van de klant"
   },
   "booking": {
     "eventDetails": "Evenementgegevens",
@@ -720,7 +728,18 @@
     "applyAnywayConfirm": "Dit vervangt de huidige waarden hier door wat de klant vroeg.",
     "changeEmailFailed": "De e-mail aan de klant kon niet worden opgeslagen voor verzending; verstuur hem opnieuw via de e-maillijst van de boeking.",
     "assignNeedsAccount": "{count, plural, one {# artiest is niet te kiezen} other {# artiesten zijn niet te kiezen}} tot ze een werkende login hebben.",
-    "assignOpenArtists": "Artiesten openen"
+    "assignOpenArtists": "Artiesten openen",
+    "recordAnyway": "Toch vastleggen",
+    "needsLine": "Voeg minstens één regel toe met een omschrijving en een prijs.",
+    "totalNegative": "Het totaal kan niet onder nul zijn. Controleer de kortingsregels.",
+    "totalTooHigh": "Dit bedrag is te hoog. Controleer de prijs en het aantal.",
+    "depositPctInvalid": "Vul een percentage in van 0 tot 100.",
+    "validDaysInvalid": "Vul een heel aantal dagen in van 1 tot 180.",
+    "downloadCreditNote": "Creditnota {number}",
+    "artistBalanceDue": "Je moet {artist} nog {amount} betalen voor deze boeking. Betaal rechtstreeks en markeer het daarna als betaald.",
+    "artistBalanceMarkPaid": "Artiest als betaald markeren",
+    "artistBalancePaid": "{artist} als betaald gemarkeerd.",
+    "inquiryNotes": "Notities bij de aanvraag"
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -758,7 +777,8 @@
     "change_requested": "De klant heeft gevraagd de evenementgegevens te wijzigen",
     "change_withdrawn": "De klant heeft het wijzigingsverzoek ingetrokken",
     "change_approved": "Wijzigingsverzoek goedgekeurd",
-    "change_rejected": "Wijzigingsverzoek geweigerd"
+    "change_rejected": "Wijzigingsverzoek geweigerd",
+    "artist_paid": "{stageName} als betaald gemarkeerd"
   },
   "quotes": {
     "title": "Offertes",
@@ -854,7 +874,7 @@
     "payType": "Vergoeding",
     "payType_percentage": "Percentage van elke boeking",
     "payType_fixed": "Vast bedrag per boeking",
-    "payType_percentageHint": "De artiest krijgt dit deel van wat de klant betaalt.",
+    "payType_percentageHint": "De artiest krijgt dit deel van wat de klant betaalt, inclusief btw. Gebruik een vast bedrag om een bedrag af te spreken.",
     "payType_fixedHint": "Hetzelfde bedrag voor elke boeking, wat de boeking ook kost.",
     "fixedFee": "Bedrag per boeking ({currency})",
     "fixedFeeHint": "Geldt voor boekingen die je vanaf nu toewijst; al toegewezen optredens houden hun vergoeding.",
@@ -983,7 +1003,8 @@
     "provider_soundcloud": "Open op SoundCloud",
     "provider_mixcloud": "Open op Mixcloud",
     "provider_tidal": "Open op TIDAL",
-    "provider_deezer": "Open op Deezer"
+    "provider_deezer": "Open op Deezer",
+    "creditNote": "Creditnota {number} downloaden"
   },
   "quotePage": {
     "title": "Offerte {code}",
@@ -1013,7 +1034,8 @@
     "accountExists": "Je hebt al een account. Log in met je e-mailadres.",
     "haveAccount": "Heb je al een account?",
     "signIn": "Log in om je boeking te volgen",
-    "outdated": "De gegevens van je evenement zijn gewijzigd nadat deze offerte is gemaakt. Het bureau stuurt je een bijgewerkte offerte."
+    "outdated": "De gegevens van je evenement zijn gewijzigd nadat deze offerte is gemaakt. Het bureau stuurt je een bijgewerkte offerte.",
+    "agencySuspended": "{agency} kan op dit moment geen nieuwe boekingen of betalingen aannemen, dus je kunt dit hier niet accepteren of betalen. Neem rechtstreeks contact op met het bureau."
   },
   "reviews": {
     "title": "Reviews",
@@ -1048,7 +1070,10 @@
     "toPay": "Te betalen",
     "payWithin": "Graag betalen binnen 14 dagen onder vermelding van factuurnummer {number}.",
     "payTo": "Betaalgegevens",
-    "page": "{number} · pagina {page} van {pages}"
+    "page": "{number} · pagina {page} van {pages}",
+    "credit_note": "Creditnota",
+    "creditLine": "Correctie op factuur {number}",
+    "creditFooter": "Deze creditnota corrigeert factuur {number}."
   },
   "budgetRanges": {
     "lt_750": "Tot € 750",
@@ -1294,7 +1319,21 @@
     "cancelDone": "Opgezegd. Je abonnement loopt door tot het einde van de betaalde periode.",
     "resume": "Opzegging intrekken",
     "resumeDone": "Je abonnement loopt gewoon door.",
-    "status_free": "Gratis: aanvragen beantwoorden en boekingen aannemen kost niets. Het Artiest-abonnement voegt je openbare profiel en direct boeken toe."
+    "status_free": "Gratis: aanvragen beantwoorden en boekingen aannemen kost niets. Het Artiest-abonnement voegt je openbare profiel en direct boeken toe.",
+    "readOnlyNoPlan": "Kies een abonnement onder Abonnement om StageDesk te gebruiken. Tot die tijd kun je rondkijken maar niets wijzigen.",
+    "yourChoice": "Jouw keuze",
+    "inclVat": "Incl. btw",
+    "cancelReasonRequired": "Kies eerst een reden.",
+    "cancelReasonQuestion": "Waarom zeg je op?",
+    "cancelReason_too_expensive": "Te duur",
+    "cancelReason_missing_features": "Er mist iets wat ik nodig heb",
+    "cancelReason_too_complex": "Te lastig in gebruik",
+    "cancelReason_other_tool": "Ik stap over naar een ander programma",
+    "cancelReason_few_bookings": "Nu te weinig boekingen",
+    "cancelReason_closing": "Het bureau stopt of pauzeert",
+    "cancelReason_other": "Iets anders",
+    "cancelNote": "Wil je nog iets kwijt? (optioneel)",
+    "cancelNotePlaceholder": "Wat had ervoor gezorgd dat je bleef?"
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -1370,6 +1409,8 @@
     "paidBy_platform": "Het platform",
     "serviceFee": "Servicekosten voor klanten (€)",
     "serviceFeeHint": "Een aparte regel op offertes. 0 voor geen.",
+    "exampleStripeFee": "Stripe-kosten in het voorbeeld op de website (€)",
+    "exampleStripeFeeHint": "Staat in de voorbeeldboeking op de homepage. Ongeveer € 0,29 per betaling met iDEAL | Wero; het voorbeeld heeft er twee (aanbetaling en restbetaling).",
     "bookingsTitle": "Boekingen",
     "quoteExpiryDays": "Offertes geldig (dagen)",
     "depositPct": "Standaard aanbetaling (%)",
@@ -1413,7 +1454,7 @@
     "title": "Betalingen",
     "description": "Ontvangen geld voor je boekingen en wat aan jou is uitbetaald.",
     "connectTitle": "Online betalingen",
-    "connectBody": "Koppel een Stripe-account zodat klanten aanbetalingen en restbedragen met iDEAL of kaart kunnen betalen. Het geld wordt na elk evenement aan je uitbetaald.",
+    "connectBody": "Koppel een Stripe-account zodat klanten aanbetalingen en restbedragen met iDEAL | Wero of kaart kunnen betalen. Het geld wordt na elk evenement aan je uitbetaald.",
     "connect": "Stripe koppelen",
     "continue": "Stripe-koppeling afronden",
     "dashboard": "Stripe-dashboard openen",
@@ -1457,7 +1498,7 @@
   "pay": {
     "payDeposit": "Aanbetaling betalen: {amount}",
     "payBalance": "Restbedrag betalen: {amount}",
-    "methods": "iDEAL of kaart, via Stripe",
+    "methods": "iDEAL | Wero of kaart, via Stripe",
     "offline": "Je bureau stuurt je de betaalgegevens.",
     "unavailable": "Online betalen is nog niet ingeschakeld door dit bureau.",
     "requestDetails": "Vraag het bureau om betaalgegevens",
@@ -1958,8 +1999,8 @@
     "channels": "Gesprekken",
     "conversation": "Gesprek",
     "removedUser": "Verwijderde gebruiker",
-    "empty_customer": "Nog geen berichten met de klant.",
-    "empty_artist": "Nog geen berichten met de artiest.",
+    "empty_customer": "Nog geen berichten.",
+    "empty_artist": "Nog geen berichten.",
     "write": "Schrijf een bericht",
     "placeholder": "Schrijf een bericht…",
     "sendHint": "Ctrl + Enter om te versturen",
@@ -2165,7 +2206,8 @@
         "operation_retried": "Terugbetaling of uitbetaling opnieuw geprobeerd",
         "operation_closed": "Terugbetaling geboekt met tekort op terugboeking",
         "subscription_reconciled": "Abonnementen van een bureau met Stripe gecontroleerd",
-        "incident_resolved": "Factuurincident als afgehandeld gemarkeerd"
+        "incident_resolved": "Factuurincident als afgehandeld gemarkeerd",
+        "artist_paid": "Artiest als betaald gemarkeerd"
       },
       "user": {
         "disable": "Account uitgeschakeld",
@@ -2262,6 +2304,9 @@
         "delete": "Verwijderde een artiest",
         "invite": "Artiest uitgenodigd of aan account gekoppeld",
         "setup_resent": "Wachtwoordlink artiest opnieuw verstuurd"
+      },
+      "team": {
+        "permissions": "Rolrechten gewijzigd"
       }
     },
     "group_page": "Pagina's",
@@ -2274,7 +2319,16 @@
     "group_impersonation": "Inloggen als",
     "viaAdmin": "via {name}",
     "group_inventory": "Apparatuur",
-    "group_data": "Gegevens"
+    "group_data": "Gegevens",
+    "target": {
+      "user": "Account",
+      "booking": "Boeking",
+      "payment": "Betaling",
+      "organization": "Bureau",
+      "agency": "Bureau",
+      "plan": "Abonnement",
+      "setting": "Instelling"
+    }
   },
   "charts": {
     "showChart": "Grafiek",
@@ -2476,7 +2530,7 @@
       "feature_quotes-invoices": "Offertes & facturen",
       "feature_quotes-invoicesHint": "Professionele offertes met btw en aanbetaling",
       "feature_payments-payouts": "Betalingen & uitbetalingen",
-      "feature_payments-payoutsHint": "iDEAL, kaarten en automatische artiestuitbetaling",
+      "feature_payments-payoutsHint": "iDEAL | Wero, kaarten en automatische artiestuitbetaling",
       "feature_artist-management": "Artiestenbeheer",
       "feature_artist-managementHint": "Beschikbaarheid, aanvragen en de gigbriefing",
       "forAgenciesHint": "Voor DJ-, band- en entertainmentbureaus",
@@ -2534,12 +2588,12 @@
   },
   "landing": {
     "metaTitle": "Boekingssoftware voor DJ- en bandbureaus",
-    "metaDescription": "Aanvragen, offertes, artiesten en betalingen op één plek. Met je eigen boekingspagina, iDEAL en automatische uitbetaling aan artiesten.",
+    "metaDescription": "Aanvragen, offertes, artiesten en betalingen op één plek. Met je eigen boekingspagina, iDEAL | Wero en automatische uitbetaling aan artiesten.",
     "eyebrow": "Voor DJ- en bandbureaus",
     "title": "Van aanvraag tot uitbetaling, <hl>zonder spreadsheets</hl>",
     "intro": "StageDesk geeft je bureau één plek voor aanvragen, offertes, planning, artiesten en betalingen. Klanten boeken via je eigen pagina; je artiesten krijgen na het feest automatisch betaald.",
     "point1": "Je eigen boekingspagina",
-    "point2": "iDEAL en creditcard",
+    "point2": "iDEAL | Wero en creditcard",
     "point3": "Nederlands en Engels",
     "seePricing": "Bekijk prijzen",
     "previewLabel": "Voorbeeld van het boekingsoverzicht in StageDesk",
@@ -2560,20 +2614,21 @@
     "feature_artists": "Artiesten die ja zeggen",
     "feature_artistsBody": "Vraag een artiest; die accepteert in de app en krijgt de volledige briefing. Deel artiesten met partnerbureaus.",
     "feature_payments": "Betalingen en uitbetalingen",
-    "feature_paymentsBody": "Klanten betalen met iDEAL of creditcard. Na het evenement worden het aandeel van de artiest en het jouwe automatisch uitbetaald.",
+    "feature_paymentsBody": "Klanten betalen met iDEAL | Wero of creditcard. Na het evenement worden het aandeel van de artiest en het jouwe automatisch uitbetaald.",
     "feature_messages": "Iedereen op de hoogte",
     "feature_messagesBody": "Berichten per boeking met de klant en de artiest, live meldingen, en e-mail wanneer het ertoe doet.",
     "allFeatures": "Alle functies",
     "moneyTitle": "Geld dat aankomt waar het hoort",
     "moneyIntro": "Geen artiestengage meer met de hand overmaken. De verdeling ligt vast zodra de klant accepteert en wordt na het evenement uitbetaald.",
-    "money1": "De klant betaalt aanbetaling en restbedrag online, met iDEAL of creditcard.",
+    "money1": "De klant betaalt aanbetaling en restbedrag online, met iDEAL | Wero of creditcard.",
     "money2": "Na het evenement, en een korte wachttijd voor geschillen, verdeelt StageDesk de betaling.",
     "money3": "Het aandeel van de artiest gaat naar de artiest; de rest naar je bureau.",
     "splitTitle": "Voorbeeldboeking",
     "splitArtist": "Artiest ({pct})",
     "splitAgency": "Je bureau",
     "splitPlatform": "Platformkosten",
-    "splitNote": "Met de huidige platformkosten en een artiestenaandeel van 40%, vóór de transactiekosten van Stripe.",
+    "splitStripe": "Stripe-betaalkosten",
+    "splitNote": "Met de huidige platformkosten, een artiestaandeel van 40% en de Stripe-kosten voor een aanbetaling en restbetaling met iDEAL | Wero. Niemand maakt het aandeel van de artiest nog met de hand over.",
     "pricingTitle": "Eenvoudige prijzen",
     "pricingIntro": "Abonnementen vanaf {price} per maand. Probeer alles {days} dagen gratis, zonder creditcard.",
     "pricingIntroNoPlans": "Abonnementen voor elk formaat bureau.",
@@ -2607,8 +2662,8 @@
     "showArtistsPoint3": "Artiesten delen met partnerbureaus",
     "showPayoutsEyebrow": "Betalingen & uitbetalingen",
     "showPayoutsTitle": "Iedereen betaald, automatisch",
-    "showPayoutsBody": "Klanten betalen aanbetaling en restbedrag met iDEAL of creditcard. Na het event verdeelt StageDesk de betaling tussen de artiest, je bureau en het platform.",
-    "showPayoutsPoint1": "iDEAL en kaarten via Stripe",
+    "showPayoutsBody": "Klanten betalen aanbetaling en restbedrag met iDEAL | Wero of creditcard. Na het event verdeelt StageDesk de betaling tussen de artiest, je bureau en het platform.",
+    "showPayoutsPoint1": "iDEAL | Wero en kaarten via Stripe",
     "showPayoutsPoint2": "Verdeling vastgelegd bij acceptatie van de offerte",
     "showPayoutsPoint3": "Terugbetalingen naar verhouding verrekend",
     "faq6Q": "Kan ik StageDesk ook gebruiken voor bands en livemuziek, niet alleen DJ's?",
@@ -2617,16 +2672,7 @@
     "faq7A": "Ja. Plak één regel code en het formulier verschijnt op je site. Het past zich aan de breedte van de pagina aan en stuurt aanvragen direct naar je wachtrij.",
     "faq8Q": "Hoe snel kan ik aan de slag?",
     "faq8A": "De meeste bureaus zijn in een middag ingericht: vul je gegevens, diensten en artiesten in, zet je boekingspagina aan en je bent klaar voor je eerste aanvraag.",
-    "heroRequest": "Organiseer je een feest? Vraag een offerte aan",
-    "requestEyebrow": "Een bruiloft, feest of bedrijfsevent gepland?",
-    "requestTitle": "Vertel over je event, en wij vinden de juiste DJ of band",
-    "requestBody": "Eén kort formulier en StageDesk koppelt je aanvraag aan een bureau dat past bij je datum, plaats en stijl. Je ontvangt vrijblijvend een offerte.",
-    "requestStep1": "Vertel de datum, plaats en wat je zoekt",
-    "requestStep2": "Wij zetten je aanvraag door naar bureaus die passen",
-    "requestStep3": "Je ontvangt een offerte en beslist zelf",
-    "requestButton": "Offerte aanvragen",
-    "requestFree": "Gratis en vrijblijvend",
-    "pricingCardsIntro": "Alle functies in elk abonnement; je kiest op basis van het aantal artiesten en boekingen. Probeer gratis, zonder creditcard."
+    "pricingCardsIntro": "Elke functie in elk abonnement; je kiest op basis van het aantal artiesten en boekingen."
   },
   "featuresPage": {
     "eyebrow": "Functies",
@@ -2665,7 +2711,7 @@
     },
     "payments": {
       "title": "Betalingen en uitbetalingen",
-      "body": "Online betalen met iDEAL en creditcard, via Stripe.",
+      "body": "Online betalen met iDEAL | Wero en creditcard, via Stripe.",
       "p1": "Aanbetaling en restbedrag online betaald of offline vastgelegd.",
       "p2": "Automatische verdeling na het evenement: artiest, bureau, platform.",
       "p3": "Terugbetalingen die uitbetalingen naar verhouding terugboeken.",
@@ -2721,7 +2767,7 @@
     "also_partners": "Partnerbureaus",
     "also_partnersBody": "Deel artiesten en aanvragen met bureaus waar je mee samenwerkt.",
     "ctaTitle": "Zie het zelf in je eigen bureau",
-    "ctaBody": "Probeer alles gratis met je eigen artiesten en diensten. Geen creditcard nodig."
+    "ctaBody": "Zet het op met je eigen artiesten en diensten, en verstuur vandaag nog je eerste offerte."
   },
   "pricingPage": {
     "eyebrow": "Prijzen",
@@ -2731,8 +2777,8 @@
     "yearly": "Per jaar",
     "recommended": "Meest gekozen",
     "perMonth": "per maand",
-    "billedMonthly": "Maandelijks gefactureerd, excl. btw",
-    "billedYearly": "{amount} per jaar gefactureerd, excl. btw",
+    "billedMonthly": "Maandelijks gefactureerd, incl. btw",
+    "billedYearly": "{amount} per jaar gefactureerd, incl. btw",
     "save": "Bespaar {amount}",
     "trialNote": "Bij abonnementen met een proefperiode betaal je pas na de gratis dagen; je kunt op elk moment opzeggen.",
     "feeTitle": "Platformkosten op online betalingen",
@@ -2745,7 +2791,7 @@
     "proof1": "Maandelijks opzegbaar",
     "proof2": "Geen creditcard om te proberen",
     "proof3": "Hosting in de EU",
-    "proof4": "Prijzen exclusief btw",
+    "proof4": "Prijzen inclusief btw",
     "compareTitle": "Abonnementen vergelijken",
     "compareIntro": "Alle abonnementen hebben dezelfde functies. Het verschil zit in het aantal artiesten, teamleden en boekingen.",
     "compareFeature": "Wat je krijgt",
@@ -2759,7 +2805,7 @@
     "included2": "Boekingspagina en websiteformulier",
     "included3": "Artiestenapp voor je artiesten",
     "included4": "Klantportaal zonder account",
-    "included5": "iDEAL, kaart en overboeking",
+    "included5": "iDEAL | Wero, kaart en overboeking",
     "included6": "Berichten en meldingen",
     "included7": "Nederlands en Engels",
     "included8": "Ondersteuning per e-mail",
@@ -2777,7 +2823,7 @@
     "faq4Q": "Krijg ik korting bij jaarlijks betalen?",
     "faq4A": "Ja. Bij jaarlijks betalen zie je per abonnement hoeveel je bespaart.",
     "faq5Q": "Hoe betaal ik het abonnement?",
-    "faq5A": "Met iDEAL, creditcard of automatische incasso. Je krijgt elke periode een factuur.",
+    "faq5A": "Met iDEAL | Wero, creditcard of automatische incasso. Je krijgt elke periode een factuur.",
     "faq6Q": "Kan ik opzeggen wanneer ik wil?",
     "faq6A": "Ja. Je zegt op in je account en houdt toegang tot het eind van de betaalde periode. Je gegevens blijven bewaard.",
     "ctaTitle": "Begin vandaag, betaal pas als het werkt",
@@ -2792,7 +2838,10 @@
     "convertedNote": "Prijzen in {currency} zijn een schatting tegen de wisselkoers van {date}. Je betaalt in euro's.",
     "compareLink": "Alle abonnementen vergelijken",
     "trialCard": "{days} dagen gratis proberen",
-    "noRateNote": "Er is nog geen wisselkoers voor {currency}, dus prijzen staan in euro's. Je betaalt in euro's."
+    "noRateNote": "Er is nog geen wisselkoers voor {currency}, dus prijzen staan in euro's. Je betaalt in euro's.",
+    "ctaBodyNoTrial": "Zet je bureau in een paar minuten op en verstuur vandaag nog je eerste offerte.",
+    "feeExampleStripe": "Stripe-kosten (2 betalingen met iDEAL | Wero)",
+    "feeExampleStripeBody": "Stripe rekent ongeveer {stripe} voor de aanbetaling en de restbetaling. Daarvoor hoeft niemand het aandeel van de artiest nog met de hand over te maken."
   },
   "forAgencies": {
     "eyebrow": "Voor DJ- en bandbureaus",
@@ -2817,7 +2866,7 @@
     "tourLink": "Bekijk de producttour",
     "proof1": "Maandelijks opzegbaar",
     "proof2": "Nederlands en Engels",
-    "proof3": "iDEAL, kaart en overboeking",
+    "proof3": "iDEAL | Wero, kaart en overboeking",
     "painTitle": "Herkenbaar?",
     "painIntro": "Wat de meeste bureaus vertellen als ze bij ons beginnen, en hoe het daarna gaat.",
     "weekTitle": "Een week op je bureau, met StageDesk",
@@ -2830,7 +2879,7 @@
     "week2Body": "Je kiest het bruiloftspakket en de saxofonist uit je diensten. Btw en aanbetaling staan er al in.",
     "week3Day": "Woensdag",
     "week3Title": "Geaccepteerd en aanbetaald",
-    "week3Body": "Het paar accepteert online en betaalt de aanbetaling met iDEAL. De datum staat vast in je agenda.",
+    "week3Body": "Het paar accepteert online en betaalt de aanbetaling met iDEAL | Wero. De datum staat vast in je agenda.",
     "week4Day": "Donderdag",
     "week4Title": "De DJ zegt ja",
     "week4Body": "Je vraagt DJ Sem via de app. Hij ziet het draaiboek, accepteert en zet de datum in zijn agenda.",
@@ -2850,7 +2899,7 @@
     "row2Title": "Offertes en betalingen die kloppen",
     "row2Body": "Offertes uit je eigen diensten, met versies, btw en aanbetaling. Betalingen online of per overboeking, met bevestiging van ontvangst.",
     "row2P1": "Btw-tarieven 21%, 9% en 0% per regel",
-    "row2P2": "iDEAL, kaart en handmatige betalingen in één overzicht",
+    "row2P2": "iDEAL | Wero, kaart en handmatige betalingen in één overzicht",
     "row2P3": "Automatische herinneringen voor het restbedrag",
     "row3Title": "Planning zonder dubbele boekingen",
     "row3Body": "Je agenda met alle feesten van de maand, en per artiest zie je wie er kan.",
@@ -3004,7 +3053,7 @@
     "copied": "Gekopieerd",
     "keepReading": "Lees verder",
     "ctaTitle": "Je boekingen op één plek, vanaf vandaag",
-    "ctaBody": "Aanvragen, offertes, artiesten en betalingen in één systeem. Probeer StageDesk gratis, zonder creditcard.",
+    "ctaBody": "Aanvragen, offertes, artiesten en betalingen in één systeem.",
     "ctaButton": "Gratis proberen",
     "ctaSecondary": "Rondleiding bekijken"
   },
@@ -3034,9 +3083,9 @@
     "intro": "De nieuwste veranderingen in StageDesk."
   },
   "acceptTerms": {
-    "title": "Bijgewerkte voorwaarden",
-    "body": "We hebben de documenten hieronder bijgewerkt. Lees en accepteer ze om verder te gaan.",
-    "updated": "Bijgewerkt op {date}",
+    "title": "Accepteer onze voorwaarden",
+    "body": "Lees en accepteer de onderstaande documenten om verder te gaan.",
+    "updated": "Versie van {date}",
     "read": "Lezen",
     "agree": "Ik ga akkoord met de documenten hierboven.",
     "continue": "Doorgaan"
@@ -3289,7 +3338,7 @@
   },
   "infographics": {
     "trustStripe": "Betalingen via Stripe",
-    "trustIdeal": "iDEAL en creditcards",
+    "trustIdeal": "iDEAL | Wero en creditcards",
     "trustEu": "Gehost in de EU",
     "trustGdpr": "AVG-proof, met verwerkersovereenkomst",
     "trustLanguages": "Nederlands en Engels",
@@ -3328,7 +3377,7 @@
     "before3": "Rondbellen om een beschikbare artiest te vinden",
     "after3": "Beschikbaarheid gecontroleerd, artiesten antwoorden in de app",
     "before4": "Achter aanbetalingen aan en artiestgages handmatig overmaken",
-    "after4": "iDEAL-betalingen en automatische uitbetalingen",
+    "after4": "Betalen met iDEAL | Wero en automatische uitbetalingen",
     "before5": "Geen overzicht van wat geboekt en ontvangen is",
     "after5": "Dashboards met omzet, events en werkvoorraad",
     "figure_roles": "5",
@@ -3463,7 +3512,7 @@
       "q2": "Wat gebeurt er als een offerte verloopt?",
       "a2": "Dan kan hij niet meer worden geaccepteerd en gaat de boeking naar verlopen. Je kunt altijd een nieuwe versie sturen.",
       "q3": "Moet ik online betalingen gebruiken?",
-      "a3": "Nee. Betalingen per bankoverschrijving of contant kun je zelf registreren. Online betalen met iDEAL is optioneel.",
+      "a3": "Nee. Betalingen per bankoverschrijving of contant kun je zelf registreren. Online betalen met iDEAL | Wero is optioneel.",
       "q4": "Kan ik eigen voorwaarden toevoegen aan een offerte?",
       "a4": "Je algemene voorwaarden gelden voor elke offerte, en per offerte kun je notities toevoegen voor specifieke afspraken.",
       "ctaTitle": "Verstuur je volgende offerte in een paar minuten",
@@ -3471,11 +3520,11 @@
     },
     "payments-payouts": {
       "eyebrow": "Betalingen & uitbetalingen",
-      "metaTitle": "iDEAL-betalingen en automatische artiestuitbetaling voor bureaus",
-      "metaDescription": "Laat klanten aanbetaling en restbedrag betalen met iDEAL of creditcard. StageDesk verdeelt elke betaling na het event en betaalt je artiesten automatisch uit via Stripe.",
-      "title": "Online betalen met iDEAL, en artiesten automatisch uitbetaald",
+      "metaTitle": "Betalen met iDEAL | Wero en automatische artiestuitbetaling voor bureaus",
+      "metaDescription": "Laat klanten aanbetaling en restbedrag betalen met iDEAL | Wero of creditcard. StageDesk verdeelt elke betaling na het event en betaalt je artiesten automatisch uit via Stripe.",
+      "title": "Online betalen met iDEAL | Wero, en artiesten automatisch uitbetaald",
       "intro": "Klanten betalen hun aanbetaling en restbedrag online. Na het event verdeelt StageDesk de betaling tussen de artiest, je bureau en het platform, zoals afgesproken bij acceptatie van de offerte.",
-      "b1Title": "iDEAL en creditcards",
+      "b1Title": "iDEAL | Wero en creditcards",
       "b1Body": "Zoals Nederlandse klanten willen betalen, via de beveiligde checkout van Stripe. Nooit meer achter overschrijvingen aan.",
       "b2Title": "De verdeling ligt vooraf vast",
       "b2Body": "Het aandeel van de artiest en de platformkosten worden vastgezet als de klant accepteert, zodat afgesproken bedragen later niet veranderen.",
@@ -3560,7 +3609,7 @@
       "b2Title": "Bruidsparen blijven op de hoogte",
       "b2Body": "Bruidsparen zien hun event, offerte, betalingen en berichten, en krijgen herinneringen voor de grote dag.",
       "b3Title": "Aanbetalingen die de datum vastleggen",
-      "b3Body": "Een aanbetaling bij acceptatie en het restbedrag voor de bruiloft, betaald met iDEAL.",
+      "b3Body": "Een aanbetaling bij acceptatie en het restbedrag voor de bruiloft, betaald met iDEAL | Wero.",
       "stepsTitle": "Een bruiloftsboeking van begin tot eind",
       "s1Title": "Aanvraag",
       "s1Body": "Het bruidspaar deelt datum, locatie en wensen.",
@@ -3639,7 +3688,7 @@
     "storyTitle": "Waarom we StageDesk bouwden",
     "story1": "Entertainmentbureaus draaien op weekenden. Aanvragen komen binnen via mail, WhatsApp en telefoon; offertes staan in Word; artiesten worden gevonden door rond te bellen; en na elk feest wordt het geld met de hand overgemaakt.",
     "story2": "We bouwden StageDesk om dat allemaal op één plek te brengen: een boekingspagina die complete aanvragen verzamelt, offertes die klanten online accepteren, een app waarin artiesten ja zeggen, en betalingen die automatisch worden verdeeld en uitbetaald.",
-    "story3": "Het is gemaakt in Nederland voor Nederlandse bureaus, met iDEAL, Nederlandse btw en elke pagina in het Nederlands en Engels.",
+    "story3": "Het is gemaakt in Nederland voor Nederlandse bureaus, met iDEAL | Wero, Nederlandse btw en elke pagina in het Nederlands en Engels.",
     "missionLabel": "Onze missie",
     "mission": "Elk entertainmentbureau de tools van een groot bureau geven, zodat ze meer events boeken met minder administratie.",
     "valuesTitle": "Waar we voor staan",
@@ -3655,7 +3704,7 @@
     "howTitle": "Hoe we werken",
     "howIntro": "Zorgvuldig gebouwd, met de Nederlandse markt voorop.",
     "how1Title": "Gemaakt voor Nederland",
-    "how1Body": "iDEAL, KvK- en btw-nummers, Nederlandse btw-tarieven en support in het Nederlands en Engels.",
+    "how1Body": "iDEAL | Wero, KvK- en btw-nummers, Nederlandse btw-tarieven en support in het Nederlands en Engels.",
     "how2Title": "Veilig vanaf de basis",
     "how2Body": "Inloggen met tweestapsverificatie, strikte scheiding van bureaudata en een auditlog van elke wijziging aan geld en toegang.",
     "how3Title": "Elke maand beter",
@@ -3806,7 +3855,23 @@
     "kind_senderTest": "Afzendertest",
     "kind_senderTestHint": "Aan het bureau, om te zien hoe klantmails aankomen",
     "kind_changeDecision": "Wijzigingsverzoek beantwoord",
-    "kind_changeDecisionHint": "Aan de klant, als het bureau een gevraagde wijziging goedkeurt of weigert"
+    "kind_changeDecisionHint": "Aan de klant, als het bureau een gevraagde wijziging goedkeurt of weigert",
+    "kind_quoteAcceptedNotice": "Offerte geaccepteerd",
+    "kind_quoteAcceptedNoticeHint": "Aan het team, als een klant accepteert",
+    "kind_artistAcceptedNotice": "Artiest heeft geaccepteerd",
+    "kind_artistAcceptedNoticeHint": "Aan het team, als een artiest ja zegt",
+    "kind_artistDeclinedNotice": "Artiest heeft afgezegd",
+    "kind_artistDeclinedNoticeHint": "Aan het team, als een artiest nee zegt",
+    "kind_bookingConfirmed": "Boeking bevestigd",
+    "kind_bookingConfirmedHint": "Aan de klant, als de artiest heeft geaccepteerd",
+    "kind_bookingCancelled": "Boeking geannuleerd",
+    "kind_bookingCancelledHint": "Aan de klant, als het bureau annuleert",
+    "kind_invoiceIssued": "Factuur klaar",
+    "kind_invoiceIssuedHint": "Aan de klant, als de factuur is gemaakt",
+    "kind_reviewInvitation": "Uitnodiging voor beoordeling",
+    "kind_reviewInvitationHint": "Aan de klant, als het evenement is afgerond",
+    "kind_agencyInvite": "Uitnodiging voor een bureau",
+    "kind_agencyInviteHint": "Aan iemand die een bureau of artiest uitnodigt voor StageDesk"
   },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
@@ -3826,7 +3891,12 @@
     "s3Body": "Bekijk de prijzen naast elkaar en accepteer degene die je bevalt, online.",
     "free": "Gratis en vrijblijvend. Je boekt pas als een prijs je bevalt.",
     "formTitle": "Je aanvraag",
-    "sentBody": "We hebben je aanvraag ontvangen (referentie {code}) en naar bureaus en artiesten in de buurt gestuurd. Je krijgt een mail bij elke prijs, met een link om ze te vergelijken."
+    "sentBody": "We hebben je aanvraag ontvangen (referentie {code}) en naar bureaus en artiesten in de buurt gestuurd. Je krijgt een mail bij elke prijs, met een link om ze te vergelijken.",
+    "closedTitle": "Nog niet geopend",
+    "closedBody": "StageDesk neemt nog geen aanvragen voor feesten aan. Kijk op de boekingspagina van een bureau zelf, of probeer het later nog eens.",
+    "errorEventType": "Voor dit soort feest nemen we nog geen aanvragen aan.",
+    "errorRegion": "{city} valt nog niet in ons gebied. Kijk op de boekingspagina van een bureau bij jou in de buurt.",
+    "regionsNote": "Voorlopig nemen we aanvragen aan in: {regions}."
   },
   "leads": {
     "title": "Leads",
@@ -3958,7 +4028,7 @@
     "title": "Betaalinstellingen",
     "description": "Koppel Stripe voor online betalingen en kies hoe klanten bureaus mogen betalen.",
     "stripeTitle": "Stripe",
-    "stripeHint": "Online betalingen (iDEAL, kaarten), uitbetalingen aan bureaus en artiesten en abonnementen lopen via je Stripe-account. Sleutels worden versleuteld en nooit meer volledig getoond.",
+    "stripeHint": "Online betalingen (iDEAL | Wero, kaarten), uitbetalingen aan bureaus en artiesten en abonnementen lopen via je Stripe-account. Sleutels worden versleuteld en nooit meer volledig getoond.",
     "notSetUp": "Niet ingesteld",
     "modeTest": "Testmodus",
     "modeLive": "Live",
@@ -3997,7 +4067,7 @@
     "testFailed": "Stripe accepteerde de sleutel niet. Controleer hem onder Developers → API keys.",
     "methodsTitle": "Betaalmethoden",
     "methodsHint": "Wat bureaus hun klanten mogen aanbieden. Elk bureau kiest daarbinnen op zijn eigen instellingenpagina.",
-    "method_online": "Online (iDEAL en kaarten)",
+    "method_online": "Online (iDEAL | Wero en kaarten)",
     "method_onlineHint": "Via Stripe, met automatische verdeling en uitbetaling.",
     "onlineNeedsStripe": "Vul eerst hierboven Stripe-sleutels in voordat klanten online kunnen betalen.",
     "method_bankTransfer": "Bankoverschrijving",
@@ -4013,7 +4083,7 @@
   "agencyPayments": {
     "title": "Betaalmethoden",
     "description": "Hoe je klanten je kunnen betalen. Online betalingen lopen via Stripe; overboekingen en contante betalingen meldt de klant en bevestig jij.",
-    "method_online": "Online (iDEAL en kaarten)",
+    "method_online": "Online (iDEAL | Wero en kaarten)",
     "method_onlineHint": "Klanten betalen in de app; het geld wordt automatisch verdeeld en uitbetaald.",
     "onlineNotConnected": "Koppel eerst Stripe om online betalingen te ontvangen.",
     "connectStripe": "Stripe koppelen",
@@ -4063,7 +4133,7 @@
   "tour": {
     "eyebrow": "Producttour",
     "metaTitle": "Producttour: StageDesk-boekingssoftware in screenshots",
-    "metaDescription": "Bekijk StageDesk in actie: het bureaudashboard, boekingen, offertes met Nederlandse btw, planning, iDEAL-betalingen, de boekingspagina, de artiestenapp en het klantportaal.",
+    "metaDescription": "Bekijk StageDesk in actie: het bureaudashboard, boekingen, offertes met Nederlandse btw, planning, betalen met iDEAL | Wero, de boekingspagina, de artiestenapp en het klantportaal.",
     "title": "Zie hoe StageDesk <hl>een bureau runt</hl>",
     "intro": "Een rondgang langs de schermen die je team, je artiesten en je klanten elke dag gebruiken, met de demogegevens van een bureau.",
     "lookEyebrow": "Een kijkje binnen",
@@ -4096,7 +4166,7 @@
     "calendar_p3": "Het trouwseizoen in één oogopslag",
     "payments_eyebrow": "Betalingen",
     "payments_title": "Weet wat er binnen is en wat nog komt",
-    "payments_body": "Online iDEAL- en kaartbetalingen, overboekingen die klanten melden en jij bevestigt, contant, terugbetalingen en uitbetalingen: elke euro op één pagina.",
+    "payments_body": "Online betalingen met iDEAL | Wero en kaart, overboekingen die klanten melden en jij bevestigt, contant, terugbetalingen en uitbetalingen: elke euro op één pagina.",
     "payments_p1": "Overboekingen bevestigen met één klik",
     "payments_p2": "Automatische uitbetaling aan artiesten",
     "payments_p3": "Terugbetalingen naar verhouding verrekend",
@@ -4116,7 +4186,7 @@
     "customer_title": "Hun event, zonder dat ze je hoeven te bellen",
     "customer_body": "Klanten volgen hun event: de offerte om te accepteren, wat betaald is en wat nog openstaat, hoe ze betalen, en een directe lijn met jou.",
     "customer_p1": "Offerte online accepteren",
-    "customer_p2": "Betalen met iDEAL of een overboeking melden",
+    "customer_p2": "Betalen met iDEAL | Wero of een overboeking melden",
     "customer_p3": "Berichten met het bureau",
     "admin_eyebrow": "Voor het platform",
     "admin_title": "Het hele platform vanaf één plek",
@@ -4681,7 +4751,8 @@
     "error_invalid": "Controleer de velden: titel en tekst zijn verplicht, het adres mag alleen kleine letters, cijfers en streepjes bevatten.",
     "error_category_in_use": "Er staan nog artikelen in deze categorie. Verplaats ze eerst.",
     "error_not_allowed": "Je kunt dit artikel niet wijzigen.",
-    "error_not_editable": "Dit artikel kan in de huidige status niet meer worden bewerkt."
+    "error_not_editable": "Dit artikel kan in de huidige status niet meer worden bewerkt.",
+    "pendingApproval": "{count, plural, one {# artikel wacht} other {# artikelen wachten}} op goedkeuring"
   },
   "blogContributions": {
     "title": "Mijn blogartikelen",
@@ -5451,7 +5522,16 @@
     "customerBooked": "Geboekt",
     "customerPaid": "Betaald",
     "customerDue": "Nog te betalen",
-    "customerBookings": "{count, plural, one {# boeking} other {# boekingen}}"
+    "customerBookings": "{count, plural, one {# boeking} other {# boekingen}}",
+    "activation": "Activatie van bureaus",
+    "activationHint": "Bureaus die in de afgelopen 90 dagen begonnen, en hoe ver ze kwamen. Geactiveerd betekent: offerte gestuurd, online betaling ontvangen en een uitbetaling afgerond. {invited} van de {signed} kwamen via een uitnodiging.",
+    "activation_signed": "Begonnen",
+    "activation_quoted": "Offerte gestuurd",
+    "activation_paidOnline": "Online betaling ontvangen",
+    "activation_paidOut": "Uitbetaling afgerond (geactiveerd)",
+    "activation_subscribed": "Betaalt een abonnement",
+    "cancellations": "Waarom bureaus opzeggen",
+    "cancellationsHint": "Redenen uit het opzegvenster, afgelopen 12 maanden."
   },
   "languages": {
     "nl": "Nederlands",
@@ -6430,5 +6510,78 @@
     "editable": "Klanten kunnen hun muziekwensen bewerken",
     "editableHint": "Genres, do's en don'ts, afspeellijst en instructies. Datum, tijden en locatie lopen altijd via jou zodra er een offerte is.",
     "save": "Opslaan"
+  },
+  "marketplaceSettings": {
+    "title": "Marktplaats",
+    "description": "Het aanvraagformulier voor mensen die een feest plannen (/request): StageDesk stuurt elke aanvraag naar de bureaus die het gebied bedienen. Laat het uit tot er genoeg bureaus zijn om te antwoorden, en begin dan met een paar soorten feesten of plaatsen.",
+    "enabled": "Aanvragen aannemen",
+    "enabledOn": "Aan: het formulier neemt aanvragen aan en staat in het menu.",
+    "enabledOff": "Uit: de pagina meldt dat hij nog niet open is en het menu laat hem weg.",
+    "eventTypes": "Soorten feesten",
+    "eventTypesHint": "Vink aan waarmee je begint. Niets aangevinkt: alle soorten.",
+    "regions": "Plaatsen",
+    "regionsHint": "Steden of provincies, één per regel of gescheiden door komma's (bijvoorbeeld Utrecht of Noord-Brabant). Leeg: overal.",
+    "regionsPlaceholder": "Utrecht\nNoord-Brabant",
+    "save": "Opslaan"
+  },
+  "siteProofSettings": {
+    "title": "Bewijs op de website",
+    "description": "Echte bureaus die StageDesk gebruiken, wat ze zeggen, een woord van de oprichter en de productvideo. Elk deel verschijnt pas op de website als het is ingevuld. Gebruik alleen namen, logo's en citaten waarvoor je toestemming hebt.",
+    "logosTitle": "Logo's van bureaus",
+    "logosHint": "Op de homepage en de prijzenpagina. Zonder afbeelding staat de naam er.",
+    "logoName": "Naam van het bureau",
+    "logoLink": "Website (optioneel)",
+    "logoImage": "Logo",
+    "remove": "Verwijderen",
+    "addLogo": "Bureau toevoegen",
+    "quotesTitle": "Citaten",
+    "quotesHint": "Een of twee zinnen in de woorden van de klant. Vul minstens één taal in.",
+    "quoteNl": "Citaat in het Nederlands",
+    "quoteEn": "Citaat in het Engels",
+    "personName": "Naam",
+    "personRole": "Functie",
+    "personRolePlaceholder": "Eigenaar, dj-bureau in Utrecht",
+    "photo": "Foto",
+    "addQuote": "Citaat toevoegen",
+    "founderTitle": "Woord van de oprichter",
+    "founderHint": "Waarom StageDesk bestaat, in een paar zinnen. Met je naam en foto.",
+    "founderNl": "Tekst in het Nederlands",
+    "founderEn": "Tekst in het Engels",
+    "video": "Productvideo",
+    "videoHint": "Een link naar YouTube of Vimeo, bovenaan de producttour. Leeg: geen video.",
+    "save": "Opslaan",
+    "invalid": "Er klopt iets niet. Controleer de links (https) en het video-adres (YouTube of Vimeo).",
+    "invalidImage": "Gebruik een PNG-, JPEG- of WebP-afbeelding tot 2 MB.",
+    "uploading": "Uploaden…",
+    "replaceImage": "Vervangen",
+    "clearImage": "Wissen"
+  },
+  "socialProof": {
+    "title": "Bureaus die met StageDesk werken",
+    "logos": "Bureaus die StageDesk gebruiken",
+    "founder": "Waarom we StageDesk bouwden",
+    "video": "Productvideo van StageDesk"
+  },
+  "agencyInvite": {
+    "agencyTitle": "Bureau uitnodigen per e-mail",
+    "agencyBody": "Nodig een bureau uit waarmee je samenwerkt, bijvoorbeeld een partner van wie je artiesten boekt. Als jullie allebei op StageDesk zitten, kunnen jullie artiesten delen.",
+    "agencyBodyReward": "Nodig een bureau uit waarmee je samenwerkt, bijvoorbeeld een partner van wie je artiesten boekt. De mail bevat je uitnodigingslink: zodra zij hun eerste factuur betalen, krijgen jullie allebei {count, plural, one {een gratis maand} other {# gratis maanden}}.",
+    "artistTitle": "Bureau uitnodigen",
+    "artistBody": "Werk je voor een bureau dat nog niet op StageDesk zit? Stuur ze een uitnodiging. Ze zien dan hoe aanvragen, offertes en automatische uitbetalingen werken.",
+    "email": "E-mailadres",
+    "emailPlaceholder": "planning@bureau.nl",
+    "send": "Uitnodiging sturen",
+    "sending": "Versturen…",
+    "sent": "Uitnodiging gestuurd naar {email}.",
+    "sentTitle": "Uitnodigingen die je stuurde",
+    "joined": "Aangemeld als {name}",
+    "pending": "Uitgenodigd",
+    "error_self": "Dat is je eigen adres.",
+    "error_already_on": "Deze persoon heeft al een bureau op StageDesk.",
+    "error_already_invited": "Je hebt dit adres de afgelopen 30 dagen al uitgenodigd.",
+    "error_limit": "Je hebt vandaag het maximum aantal uitnodigingen gestuurd. Probeer het morgen opnieuw.",
+    "error_invalid": "Vul een geldig e-mailadres in.",
+    "error_notArtist": "Alleen artiesten met een actief profiel kunnen uitnodigingen sturen.",
+    "error_generic": "De uitnodiging kon niet worden verstuurd. Probeer het opnieuw."
   }
 }

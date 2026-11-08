@@ -110,7 +110,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await page.getByRole("dialog").getByRole("button", { name: "Verder" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Boeking door platformbeheerder" })).toBeVisible();
     await page.getByRole("tab", { name: "Nieuwe klant" }).click();
-    await page.getByLabel("Je naam").fill(`Klant Platform ${run}`);
+    await page.getByLabel("Naam van de klant").fill(`Klant Platform ${run}`);
     await page.getByLabel("E-mailadres").fill(`platform.${run}@test.local`);
     await page.getByLabel("Plaats").fill("Utrecht");
     await page.getByRole("button", { name: "Boeking aanmaken" }).click();

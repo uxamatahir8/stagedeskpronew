@@ -19,41 +19,42 @@ datasource db {
 // merge by hand: model and field names must match what Better Auth expects.
 
 model User {
-  id               String            @id @db.VarChar(64)
-  name             String            @db.VarChar(191)
-  email            String            @unique @db.VarChar(191)
-  emailVerified    Boolean           @default(false)
-  image            String?           @db.Text
-  twoFactorEnabled Boolean?          @default(false)
+  id                  String            @id @db.VarChar(64)
+  name                String            @db.VarChar(191)
+  email               String            @unique @db.VarChar(191)
+  emailVerified       Boolean           @default(false)
+  image               String?           @db.Text
+  twoFactorEnabled    Boolean?          @default(false)
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
-  platformRole     String?           @db.VarChar(32)
-  locale           String?           @default("en") @db.VarChar(8)
+  platformRole        String?           @db.VarChar(32)
+  locale              String?           @default("en") @db.VarChar(8)
   /// Personal date and time display; null follows the agency, then the platform.
-  timeZone         String?           @db.VarChar(64)
-  dateFormat       String?           @db.VarChar(16)
-  timeFormat       String?           @db.VarChar(4)
+  timeZone            String?           @db.VarChar(64)
+  dateFormat          String?           @db.VarChar(16)
+  timeFormat          String?           @db.VarChar(4)
   /// Set by the platform admin: the user can't sign in.
-  disabledAt       DateTime?
-  phone            String?           @db.VarChar(32)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  sessions         Session[]
-  accounts         Account[]
-  members          Member[]
-  invitations      Invitation[]
-  twofactors       TwoFactor[]
-  artistProfiles   Artist[]
-  bookings         Booking[]         @relation("BookingCustomer")
-  reviews          Review[]
-  affiliate        Affiliate?
-  notifications    Notification[]
-  bookingMessages  BookingMessage[]
-  supportTickets   SupportTicket[]
-  ticketMessages   TicketMessage[]
-  legalAcceptances LegalAcceptance[]
-  contentArticles  ContentArticle[]  @relation("ContentAuthor")
-  contentReviews   ContentArticle[]  @relation("ContentReviewer")
-  bookingTypesCreated BookingType[]  @relation("BookingTypeCreator")
+  disabledAt          DateTime?
+  phone               String?           @db.VarChar(32)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  members             Member[]
+  invitations         Invitation[]
+  twofactors          TwoFactor[]
+  artistProfiles      Artist[]
+  bookings            Booking[]         @relation("BookingCustomer")
+  reviews             Review[]
+  affiliate           Affiliate?
+  agencyInvites       AgencyInvite[]
+  notifications       Notification[]
+  bookingMessages     BookingMessage[]
+  supportTickets      SupportTicket[]
+  ticketMessages      TicketMessage[]
+  legalAcceptances    LegalAcceptance[]
+  contentArticles     ContentArticle[]  @relation("ContentAuthor")
+  contentReviews      ContentArticle[]  @relation("ContentReviewer")
+  bookingTypesCreated BookingType[]     @relation("BookingTypeCreator")
 
   @@map("users")
 }
@@ -190,11 +191,16 @@ model Organization {
   quoteItems         QuoteItem[]
   payments           Payment[]
   invoices           Invoice[]
+  creditNotes        CreditNote[]
   counters           OrganizationCounter[]
   reviews            Review[]
 
   leadsAssigned Lead[]      @relation("LeadAgency")
   leadOffers    LeadOffer[] @relation("LeadOffers")
+
+  invitesSent          AgencyInvite[]         @relation("InvitingAgency")
+  invitesAccepted      AgencyInvite[]         @relation("JoinedAgency")
+  cancellationFeedback CancellationFeedback[]
 
   /// Payment methods the agency offers its customers (within what the platform allows).
   acceptOnline        Boolean          @default(true)
@@ -460,6 +466,7 @@ model Booking {
   quotes               Quote[]
   payments             Payment[]
   invoices             Invoice[]
+  creditNotes          CreditNote[]
   review               Review?
   ledger               LedgerEntry[]
   messages             BookingMessage[]
@@ -897,10 +904,37 @@ model Invoice {
   totalCents     Int
   data           Json
   createdAt      DateTime     @default(now())
+  creditNotes    CreditNote[]
 
   @@unique([organizationId, number])
   @@index([bookingId])
   @@map("invoices")
+}
+
+/// Corrects an issued invoice when money on it is refunded. Amounts are positive; the document shows them as negative.
+model CreditNote {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  invoiceId      String       @db.VarChar(64)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// What caused it (a refund operation or a refund seen on a Stripe charge); one note per cause.
+  sourceKey      String       @unique @db.VarChar(191)
+  number         String       @db.VarChar(32)
+  issuedAt       DateTime
+  subtotalCents  Int
+  vatCents       Int
+  totalCents     Int
+  /// The VAT split, as printed.
+  vatGroups      Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, number])
+  @@index([bookingId])
+  @@index([invoiceId])
+  @@map("credit_notes")
 }
 
 /// Per-agency sequences, e.g. invoice numbers per year.
@@ -1581,32 +1615,32 @@ model ContentCategory {
 
 /// A blog post, help article or changelog entry. Bodies are Markdown, rendered without raw HTML.
 model ContentArticle {
-  id          String           @id @db.VarChar(64)
+  id              String           @id @db.VarChar(64)
   /// blog | help | changelog
-  kind        String           @db.VarChar(16)
-  slug        String           @db.VarChar(120)
-  categoryId  String?          @db.VarChar(64)
-  category    ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  kind            String           @db.VarChar(16)
+  slug            String           @db.VarChar(120)
+  categoryId      String?          @db.VarChar(64)
+  category        ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   /// draft | pending | published | rejected
-  status      String           @default("draft") @db.VarChar(16)
+  status          String           @default("draft") @db.VarChar(16)
   /// Shown first (blog: the lead story).
-  featured    Boolean          @default(false)
-  publishedAt DateTime?
-  coverImage  String?          @db.VarChar(500)
-  authorName  String?          @db.VarChar(120)
-  authorId    String?          @db.VarChar(64)
-  author      User?            @relation("ContentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
-  submittedAt DateTime?
-  reviewedById String?         @db.VarChar(64)
-  reviewedBy  User?            @relation("ContentReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt  DateTime?
-  rejectionReason String?      @db.VarChar(500)
+  featured        Boolean          @default(false)
+  publishedAt     DateTime?
+  coverImage      String?          @db.VarChar(500)
+  authorName      String?          @db.VarChar(120)
+  authorId        String?          @db.VarChar(64)
+  author          User?            @relation("ContentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  submittedAt     DateTime?
+  reviewedById    String?          @db.VarChar(64)
+  reviewedBy      User?            @relation("ContentReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+  rejectionReason String?          @db.VarChar(500)
   /// ArticleLocale (packages/core/src/content.ts); English is optional.
-  nl          Json
-  en          Json?
-  position    Int              @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  nl              Json
+  en              Json?
+  position        Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@unique([kind, slug])
   @@index([kind, status, publishedAt])
@@ -2081,4 +2115,46 @@ model EmailMessage {
   @@index([bookingId, createdAt])
   @@index([agencyId, createdAt])
   @@map("email_messages")
+}
+
+/// Someone asked another agency to join StageDesk: an agency (its referral
+/// reward applies) or an artist who works for several agencies. Platform-level
+/// (agencyId-style fields), so it stays out of tenantDb. When an agency is
+/// created by someone with that email address, the invite is marked joined.
+model AgencyInvite {
+  id              String        @id @db.VarChar(64)
+  email           String        @db.VarChar(191)
+  /// agency | artist
+  kind            String        @db.VarChar(8)
+  inviterUserId   String        @db.VarChar(64)
+  inviterUser     User          @relation(fields: [inviterUserId], references: [id], onDelete: Cascade)
+  inviterAgencyId String?       @db.VarChar(64)
+  inviterAgency   Organization? @relation("InvitingAgency", fields: [inviterAgencyId], references: [id], onDelete: Cascade)
+  joinedAgencyId  String?       @db.VarChar(64)
+  joinedAgency    Organization? @relation("JoinedAgency", fields: [joinedAgencyId], references: [id], onDelete: SetNull)
+  joinedAt        DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([email])
+  @@index([inviterUserId, createdAt])
+  @@index([inviterAgencyId])
+  @@index([joinedAgencyId])
+  @@map("agency_invites")
+}
+
+/// Why an agency cancelled its plan, asked in the cancel dialog. One row per
+/// cancellation (also after a resume and a second cancel). Platform-level.
+model CancellationFeedback {
+  id        String       @id @db.VarChar(64)
+  agencyId  String       @db.VarChar(64)
+  agency    Organization @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String?      @db.VarChar(64)
+  /// too_expensive | missing_features | too_complex | other_tool | few_bookings | closing | other
+  reason    String       @db.VarChar(32)
+  note      String?      @db.Text
+  createdAt DateTime     @default(now())
+
+  @@index([agencyId])
+  @@index([createdAt])
+  @@map("cancellation_feedback")
 }

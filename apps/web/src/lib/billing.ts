@@ -12,8 +12,10 @@ import { PaymentsError } from "@stagedesk/payments";
 export async function writeBlocked(organizationId: string): Promise<string | null> {
   const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { suspendedAt: true } });
   if (org?.suspendedAt) return (await getTranslations("agencySuspended"))("title");
-  const { access } = await agencyBilling(organizationId);
-  return access.level === "read_only" ? (await getTranslations("billing"))("readOnly") : null;
+  const { access, subscription } = await agencyBilling(organizationId);
+  if (access.level !== "read_only") return null;
+  // Someone who never had a plan isn't told it "ended".
+  return (await getTranslations("billing"))(subscription ? "readOnly" : "readOnlyNoPlan");
 }
 
 /**

@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { normalizePromoCode, parseViaCookie, viaCookie } from "@stagedesk/core";
-import { attachReferral, createSoloArtist, prisma } from "@stagedesk/db";
+import { attachReferral, createSoloArtist, markInvitesJoined, prisma } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { auth } from "@/lib/auth";
@@ -57,8 +57,14 @@ export async function createAgency(_prev: FormState, form: FormData): Promise<Fo
     await attachReferral({ agencyId: organization.id, ownerUserId: viewer.user.id, ownerEmail: viewer.user.email, visit, promoCode }).catch((error) =>
       console.error("[affiliates] referral not recorded", error),
     );
+    // Someone invited this address to start an agency: count it as joined.
+    await markInvitesJoined(viewer.user.email, organization.id).catch((error) => console.error("[invites] not marked joined", error));
   }
-  // No automatic trial: the owner chooses a plan first (plans may offer free days).
+  // No automatic trial: the owner chooses a plan first (plans may offer free days), starting from the one they picked on the pricing page.
+  const plan = String(form.get("plan") ?? "");
+  const interval = form.get("interval") === "year" ? "year" : "month";
+  // In a cookie, since the terms step can come between here and the billing page. It only preselects a plan.
+  if (organization && /^[a-z0-9_-]{1,48}$/.test(plan)) (await cookies()).set("chosen_plan", `${plan}:${interval}`, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 3600 });
   redirect({ href: organization ? "/app/billing?welcome=1" : "/app", locale: (await getLocale()) as Locale });
   return { ok: true };
 }

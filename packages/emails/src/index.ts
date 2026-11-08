@@ -20,6 +20,7 @@ import {
   LeadOffer,
   LeadQuote,
   LeadWon,
+  AgencyInvite,
   LeadReceived,
   LoginCode,
   NewInquiry,
@@ -31,6 +32,7 @@ import {
   QuoteSent,
   GigAssigned,
   BookingDetailsRequest,
+  BookingUpdate,
   ChangeDecision,
   SenderTest,
   ResetPassword,
@@ -178,6 +180,12 @@ export function sendChangeDecision(to: string, p: Parameters<typeof ChangeDecisi
   return send(to, copy[p.locale].changeDecision.subject(p.approved, p.agency, p.code), createElement(ChangeDecision, p));
 }
 
+export function sendBookingUpdate(to: string, p: Parameters<typeof BookingUpdate>[0]) {
+  const c = copy[p.locale].bookingUpdate[p.update];
+  const subject = c.subject({ name: p.name ?? "", agency: p.agency ?? "", customer: p.customer ?? "", artist: p.artist ?? "", code: p.code ?? "", event: p.event ?? "", date: p.date ?? "", reason: p.reason ?? "" });
+  return send(to, subject, createElement(BookingUpdate, p));
+}
+
 export function sendSenderTest(to: string, p: Parameters<typeof SenderTest>[0]) {
   return send(to, copy[p.locale].senderTest.subject, createElement(SenderTest, p));
 }
@@ -230,6 +238,10 @@ export function sendContactMessage(to: string, p: { locale: EmailLocale; name: s
 
 export function sendAgencyCreated(to: string, p: { locale: EmailLocale; name: string; agency: string; url: string; setup?: boolean }) {
   return send(to, copy[p.locale].agencyCreated.subject(p.agency), createElement(AgencyCreated, p));
+}
+
+export function sendAgencyInvite(to: string, p: { locale: EmailLocale; inviter: string; agency: string | null; url: string }) {
+  return send(to, copy[p.locale].agencyInvite.subject(p.inviter), createElement(AgencyInvite, p));
 }
 
 export function sendLeadReceived(to: string, p: { locale: EmailLocale; name: string; reference: string; url: string }) {
@@ -302,6 +314,13 @@ const senders = {
   gigAssigned: sendGigAssigned,
   bookingDetailsRequest: sendBookingDetailsRequest,
   changeDecision: sendChangeDecision,
+  quoteAcceptedNotice: sendBookingUpdate,
+  artistAcceptedNotice: sendBookingUpdate,
+  artistDeclinedNotice: sendBookingUpdate,
+  bookingConfirmed: sendBookingUpdate,
+  bookingCancelled: sendBookingUpdate,
+  invoiceIssued: sendBookingUpdate,
+  reviewInvitation: sendBookingUpdate,
   senderTest: sendSenderTest,
   invitation: sendInvitation,
   affiliateApproved: sendAffiliateApproved,
@@ -314,6 +333,7 @@ const senders = {
   ticketReply: sendTicketReply,
   contactMessage: sendContactMessage,
   agencyCreated: sendAgencyCreated,
+  agencyInvite: sendAgencyInvite,
   leadReceived: sendLeadReceived,
   leadOffer: sendLeadOffer,
   leadQuote: sendLeadQuote,

@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { CheckIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -12,7 +13,7 @@ import { Pill } from "@/components/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
-import { dateTime, euro, percent } from "@/lib/format";
+import { dayOf, euro, percent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { requireAgency } from "@/lib/viewer";
 import { CancelPlan } from "./cancel-plan";
@@ -61,15 +62,17 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
   const done = query["checkout"] === "success";
   // Straight after creating the agency: choosing a plan is the next step.
   const welcome = query["welcome"] === "1" && !subscription;
+  // Picked on the pricing page before signing up.
+  const [chosenPlan, chosenInterval] = ((await cookies()).get("chosen_plan")?.value ?? "").split(":");
 
   const statusLine = (() => {
     if (!subscription) return t("status_none");
-    if (access.reason === "trial") return t(subscription.cancelAtPeriodEnd ? "status_cancels" : "status_trial", { date: dateTime(format, access.until!) });
-    if (access.reason === "grace") return t("status_grace", { date: dateTime(format, access.until!) });
+    if (access.reason === "trial") return t(subscription.cancelAtPeriodEnd ? "status_cancels" : "status_trial", { date: dayOf(format, access.until!) });
+    if (access.reason === "grace") return t("status_grace", { date: dayOf(format, access.until!) });
     if (access.reason === "active" && subscription.currentPeriodEnd) {
       return subscription.cancelAtPeriodEnd
-        ? t("status_cancels", { date: dateTime(format, subscription.currentPeriodEnd) })
-        : t("status_renews", { date: dateTime(format, subscription.currentPeriodEnd) });
+        ? t("status_cancels", { date: dayOf(format, subscription.currentPeriodEnd) })
+        : t("status_renews", { date: dayOf(format, subscription.currentPeriodEnd) });
     }
     return t(`status_${access.reason}`);
   })();
@@ -105,7 +108,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
               {subscription?.stripeSubscriptionId && ["active", "trialing", "past_due"].includes(subscription.status) && (
                 <CancelPlan
                   cancelling={subscription.cancelAtPeriodEnd}
-                  endsOn={dateTime(format, (subscription.status === "trialing" ? subscription.trialEndsAt : subscription.currentPeriodEnd) ?? new Date())}
+                  endsOn={dayOf(format, (subscription.status === "trialing" ? subscription.trialEndsAt : subscription.currentPeriodEnd) ?? new Date())}
                 />
               )}
             </div>
@@ -155,6 +158,8 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
       </div>
 
       <PlanPicker
+        chosenPlanId={subscription ? undefined : plans.find((p) => p.key === chosenPlan)?.id}
+        chosenInterval={chosenInterval === "year" ? "year" : undefined}
         stripeReady={await isStripeConfigured()}
         // The agency's plan unless cancelled; "paid" when active or on a Stripe trial (card on file).
         current={

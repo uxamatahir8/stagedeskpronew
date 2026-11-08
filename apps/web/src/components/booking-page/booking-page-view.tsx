@@ -78,7 +78,8 @@ export function BookingFrame({ theme, brandColor, className, children }: { theme
 const accentButton =
   "inline-flex items-center justify-center gap-2 rounded-[var(--bp-radius)] bg-[var(--bp-accent)] px-5 py-3 text-sm font-semibold text-[var(--bp-on-accent)] shadow-sm transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bp-accent)]";
 
-export function BookingPageView({ data, theme, form, preview = false }: { data: BookingPageData; theme: BookingTheme; form: React.ReactNode; preview?: boolean }) {
+/** `branding` shows the "Bookings by StageDesk" link; plans with removeBranding hide it. */
+export function BookingPageView({ data, theme, form, preview = false, branding = true }: { data: BookingPageData; theme: BookingTheme; form: React.ReactNode; preview?: boolean; branding?: boolean }) {
   const t = useTranslations("bookingPage");
   const sections = theme.sections.filter((s) => s.visible && hasContent(s, data));
   const ctaLabel = theme.ctaLabel || t("requestQuote");
@@ -125,9 +126,11 @@ export function BookingPageView({ data, theme, form, preview = false }: { data: 
             © {data.name}
             {data.city && ` · ${data.city}`}
           </span>
-          <Link href="/" className="transition-colors hover:text-foreground">
-            {t("poweredBy")}
-          </Link>
+          {branding && (
+            <Link href="/" className="transition-colors hover:text-foreground">
+              {t("poweredBy")}
+            </Link>
+          )}
         </div>
       </footer>
 

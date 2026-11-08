@@ -26,3 +26,5 @@ export * from "./visitor";
 export * from "./inventory";
 export * from "./config";
 export * from "./invoice-template";
+export * from "./credit-notes";
+export * from "./growth";

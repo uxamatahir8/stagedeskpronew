@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
-import { allPublishedSlugs, directoryArtists, listContentCategories, prisma } from "@stagedesk/db";
+import { allPublishedSlugs, directoryArtists, getSetting, listContentCategories, prisma } from "@stagedesk/db";
 import { siteUrl } from "@/lib/seo";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/features/booking-page", "/features/quotes-invoices", "/features/payments-payouts", "/features/artist-management",
     "/solutions/weddings-events", "/solutions/band-agencies", "/request", "/tour", "/partners/how-it-works", "/partners/earnings", "/partners/faq", "/artists",
   ];
-  const [pages, agencies, posts, articles, categories, artists] = await Promise.all([
+  const [pages, agencies, posts, articles, categories, artists, marketplace] = await Promise.all([
     prisma.page.findMany({ where: { status: "published" }, select: { slugNl: true, slugEn: true, updatedAt: true } }),
     // Public booking pages that are switched on.
     prisma.organization.findMany({ where: { bookingPageEnabled: true, suspendedAt: null }, select: { slug: true } }),
@@ -30,9 +30,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     listContentCategories("blog"),
     // Independent artists in the directory (with the Artist plan).
     directoryArtists(),
+    getSetting("marketplace"),
   ]);
   return [
-    ...fixed.flatMap((p) => both({ nl: p, en: p }, { changeFrequency: "weekly", priority: p === "/" ? 1 : 0.8 })),
+    ...fixed.filter((p) => p !== "/request" || marketplace.enabled).flatMap((p) => both({ nl: p, en: p }, { changeFrequency: "weekly", priority: p === "/" ? 1 : 0.8 })),
     ...posts.flatMap((p) => both({ nl: `/blog/${p.slug}`, en: `/blog/${p.slug}` }, { lastModified: p.updatedAt, changeFrequency: "monthly" })),
     ...articles.flatMap((a) => both({ nl: `/help/${a.slug}`, en: `/help/${a.slug}` }, { lastModified: a.updatedAt, changeFrequency: "monthly" })),
     ...categories.filter((c) => c._count.articles > 0).flatMap((c) => both({ nl: `/blog/category/${c.slug}`, en: `/blog/category/${c.slug}` }, { changeFrequency: "weekly", priority: 0.5 })),

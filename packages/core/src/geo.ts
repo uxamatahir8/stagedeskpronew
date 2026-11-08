@@ -62,3 +62,19 @@ export function servesRequest(area: ServiceArea, request: RequestPlace): boolean
   if (area.radiusKm && area.location && request.location) return distanceKm(area.location, request.location) <= area.radiusKm;
   return false;
 }
+
+/**
+ * Whether the platform's request form takes this request: the marketplace is
+ * on, the event type is one it has started with, and the place is in a launch
+ * region (any of the places given: the typed city, its geocoded city or province).
+ */
+export function marketplaceCovers(
+  setting: { enabled: boolean; eventTypes: readonly string[]; regions: readonly string[] },
+  request: { eventType: string; places: readonly (string | null | undefined)[] },
+): "ok" | "closed" | "event_type" | "region" {
+  if (!setting.enabled) return "closed";
+  if (setting.eventTypes.length > 0 && !setting.eventTypes.includes(request.eventType)) return "event_type";
+  if (setting.regions.length === 0) return "ok";
+  const wanted = new Set(request.places.filter((p): p is string => Boolean(p)).flatMap((p) => p.split("|")).map(normalizePlace).filter(Boolean));
+  return setting.regions.some((r) => wanted.has(normalizePlace(r))) ? "ok" : "region";
+}

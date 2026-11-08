@@ -27,6 +27,10 @@ export interface PricingCard {
 }
 
 /** The plans side by side; the recommended one stands out in the brand's dark purple. */
+/** Sign-up remembers the plan and period chosen here, so the billing page can start from them. */
+const withPlan = (href: string, plan: string, interval: string) =>
+  href === "/sign-up" ? `/sign-up?next=${encodeURIComponent(`/onboarding?start=agency&plan=${plan}&interval=${interval}`)}` : href;
+
 export function PricingCards({ plans, cta, trialDays }: { plans: PricingCard[]; cta: { href: string; label: string }; trialDays: number }) {
   const t = useTranslations("pricingPage");
   const [interval, setInterval] = useState<"month" | "year">("month");
@@ -84,7 +88,7 @@ export function PricingCards({ plans, cta, trialDays }: { plans: PricingCard[]; 
               )}
               {p.billedInEuro && <p className={cn("-mt-4 text-xs", dark ? "text-white/60" : "text-muted-foreground")}>{p.billedInEuro}</p>}
               <Button asChild size="lg" variant={dark ? "default" : "outline"} className={cn("w-full", dark && "bg-[oklch(0.66_0.2_352)] text-white hover:bg-[oklch(0.6_0.2_352)]")}>
-                <Link href={cta.href}>
+                <Link href={withPlan(cta.href, p.key, interval)}>
                   {cta.label}
                   <ArrowRightIcon />
                 </Link>

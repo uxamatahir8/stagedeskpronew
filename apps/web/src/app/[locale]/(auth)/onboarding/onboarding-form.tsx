@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
 import { FormField } from "@/components/form-field";
@@ -8,13 +9,15 @@ import { Input } from "@/components/ui/input";
 import type { FormState } from "@/lib/validation";
 import { createAgency, createSoloArtistAction } from "./actions";
 
-export function OnboardingForm() {
+export function OnboardingForm({ plan, interval }: { plan?: string; interval?: string }) {
   const t = useTranslations("onboarding");
   const [state, action, pending] = useActionState(createAgency, {} as FormState);
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form action={action} className="grid gap-4">
+    <form {...keepValues(action)} className="grid gap-4">
+      {plan && <input type="hidden" name="plan" value={plan} />}
+      {interval && <input type="hidden" name="interval" value={interval} />}
       <FormField id="onb-name" label={t("agencyName")} error={errors["name"]}>
         <Input id="onb-name" name="name" required maxLength={100} autoComplete="organization" />
       </FormField>
@@ -41,7 +44,7 @@ export function SoloArtistForm() {
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form action={action} className="grid gap-4">
+    <form {...keepValues(action)} className="grid gap-4">
       <FormField id="solo-name" label={t("stageName")} error={errors["stageName"]}>
         <Input id="solo-name" name="stageName" required maxLength={120} autoComplete="nickname" />
       </FormField>

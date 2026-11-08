@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
@@ -39,7 +40,7 @@ export function NewBookingForm({
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...keepValues(action)} className="grid gap-6">
       <input type="hidden" name="customerMode" value={mode} />
       <input type="hidden" name="customerId" value={customerId} />
       <Card>
@@ -71,7 +72,7 @@ export function NewBookingForm({
               </FormField>
             </TabsContent>
             <TabsContent value="new" className="mt-4 grid gap-4 sm:grid-cols-2">
-              <FormField required id="nb-cname" label={t("auth.name")} error={errors["customerName"]}>
+              <FormField required id="nb-cname" label={t("newBooking.customerName")} error={errors["customerName"]}>
                 <Input required id="nb-cname" name="customerName" maxLength={191} autoComplete="off" />
               </FormField>
               <FormField required id="nb-cemail" label={t("auth.email")} error={errors["customerEmail"]}>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artistCutOfPayment, artistEarnings, compensationOf } from "./compensation";
+import { artistCutOfPayment, artistShareOfReceived, artistEarnings, compensationOf } from "./compensation";
 import { availableForArtist, splitBookingPayment } from "./fees";
 import type { FeeRule } from "./settings/fees";
 
@@ -93,5 +93,25 @@ describe("splitBookingPayment with a fixed artist amount", () => {
 
   it("refuses an artist amount larger than what is available", () => {
     expect(() => splitBookingPayment({ amount: 10_000, stripeFee: 0, artistShareBps: 0, artistCents: 9_600, feeRule: fivePct, stripeFeePaidBy: "agency" })).toThrow(RangeError);
+  });
+});
+
+describe("artistShareOfReceived", () => {
+  const pct = { type: "percentage", shareBps: 6_000, fixedCents: null } as const;
+  const fixed = { type: "fixed", shareBps: 0, fixedCents: 30_000 } as const;
+
+  it("takes the share of what came in", () => {
+    expect(artistShareOfReceived(pct, 36_300, 36_300)).toBe(21_780);
+    expect(artistShareOfReceived(pct, 10_000, 36_300)).toBe(6_000);
+  });
+
+  it("spreads a fixed fee in proportion, never above the fee", () => {
+    expect(artistShareOfReceived(fixed, 50_000, 100_000)).toBe(15_000);
+    expect(artistShareOfReceived(fixed, 200_000, 100_000)).toBe(30_000);
+  });
+
+  it("owes nothing when nothing came in", () => {
+    expect(artistShareOfReceived(pct, 0, 36_300)).toBe(0);
+    expect(artistShareOfReceived(fixed, -5, 100_000)).toBe(0);
   });
 });

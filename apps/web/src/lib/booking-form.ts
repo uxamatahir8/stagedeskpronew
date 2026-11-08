@@ -1,7 +1,7 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { eventTypes, parseEuros } from "@stagedesk/core";
+import { eventTypes, parseEuros, todayInNetherlands } from "@stagedesk/core";
 import { fieldErrorKeys, optionalText } from "@/lib/validation";
 
 // Fields of the booking form, shared by the agency's and the platform admin's actions.
@@ -48,7 +48,7 @@ export const newBookingSchema = z.object({
   customerEmail: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : v), z.email("invalidEmail").max(191).nullable()),
   customerPhone: optionalText(32),
   message: optionalText(5000),
-});
+}).refine((d) => !d.eventDate || d.eventDate >= todayInNetherlands(), { path: ["eventDate"], message: "pastDate" });
 
 export async function translateErrors(error: z.ZodError) {
   const [tb, ts] = await Promise.all([getTranslations("newBooking"), getTranslations("agencySettings")]);
@@ -56,7 +56,7 @@ export async function translateErrors(error: z.ZodError) {
   return Object.fromEntries(
     Object.entries(keys).map(([field, key]) => [
       field,
-      ["invalidTime", "invalidNumber", "invalidDate", "invalidPrice"].includes(key)
+      ["invalidTime", "invalidNumber", "invalidDate", "invalidPrice", "pastDate"].includes(key)
         ? tb(key as "invalidTime")
         : ts(key as "required"),
     ]),

@@ -81,3 +81,15 @@ export function artistCutOfPayment(input: {
   const artist = Math.max(0, Math.min(wanted, available));
   return { artist, shortfall: wanted - artist };
 }
+
+/**
+ * The artist's part of money the agency received itself (bank transfer, cash):
+ * nothing moves through Stripe, so the agency owes them this directly. Never
+ * more than they earn on the whole booking.
+ */
+export function artistShareOfReceived(c: Compensation, receivedCents: Cents, bookingTotalCents: Cents): Cents {
+  if (receivedCents <= 0) return 0;
+  if (c.type === "percentage") return percentOf(receivedCents, c.shareBps);
+  const fee = c.fixedCents ?? 0;
+  return bookingTotalCents > 0 ? Math.min(fee, Math.round((fee * receivedCents) / bookingTotalCents)) : fee;
+}

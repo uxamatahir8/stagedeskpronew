@@ -4,10 +4,11 @@ import { getFormatter } from "@/lib/formatter";
 import { artistEarnings, compensationOf, type EventType, todayInNetherlands } from "@stagedesk/core";
 import { artistGigs, currentArtistIds, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
+import { InviteAgencyForm } from "@/components/invite-agency-form";
 import { StatCard } from "@/components/stat-card";
 import { GigStateBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { euro, eventDate } from "@/lib/format";
 
@@ -50,8 +51,9 @@ export async function ArtistHome({ userId }: { userId: string }) {
   const today = todayInNetherlands();
   const yearStart = new Date(`${today.slice(0, 4)}-01-01T00:00:00Z`);
   // An artist's own gigs, at their agency and at partner agencies they're shared with.
-  const [t, te, format, { requests, upcoming: gigs }, paid] = await Promise.all([
+  const [t, ti, te, format, { requests, upcoming: gigs }, paid] = await Promise.all([
     getTranslations("artistHome"),
+    getTranslations("agencyInvite"),
     getTranslations("eventTypes"),
     getFormatter(),
     artistGigs(userId),
@@ -136,6 +138,16 @@ export async function ArtistHome({ userId }: { userId: string }) {
               })}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{ti("artistTitle")}</CardTitle>
+          <CardDescription>{ti("artistBody")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InviteAgencyForm as="artist" />
         </CardContent>
       </Card>
     </>

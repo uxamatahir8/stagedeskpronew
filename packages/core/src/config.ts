@@ -51,7 +51,10 @@ export function checkProductionConfig(env: ConfigEnv, role: "web" | "worker" = "
     }
     // Cloudflare's documented test keys (1x…, 2x…, 3x…) pass or fail everything.
     if (/^[123]x0{10,}/.test(env["TURNSTILE_SECRET_KEY"] ?? "")) errors.push("TURNSTILE_SECRET_KEY is one of Cloudflare's test keys, which accept every submission.");
-    if (!has("TRUSTED_PROXIES")) warnings.push("TRUSTED_PROXIES is not set: rate limits trust the first X-Forwarded-For address, which a client can choose. Set it to the number of proxies in front of the app (1 behind Caddy).");
+    // Without it every rate limit keys on an address the client chooses (X-Forwarded-For), so they can all be bypassed.
+    const proxies = (env["TRUSTED_PROXIES"] ?? "").trim();
+    if (!proxies) errors.push("TRUSTED_PROXIES is not set: rate limits would trust the first X-Forwarded-For address, which a client can choose. Set it to the number of proxies in front of the app (1 behind Caddy).");
+    else if (!/^[1-9]\d?$/.test(proxies)) errors.push(`TRUSTED_PROXIES must be the number of proxies in front of the app, 1 or more (is "${proxies}").`);
   }
   if (!has("STRIPE_SECRET_KEY")) warnings.push("STRIPE_SECRET_KEY is not set in .env: online payments work only if the keys are entered under Settings → Payment setup.");
   if (env["STRIPE_API_BASE"]) errors.push("STRIPE_API_BASE is set: that points Stripe at a mock server. Remove it in production.");

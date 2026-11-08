@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
-import { bookingTypeExists, notify, platformAdminIds, submitLead } from "@stagedesk/db";
+import { bookingTypeExists, marketplaceAccepts, notify, platformAdminIds, submitLead } from "@stagedesk/db";
 import type { InquiryResult } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { runLeadBroadcast } from "@/lib/lead-market";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
@@ -57,6 +57,12 @@ export async function submitLeadAction(form: FormData): Promise<InquiryResult> {
   const d = parsed.data;
   if (!(await bookingTypeExists(d.eventType))) return { ok: false, message: t("errorRequired") };
   if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
+  // The platform may not take requests yet, or only some event types and places (Settings → Marketplace).
+  const covered = await marketplaceAccepts(d.eventType, d.venueCity);
+  if (covered !== "ok") {
+    const tl = await getTranslations("leadForm");
+    return { ok: false, message: covered === "closed" ? tl("closedBody") : covered === "event_type" ? tl("errorEventType") : tl("errorRegion", { city: d.venueCity }) };
+  }
   if (!(await allow(`lead:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
 
   const locale = userLocale(await getLocale());

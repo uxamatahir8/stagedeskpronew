@@ -9,6 +9,7 @@ import { InquiryForm } from "@/components/booking/inquiry-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { pageMetadata } from "@/lib/seo";
+import { siteSettings } from "@/lib/site";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { submitLeadAction } from "./actions";
 
@@ -66,6 +67,21 @@ export default async function RequestPage({ params }: PageProps<"/[locale]/reque
 async function LeadForm() {
   // Reads the date (for the earliest allowed event day), so it renders per request.
   await connection();
-  const [types, locale] = await Promise.all([availableBookingTypes(), getLocale()]);
-  return <InquiryForm kind="platform" submitAction={submitLeadAction} artists={[]} fullyBooked={[]} siteKey={turnstileSiteKey()} today={todayInNetherlands()} bookingTypes={types.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))} />;
+  const [all, locale, { marketplace }, t] = await Promise.all([availableBookingTypes(), getLocale(), siteSettings(), getTranslations("leadForm")]);
+  // Before launch (Settings → Marketplace) the page says so instead of taking requests nobody answers.
+  if (!marketplace.enabled) {
+    return (
+      <div className="grid gap-2 rounded-2xl border border-dashed p-6">
+        <p className="font-semibold">{t("closedTitle")}</p>
+        <p className="text-sm text-muted-foreground">{t("closedBody")}</p>
+      </div>
+    );
+  }
+  const types = marketplace.eventTypes.length > 0 ? all.filter((type) => marketplace.eventTypes.includes(type.key)) : all;
+  return (
+    <div className="grid gap-4">
+      {marketplace.regions.length > 0 && <p className="text-sm text-muted-foreground">{t("regionsNote", { regions: marketplace.regions.join(", ") })}</p>}
+      <InquiryForm kind="platform" submitAction={submitLeadAction} artists={[]} fullyBooked={[]} siteKey={turnstileSiteKey()} today={todayInNetherlands()} bookingTypes={types.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))} />
+    </div>
+  );
 }

@@ -30,7 +30,12 @@ export function PlanPicker({
   current: currentSub,
   switching,
   stripeReady,
+  chosenPlanId,
+  chosenInterval,
 }: {
+  /** Picked on the pricing page before signing up. */
+  chosenPlanId?: string;
+  chosenInterval?: "month" | "year";
   plans: PlanCard[];
   /** The agency's plan; `paid` is false while it still has to be paid (overdue, or a trial without card). */
   current: { planId: string; interval: "month" | "year"; paid: boolean } | null;
@@ -39,7 +44,7 @@ export function PlanPicker({
   stripeReady: boolean;
 }) {
   const t = useTranslations("billing");
-  const [interval, setInterval] = useState<"month" | "year">(currentSub?.interval ?? "month");
+  const [interval, setInterval] = useState<"month" | "year">(currentSub?.interval ?? chosenInterval ?? "month");
   const [pending, go] = useRedirect();
 
   return (
@@ -60,6 +65,7 @@ export function PlanPicker({
           // The plan you're on and paying for can't be bought again; one still to pay can.
           const current = mine && interval === currentSub.interval && currentSub.paid;
           const trialDays = currentSub ? 0 : p.trialDays;
+          const chosen = p.id === chosenPlanId;
           const label = current
             ? t("current")
             : mine && !currentSub.paid
@@ -70,19 +76,21 @@ export function PlanPicker({
                   ? t("startTrial", { days: trialDays })
                   : t("choose", { plan: p.name });
           return (
-            <li key={p.id} className={cn("grid content-start gap-4 rounded-2xl border bg-card p-5", mine ? "border-primary ring-2 ring-primary" : p.recommended && "border-primary/50")}>
+            <li key={p.id} className={cn("grid content-start gap-4 rounded-2xl border bg-card p-5", mine || chosen ? "border-primary ring-2 ring-primary" : p.recommended && "border-primary/50")}>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-lg font-semibold">{p.name}</h3>
                 <span className="flex flex-wrap gap-1.5">
                   {mine && <Pill tone="success">{t("yourPlan")}</Pill>}
+                  {chosen && <Pill tone="brand">{t("yourChoice")}</Pill>}
                   {trialDays > 0 && <Pill tone="success">{t("trialBadge", { days: trialDays })}</Pill>}
-                  {p.recommended && !mine && <Pill tone="brand">{t("recommended")}</Pill>}
+                  {p.recommended && !mine && !chosen && <Pill tone="brand">{t("recommended")}</Pill>}
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">{p.description}</p>
               <p className="text-3xl font-semibold tracking-tight tabular-nums">
                 {interval === "month" ? p.monthly : p.yearly}
                 <span className="text-base font-normal text-muted-foreground">{interval === "month" ? t("perMonth") : t("perYear")}</span>
+                <span className="block text-xs font-normal tracking-normal text-muted-foreground">{t("inclVat")}</span>
               </p>
               <ul className="grid gap-1.5 text-sm">
                 {p.features.map((f) => (
@@ -94,7 +102,7 @@ export function PlanPicker({
                 {p.fee && <li className="text-muted-foreground">{p.fee}</li>}
               </ul>
               <Button
-                variant={mine || (!currentSub && p.recommended) ? "default" : "outline"}
+                variant={mine || chosen || (!currentSub && !chosenPlanId && p.recommended) ? "default" : "outline"}
                 disabled={pending || current || !stripeReady}
                 onClick={() => go(() => choosePlanAction(p.id, interval))}
               >

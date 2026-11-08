@@ -182,7 +182,8 @@
     "emptyAction": "New quote",
     "tabsAll": "All",
     "tabsOpen": "Open",
-    "tabsDone": "Done"
+    "tabsDone": "Done",
+    "fileTooLarge": "This file is too large. Choose one smaller than 5 MB."
   },
   "auth": {
     "brandLine": "Bookings, quotes and payments for entertainment agencies.",
@@ -260,7 +261,7 @@
     },
     "brandPoint1": "Inquiries, quotes and payments in one place",
     "brandPoint2": "Artists accept gigs from their phone",
-    "brandPoint3": "iDEAL payments and automatic payouts",
+    "brandPoint3": "iDEAL | Wero payments and automatic payouts",
     "backToSite": "Back to the website",
     "terms": "Terms",
     "privacy": "Privacy",
@@ -439,7 +440,8 @@
     "verify": "Verify and turn on",
     "enabled": "Two-step verification is on.",
     "disabled": "Two-step verification is off.",
-    "statusOn": "On"
+    "statusOn": "On",
+    "manualKey": "Can't scan? Enter this key in your app:"
   },
   "errors": {
     "forbiddenTitle": "You don't have access to this page",
@@ -520,7 +522,11 @@
     "manual_numbers_off": "Typing invoice numbers is switched off for your agency (Settings → Invoices).",
     "quote_outdated": "The event details changed after this quote was sent. Send a revised quote first.",
     "artist_no_account": "This artist has no login yet, so they can't see or answer a request. Invite them from their artist page first.",
-    "artist_account_disabled": "This artist's account is disabled, so they can't see or answer a request."
+    "artist_account_disabled": "This artist's account is disabled, so they can't see or answer a request.",
+    "negative_total": "The total of a quote can't be below zero. Check the discount lines.",
+    "amount_too_high": "This amount is too high. Check the price and quantity.",
+    "overpayment": "This is more than the amount still due. Check the amount, or record it anyway if the customer really paid more.",
+    "nothing_due": "There's nothing left to pay this artist."
   },
   "bookings": {
     "title": "Bookings",
@@ -579,7 +585,9 @@
     "invalidDate": "Choose a date.",
     "invalidPrice": "Enter an amount like 125 or 125,50.",
     "backToCalendar": "Back to the calendar",
-    "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free."
+    "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free.",
+    "pastDate": "This date has passed. Choose today or a later date.",
+    "customerName": "Customer's name"
   },
   "booking": {
     "eventDetails": "Event details",
@@ -720,7 +728,18 @@
     "applyAnywayConfirm": "This replaces the current values shown here with what the customer asked for.",
     "changeEmailFailed": "The customer's email could not be stored for sending; send it again from the booking's email list.",
     "assignNeedsAccount": "{count, plural, one {# artist can't be picked} other {# artists can't be picked}} until they have a working login.",
-    "assignOpenArtists": "Open artists"
+    "assignOpenArtists": "Open artists",
+    "recordAnyway": "Record anyway",
+    "needsLine": "Add at least one line with a description and a price.",
+    "totalNegative": "The total can't be below zero. Check the discount lines.",
+    "totalTooHigh": "This amount is too high. Check the price and quantity.",
+    "depositPctInvalid": "Enter a percentage from 0 to 100.",
+    "validDaysInvalid": "Enter a whole number of days from 1 to 180.",
+    "downloadCreditNote": "Credit note {number}",
+    "artistBalanceDue": "You still owe {artist} {amount} for this booking. Pay them directly, then mark it as paid.",
+    "artistBalanceMarkPaid": "Mark artist as paid",
+    "artistBalancePaid": "Marked {artist} as paid.",
+    "inquiryNotes": "Notes from the inquiry"
   },
   "timeline": {
     "created": "Booking created",
@@ -758,7 +777,8 @@
     "change_requested": "The customer asked to change the event details",
     "change_withdrawn": "The customer took back their change request",
     "change_approved": "Change request approved",
-    "change_rejected": "Change request refused"
+    "change_rejected": "Change request refused",
+    "artist_paid": "{stageName} marked as paid"
   },
   "quotes": {
     "title": "Quotes",
@@ -854,7 +874,7 @@
     "payType": "Pay",
     "payType_percentage": "Percentage of each booking",
     "payType_fixed": "Fixed amount per booking",
-    "payType_percentageHint": "The artist gets this share of what the customer pays.",
+    "payType_percentageHint": "The artist gets this share of what the customer pays, including VAT. Use a fixed fee to agree an amount instead.",
     "payType_fixedHint": "The same amount for every booking, whatever the booking costs.",
     "fixedFee": "Amount per booking ({currency})",
     "fixedFeeHint": "Applies to bookings you assign from now on; gigs already assigned keep their pay.",
@@ -983,7 +1003,8 @@
     "provider_soundcloud": "Open on SoundCloud",
     "provider_mixcloud": "Open on Mixcloud",
     "provider_tidal": "Open on TIDAL",
-    "provider_deezer": "Open on Deezer"
+    "provider_deezer": "Open on Deezer",
+    "creditNote": "Download credit note {number}"
   },
   "quotePage": {
     "title": "Quote {code}",
@@ -1013,7 +1034,8 @@
     "accountExists": "You already have an account. Sign in with your email.",
     "haveAccount": "Already have an account?",
     "signIn": "Sign in to follow your booking",
-    "outdated": "The event details changed after this quote was made. The agency will send you an updated quote."
+    "outdated": "The event details changed after this quote was made. The agency will send you an updated quote.",
+    "agencySuspended": "{agency} can't take new bookings or payments at the moment, so this can't be accepted or paid here. Please contact the agency directly."
   },
   "reviews": {
     "title": "Reviews",
@@ -1048,7 +1070,10 @@
     "toPay": "To pay",
     "payWithin": "Please pay within 14 days, quoting invoice number {number}.",
     "payTo": "Payment details",
-    "page": "{number} · page {page} of {pages}"
+    "page": "{number} · page {page} of {pages}",
+    "credit_note": "Credit note",
+    "creditLine": "Correction of invoice {number}",
+    "creditFooter": "This credit note corrects invoice {number}."
   },
   "budgetRanges": {
     "lt_750": "Up to €750",
@@ -1294,7 +1319,21 @@
     "cancelDone": "Cancelled. Your plan stays active until the end of the paid period.",
     "resume": "Resume plan",
     "resumeDone": "Your plan continues as normal.",
-    "status_free": "Free: answering requests and taking bookings costs nothing. The Artist plan adds your public profile and direct booking."
+    "status_free": "Free: answering requests and taking bookings costs nothing. The Artist plan adds your public profile and direct booking.",
+    "readOnlyNoPlan": "Choose a plan under Subscription to start using StageDesk. Until then you can look around but not make changes.",
+    "yourChoice": "Your choice",
+    "inclVat": "Incl. VAT",
+    "cancelReasonRequired": "Choose a reason first.",
+    "cancelReasonQuestion": "Why are you cancelling?",
+    "cancelReason_too_expensive": "Too expensive",
+    "cancelReason_missing_features": "Something I need is missing",
+    "cancelReason_too_complex": "Too hard to use",
+    "cancelReason_other_tool": "Switching to another tool",
+    "cancelReason_few_bookings": "Not enough bookings right now",
+    "cancelReason_closing": "Closing or pausing the agency",
+    "cancelReason_other": "Something else",
+    "cancelNote": "Anything you'd like to add? (optional)",
+    "cancelNotePlaceholder": "What would have made you stay?"
   },
   "plans": {
     "title": "Plans & limits",
@@ -1370,6 +1409,8 @@
     "paidBy_platform": "The platform",
     "serviceFee": "Service fee shown to customers (€)",
     "serviceFeeHint": "A separate line on quotes. 0 for none.",
+    "exampleStripeFee": "Stripe costs in the website example (€)",
+    "exampleStripeFeeHint": "Shown in the example booking on the home page. About €0.29 per iDEAL | Wero payment; the example has two (deposit and balance).",
     "bookingsTitle": "Bookings",
     "quoteExpiryDays": "Quotes valid for (days)",
     "depositPct": "Default deposit (%)",
@@ -1413,7 +1454,7 @@
     "title": "Payments",
     "description": "Money received for your bookings and what's been paid out to you.",
     "connectTitle": "Online payments",
-    "connectBody": "Connect a Stripe account so customers can pay deposits and balances with iDEAL or card. Money is paid out to you after each event.",
+    "connectBody": "Connect a Stripe account so customers can pay deposits and balances with iDEAL | Wero or card. Money is paid out to you after each event.",
     "connect": "Connect Stripe",
     "continue": "Finish Stripe setup",
     "dashboard": "Open Stripe dashboard",
@@ -1457,7 +1498,7 @@
   "pay": {
     "payDeposit": "Pay deposit {amount}",
     "payBalance": "Pay balance {amount}",
-    "methods": "iDEAL or card, via Stripe",
+    "methods": "iDEAL | Wero or card, via Stripe",
     "offline": "Your agency will send you payment details.",
     "unavailable": "Online payment has not been enabled by this agency yet.",
     "requestDetails": "Ask agency for payment details",
@@ -1958,8 +1999,8 @@
     "channels": "Conversations",
     "conversation": "Conversation",
     "removedUser": "Removed user",
-    "empty_customer": "No messages with the customer yet.",
-    "empty_artist": "No messages with the artist yet.",
+    "empty_customer": "No messages yet.",
+    "empty_artist": "No messages yet.",
     "write": "Write a message",
     "placeholder": "Write a message…",
     "sendHint": "Ctrl + Enter to send",
@@ -2165,7 +2206,8 @@
         "operation_retried": "Retried a refund or payout",
         "operation_closed": "Closed a refund with a reversal shortfall",
         "subscription_reconciled": "Reconciled an agency's subscriptions with Stripe",
-        "incident_resolved": "Marked a billing incident as handled"
+        "incident_resolved": "Marked a billing incident as handled",
+        "artist_paid": "Marked an artist as paid"
       },
       "user": {
         "disable": "Disabled an account",
@@ -2262,6 +2304,9 @@
         "delete": "Deleted an artist",
         "invite": "Artist invited or linked to an account",
         "setup_resent": "Artist password setup link resent"
+      },
+      "team": {
+        "permissions": "Changed role permissions"
       }
     },
     "group_page": "Pages",
@@ -2274,7 +2319,16 @@
     "group_impersonation": "Log in as",
     "viaAdmin": "via {name}",
     "group_inventory": "Equipment",
-    "group_data": "Data"
+    "group_data": "Data",
+    "target": {
+      "user": "Account",
+      "booking": "Booking",
+      "payment": "Payment",
+      "organization": "Agency",
+      "agency": "Agency",
+      "plan": "Plan",
+      "setting": "Setting"
+    }
   },
   "charts": {
     "showChart": "Chart",
@@ -2476,7 +2530,7 @@
       "feature_quotes-invoices": "Quotes & invoices",
       "feature_quotes-invoicesHint": "Professional quotes with VAT and deposit",
       "feature_payments-payouts": "Payments & payouts",
-      "feature_payments-payoutsHint": "iDEAL, cards and automatic artist payouts",
+      "feature_payments-payoutsHint": "iDEAL | Wero, cards and automatic artist payouts",
       "feature_artist-management": "Artist management",
       "feature_artist-managementHint": "Availability, requests and the gig brief",
       "forAgenciesHint": "For DJ, band and entertainment agencies",
@@ -2534,12 +2588,12 @@
   },
   "landing": {
     "metaTitle": "Booking software for DJ and band agencies",
-    "metaDescription": "Inquiries, quotes, artists and payments in one place. With your own booking page, iDEAL and automatic artist payouts.",
+    "metaDescription": "Inquiries, quotes, artists and payments in one place. With your own booking page, iDEAL | Wero and automatic artist payouts.",
     "eyebrow": "For DJ and band agencies",
     "title": "From inquiry to payout, <hl>without the spreadsheets</hl>",
     "intro": "StageDesk gives your agency one place for inquiries, quotes, planning, artists and payments. Your customers book through your own page; your artists get paid automatically after the party.",
     "point1": "Your own booking page",
-    "point2": "iDEAL and cards",
+    "point2": "iDEAL | Wero and cards",
     "point3": "Dutch and English",
     "seePricing": "See pricing",
     "previewLabel": "Example of the booking overview in StageDesk",
@@ -2560,20 +2614,21 @@
     "feature_artists": "Artists who say yes",
     "feature_artistsBody": "Ask an artist, they accept in the app and get the full brief. Share artists with partner agencies.",
     "feature_payments": "Payments and payouts",
-    "feature_paymentsBody": "Customers pay by iDEAL or card. After the event the artist's share and yours are paid out automatically.",
+    "feature_paymentsBody": "Customers pay by iDEAL | Wero or card. After the event the artist's share and yours are paid out automatically.",
     "feature_messages": "Everyone in the loop",
     "feature_messagesBody": "Messages per booking with the customer and the artist, live notifications, and email when it matters.",
     "allFeatures": "All features",
     "moneyTitle": "Money that arrives where it should",
     "moneyIntro": "No more transferring artist fees by hand. The split is agreed when the customer accepts, and paid out after the event.",
-    "money1": "The customer pays the deposit and balance online, with iDEAL or card.",
+    "money1": "The customer pays the deposit and balance online, with iDEAL | Wero or card.",
     "money2": "After the event, and a short wait for disputes, StageDesk splits the payment.",
     "money3": "The artist's share goes to the artist; the rest goes to your agency.",
     "splitTitle": "Example booking",
     "splitArtist": "Artist ({pct})",
     "splitAgency": "Your agency",
     "splitPlatform": "Platform fee",
-    "splitNote": "With the current platform fee and a 40% artist share, before Stripe's processing fee.",
+    "splitStripe": "Stripe payment costs",
+    "splitNote": "With the current platform fee, a 40% artist share and Stripe's costs for a deposit and a balance paid with iDEAL | Wero. Nobody transfers the artist's share by hand.",
     "pricingTitle": "Simple pricing",
     "pricingIntro": "Plans from {price} a month. Try everything free for {days} days, no card needed.",
     "pricingIntroNoPlans": "Plans for every size of agency.",
@@ -2607,8 +2662,8 @@
     "showArtistsPoint3": "Share artists with partner agencies",
     "showPayoutsEyebrow": "Payments & payouts",
     "showPayoutsTitle": "Everyone paid, automatically",
-    "showPayoutsBody": "Customers pay their deposit and balance with iDEAL or card. After the event StageDesk splits the payment between the artist, your agency and the platform.",
-    "showPayoutsPoint1": "iDEAL and cards through Stripe",
+    "showPayoutsBody": "Customers pay their deposit and balance with iDEAL | Wero or card. After the event StageDesk splits the payment between the artist, your agency and the platform.",
+    "showPayoutsPoint1": "iDEAL | Wero and cards through Stripe",
     "showPayoutsPoint2": "Split agreed when the quote is accepted",
     "showPayoutsPoint3": "Refunds handled proportionally",
     "faq6Q": "Can I use StageDesk for bands and live music as well as DJs?",
@@ -2617,16 +2672,7 @@
     "faq7A": "Yes. Paste one line of code and the form appears on your site. It adapts to the width of the page and sends inquiries straight to your queue.",
     "faq8Q": "How long does it take to get started?",
     "faq8A": "Most agencies are set up in an afternoon: add your details, services and artists, switch on your booking page, and you're ready for your first inquiry.",
-    "heroRequest": "Planning an event? Request a quote",
-    "requestEyebrow": "Planning a wedding, party or company event?",
-    "requestTitle": "Tell us about your event, and we'll find the right DJ or band",
-    "requestBody": "One short form and StageDesk matches your request with an agency that fits your date, place and style. You receive a quote, without obligation.",
-    "requestStep1": "Tell us the date, place and what you're looking for",
-    "requestStep2": "We pass your request to agencies that fit",
-    "requestStep3": "You receive a quote and decide",
-    "requestButton": "Request a quote",
-    "requestFree": "Free and without obligation",
-    "pricingCardsIntro": "Every feature in every plan; you choose by the number of artists and bookings. Try it free, no credit card."
+    "pricingCardsIntro": "Every feature in every plan; you choose by the number of artists and bookings."
   },
   "featuresPage": {
     "eyebrow": "Features",
@@ -2665,7 +2711,7 @@
     },
     "payments": {
       "title": "Payments and payouts",
-      "body": "Online payments with iDEAL and cards, through Stripe.",
+      "body": "Online payments with iDEAL | Wero and cards, through Stripe.",
       "p1": "Deposit and balance paid online or recorded offline.",
       "p2": "Automatic split after the event: artist, agency, platform.",
       "p3": "Refunds that take back payouts proportionally.",
@@ -2721,7 +2767,7 @@
     "also_partners": "Partner agencies",
     "also_partnersBody": "Share artists and inquiries with agencies you work with.",
     "ctaTitle": "See it for yourself, in your own agency",
-    "ctaBody": "Try everything for free with your own artists and services. No credit card needed."
+    "ctaBody": "Set it up with your own artists and services, and send your first quote today."
   },
   "pricingPage": {
     "eyebrow": "Pricing",
@@ -2731,8 +2777,8 @@
     "yearly": "Yearly",
     "recommended": "Most chosen",
     "perMonth": "per month",
-    "billedMonthly": "Billed monthly, excl. VAT",
-    "billedYearly": "{amount} billed yearly, excl. VAT",
+    "billedMonthly": "Billed monthly, incl. VAT",
+    "billedYearly": "{amount} billed yearly, incl. VAT",
     "save": "Save {amount}",
     "trialNote": "On plans with a trial you pay only after the free days, and you can cancel any time.",
     "feeTitle": "Platform fee on online payments",
@@ -2745,7 +2791,7 @@
     "proof1": "Cancel monthly",
     "proof2": "No credit card to try",
     "proof3": "Hosted in the EU",
-    "proof4": "Prices exclude VAT",
+    "proof4": "Prices include VAT",
     "compareTitle": "Compare plans",
     "compareIntro": "Every plan has the same features. The difference is the number of artists, team members and bookings.",
     "compareFeature": "What you get",
@@ -2759,7 +2805,7 @@
     "included2": "Booking page and website form",
     "included3": "Artist app for your artists",
     "included4": "Customer portal without an account",
-    "included5": "iDEAL, card and bank transfer",
+    "included5": "iDEAL | Wero, card and bank transfer",
     "included6": "Messages and notifications",
     "included7": "Dutch and English",
     "included8": "Support by email",
@@ -2777,7 +2823,7 @@
     "faq4Q": "Is there a discount for paying yearly?",
     "faq4A": "Yes. With yearly billing each plan shows how much you save.",
     "faq5Q": "How do I pay for the subscription?",
-    "faq5A": "With iDEAL, credit card or direct debit. You get an invoice every period.",
+    "faq5A": "With iDEAL | Wero, credit card or direct debit. You get an invoice every period.",
     "faq6Q": "Can I cancel whenever I want?",
     "faq6A": "Yes. You cancel in your account and keep access until the end of the paid period. Your data is kept.",
     "ctaTitle": "Start today, pay once it works",
@@ -2792,7 +2838,10 @@
     "convertedNote": "Prices in {currency} are an estimate at the exchange rate of {date}. You pay in euros.",
     "compareLink": "Compare all plans",
     "trialCard": "Try {days} days free",
-    "noRateNote": "There's no exchange rate for {currency} yet, so prices are shown in euros. You pay in euros."
+    "noRateNote": "There's no exchange rate for {currency} yet, so prices are shown in euros. You pay in euros.",
+    "ctaBodyNoTrial": "Set up your agency in minutes and send your first quote today.",
+    "feeExampleStripe": "Stripe costs (2 payments with iDEAL | Wero)",
+    "feeExampleStripeBody": "Stripe charges about {stripe} for the deposit and the balance. In return, nobody has to transfer the artist's share by hand."
   },
   "forAgencies": {
     "eyebrow": "For DJ and band agencies",
@@ -2817,7 +2866,7 @@
     "tourLink": "Take the product tour",
     "proof1": "Cancel any month",
     "proof2": "Dutch and English",
-    "proof3": "iDEAL, card and bank transfer",
+    "proof3": "iDEAL | Wero, card and bank transfer",
     "painTitle": "Sound familiar?",
     "painIntro": "What most agencies tell us when they start, and how it goes afterwards.",
     "weekTitle": "A week at your agency, with StageDesk",
@@ -2830,7 +2879,7 @@
     "week2Body": "You pick the wedding package and the saxophonist from your services. VAT and deposit are already in.",
     "week3Day": "Wednesday",
     "week3Title": "Accepted and deposit paid",
-    "week3Body": "The couple accepts online and pays the deposit with iDEAL. The date is fixed in your calendar.",
+    "week3Body": "The couple accepts online and pays the deposit with iDEAL | Wero. The date is fixed in your calendar.",
     "week4Day": "Thursday",
     "week4Title": "The DJ says yes",
     "week4Body": "You ask DJ Sem in the app. He reads the brief, accepts and the date goes into his calendar.",
@@ -2850,7 +2899,7 @@
     "row2Title": "Quotes and payments that add up",
     "row2Body": "Quotes from your own services, with versions, VAT and a deposit. Payments online or by bank transfer, with confirmation of receipt.",
     "row2P1": "VAT rates of 21%, 9% and 0% per line",
-    "row2P2": "iDEAL, card and manual payments in one overview",
+    "row2P2": "iDEAL | Wero, card and manual payments in one overview",
     "row2P3": "Automatic reminders for the balance",
     "row3Title": "Planning without double bookings",
     "row3Body": "Your calendar with every event of the month, and per artist you see who's available.",
@@ -3004,7 +3053,7 @@
     "copied": "Copied",
     "keepReading": "Keep reading",
     "ctaTitle": "All your bookings in one place, starting today",
-    "ctaBody": "Inquiries, quotes, artists and payments in one system. Try StageDesk free, no credit card needed.",
+    "ctaBody": "Inquiries, quotes, artists and payments in one system.",
     "ctaButton": "Try it free",
     "ctaSecondary": "Take the tour"
   },
@@ -3034,9 +3083,9 @@
     "intro": "What's new in StageDesk."
   },
   "acceptTerms": {
-    "title": "Updated terms",
-    "body": "We've updated the documents below. Please read and accept them to continue.",
-    "updated": "Updated {date}",
+    "title": "Please accept our terms",
+    "body": "Read and accept the documents below to continue.",
+    "updated": "Version of {date}",
     "read": "Read",
     "agree": "I agree to the documents above.",
     "continue": "Continue"
@@ -3289,7 +3338,7 @@
   },
   "infographics": {
     "trustStripe": "Payments through Stripe",
-    "trustIdeal": "iDEAL and cards",
+    "trustIdeal": "iDEAL | Wero and cards",
     "trustEu": "Hosted in the EU",
     "trustGdpr": "GDPR-ready, with a DPA",
     "trustLanguages": "Dutch and English",
@@ -3328,7 +3377,7 @@
     "before3": "Calling around to find an available artist",
     "after3": "Availability checked, artists answer in the app",
     "before4": "Chasing deposits and transferring artist fees by hand",
-    "after4": "iDEAL payments and automatic payouts",
+    "after4": "iDEAL | Wero payments and automatic payouts",
     "before5": "No overview of what's booked and collected",
     "after5": "Dashboards with revenue, events and workload",
     "figure_roles": "5",
@@ -3463,7 +3512,7 @@
       "q2": "What happens when a quote expires?",
       "a2": "It can no longer be accepted, and the booking moves to expired. You can send a new version at any time.",
       "q3": "Do I have to use online payments?",
-      "a3": "No. You can record payments by bank transfer or cash yourself. Online payments with iDEAL are optional.",
+      "a3": "No. You can record payments by bank transfer or cash yourself. Online payments with iDEAL | Wero are optional.",
       "q4": "Can I add my own terms to a quote?",
       "a4": "Your terms of service apply to every quote, and you can add notes per quote for anything specific.",
       "ctaTitle": "Send your next quote in minutes",
@@ -3471,11 +3520,11 @@
     },
     "payments-payouts": {
       "eyebrow": "Payments & payouts",
-      "metaTitle": "iDEAL payments and automatic artist payouts for agencies",
-      "metaDescription": "Let customers pay deposits and balances with iDEAL or card. StageDesk splits each payment after the event and pays your artists automatically through Stripe.",
-      "title": "Online payments with iDEAL, and artists paid automatically",
+      "metaTitle": "iDEAL | Wero payments and automatic artist payouts for agencies",
+      "metaDescription": "Let customers pay deposits and balances with iDEAL | Wero or card. StageDesk splits each payment after the event and pays your artists automatically through Stripe.",
+      "title": "Online payments with iDEAL | Wero, and artists paid automatically",
       "intro": "Customers pay their deposit and balance online. After the event, StageDesk splits the payment between the artist, your agency and the platform, as agreed when the quote was accepted.",
-      "b1Title": "iDEAL and cards",
+      "b1Title": "iDEAL | Wero and cards",
       "b1Body": "The way Dutch customers want to pay, through Stripe's secure checkout. No more chasing bank transfers.",
       "b2Title": "The split is fixed upfront",
       "b2Body": "The artist's share and the platform fee are frozen when the customer accepts, so nobody's agreed amount changes later.",
@@ -3560,7 +3609,7 @@
       "b2Title": "Couples stay informed",
       "b2Body": "Couples see their event, quote, payments and messages, and get reminders before the big day.",
       "b3Title": "Deposits that secure the date",
-      "b3Body": "A deposit on acceptance and the balance before the wedding, paid with iDEAL.",
+      "b3Body": "A deposit on acceptance and the balance before the wedding, paid with iDEAL | Wero.",
       "stepsTitle": "A wedding booking, start to finish",
       "s1Title": "Inquiry",
       "s1Body": "The couple shares the date, venue and wishes.",
@@ -3639,7 +3688,7 @@
     "storyTitle": "Why we built StageDesk",
     "story1": "Entertainment agencies run on weekends. Inquiries come in by email, WhatsApp and phone; quotes live in Word; artists are found by calling around; and the money is transferred by hand after every party.",
     "story2": "We built StageDesk to bring all of that into one place: a booking page that collects complete inquiries, quotes customers accept online, an app where artists say yes, and payments that are split and paid out automatically.",
-    "story3": "It's made in the Netherlands for Dutch agencies, with iDEAL, Dutch VAT and every page in Dutch and English.",
+    "story3": "It's made in the Netherlands for Dutch agencies, with iDEAL | Wero, Dutch VAT and every page in Dutch and English.",
     "missionLabel": "Our mission",
     "mission": "Give every entertainment agency the tools of a big one, so they can book more events with less admin.",
     "valuesTitle": "What we stand for",
@@ -3655,7 +3704,7 @@
     "howTitle": "How we work",
     "howIntro": "Built carefully, for the Dutch market first.",
     "how1Title": "Made for the Netherlands",
-    "how1Body": "iDEAL, KvK and VAT numbers, Dutch VAT rates, and support in Dutch and English.",
+    "how1Body": "iDEAL | Wero, KvK and VAT numbers, Dutch VAT rates, and support in Dutch and English.",
     "how2Title": "Secure by design",
     "how2Body": "Two-factor sign-in, strict separation of agency data, and an audit log of every change to money and access.",
     "how3Title": "Improving every month",
@@ -3806,7 +3855,23 @@
     "kind_senderTest": "Sender test",
     "kind_senderTestHint": "To the agency, to check how its customer emails arrive",
     "kind_changeDecision": "Change request answered",
-    "kind_changeDecisionHint": "To the customer, when the agency approves or refuses a change they asked for"
+    "kind_changeDecisionHint": "To the customer, when the agency approves or refuses a change they asked for",
+    "kind_quoteAcceptedNotice": "Quote accepted",
+    "kind_quoteAcceptedNoticeHint": "To the agency team, when a customer accepts",
+    "kind_artistAcceptedNotice": "Artist accepted",
+    "kind_artistAcceptedNoticeHint": "To the agency team, when an artist says yes",
+    "kind_artistDeclinedNotice": "Artist declined",
+    "kind_artistDeclinedNoticeHint": "To the agency team, when an artist says no",
+    "kind_bookingConfirmed": "Booking confirmed",
+    "kind_bookingConfirmedHint": "To the customer, when the artist has accepted",
+    "kind_bookingCancelled": "Booking cancelled",
+    "kind_bookingCancelledHint": "To the customer, when the agency cancels",
+    "kind_invoiceIssued": "Invoice ready",
+    "kind_invoiceIssuedHint": "To the customer, when the invoice is made",
+    "kind_reviewInvitation": "Review invitation",
+    "kind_reviewInvitationHint": "To the customer, when the event is completed",
+    "kind_agencyInvite": "Agency invite",
+    "kind_agencyInviteHint": "To someone an agency or an artist invites to StageDesk"
   },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
@@ -3826,7 +3891,12 @@
     "s3Body": "See the prices side by side and accept the one you like, online.",
     "free": "Free and without obligation. You only book when a price suits you.",
     "formTitle": "Your request",
-    "sentBody": "We've received your request (reference {code}) and sent it to agencies and artists near your event. You'll get an email for each price, with a link to compare them."
+    "sentBody": "We've received your request (reference {code}) and sent it to agencies and artists near your event. You'll get an email for each price, with a link to compare them.",
+    "closedTitle": "Not open yet",
+    "closedBody": "StageDesk doesn't take event requests yet. Look for an agency's own booking page, or try again later.",
+    "errorEventType": "We don't take requests for this kind of event yet.",
+    "errorRegion": "We don't cover {city} yet. Look for an agency's own booking page in your area.",
+    "regionsNote": "For now we take requests in: {regions}."
   },
   "leads": {
     "title": "Leads",
@@ -3958,7 +4028,7 @@
     "title": "Payment setup",
     "description": "Connect Stripe for online payments and choose how customers may pay agencies.",
     "stripeTitle": "Stripe",
-    "stripeHint": "Online payments (iDEAL, cards), agency and artist payouts and subscriptions all run through your Stripe account. Keys are encrypted and never shown again in full.",
+    "stripeHint": "Online payments (iDEAL | Wero, cards), agency and artist payouts and subscriptions all run through your Stripe account. Keys are encrypted and never shown again in full.",
     "notSetUp": "Not set up",
     "modeTest": "Test mode",
     "modeLive": "Live",
@@ -3997,7 +4067,7 @@
     "testFailed": "Stripe didn't accept the key. Check it under Developers → API keys.",
     "methodsTitle": "Payment methods",
     "methodsHint": "What agencies may offer their customers. Each agency chooses within these on its own settings page.",
-    "method_online": "Online (iDEAL and cards)",
+    "method_online": "Online (iDEAL | Wero and cards)",
     "method_onlineHint": "Through Stripe, with automatic split and payouts.",
     "onlineNeedsStripe": "Needs Stripe keys above before customers can pay online.",
     "method_bankTransfer": "Bank transfer",
@@ -4013,7 +4083,7 @@
   "agencyPayments": {
     "title": "Payment methods",
     "description": "How your customers can pay you. Online payments go through Stripe; bank transfers and cash are reported by the customer and confirmed by you.",
-    "method_online": "Online (iDEAL and cards)",
+    "method_online": "Online (iDEAL | Wero and cards)",
     "method_onlineHint": "Customers pay in the app; the money is split and paid out automatically.",
     "onlineNotConnected": "Connect Stripe first to take online payments.",
     "connectStripe": "Connect Stripe",
@@ -4063,7 +4133,7 @@
   "tour": {
     "eyebrow": "Product tour",
     "metaTitle": "Product tour: StageDesk booking software in screenshots",
-    "metaDescription": "See StageDesk in action: the agency dashboard, bookings, quotes with Dutch VAT, planning, iDEAL payments, the booking page, the artist app and the customer portal.",
+    "metaDescription": "See StageDesk in action: the agency dashboard, bookings, quotes with Dutch VAT, planning, iDEAL | Wero payments, the booking page, the artist app and the customer portal.",
     "title": "See how StageDesk <hl>runs an agency</hl>",
     "intro": "A walk through the screens your team, your artists and your customers use every day, with an agency's demo data.",
     "lookEyebrow": "A look inside",
@@ -4096,7 +4166,7 @@
     "calendar_p3": "Plan the wedding season at a glance",
     "payments_eyebrow": "Payments",
     "payments_title": "Know what came in and what's still to come",
-    "payments_body": "Online iDEAL and card payments, bank transfers your customers report and you confirm, cash, refunds and payouts: every euro on one page.",
+    "payments_body": "Online iDEAL | Wero and card payments, bank transfers your customers report and you confirm, cash, refunds and payouts: every euro on one page.",
     "payments_p1": "Confirm bank transfers in one click",
     "payments_p2": "Automatic payouts to artists",
     "payments_p3": "Refunds handled proportionally",
@@ -4116,7 +4186,7 @@
     "customer_title": "Their event, without phoning you",
     "customer_body": "Customers follow their event: the quote to accept, what's paid and what's due, how to pay, and a direct line to you.",
     "customer_p1": "Accept the quote online",
-    "customer_p2": "Pay by iDEAL or report a transfer",
+    "customer_p2": "Pay by iDEAL | Wero or report a transfer",
     "customer_p3": "Messages with the agency",
     "admin_eyebrow": "For the platform",
     "admin_title": "Run the whole platform from one place",
@@ -4681,7 +4751,8 @@
     "error_invalid": "Check the fields: title and text are required, and the address may only contain lowercase letters, numbers and hyphens.",
     "error_category_in_use": "This category still has articles. Move them first.",
     "error_not_allowed": "You cannot change this article.",
-    "error_not_editable": "This article can no longer be edited in its current status."
+    "error_not_editable": "This article can no longer be edited in its current status.",
+    "pendingApproval": "{count, plural, one {# article is} other {# articles are}} waiting for approval"
   },
   "blogContributions": {
     "title": "My blog posts",
@@ -5451,7 +5522,16 @@
     "customerBooked": "Booked",
     "customerPaid": "Paid",
     "customerDue": "Still to pay",
-    "customerBookings": "{count, plural, one {# booking} other {# bookings}}"
+    "customerBookings": "{count, plural, one {# booking} other {# bookings}}",
+    "activation": "Agency activation",
+    "activationHint": "Agencies that started in the last 90 days, and how far they got. Activated means a quote sent, an online payment received and a payout completed. {invited} of {signed} came through an invite.",
+    "activation_signed": "Started",
+    "activation_quoted": "Sent a quote",
+    "activation_paidOnline": "Got an online payment",
+    "activation_paidOut": "Completed a payout (activated)",
+    "activation_subscribed": "Paying for a plan",
+    "cancellations": "Why agencies cancel",
+    "cancellationsHint": "Reasons given in the cancel dialog, last 12 months."
   },
   "languages": {
     "nl": "Dutch",
@@ -6430,5 +6510,78 @@
     "editable": "Customers can edit their music wishes",
     "editableHint": "Genres, do's and don'ts, playlist and instructions. Date, times and venue always go through you once a quote is out.",
     "save": "Save"
+  },
+  "marketplaceSettings": {
+    "title": "Marketplace",
+    "description": "The request form for people planning an event (/request): StageDesk sends each request to the agencies that serve it. Keep it off until there are enough agencies to answer, then start with a few event types or places.",
+    "enabled": "Take requests",
+    "enabledOn": "On: the form takes requests and is in the menu.",
+    "enabledOff": "Off: the page says it isn't open yet and the menu leaves it out.",
+    "eventTypes": "Event types",
+    "eventTypesHint": "Tick the ones to start with. None ticked: all event types.",
+    "regions": "Places",
+    "regionsHint": "Cities or provinces, one per line or separated by commas (for example Utrecht or Noord-Brabant). Empty: everywhere.",
+    "regionsPlaceholder": "Utrecht\nNoord-Brabant",
+    "save": "Save"
+  },
+  "siteProofSettings": {
+    "title": "Website proof",
+    "description": "Real agencies that use StageDesk, what they say, a note from the founder and the product video. Each part only appears on the website once it's filled in. Only add names, logos and quotes you have permission to publish.",
+    "logosTitle": "Agency logos",
+    "logosHint": "Shown on the home page and the pricing page. Without an image the name is shown.",
+    "logoName": "Agency name",
+    "logoLink": "Website (optional)",
+    "logoImage": "Logo",
+    "remove": "Remove",
+    "addLogo": "Add an agency",
+    "quotesTitle": "Quotes",
+    "quotesHint": "One or two sentences in the customer's own words. Fill in at least one language.",
+    "quoteNl": "Quote in Dutch",
+    "quoteEn": "Quote in English",
+    "personName": "Name",
+    "personRole": "Role",
+    "personRolePlaceholder": "Owner, DJ agency in Utrecht",
+    "photo": "Photo",
+    "addQuote": "Add a quote",
+    "founderTitle": "Founder note",
+    "founderHint": "Why StageDesk exists, in a few sentences. Shown with your name and photo.",
+    "founderNl": "Note in Dutch",
+    "founderEn": "Note in English",
+    "video": "Product video",
+    "videoHint": "A YouTube or Vimeo link, shown at the top of the product tour. Empty: no video.",
+    "save": "Save",
+    "invalid": "Something isn't valid. Check the links (https) and the video address (YouTube or Vimeo).",
+    "invalidImage": "Use a PNG, JPEG or WebP image up to 2 MB.",
+    "uploading": "Uploading…",
+    "replaceImage": "Replace",
+    "clearImage": "Clear"
+  },
+  "socialProof": {
+    "title": "Agencies that work with StageDesk",
+    "logos": "Agencies using StageDesk",
+    "founder": "Why we built StageDesk",
+    "video": "StageDesk product video"
+  },
+  "agencyInvite": {
+    "agencyTitle": "Invite an agency by email",
+    "agencyBody": "Invite an agency you work with, for example a partner whose artists you book. When you're both on StageDesk you can share artists.",
+    "agencyBodyReward": "Invite an agency you work with, for example a partner whose artists you book. The email carries your invite link: when they pay their first invoice, you both get {count, plural, one {a free month} other {# free months}}.",
+    "artistTitle": "Invite an agency",
+    "artistBody": "Work for an agency that isn't on StageDesk yet? Send them an invite. They'll see how requests, quotes and automatic payouts work.",
+    "email": "Email address",
+    "emailPlaceholder": "planning@agency.nl",
+    "send": "Send invite",
+    "sending": "Sending…",
+    "sent": "Invite sent to {email}.",
+    "sentTitle": "Invites you sent",
+    "joined": "Joined as {name}",
+    "pending": "Invited",
+    "error_self": "That's your own address.",
+    "error_already_on": "This person already runs an agency on StageDesk.",
+    "error_already_invited": "You've already invited this address in the last 30 days.",
+    "error_limit": "You've sent the most invites for today. Try again tomorrow.",
+    "error_invalid": "Enter a valid email address.",
+    "error_notArtist": "Only artists with an active profile can send invites.",
+    "error_generic": "The invite couldn't be sent. Please try again."
   }
 }

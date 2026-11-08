@@ -106,7 +106,7 @@ async function Audit({ searchParams }: Pick<PageProps<"/[locale]/app/audit">, "s
               </TableCell>
               <TableCell>
                 <div>{t.has(`action.${e.action}` as "action.user.disable") ? t(`action.${e.action}` as "action.user.disable") : e.action}</div>
-                {e.targetId && <div className="font-mono text-xs text-muted-foreground">{e.targetType}:{e.targetId.slice(0, 12)}</div>}
+                {e.targetType && e.targetId && <div className="text-xs text-muted-foreground" title={e.targetId}>{t.has(`target.${e.targetType}` as "target.user") ? t(`target.${e.targetType}` as "target.user") : e.targetType}</div>}
               </TableCell>
               <TableCell>{agencies.find((a) => a.id === e.agencyId)?.name ?? "—"}</TableCell>
               <TableCell className="max-w-xs">

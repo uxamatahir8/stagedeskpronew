@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ImageUpIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useActionState, useRef, useTransition } from "react";
@@ -115,7 +116,7 @@ export function AgencyForm({ values, dates, platformDates, currencyOptions }: { 
   );
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...keepValues(action)} className="grid gap-6">
       <Card>
         <CardHeader>
           <CardTitle>{t("details")}</CardTitle>

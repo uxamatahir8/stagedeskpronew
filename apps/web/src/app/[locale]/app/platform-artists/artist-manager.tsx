@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -29,7 +30,7 @@ export function PlatformArtistManager({ artists, agencies, bookings }: { artists
 
   return (
     <div className="grid gap-6 lg:grid-cols-3">
-      <form className="grid gap-3 rounded-xl border bg-card p-5" action={(form) => run(() => createPlatformArtistAction({ stageName: String(form.get("stageName")), email: String(form.get("email")), organizationId: String(form.get("organizationId")) || null, sharePct: Number(form.get("sharePct")) }))}>
+      <form className="grid gap-3 rounded-xl border bg-card p-5" {...keepValues((form, el) => run(() => createPlatformArtistAction({ stageName: String(form.get("stageName")), email: String(form.get("email")), organizationId: String(form.get("organizationId")) || null, sharePct: Number(form.get("sharePct")) }), () => el?.reset()))}>
         <h2 className="font-semibold">{t("add")}</h2>
         <Input name="stageName" required maxLength={120} placeholder={t("stageName")} />
         <Input name="email" required type="email" maxLength={191} placeholder={t("email")} />
@@ -41,14 +42,14 @@ export function PlatformArtistManager({ artists, agencies, bookings }: { artists
         <Button disabled={pending}>{t("createAndInvite")}</Button>
       </form>
 
-      <form className="grid gap-3 rounded-xl border bg-card p-5" action={(form) => run(() => sharePlatformArtistAction(String(form.get("artistId")), String(form.get("organizationId"))))}>
+      <form className="grid gap-3 rounded-xl border bg-card p-5" {...keepValues((form, el) => run(() => sharePlatformArtistAction(String(form.get("artistId")), String(form.get("organizationId"))), () => el?.reset()))}>
         <h2 className="font-semibold">{t("share")}</h2>
         <NativeSelect name="artistId" required value={artistId} onChange={(e) => setArtistId(e.target.value)}>{artists.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</NativeSelect>
         <NativeSelect name="organizationId" required defaultValue=""><option value="" disabled>{t("chooseAgency")}</option>{agencies.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</NativeSelect>
         <Button disabled={pending || !artistId}>{t("shareNow")}</Button>
       </form>
 
-      <form className="grid gap-3 rounded-xl border bg-card p-5" action={(form) => run(() => assignPlatformArtistAction(String(form.get("artistId")), String(form.get("bookingId"))))}>
+      <form className="grid gap-3 rounded-xl border bg-card p-5" {...keepValues((form, el) => run(() => assignPlatformArtistAction(String(form.get("artistId")), String(form.get("bookingId"))), () => el?.reset()))}>
         <h2 className="font-semibold">{t("assign")}</h2>
         <NativeSelect name="artistId" required defaultValue=""><option value="" disabled>{t("chooseArtist")}</option>{artists.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}</NativeSelect>
         <NativeSelect name="bookingId" required defaultValue=""><option value="" disabled>{t("chooseBooking")}</option>{bookings.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}</NativeSelect>

@@ -49,8 +49,14 @@ export async function siteSettings() {
   "use cache";
   cacheTag(SITE_TAGS.settings);
   cacheLife("hours");
-  const [site, fees, program] = await Promise.all([getSetting("site.general"), getSetting("fees.platform"), getSetting("affiliates.program")]);
-  return { site, fees, program };
+  const [site, fees, program, marketplace, proof] = await Promise.all([
+    getSetting("site.general"),
+    getSetting("fees.platform"),
+    getSetting("affiliates.program"),
+    getSetting("marketplace"),
+    getSetting("site.proof"),
+  ]);
+  return { site, fees, program, marketplace, proof };
 }
 
 /** Footer columns with their links, plus the footer settings; changes call updateTag(SITE_TAGS.footer). */

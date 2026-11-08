@@ -26,7 +26,14 @@ node scripts/check-env.mjs /path/to/production/.env web
 node scripts/check-env.mjs /path/to/production/.env worker
 ```
 
-The same check runs when the processes start (`apps/web/src/instrumentation.ts`, `apps/worker/src/index.ts`). With errors, the web server and the worker refuse to start. Set `TRUSTED_PROXIES=1` behind Caddy and `HEALTH_TOKEN` for monitoring.
+The same check runs when the processes start (`apps/web/src/instrumentation.ts`, `apps/worker/src/index.ts`). With errors, the web server and the worker refuse to start. Set `TRUSTED_PROXIES=1` behind Caddy (required: without it the web server refuses to start, because every rate limit would key on an address the client chooses) and `HEALTH_TOKEN` for monitoring.
+
+Also before launch (security QA, 8 Nov 2026):
+
+- The app port must only be reachable through Caddy: bind Next to `127.0.0.1` or firewall the port. A client that reaches the port directly can still choose its own X-Forwarded-For.
+- Set `SECRETS_KEY` to the current `BETTER_AUTH_SECRET` value first (stored secrets stay readable), so the auth secret can later be rotated on its own.
+- Real Turnstile keys; live Stripe keys only in production.
+- `WEB_INSTANCES` (staging deploy script) runs more web processes in PM2 cluster mode; pages render on one core per process.
 
 ## Release steps
 

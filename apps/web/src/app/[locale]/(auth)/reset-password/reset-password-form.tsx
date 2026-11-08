@@ -69,7 +69,7 @@ export function ResetPasswordForm({ token, setup }: { token: string | null; setu
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <form method="post" onSubmit={submit} className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor="reset-password">{t("auth.reset.password")}</Label>
         <PasswordInput id="reset-password" name="password" autoComplete="new-password" minLength={10} maxLength={128} required meter rules />

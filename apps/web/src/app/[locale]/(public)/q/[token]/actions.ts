@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { acceptQuote, prisma } from "@stagedesk/db";
 import { type ActionResult, runAction } from "@/lib/actions";
+import { mailAgencyTeam } from "@/lib/booking-mail";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/viewer";
 import { passwordProblem } from "@stagedesk/core";
@@ -18,17 +19,22 @@ export async function acceptQuoteByTokenAction(token: string, name: string, agre
 
   const quote = await prisma.quote.findUnique({
     where: { token },
-    select: { id: true, organizationId: true, booking: { select: { customerId: true } }, organization: { select: { name: true } } },
+    select: { id: true, organizationId: true, bookingId: true, booking: { select: { customerId: true } }, organization: { select: { name: true, suspendedAt: true } } },
   });
   if (!quote) return { ok: false, message: (await getTranslations("quotePage"))("notFound") };
+
+  // Nobody at a suspended agency can follow up, so a customer can't commit to it.
+  if (quote.organization.suspendedAt) return { ok: false, message: (await getTranslations("quotePage"))("agencySuspended", { agency: quote.organization.name }) };
 
   const session = await getSession();
   const actorId = session && session.user.id === quote.booking.customerId ? session.user.id : null;
   const t = await getTranslations("quotePage");
-  return runAction(
+  const result = await runAction(
     () => acceptQuote(quote.organizationId, quote.id, { actor: "customer", actorId, name: fullName }),
     t("accepted", { agency: quote.organization.name }),
   );
+  if (result.ok) await mailAgencyTeam(quote.bookingId, "quoteAccepted");
+  return result;
 }
 
 export type SetupAccountResult = { ok: true; next: string } | { ok: false; message: string };

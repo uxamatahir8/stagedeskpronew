@@ -14,11 +14,12 @@ import { euro } from "@/lib/format";
 
 /** Platform analytics: growth, booking value, plan mix and the lead pipeline. */
 export async function AdminAnalytics() {
-  const [t, tb, ts, tsup, format, locale, d] = await Promise.all([
+  const [t, tb, ts, tsup, tbill, format, locale, d] = await Promise.all([
     getTranslations("dashboards"),
     getTranslations("bookingStatus"),
     getTranslations("subStatus"),
     getTranslations("support"),
+    getTranslations("billing"),
     getFormatter(),
     getLocale(),
     adminDashboard(),
@@ -99,6 +100,40 @@ export async function AdminAnalytics() {
                 { key: "offered", label: t("stage_offered"), value: d.leadFunnel.offered },
                 { key: "assigned", label: t("stage_assigned"), value: d.leadFunnel.assigned },
               ]}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("activation")}</CardTitle>
+            <CardDescription>{t("activationHint", { invited: d.activation.invited, signed: d.activation.signed })}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Funnel
+              conversionLabel={(pct) => t("conversion", { pct })}
+              steps={[
+                { key: "signed", label: t("activation_signed"), value: d.activation.signed },
+                { key: "quoted", label: t("activation_quoted"), value: d.activation.quoted },
+                { key: "paidOnline", label: t("activation_paidOnline"), value: d.activation.paidOnline },
+                { key: "paidOut", label: t("activation_paidOut"), value: d.activation.paidOut },
+                { key: "subscribed", label: t("activation_subscribed"), value: d.activation.subscribed },
+              ]}
+            />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("cancellations")}</CardTitle>
+            <CardDescription>{t("cancellationsHint")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BarList
+              share
+              empty={t("noData")}
+              items={d.cancellationReasons.sort((a, b) => b.value - a.value).map((c) => ({ key: c.key, label: tbill.has(`cancelReason_${c.key}` as "cancelReason_other") ? tbill(`cancelReason_${c.key}` as "cancelReason_other") : c.key, value: c.value }))}
             />
           </CardContent>
         </Card>

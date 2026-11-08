@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { MailCheckIcon, PartyPopperIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
@@ -18,6 +19,7 @@ export function ApplyForm({ signedInAs, turnstileKey, linkBase }: { signedInAs: 
   const locale = useLocale();
   const [result, setResult] = useState<ApplyResult | null>(null);
   const [code, setCode] = useState("");
+  const [attempts, setAttempts] = useState(0);
   const [pending, startTransition] = useTransition();
 
   if (result?.ok) {
@@ -36,7 +38,16 @@ export function ApplyForm({ signedInAs, turnstileKey, linkBase }: { signedInAs: 
   }
 
   return (
-    <form action={(form) => startTransition(async () => setResult(await applyAction(form)))} className="grid gap-4">
+    <form
+      {...keepValues((form) =>
+        startTransition(async () => {
+          const next = await applyAction(form);
+          setResult(next);
+          if (!next.ok) setAttempts((n) => n + 1);
+        }),
+      )}
+      className="grid gap-4"
+    >
       {signedInAs && <FormMessage tone="success">{t("signedInAs", { email: signedInAs })}</FormMessage>}
       <FormField id="apply-name" label={t("name")}>
         <Input id="apply-name" name="name" autoComplete="name" required minLength={2} maxLength={191} />
@@ -70,7 +81,7 @@ export function ApplyForm({ signedInAs, turnstileKey, linkBase }: { signedInAs: 
           onChange={(e) => setCode(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, ""))}
         />
       </FormField>
-      {turnstileKey && <Turnstile siteKey={turnstileKey} language={locale} />}
+      {turnstileKey && <Turnstile siteKey={turnstileKey} language={locale} resetCount={attempts} />}
       {result && !result.ok && <FormMessage>{result.message}</FormMessage>}
       <Button type="submit" disabled={pending} className="w-fit">
         {t("submit")}

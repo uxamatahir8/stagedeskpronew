@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
-import { dateTime, euro, eventDate } from "@/lib/format";
+import { dateTime, dayOf, euro, eventDate } from "@/lib/format";
 import { payByQuoteTokenAction, reportPaymentByTokenAction } from "@/lib/pay-actions";
 import { AcceptQuoteForm } from "./accept-form";
 import { Link } from "@/i18n/navigation";
@@ -51,8 +51,8 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
     where: { token },
     include: {
       items: { orderBy: { position: "asc" } },
-      organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true } },
-      booking: { select: { id: true, customerId: true, currency: true, customer: { select: { name: true, email: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } }, trackingCode: true, eventType: true, eventDate: true, startTime: true, endTime: true, venueName: true, venueAddress: true, venueCity: true, guestCount: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true } },
+      organization: { select: { name: true, logo: true, brandColor: true, contactEmail: true, phone: true, website: true, suspendedAt: true } },
+      booking: { select: { id: true, invoices: { select: { id: true, number: true } }, creditNotes: { select: { id: true, number: true }, orderBy: { issuedAt: "asc" } }, customerId: true, currency: true, customer: { select: { name: true, email: true, accounts: { where: { providerId: "credential" }, select: { id: true } } } }, trackingCode: true, eventType: true, eventDate: true, startTime: true, endTime: true, venueName: true, venueAddress: true, venueCity: true, guestCount: true, status: true, organizationId: true, totalCents: true, depositCents: true, paidCents: true } },
     },
   });
   if (!quote) return <FormMessage>{t("quotePage.notFound")}</FormMessage>;
@@ -95,7 +95,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
           {offered.venueCity && ` · ${[offered.venueName, offered.venueCity].filter(Boolean).join(", ")}`}
         </p>
         {quote.status === "sent" && !expired && (
-          <p className="text-sm text-muted-foreground">{t("quotePage.validUntil", { date: dateTime(format, quote.expiresAt) })}</p>
+          <p className="text-sm text-muted-foreground">{t("quotePage.validUntil", { date: dayOf(format, quote.expiresAt) })}</p>
         )}
       </div>
 
@@ -105,9 +105,31 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
         </CardContent>
       </Card>
 
+      {agency.suspendedAt && <FormMessage>{t("quotePage.agencySuspended", { agency: agency.name })}</FormMessage>}
+
       {quote.status === "accepted" && quote.acceptedAt ? (
         <>
           <FormMessage tone="success">{t("quotePage.alreadyAccepted", { date: dateTime(format, quote.acceptedAt) })}</FormMessage>
+          {(quote.booking.invoices.length > 0 || quote.booking.creditNotes.length > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {quote.booking.invoices.map((inv) => (
+                <Button key={inv.id} variant="outline" size="sm" asChild>
+                  <a href={`/api/pdf/invoice/${inv.id}?token=${encodeURIComponent(token)}&lang=${locale}`} target="_blank" rel="noopener">
+                    <FileDownIcon />
+                    {t("customerEvent.invoice", { number: inv.number })}
+                  </a>
+                </Button>
+              ))}
+              {quote.booking.creditNotes.map((note) => (
+                <Button key={note.id} variant="outline" size="sm" asChild>
+                  <a href={`/api/pdf/credit-note/${note.id}?token=${encodeURIComponent(token)}&lang=${locale}`} target="_blank" rel="noopener">
+                    <FileDownIcon />
+                    {t("customerEvent.creditNote", { number: note.number })}
+                  </a>
+                </Button>
+              ))}
+            </div>
+          )}
           <PayPanel booking={quote.booking} pay={payByQuoteTokenAction.bind(null, token)} report={reportPaymentByTokenAction.bind(null, token)} paid={(await searchParams)["paid"]} />
         </>
       ) : quote.status === "superseded" ? (
@@ -118,7 +140,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
         <FormMessage>{t("bookingErrors.quote_expired")}</FormMessage>
       ) : outdated ? (
         <FormMessage>{t("quotePage.outdated")}</FormMessage>
-      ) : (
+      ) : agency.suspendedAt ? null : (
         <Card>
           <CardContent className="grid gap-4">
             {quote.depositCents > 0 && <p className="text-sm">{t("quotePage.depositDue", { amount: euro(format, quote.depositCents, quote.booking.currency) })}</p>}

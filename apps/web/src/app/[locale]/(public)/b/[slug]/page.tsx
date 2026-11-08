@@ -47,7 +47,8 @@ async function Page({ params }: Pick<PageProps<"/[locale]/b/[slug]">, "params">)
   const agency = await publicAgency(slug);
   if (!agency) notFound();
   // The booking page is a plan feature.
-  if (!(await agencyBilling(agency.id)).limits.bookingPage) notFound();
+  const { limits } = await agencyBilling(agency.id);
+  if (!limits.bookingPage) notFound();
 
   const today = todayInNetherlands();
   // Availability hints cover the next 18 months.
@@ -76,6 +77,7 @@ async function Page({ params }: Pick<PageProps<"/[locale]/b/[slug]">, "params">)
       <BookingPageView
         data={data}
         theme={theme}
+        branding={!limits.removeBranding}
         form={
           <InquiryForm
             slug={slug}
