@@ -74,7 +74,9 @@
     "platformArtists": "Artiestenbeheer",
     "inventory": "Apparatuur",
     "blogPosts": "Mijn blogartikelen",
-    "bookingTypes": "Boekingstypen"
+    "bookingTypes": "Boekingstypen",
+    "subscriptionCodes": "Kortingscodes abonnementen",
+    "promoCodes": "Kortingscodes"
   },
   "shell": {
     "search": "Zoeken…",
@@ -183,7 +185,8 @@
     "tabsAll": "Alle",
     "tabsOpen": "Open",
     "tabsDone": "Klaar",
-    "fileTooLarge": "Dit bestand is te groot. Kies een bestand kleiner dan 5 MB."
+    "fileTooLarge": "Dit bestand is te groot. Kies een bestand kleiner dan 5 MB.",
+    "nextDay": "(+1 dag)"
   },
   "auth": {
     "brandLine": "Boekingen, offertes en betalingen voor entertainmentbureaus.",
@@ -401,7 +404,8 @@
     "required": "Dit veld is verplicht.",
     "currency": "Valuta",
     "currencyHint": "Voor offertes, facturen en betalingen. Nieuwe boekingen krijgen deze valuta; bestaande boekingen houden hun valuta.",
-    "currencyUnavailable": "Die valuta is niet beschikbaar. Kies een andere."
+    "currencyUnavailable": "Die valuta is niet beschikbaar. Kies een andere.",
+    "invalid": "Deze waarde klopt niet."
   },
   "agencies": {
     "title": "Bureaus",
@@ -446,7 +450,8 @@
   "errors": {
     "forbiddenTitle": "Je hebt geen toegang tot deze pagina",
     "forbiddenBody": "Vraag een eigenaar of beheerder van je bureau als je deze pagina nodig hebt.",
-    "backHome": "Terug naar home"
+    "backHome": "Terug naar home",
+    "forbiddenBodyNotForYou": "Deze pagina hoort niet bij je account."
   },
   "eventTypes": {
     "wedding": "Bruiloft",
@@ -526,7 +531,8 @@
     "negative_total": "Het totaal van een offerte kan niet onder nul zijn. Controleer de kortingsregels.",
     "amount_too_high": "Dit bedrag is te hoog. Controleer de prijs en het aantal.",
     "overpayment": "Dit is meer dan het openstaande bedrag. Controleer het bedrag, of leg het toch vast als de klant echt meer heeft betaald.",
-    "nothing_due": "Er staat niets meer open voor deze artiest."
+    "nothing_due": "Er staat niets meer open voor deze artiest.",
+    "overpaymentDue": "Dit is meer dan er nog openstaat ({due}). Controleer het bedrag, of leg het toch vast als de klant echt meer betaalde."
   },
   "bookings": {
     "title": "Boekingen",
@@ -587,7 +593,8 @@
     "backToCalendar": "Terug naar de agenda",
     "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is.",
     "pastDate": "Deze datum is al geweest. Kies vandaag of een latere datum.",
-    "customerName": "Naam van de klant"
+    "customerName": "Naam van de klant",
+    "invalidValue": "Deze waarde klopt niet."
   },
   "booking": {
     "eventDetails": "Evenementgegevens",
@@ -739,7 +746,15 @@
     "artistBalanceDue": "Je moet {artist} nog {amount} betalen voor deze boeking. Betaal rechtstreeks en markeer het daarna als betaald.",
     "artistBalanceMarkPaid": "Artiest als betaald markeren",
     "artistBalancePaid": "{artist} als betaald gemarkeerd.",
-    "inquiryNotes": "Notities bij de aanvraag"
+    "inquiryNotes": "Notities bij de aanvraag",
+    "nextDay": "(+1 dag)",
+    "settlementRequired": "De klant heeft al betaald: kies of je dat terugbetaalt of houdt.",
+    "settlementTitle": "De klant heeft {amount} betaald",
+    "settlementHint": "Kies wat ermee gebeurt. Een online betaling betaal je terug bij de betalingen hieronder.",
+    "settlement_refund": "Terugbetalen aan de klant",
+    "settlement_keep": "Houden als annuleringskosten",
+    "refundToDo": "Nog terug te betalen: {amount}. Doe dat bij de betalingen hieronder.",
+    "keptAsFee": "{amount} gehouden als annuleringskosten."
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -778,7 +793,10 @@
     "change_withdrawn": "De klant heeft het wijzigingsverzoek ingetrokken",
     "change_approved": "Wijzigingsverzoek goedgekeurd",
     "change_rejected": "Wijzigingsverzoek geweigerd",
-    "artist_paid": "{stageName} als betaald gemarkeerd"
+    "artist_paid": "{stageName} als betaald gemarkeerd",
+    "quote_declined": "{name} heeft offerte v{version} afgewezen",
+    "cancel_refund": "Betaalde {amount} wordt terugbetaald",
+    "cancel_keep": "Betaalde {amount} gehouden als annuleringskosten"
   },
   "quotes": {
     "title": "Offertes",
@@ -895,7 +913,8 @@
     "archived": "Dienst gearchiveerd.",
     "emptyTitle": "Nog geen diensten",
     "emptyBody": "Voeg toe waar je meestal een offerte voor maakt, zoals een uurtarief voor een dj of een lichtshow.",
-    "searchPlaceholder": "Zoek op naam of omschrijving"
+    "searchPlaceholder": "Zoek op naam of omschrijving",
+    "negativePrice": "Een dienst kan niet minder dan nul kosten. Geef korting op de offerte, of met een kortingscode."
   },
   "gigs": {
     "myGigs": "Mijn optredens",
@@ -927,7 +946,8 @@
     "dateNotScheduled": "Datum nog niet bekend",
     "requestsCount": "{count, plural, one {# aanvraag te beantwoorden} other {# aanvragen te beantwoorden}}",
     "closedTitle": "Niet meer op je planning",
-    "endedTitle": "Deze aanvraag van {agency} staat niet meer open"
+    "endedTitle": "Deze aanvraag van {agency} staat niet meer open",
+    "nextDay": "(+1 dag)"
   },
   "availability": {
     "title": "Beschikbaarheid",
@@ -1035,7 +1055,14 @@
     "haveAccount": "Heb je al een account?",
     "signIn": "Log in om je boeking te volgen",
     "outdated": "De gegevens van je evenement zijn gewijzigd nadat deze offerte is gemaakt. Het bureau stuurt je een bijgewerkte offerte.",
-    "agencySuspended": "{agency} kan op dit moment geen nieuwe boekingen of betalingen aannemen, dus je kunt dit hier niet accepteren of betalen. Neem rechtstreeks contact op met het bureau."
+    "agencySuspended": "{agency} kan op dit moment geen nieuwe boekingen of betalingen aannemen, dus je kunt dit hier niet accepteren of betalen. Neem rechtstreeks contact op met het bureau.",
+    "decline": "Offerte afwijzen",
+    "declineTitle": "Deze offerte afwijzen?",
+    "declineBody": "Het bureau krijgt dit direct te horen. Je kunt ze nog steeds om een nieuwe offerte vragen.",
+    "declineReason": "Reden (optioneel)",
+    "declineConfirm": "Offerte afwijzen",
+    "declined": "Je hebt de offerte afgewezen. {agency} weet het nu.",
+    "youDeclined": "Je hebt deze offerte afgewezen. Een nieuwe nodig? Neem contact op met {agency}."
   },
   "reviews": {
     "title": "Reviews",
@@ -1144,7 +1171,11 @@
     "phoneLabel": "Bel ons",
     "emailLabel": "Mail ons",
     "websiteLabel": "Website",
-    "addressLabel": "Adres"
+    "addressLabel": "Adres",
+    "promoCode": "Kortingscode (optioneel)",
+    "promoCodeHint": "Een code van ons gekregen? Vul hem hier in.",
+    "embedUnavailableTitle": "Boekingsformulier niet beschikbaar",
+    "embedUnavailableBody": "Het boekingsformulier van {agency} kan hier nu niet worden getoond. Neem direct contact op met het bureau."
   },
   "bookingPageSettings": {
     "title": "Boekingspagina",
@@ -1234,7 +1265,9 @@
     "font_elegant": "Elegant",
     "font_geometric": "Geometrisch",
     "font_condensed": "Smal",
-    "font_playful": "Speels"
+    "font_playful": "Speels",
+    "embedNotOnPlan": "Het formulier op je eigen website hoort bij de abonnementen Pro en Business. Stap over om de code te krijgen.",
+    "embedUpgrade": "Bekijk abonnementen"
   },
   "attention": {
     "newInquiry": "Nieuwe aanvraag van {name}",
@@ -1333,7 +1366,11 @@
     "cancelReason_closing": "Het bureau stopt of pauzeert",
     "cancelReason_other": "Iets anders",
     "cancelNote": "Wil je nog iets kwijt? (optioneel)",
-    "cancelNotePlaceholder": "Wat had ervoor gezorgd dat je bleef?"
+    "cancelNotePlaceholder": "Wat had ervoor gezorgd dat je bleef?",
+    "promoOpen": "Heb je een kortingscode?",
+    "promoLabel": "Kortingscode",
+    "promoPlaceholder": "bijv. PILOT50",
+    "promoHint": "Wordt toegepast als je hieronder een abonnement kiest."
   },
   "plans": {
     "title": "Abonnementen & limieten",
@@ -1430,7 +1467,9 @@
     "saved": "Instellingen opgeslagen.",
     "invalid": "Sommige waarden kloppen niet. Controleer de getallen en probeer het opnieuw.",
     "waitlistMode": "Wachtlijstmodus",
-    "waitlistModeHint": "Vóór de lancering: de website verzamelt aanmeldingen voor de wachtlijst in plaats van een proefperiode aan te bieden."
+    "waitlistModeHint": "Vóór de lancering: de website verzamelt aanmeldingen voor de wachtlijst in plaats van een proefperiode aan te bieden.",
+    "subscriptionVat": "Btw in abonnementsprijzen (%)",
+    "subscriptionVatHint": "Staat als btw op de facturen van Stripe; de prijzen veranderen niet. 0 voor geen."
   },
   "agencyFee": {
     "deal": "Kostenafspraak",
@@ -1608,7 +1647,11 @@
     "incidentReconcile": "Controleren met Stripe",
     "incidentResolve": "Markeren als afgehandeld",
     "incidentResolved": "Opgelost: één lopend abonnement.",
-    "incidentStillOpen": "Nog {count} lopende abonnementen in Stripe."
+    "incidentStillOpen": "Nog {count} lopende abonnementen in Stripe.",
+    "webhookRejectedTitle": "Stripe-events worden geweigerd",
+    "webhookRejectedSignature": "{count, plural, one {# bericht} other {# berichten}} van Stripe kwamen de afgelopen twee dagen niet door de handtekeningcontrole: het webhook-geheim onder Instellingen → Betaalinstellingen hoort niet bij het endpoint in Stripe. Abonnementen en betalingen synchroniseren pas weer als dat klopt.",
+    "webhookRejectedNotConfigured": "{count, plural, one {# bericht} other {# berichten}} kwamen binnen terwijl er geen webhook-geheim was ingesteld.",
+    "webhookRejectedLast": "Laatste: {date}."
   },
   "partners": {
     "metaTitle": "Partnerprogramma",
@@ -1981,7 +2024,8 @@
     "change_approved": "{name} heeft je gevraagde wijziging van {code} goedgekeurd",
     "change_rejected": "{name} kon je gevraagde wijziging van {code} niet doorvoeren",
     "gig_updated": "{name} heeft de gegevens van optreden {code} gewijzigd",
-    "booking_updated": "{name} heeft de gegevens van je boeking {code} gewijzigd"
+    "booking_updated": "{name} heeft de gegevens van je boeking {code} gewijzigd",
+    "quote_declined": "{name} heeft de offerte voor {code} afgewezen"
   },
   "messages": {
     "title": "Berichten",
@@ -2308,6 +2352,11 @@
       },
       "team": {
         "permissions": "Rolrechten gewijzigd"
+      },
+      "promo": {
+        "create": "Kortingscode gemaakt",
+        "enable": "Kortingscode aangezet",
+        "disable": "Kortingscode uitgezet"
       }
     },
     "group_page": "Pagina's",
@@ -2485,7 +2534,8 @@
     "dos": "Wel",
     "donts": "Niet",
     "playlist": "Playlist openen",
-    "dateNotScheduled": "Datum nog niet bekend"
+    "dateNotScheduled": "Datum nog niet bekend",
+    "nextDay": "(+1 dag)"
   },
   "customerHome": {
     "noBooking": "Nog geen boeking bij {agency}.",
@@ -3872,7 +3922,10 @@
     "kind_reviewInvitation": "Uitnodiging voor beoordeling",
     "kind_reviewInvitationHint": "Aan de klant, als het evenement is afgerond",
     "kind_agencyInvite": "Uitnodiging voor een bureau",
-    "kind_agencyInviteHint": "Aan iemand die een bureau of artiest uitnodigt voor StageDesk"
+    "kind_agencyInviteHint": "Aan iemand die een bureau of artiest uitnodigt voor StageDesk",
+    "kind_gigAssigned_new": "Boekingsverzoek aan de artiest",
+    "kind_gigAssigned_withdrawn": "Verzoek ingetrokken (artiest)",
+    "kind_gigAssigned_cancelled": "Boeking geannuleerd (artiest)"
   },
   "supportMode": {
     "banner": "Supportmodus: je werkt in <b>{agency}</b> als bureaubeheerder. Wijzigingen staan op jouw naam en starten of verlaten wordt vastgelegd.",
@@ -4079,7 +4132,9 @@
     "confirmWithinDaysHint": "Daarna staat een gemelde betaling als te laat bij het bureau.",
     "sendReceipts": "Betaalbewijzen e-mailen",
     "sendReceiptsHint": "Klanten krijgen een betaalbewijs voor elke geregistreerde of bevestigde betaling.",
-    "saveMethods": "Betaalmethoden opslaan"
+    "saveMethods": "Betaalmethoden opslaan",
+    "testNoWebhookSecret": "Er is nog geen webhook-geheim ingesteld, dus de events van Stripe worden geweigerd.",
+    "testOkMode": "Verbonden met {name} ({country}), {mode}."
   },
   "agencyPayments": {
     "title": "Betaalmethoden",
@@ -6302,7 +6357,8 @@
     "progressLabel": "Ingeladen",
     "progress": "{loaded} van {planned}",
     "stillToLoad": "{count, plural, one {Nog # stuk in te laden} other {Nog # stuks in te laden}}",
-    "checklist": "Apparatuurlijst ({loaded}/{planned})"
+    "checklist": "Apparatuurlijst ({loaded}/{planned})",
+    "nextDay": "(+1 dag)"
   },
   "communicationSettings": {
     "title": "Communicatie met klanten",
@@ -6584,5 +6640,106 @@
     "error_invalid": "Vul een geldig e-mailadres in.",
     "error_notArtist": "Alleen artiesten met een actief profiel kunnen uitnodigingen sturen.",
     "error_generic": "De uitnodiging kon niet worden verstuurd. Probeer het opnieuw."
+  },
+  "promoCodes": {
+    "platformTitle": "Kortingscodes abonnementen",
+    "platformDescription": "Kortingscodes die bureaus op een StageDesk-abonnement kunnen gebruiken.",
+    "platformHint": "Een code wordt een coupon en kortingscode in Stripe. Bureaus vullen hem in op de pagina Abonnement of bij het afrekenen in Stripe. De korting is na het maken niet meer te wijzigen: zet de code uit en maak een nieuwe.",
+    "agencyTitle": "Kortingscodes",
+    "agencyDescription": "Kortingscodes voor de boekingen van je klanten.",
+    "agencyHint": "Klanten vullen een code in op je boekingspagina, of je zet hem zelf op een boeking. In de offerte-editor wordt de korting een kortingsregel, met de btw per tarief berekend.",
+    "noneTitle": "Nog geen kortingscodes",
+    "nonePlatform": "Maak een code voor een pilotdeal of een campagne, bijvoorbeeld PILOT50.",
+    "noneAgency": "Maak een code voor een campagne of een trouwbeurs, bijvoorbeeld BRUILOFT10.",
+    "code": "Code",
+    "codeHint": "Letters, cijfers en streepjes, 3 tot 32 tekens.",
+    "description": "Omschrijving (optioneel)",
+    "discount": "Korting",
+    "discountType": "Soort korting",
+    "type_percentage": "Percentage",
+    "type_fixed": "Vast bedrag",
+    "type_fixedInclVat": "Vast bedrag (incl. btw)",
+    "percent": "Percentage korting",
+    "amount": "Bedrag korting (€)",
+    "amountInclVat": "Bedrag korting incl. btw (€)",
+    "duration": "Hoe lang",
+    "duration_once": "Alleen de eerste betaling",
+    "duration_repeating": "Een aantal maanden",
+    "duration_forever": "Zolang het abonnement loopt",
+    "duration_months": "{count, plural, one {# maand} other {# maanden}}",
+    "months": "Maanden",
+    "plans": "Abonnementen",
+    "plansHint": "Vink aan voor welke abonnementen hij geldt. Niets aangevinkt: alle abonnementen.",
+    "allPlans": "Alle abonnementen",
+    "uses": "Gebruikt",
+    "maxUses": "Maximaal aantal keer (optioneel)",
+    "maxUsesHint": "Leeg: geen maximum.",
+    "expires": "Verloopt",
+    "expiresOn": "Geldig tot (optioneel)",
+    "expiresHint": "Tot en met deze dag.",
+    "firstOnly": "Alleen voor het eerste abonnement van een bureau",
+    "firstOnlyShort": "Eerste abonnement",
+    "notInStripe": "Nog niet in Stripe",
+    "active": "Actief",
+    "activeFor": "{code} actief",
+    "activeLabel": "Actief: klanten kunnen hem gebruiken",
+    "new": "Nieuwe code",
+    "newPlatformTitle": "Nieuwe kortingscode voor abonnementen",
+    "newPlatformHint": "De korting ligt vast zodra de code is gemaakt.",
+    "newAgencyTitle": "Nieuwe kortingscode",
+    "newAgencyHint": "Een gewijzigde korting geldt alleen voor offertes die je vanaf nu maakt.",
+    "editTitle": "Kortingscode bewerken",
+    "create": "Code maken",
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "created": "Code {code} gemaakt.",
+    "saved": "Code {code} opgeslagen.",
+    "deleted": "Code verwijderd.",
+    "enabled": "Code aangezet.",
+    "disabled": "Code uitgezet.",
+    "valid": "Geldig",
+    "always": "Altijd",
+    "validFrom": "Geldig vanaf (optioneel)",
+    "validUntil": "Geldig tot (optioneel)",
+    "minimum": "Minimum",
+    "minimumLabel": "Minimaal boekingsbedrag incl. btw (€, optioneel)",
+    "minimumHint": "De offerte moet dit totaal halen vóór de korting.",
+    "actions": "Acties",
+    "editCode": "{code} bewerken",
+    "deleteCode": "{code} verwijderen",
+    "error_invalid": "Sommige waarden kloppen niet. Controleer de code, de korting en de datums.",
+    "error_code_taken": "Die code is al in gebruik.",
+    "error_in_use": "Deze code is op een boeking gebruikt en kan niet worden verwijderd. Zet hem uit.",
+    "error_not_found": "Deze code bestaat niet meer.",
+    "error_unknown": "Deze code kennen we niet.",
+    "error_inactive": "Deze code is niet actief.",
+    "error_not_started": "Deze code is nog niet geldig.",
+    "error_expired": "Deze code is verlopen.",
+    "error_used_up": "Deze code is al het maximale aantal keer gebruikt.",
+    "error_wrong_plan": "Deze code geldt niet voor dit abonnement.",
+    "error_first_only": "Deze code is alleen voor een eerste abonnement.",
+    "error_below_minimum": "De boeking haalt het minimumbedrag van deze code nog niet.",
+    "error_amount": "Vul een percentage tussen 0 en 100 in, of een bedrag boven nul.",
+    "error_max": "Het maximale aantal keer moet een heel getal boven nul zijn.",
+    "error_minimum": "Vul het minimum in als bedrag boven nul.",
+    "error_dates": "De begindatum moet vóór de einddatum liggen.",
+    "problem_unknown": "Deze kortingscode kennen we niet. Controleer hem en probeer het opnieuw.",
+    "problem_inactive": "Deze kortingscode is niet actief.",
+    "problem_not_started": "Deze kortingscode is nog niet geldig.",
+    "problem_expired": "Deze kortingscode is verlopen.",
+    "problem_used_up": "Deze kortingscode is op.",
+    "problem_wrong_plan": "Deze kortingscode geldt niet voor dit abonnement.",
+    "problem_first_only": "Deze kortingscode is alleen voor een eerste abonnement.",
+    "problem_below_minimum": "De offerte haalt het minimumbedrag van deze code nog niet.",
+    "removedFromBooking": "Kortingscode van de boeking gehaald.",
+    "addedToBooking": "Kortingscode {code} op de boeking gezet.",
+    "promoLine": "Korting ({code})",
+    "bookingCodeCustomer": "De klant gebruikte code {code} ({discount}).",
+    "bookingCodeStaff": "Code {code} ({discount}) staat op deze boeking.",
+    "addDiscount": "Korting toevoegen",
+    "updateDiscount": "Korting bijwerken",
+    "removeCode": "Code verwijderen",
+    "bookingCodeLabel": "Kortingscode",
+    "apply": "Toepassen"
   }
 }

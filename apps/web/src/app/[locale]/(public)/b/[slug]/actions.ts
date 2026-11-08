@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
-import { agencyBilling, bookingTypeExists, publicAgency, submitInquiry } from "@stagedesk/db";
+import { agencyBilling, bookingTypeExists, findBookingPromo, publicAgency, submitInquiry } from "@stagedesk/db";
 import { announceNewBooking } from "@/lib/announce";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { allow, clientIp } from "@/lib/rate-limit";
@@ -30,6 +30,7 @@ const schema = z.object({
   preferredGenre: text(96),
   partnerName: text(191),
   ceremony: z.preprocess((v) => v === "on" || v === true, z.boolean()),
+  promoCode: text(40),
   message: text(5000),
 });
 
@@ -66,6 +67,11 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
   const open = await publicAgency(slug);
   if (!open || !(await agencyBilling(open.id)).limits.bookingPage) return { ok: false, message: t("notFound") };
   if (!(await bookingTypeExists(d.eventType, open.id))) return { ok: false, message: t("errorRequired") };
+  // A promo code is checked before anything is stored, so the customer can correct it.
+  if (d.promoCode) {
+    const { problem } = await findBookingPromo(open.id, d.promoCode);
+    if (problem) return { ok: false, message: (await getTranslations("promoCodes"))(`problem_${problem}`) };
+  }
 
   const locale = userLocale(await getLocale());
   const result = await submitInquiry(slug, { ...d, eventType: d.eventType as Parameters<typeof submitInquiry>[1]["eventType"], email: d.email, locale });
@@ -82,10 +88,10 @@ export async function submitInquiryAction(slug: string, form: FormData): Promise
       code: booking.trackingCode,
       url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`),
     },
-  });
+  }, { bookingId: booking.id, agencyId: agency.id });
 
   // Let everyone who handles bookings at the agency know, each in their own language.
-  await announceNewBooking(agency.id, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
+  await announceNewBooking(agency.id, { id: booking.id, trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
 
   return { ok: true, code: booking.trackingCode, name: d.name.split(/\s+/)[0] ?? d.name };
 }

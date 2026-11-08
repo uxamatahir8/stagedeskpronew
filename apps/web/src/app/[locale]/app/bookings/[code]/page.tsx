@@ -5,21 +5,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import {
-  availableActions,
-  type BookingStatus,
-  changeConflicts,
-  conflictFingerprint,
-  depositRuleOf,
-  quoteChangedFields,
-  quoteEventSnapshot,
-  type EventType,
-  isBudgetRange,
-  paymentStatus,
-  todayInNetherlands,
-  localePrefix,
-} from "@stagedesk/core";
-import { artistAccountStatesOf, artistBalanceOnBooking, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
+import { availableActions, type BookingStatus, changeConflicts, conflictFingerprint, depositRuleOf, quoteChangedFields, quoteEventSnapshot, type EventType, isBudgetRange, paymentStatus, todayInNetherlands, localePrefix, eventTimeRange } from "@stagedesk/core";
+import { artistAccountStatesOf, artistBalanceOnBooking, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, bookingPromoOf, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
 import { changeRows } from "@/lib/change-requests";
 import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
@@ -163,11 +150,23 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
   const mailLocale = current?.locale === "nl" || current?.locale === "en" ? { locale: current.locale as "nl" | "en", reason: "customer" as const } : await customerMailLocale(booking.id);
   // What happened to the booking's emails: stored, queued, accepted by the mail server, or failing.
   const emails = await bookingEmails(booking.id);
+  // An artist's emails share one kind; the step (request, withdrawn, cancelled) is in the outbox key "gig-<step>-<id>".
+  const emailLabel = (m: { kind: string; key: string | null }) => {
+    const step = m.kind === "gigAssigned" ? /^gig-(new|withdrawn|cancelled)-/.exec(m.key ?? "")?.[1] : undefined;
+    const key = (step ? `emailPreviews.kind_gigAssigned_${step}` : `emailPreviews.kind_${m.kind}`) as "emailPreviews.kind_quote";
+    return t.has(key) ? t(key) : m.kind;
+  };
   // The customer can fill in the event details through a link until a quote is accepted.
   const detailRequest =
     booking.customer && ["inquiry", "quoted", "expired"].includes(status) && viewerCan(viewer, "agency.bookings.edit")
       ? { open: await openDetailRequest(organization.id, booking.id), locale: mailLocale.locale }
       : null;
+  // The agency promo code on the booking, shown in the quote editor with its discount.
+  const promoRow = await bookingPromoOf(organization.id, booking.id);
+  const promo = promoRow
+    ? { code: promoRow.code, discount: promoRow.discount, minTotalCents: promoRow.minTotalCents, addedBy: promoRow.addedBy, label: promoRow.discount.type === "percentage" ? percent(format, promoRow.discount.bps) : euro(format, promoRow.discount.cents, booking.currency) }
+    : null;
+  const ended = status === "cancelled" || status === "declined";
   const quoteDefaults = {
     depositType: startDeposit.type,
     depositFixed: startDeposit.type === "fixed" ? centsToInput(startDeposit.cents, locale) : "",
@@ -269,7 +268,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
             <p className="font-mono text-sm text-muted-foreground">{booking.trackingCode}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatusActions bookingId={booking.id} actions={actions} />
+            <StatusActions bookingId={booking.id} actions={actions} paid={booking.paidCents > 0 ? euro(format, booking.paidCents, booking.currency) : null} />
           </div>
         </div>
       </div>
@@ -307,7 +306,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   {eventDate(format, booking.eventDate) ?? t("bookings.noDate")}
                 </Detail>
                 <Detail icon={ClockIcon} label={t("newBooking.startTime")}>
-                  {booking.startTime ? `${booking.startTime}${booking.endTime ? ` – ${booking.endTime}` : ""}` : "—"}
+                  {eventTimeRange(booking.startTime, booking.endTime, t("ui.nextDay")) ?? "—"}
                 </Detail>
                 <Detail icon={MapPinIcon} label={t("newBooking.venue")}>
                   {[booking.venueName, booking.venueAddress, booking.venueCity].filter(Boolean).join(", ") || "—"}
@@ -398,6 +397,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 defaultExpiryDays={defaults.quoteExpiryDays}
                 currency={booking.currency}
                 quoteDefaults={quoteDefaults}
+                promo={promo}
               />
             </CardContent>
           </Card>
@@ -488,8 +488,15 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 <dl className="grid grid-cols-3 gap-3 text-sm">
                   <Figure label={t("booking.total")} value={euro(format, booking.totalCents, booking.currency)} />
                   <Figure label={t("booking.paid")} value={euro(format, booking.paidCents, booking.currency)} />
-                  <Figure label={t("booking.due")} value={euro(format, Math.max(0, booking.totalCents - booking.paidCents), booking.currency)} />
+                  {/* A cancelled or declined booking owes nothing more; money in is refunded or kept (cancelSettlement). */}
+                  <Figure label={t("booking.due")} value={euro(format, ended ? 0 : Math.max(0, booking.totalCents - booking.paidCents), booking.currency)} />
                 </dl>
+              )}
+              {ended && booking.paidCents > 0 && booking.cancelSettlement === "refund" && (
+                <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">{t("booking.refundToDo", { amount: euro(format, booking.paidCents, booking.currency) })}</p>
+              )}
+              {ended && booking.paidCents > 0 && booking.cancelSettlement === "keep" && (
+                <p className="text-sm text-muted-foreground">{t("booking.keptAsFee", { amount: euro(format, booking.paidCents, booking.currency) })}</p>
               )}
               {booking.paymentClaims.map((c) => (
                 <div key={c.id} className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4">
@@ -678,7 +685,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   {emails.map((m) => (
                     <li key={m.id} className="grid gap-0.5">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="min-w-0 truncate">{t.has(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") ? t(`emailPreviews.kind_${m.kind}` as "emailPreviews.kind_quote") : m.kind}</span>
+                        <span className="min-w-0 truncate">{emailLabel(m)}</span>
                         <Pill tone={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" || m.status === "suppressed" ? "danger" : "neutral"}>{t(`bookingEmails.status_${m.status as "sent"}`)}</Pill>
                       </div>
                       <p className="truncate text-xs text-muted-foreground">

@@ -99,6 +99,8 @@ export const defaultAgencyGrants: Record<"agency_admin" | "agency_staff", readon
 };
 
 const always = ["messages", "support", "blog.submit"] as const;
+/** People an agency works for or with: no blog posts (those are for agencies and partners). */
+const basics = ["messages", "support"] as const;
 
 const grants: Record<Role, readonly Permission[]> = {
   platform_admin: [
@@ -118,8 +120,8 @@ const grants: Record<Role, readonly Permission[]> = {
   agency_owner: [...agencyPermissions, ...ownerOnlyPermissions, ...always],
   agency_admin: [...defaultAgencyGrants.agency_admin, ...always],
   agency_staff: [...defaultAgencyGrants.agency_staff, ...always],
-  artist: ["artist.gigs", "artist.availability", "artist.earnings", ...always],
-  customer: ["customer.event", "customer.payments", ...always],
+  artist: ["artist.gigs", "artist.availability", "artist.earnings", ...basics],
+  customer: ["customer.event", "customer.payments", ...basics],
   // Runs their own bookings like a one-person agency, without a team, other artists or a website.
   solo_artist: [
     "agency.bookings",

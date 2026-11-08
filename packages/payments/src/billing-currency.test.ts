@@ -25,6 +25,8 @@ describe("plans are billed in euros", () => {
       },
     },
     customers: { create: async () => ({ id: "cus_eur" }), retrieve: async (id: string) => ({ id }) },
+    taxRates: { list: () => [], create: async () => ({ id: "txr_plans" }) },
+
     checkout: {
       sessions: {
         create: async (input: Record<string, unknown>) => {
@@ -67,5 +69,7 @@ describe("plans are billed in euros", () => {
     expect(sessions).toHaveLength(1);
     expect(sessions[0]!["line_items"]).toEqual([{ price: "price_eur_month", quantity: 1 }]);
     expect(sessions[0]).not.toHaveProperty("currency");
+    // Plan prices include VAT: Stripe shows that part as VAT (an inclusive rate), and asks businesses for a VAT number.
+    expect(sessions[0]).toMatchObject({ subscription_data: { default_tax_rates: ["txr_plans"] }, tax_id_collection: { enabled: true } });
   });
 });

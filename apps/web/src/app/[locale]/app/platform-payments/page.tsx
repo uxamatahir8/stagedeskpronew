@@ -16,6 +16,7 @@ import { ServerTable } from "@/components/list/data-table";
 import type { Locale } from "@/i18n/routing";
 import { dateTime, euro, startOfMonth } from "@/lib/format";
 import { requirePermission } from "@/lib/viewer";
+import { webhookRejections } from "@/lib/webhook-health";
 import { IncidentButtons, OperationButtons, RetryEventButton } from "./retry-button";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/platform-payments">): Promise<Metadata> {
@@ -90,7 +91,7 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
   });
   const ledgerSum = (type: string) => ledger.find((l) => l.type === type)?._sum.amountCents ?? 0;
   const mrr = paying.reduce((sum, s) => sum + (s.interval === "year" ? Math.round(s.plan.yearlyPriceCents / 12) : s.plan.monthlyPriceCents), 0);
-  const stripeReady = await isStripeConfigured();
+  const [stripeReady, rejected] = await Promise.all([isStripeConfigured(), webhookRejections()]);
 
   return (
     <div className="grid gap-6">
@@ -99,6 +100,18 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
         description={t("description")}
         actions={<Pill tone={stripeReady ? "success" : "warning"}>{stripeReady ? t("configured") : t("notConfigured")}</Pill>}
       />
+
+      {(rejected.signature > 0 || rejected.notConfigured > 0) && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle>{t("webhookRejectedTitle")}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {rejected.signature > 0 && t("webhookRejectedSignature", { count: rejected.signature })} {rejected.notConfigured > 0 && t("webhookRejectedNotConfigured", { count: rejected.notConfigured })}{" "}
+              {rejected.last && t("webhookRejectedLast", { date: dateTime(format, rejected.last.at) })}
+            </p>
+          </CardHeader>
+        </Card>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard index={0} label={t("volume")} value={euro(format, volume._sum.amountCents ?? 0)} icon={BanknoteIcon} />
@@ -162,11 +175,7 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
                         <div className="text-xs text-muted-foreground">
                           {booking ? `${booking.organization.name} · ${booking.trackingCode}` : o.organizationId} · <span className="font-mono">{o.id}</span>
                         </div>
-                        {o.lastError && (
-                          <div className="max-w-md truncate text-xs text-destructive" title={o.lastError}>
-                            {o.lastError}
-                          </div>
-                        )}
+                        {o.lastError && <div className="max-w-md truncate text-xs text-destructive">{shortErrorText(o.lastError)}</div>}
                       </TableCell>
                       <TableCell className="whitespace-nowrap tabular-nums">{dateTime(format, o.createdAt)}</TableCell>
                       <TableCell>
@@ -220,7 +229,7 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
                   <TableCell>
                     <div className="font-mono text-xs">{e.type}</div>
                     <div className="font-mono text-[11px] text-muted-foreground">{e.id}</div>
-                    {e.error && <div className="max-w-md truncate text-xs text-destructive" title={e.error}>{e.error}</div>}
+                    {e.error && <div className="max-w-md truncate text-xs text-destructive">{shortErrorText(e.error)}</div>}
                   </TableCell>
                   <TableCell className="whitespace-nowrap tabular-nums">{dateTime(format, e.receivedAt)}</TableCell>
                   <TableCell>
@@ -235,4 +244,17 @@ async function PlatformPayments({ searchParams }: Pick<PageProps<"/[locale]/app/
       </div>
     </div>
   );
+}
+
+/**
+ * One readable line from a stored error. Errors saved before shortError()
+ * existed can hold a whole Prisma query dump; the admin never needs that here.
+ */
+function shortErrorText(raw: string) {
+  if (/Foreign key constraint/i.test(raw)) return "Database error P2003: foreign key constraint (the agency isn't in this database)";
+  const line = raw
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => l && !/^Invalid `prisma|^PrismaClient\w*Error:?$/.test(l));
+  return (line ?? raw).slice(0, 200);
 }

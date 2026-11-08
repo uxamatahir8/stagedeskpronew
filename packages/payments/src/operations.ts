@@ -1,3 +1,4 @@
+import { shortError } from "./errors";
 import type Stripe from "stripe";
 import { randomUUID } from "node:crypto";
 import { type FinancialOperation, Prisma, prisma } from "@stagedesk/db";
@@ -93,7 +94,9 @@ export async function saveOperationData(op: Pick<Operation, "id" | "lockToken">,
 export async function failAttempt(op: Operation, error: unknown, opts: { moneyMoved: boolean }, now = new Date()) {
   // Taken over by another process: its owner decides what happens now.
   if (error instanceof LeaseLostError) return "busy" as const;
-  const message = String((error as Error)?.message ?? error).slice(0, 5000);
+  // One readable line for the admin; the whole error goes to the server log.
+  const message = shortError(error);
+  console.error(`[payments] operation ${op.id} attempt failed`, error);
   if (!opts.moneyMoved && isDefinitiveStripeError(error)) {
     const done = await prisma.financialOperation.updateMany({ where: owned(op), data: { status: "failed", lastError: message, lockedUntil: null, lockToken: null, nextAttemptAt: null } });
     return done.count === 1 ? ("failed" as const) : ("busy" as const);

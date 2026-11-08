@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType, gigState, playlistLink, todayInNetherlands } from "@stagedesk/core";
+import { type EventType, gigState, playlistLink, todayInNetherlands, eventTimeRange } from "@stagedesk/core";
 import { currentArtistProfile, liveAssignmentOnBooking, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { GigStateBadge } from "@/components/status-badge";
@@ -124,7 +124,7 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
           <dl className="grid gap-3 sm:grid-cols-2">
             <Item icon={CalendarIcon} label={t("newBooking.eventDate")}>{eventDate(format, b.eventDate) ?? t("bookings.noDate")}</Item>
             <Item icon={ClockIcon} label={t("newBooking.startTime")}>
-              {b.startTime ? `${b.startTime}${b.endTime ? ` – ${b.endTime}` : ""}` : "—"}
+              {eventTimeRange(b.startTime, b.endTime, t("ui.nextDay")) ?? "—"}
             </Item>
             <Item icon={MapPinIcon} label={t("newBooking.venue")}>
               {[b.venueName, b.venueAddress, b.venueCity].filter(Boolean).join(", ") || "—"}

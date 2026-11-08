@@ -50,3 +50,22 @@ Also before launch (security QA, 8 Nov 2026):
 ## Rollback
 
 Code: switch the symlink back and restart, as staging does automatically. The schema stays; see above. **Irreversible:** Stripe refunds, transfers and reversals already made. Operations left `pending` by a rolled-back release are continued by the worker of whichever release runs, since both releases share the table. Don't drop `financial_operations` on rollback.
+
+## Go-live checklist (client QA report, 8 Nov 2026)
+
+Code fixes for the report are in the app. These steps happen outside the code, in Stripe or on the server.
+
+1. **Stripe webhook (SD-01).** In Stripe → Developers → Webhooks, add an endpoint for `https://<host>/api/webhooks/stripe` with the events in `handledStripeEvents` (`packages/payments/src/webhooks.ts`). Put its signing secret under Settings → Payment setup (or `STRIPE_WEBHOOK_SECRET`), then press "Test connection": it names the account and mode and warns when no signing secret is set. Admin → Payments & payouts shows a red card when deliveries fail the signature check. Events about agencies this database doesn't have (another environment sharing the Stripe account, deleted test agencies) are now "ignored", not retried until they give up. Replay the ones that gave up from the same page.
+2. **Live mode (SD-09/SD-10).** Live keys and a new live webhook secret on production only. In Stripe → Settings → Business and Branding: business name (not "New Business"), logo, colours, support email, statement descriptor. Check that the production `APP_URL` is the production domain: canonical links, the sitemap, `og:url` and email links all follow it.
+3. **Staging stays out of search engines (SD-09).** Automatic for an `APP_URL` starting with `staging.`; anywhere else set `SITE_NOINDEX=true`. Then robots.txt disallows everything, the sitemap is empty and every response has `X-Robots-Tag: noindex, nofollow`.
+4. **Headers in one place (SD-19).** The app sets every security header (`next.config.ts`). Remove `X-Frame-Options`, `X-Content-Type-Options` and `Referrer-Policy` from the nginx/Caddy config: duplicates conflict (two Referrer-Policies), and a proxy-level `X-Frame-Options: SAMEORIGIN` breaks the embeddable booking form on agencies' own sites.
+5. **Manual payment pass (SD-03), in test mode, before go-live.** Stripe's hosted pages can't be automated, so a person does this once:
+   1. Agency → Payments → Connect Stripe; finish onboarding with Stripe's test data.
+   2. Send a quote with a deposit; as the customer pay it with iDEAL (test bank) and once with card 4242 4242 4242 4242.
+   3. Pay the balance; mark the event completed; check the payout split under Admin → Payments & payouts (agency, artist, platform fee) and in Stripe → Connect.
+   4. Refund part of a payment from the booking; check the credit note and the refund in Stripe.
+   5. Trigger a dispute with test card 4000 0000 0000 0259 and check the webhook is processed.
+6. **Public forms (Turnstile).** Submit the booking page, `/request`, `/contact` and the newsletter form once from a normal browser with the real Turnstile keys.
+7. **Plan VAT.** Settings → "VAT included in plan prices" (21% by default) attaches an inclusive tax rate to subscriptions: prices don't change, Stripe's invoices show the VAT part, and Checkout asks businesses for their VAT number. Reverse charge for EU businesses outside the Netherlands isn't handled; agree with the accountant whether that's needed.
+8. **Deploys without a gap.** A deploy restarts the web process (`scripts/deploy-staging.sh`), which gave a short 502. Run `WEB_INSTANCES=2`, let the proxy retry for a few seconds (`lb_try_duration` in Caddy, `proxy_next_upstream` in nginx), and add uptime monitoring on `/api/health`.
+9. **Domain (SD-20).** Production is `stagedeskpro.com`; the contact address is `info@stagedeskpro.com`. New installs get it as the default for the support and footer email. On a database that already exists (staging), the old values are stored: change them under Settings (general and footer), and update the privacy page and the help article "Booking page and form" in the admin, which were seeded with `stagedesk.pro`.

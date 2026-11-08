@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { Prisma, prisma } from "@stagedesk/db";
 import { adjustCommissionsForCharge, attributeSubscriptionPromo, recordInvoiceCommission } from "./affiliates";
+import { recordPlatformPromoFromSubscription } from "./promo-codes";
+import { shortError } from "./errors";
 import { recordStripePayment } from "./booking-payments";
 import { applyStripeAccount } from "./connect";
 import { syncChargeRefund } from "./refunds";
@@ -64,13 +66,14 @@ export async function processStoredEvent(stripe: Stripe, eventId: string, now = 
       where: mine,
       data: {
         status: dead ? "dead" : "failed",
-        error: String(error).slice(0, 5000),
+        error: shortError(error),
         lockedUntil: null,
         lockToken: null,
         nextAttemptAt: dead ? null : new Date(now.getTime() + eventRetryDelayMs(stored.attempts)),
       },
     });
-    if (dead && done.count === 1) console.error(`[stripe] event ${eventId} (${stored.type}) gave up after ${stored.attempts} attempts`, error);
+    console.error(`[stripe] event ${eventId} (${stored.type}) failed (attempt ${stored.attempts})`, error);
+    if (dead && done.count === 1) console.error(`[stripe] event ${eventId} (${stored.type}) gave up after ${stored.attempts} attempts`);
     throw error;
   }
 }
@@ -119,8 +122,8 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object;
       if (session.mode === "subscription" && session.customer) {
-        await syncAgencySubscriptions(stripe, typeof session.customer === "string" ? session.customer : session.customer.id);
-        return true;
+        // Null when the agency isn't in this database: the event is ignored, not failed.
+        return Boolean(await syncAgencySubscriptions(stripe, typeof session.customer === "string" ? session.customer : session.customer.id));
       }
       if (session.mode === "payment") {
         await recordStripePayment(stripe, session);
@@ -133,8 +136,10 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
     case "customer.subscription.deleted": {
       // Stripe doesn't promise order: decide from all of the customer's subscriptions as they are now.
       const object = event.data.object;
-      await syncAgencySubscriptions(stripe, typeof object.customer === "string" ? object.customer : object.customer.id);
+      if (!(await syncAgencySubscriptions(stripe, typeof object.customer === "string" ? object.customer : object.customer.id))) return false;
       if (event.type === "customer.subscription.created") await attributeSubscriptionPromo(stripe, await stripe.subscriptions.retrieve(object.id));
+      // A platform promo code used at Checkout or with a plan switch counts as one use per agency.
+      if (event.type !== "customer.subscription.deleted") await recordPlatformPromoFromSubscription(stripe, await stripe.subscriptions.retrieve(object.id));
       return true;
     }
     case "invoice.payment_failed":
@@ -144,7 +149,7 @@ async function handleEvent(stripe: Stripe, event: Stripe.Event): Promise<boolean
       const id = typeof subscriptionId === "string" ? subscriptionId : subscriptionId?.id;
       if (!id) return false;
       const sub = await stripe.subscriptions.retrieve(id);
-      await syncAgencySubscriptions(stripe, typeof sub.customer === "string" ? sub.customer : sub.customer.id);
+      if (!(await syncAgencySubscriptions(stripe, typeof sub.customer === "string" ? sub.customer : sub.customer.id))) return false;
       if (event.type === "invoice.paid") {
         // The promo code decides the referral before the first commission is booked.
         await attributeSubscriptionPromo(stripe, sub);

@@ -200,6 +200,12 @@ export function InquiryForm({
         <FormField id="inq-message" label={t("bookingPage.message")} className="sm:col-span-2">
           <Textarea id="inq-message" name="message" rows={4} maxLength={5000} />
         </FormField>
+        {/* An agency's own discount code; the platform's request form has none. */}
+        {kind === "agency" && (
+          <FormField id="inq-promo" label={t("bookingPage.promoCode")} hint={t("bookingPage.promoCodeHint")}>
+            <Input id="inq-promo" name="promoCode" maxLength={32} autoComplete="off" className="uppercase" />
+          </FormField>
+        )}
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">

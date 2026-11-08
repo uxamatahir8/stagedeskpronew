@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { removeCoverAction, saveBookingPageAction, uploadCoverAction } from "./actions";
@@ -36,7 +36,7 @@ const DESKTOP_WIDTH = 1280;
  * Booking page settings: the look, texts and section order on the left, a
  * live preview of the real page on the right. Nothing is public until saved.
  */
-export function BookingPageForm({ pageUrl, embedCode, preview, branding, values }: { pageUrl: string; embedCode: string; preview: BookingPageData; branding: boolean; values: Values }) {
+export function BookingPageForm({ pageUrl, embedCode, preview, branding, values }: { pageUrl: string; /** null when the plan has no website form: an upgrade note is shown instead. */ embedCode: string | null; preview: BookingPageData; branding: boolean; values: Values }) {
   const t = useTranslations("bookingPageSettings");
   const tp = useTranslations("bookingPage");
   const router = useRouter();
@@ -348,13 +348,24 @@ export function BookingPageForm({ pageUrl, embedCode, preview, branding, values 
                 <CardDescription>{t("embedHint")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3">
-                <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs">
-                  <code>{embedCode}</code>
-                </pre>
-                <Button variant="outline" size="sm" className="w-fit" onClick={() => copy(embedCode)}>
-                  <CopyIcon />
-                  {t("copyCode")}
-                </Button>
+                {embedCode ? (
+                  <>
+                    <pre className="overflow-x-auto rounded-lg bg-muted p-3 text-xs">
+                      <code>{embedCode}</code>
+                    </pre>
+                    <Button variant="outline" size="sm" className="w-fit" onClick={() => copy(embedCode)}>
+                      <CopyIcon />
+                      {t("copyCode")}
+                    </Button>
+                  </>
+                ) : (
+                  <div className="grid gap-2 rounded-lg border border-dashed p-3 text-sm">
+                    <p className="text-muted-foreground">{t("embedNotOnPlan")}</p>
+                    <Button asChild variant="outline" size="sm" className="w-fit">
+                      <Link href="/app/billing">{t("embedUpgrade")}</Link>
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

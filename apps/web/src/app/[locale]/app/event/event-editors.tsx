@@ -171,7 +171,7 @@ export function ChangeDetailsDialog({ bookingId, values, direct, today, bookingT
             <Input id="chg-address" name="venueAddress" maxLength={191} defaultValue={values.venueAddress} />
           </FormField>
           <FormField id="chg-guests" label={t("newBooking.guestCount")} error={errors["guestCount"]}>
-            <Input id="chg-guests" name="guestCount" inputMode="numeric" defaultValue={values.guestCount} />
+            <Input id="chg-guests" name="guestCount" type="number" min={0} max={100000} inputMode="numeric" defaultValue={values.guestCount} />
           </FormField>
           {!direct && (
             <FormField id="chg-note" label={t("customerEvent.changeNote")} className="sm:col-span-2">

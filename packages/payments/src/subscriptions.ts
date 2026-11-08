@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
-import { markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
+import { getSetting, markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
 import { referralPromotionCode, syncAffiliatePromo } from "./affiliates";
 import { isMissingStripePrice, isMissingStripeResource, syncPlanToStripe } from "./plans";
 
@@ -9,6 +9,29 @@ export class PaymentsError extends Error {
     super(`Payments: ${code}`);
     this.name = "PaymentsError";
   }
+}
+
+/**
+ * The Stripe tax rate for the VAT included in plan prices (billing.defaults.subscriptionVatBps),
+ * found or made in the current account; null when it's 0. Inclusive, so the price stays the same.
+ */
+export async function planVatRate(stripe: Stripe): Promise<string | null> {
+  const { subscriptionVatBps } = await getSetting("billing.defaults");
+  if (!subscriptionVatBps) return null;
+  const percentage = subscriptionVatBps / 100;
+  for await (const rate of stripe.taxRates.list({ active: true, inclusive: true, limit: 100 })) {
+    if (rate.metadata?.["stagedesk"] === "plans" && rate.percentage === percentage) return rate.id;
+  }
+  const created = await stripe.taxRates.create(
+    { display_name: "BTW", description: `StageDesk plans, ${percentage}% VAT included`, inclusive: true, percentage, country: "NL", jurisdiction: "NL", metadata: { stagedesk: "plans" } },
+    { idempotencyKey: `plan-vat-rate-${subscriptionVatBps}` },
+  );
+  return created.id;
+}
+
+/** Whether an agency is in this database (Stripe events can be about agencies of another environment). */
+async function agencyExists(organizationId: string) {
+  return Boolean(await prisma.organization.findUnique({ where: { id: organizationId }, select: { id: true } }));
 }
 
 /** The parameter a Stripe error is about (e.g. "customer", "discounts[0][promotion_code]"). */
@@ -40,7 +63,7 @@ export async function ensureCustomer(stripe: Stripe, organizationId: string, ema
  */
 export async function subscriptionCheckout(
   stripe: Stripe,
-  input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
+  input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string; promotionCodeId?: string | null },
 ) {
   // Ids stored from another Stripe account (keys changed) are repaired one by one, then checkout is tried again.
   for (let attempt = 0; ; attempt++) {
@@ -86,15 +109,12 @@ async function existsInThisAccount(retrieve: () => Promise<object>) {
 
 async function subscriptionCheckoutOnce(
   stripe: Stripe,
-  input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
+  input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string; promotionCodeId?: string | null },
 ) {
   // Never a second subscription: a running one is switched instead (changeSubscriptionPlan). One made
   // with another Stripe account (the keys were changed) can't be changed from here; a new checkout
   // replaces it, and its webhook overwrites the agency's subscription row.
-  const live = await liveStripeSubscription(input.organizationId);
-  if (live?.stripeSubscriptionId && (await existsInThisAccount(() => stripe.subscriptions.retrieve(live.stripeSubscriptionId!)))) {
-    return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
-  }
+  if (await liveStripeSubscriptionHere(stripe, input.organizationId)) return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
   const price = input.interval === "year" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
   if (!price) throw new PaymentsError("plan_not_synced");
@@ -107,20 +127,35 @@ async function subscriptionCheckoutOnce(
   const trialDays = trialEnd ? 0 : planTrialDays(plan, await trialEligible(input.organizationId));
   const trial = trialEnd ? { trial_end: trialEnd } : trialDays > 0 ? { trial_period_days: trialDays } : {};
 
-  // A referred agency gets its partner's discount automatically; others may type a code.
-  const promotionCode = await referralPromotionCode(input.organizationId);
+  // A code the agency entered (a platform promo code, already in Stripe) wins; otherwise a referred
+  // agency gets its partner's discount automatically, and others may type a code at Checkout.
+  const promotionCode = input.promotionCodeId ?? (await referralPromotionCode(input.organizationId));
+  // Plan prices include VAT: an inclusive tax rate shows that part on Stripe's invoices (the price doesn't
+  // change), and businesses can enter their VAT number. Not Stripe Tax: nothing to set up in Stripe.
+  const vatRate = await planVatRate(stripe);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     customer,
     line_items: [{ price, quantity: 1 }],
     locale: input.locale,
+    ...(vatRate ? { tax_id_collection: { enabled: true }, customer_update: { name: "auto" as const, address: "auto" as const } } : {}),
     ...(promotionCode ? { discounts: [{ promotion_code: promotionCode }] } : { allow_promotion_codes: true }),
-    subscription_data: { metadata: { organizationId: input.organizationId, planId: plan.id }, ...trial },
+    subscription_data: { metadata: { organizationId: input.organizationId, planId: plan.id }, ...trial, ...(vatRate ? { default_tax_rates: [vatRate] } : {}) },
     metadata: { organizationId: input.organizationId, planId: plan.id },
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
   });
   return session.url!;
+}
+
+/**
+ * The running subscription, if it exists in the Stripe account the current
+ * keys belong to. One made with other keys (the platform changed accounts)
+ * can't be switched from here, so choosing a plan starts a new checkout.
+ */
+export async function liveStripeSubscriptionHere(stripe: Stripe, organizationId: string) {
+  const live = await liveStripeSubscription(organizationId);
+  return live?.stripeSubscriptionId && (await existsInThisAccount(() => stripe.subscriptions.retrieve(live.stripeSubscriptionId!))) ? live : null;
 }
 
 /** A Stripe subscription that is still running; switching plans changes it instead of starting another. */
@@ -133,7 +168,7 @@ export async function liveStripeSubscription(organizationId: string) {
  * Moves a running Stripe subscription to another plan or interval. Stripe
  * prorates the difference on the next invoice; a running trial continues.
  */
-export async function changeSubscriptionPlan(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year" }) {
+export async function changeSubscriptionPlan(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year"; promotionCodeId?: string | null }) {
   try {
     return await changeSubscriptionPlanOnce(stripe, input);
   } catch (error) {
@@ -143,7 +178,7 @@ export async function changeSubscriptionPlan(stripe: Stripe, input: { organizati
   }
 }
 
-async function changeSubscriptionPlanOnce(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year" }) {
+async function changeSubscriptionPlanOnce(stripe: Stripe, input: { organizationId: string; planId: string; interval: "month" | "year"; promotionCodeId?: string | null }) {
   const current = await liveStripeSubscription(input.organizationId);
   if (!current?.stripeSubscriptionId) throw new PaymentsError("not_found");
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
@@ -156,6 +191,9 @@ async function changeSubscriptionPlanOnce(stripe: Stripe, input: { organizationI
     items: [{ id: item.id, price }],
     proration_behavior: "create_prorations",
     cancel_at_period_end: false,
+    ...(await planVatRate(stripe).then((rate) => (rate ? { default_tax_rates: [rate] } : {}))),
+    // A promo code entered with the switch applies from now on.
+    ...(input.promotionCodeId ? { discounts: [{ promotion_code: input.promotionCodeId }] } : {}),
     metadata: { ...live.metadata, organizationId: input.organizationId, planId: plan.id },
   });
   // The webhook says the same a moment later; showing it now avoids a stale page.
@@ -207,6 +245,9 @@ export async function applyStripeSubscription(sub: Stripe.Subscription, now = ne
     sub.metadata["organizationId"] ??
     (await prisma.organization.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true } }))?.id;
   if (!organizationId) return null;
+  // An agency this database doesn't have: another environment sharing the Stripe account, or one
+  // that was deleted. Not ours to record (writing it broke the foreign key and retried forever).
+  if (!(await agencyExists(organizationId))) return null;
 
   const item = sub.items.data[0];
   const priceId = item?.price.id;
@@ -295,7 +336,7 @@ export async function syncAgencySubscriptions(stripe: Stripe, customerId: string
   const subs: Stripe.Subscription[] = [];
   for await (const sub of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) subs.push(sub);
   const organizationId = org?.id ?? subs.find((s) => s.metadata?.["organizationId"])?.metadata["organizationId"];
-  if (!organizationId) return null;
+  if (!organizationId || !(await agencyExists(organizationId))) return null;
   const mine = subs.filter((s) => !s.metadata?.["organizationId"] || s.metadata["organizationId"] === organizationId);
   const { chosen, duplicates } = authoritativeSubscription(mine);
   const record = chosen ? await applyStripeSubscription(chosen, now, { authoritative: true }) : null;

@@ -1,3 +1,4 @@
+import { eventTimeRange } from "@stagedesk/core";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -53,7 +54,7 @@ async function Print({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]/e
           <h1 className="text-xl font-semibold">{t("packingList")}</h1>
           <p>
             <span className="font-mono font-medium">{b.trackingCode}</span> · {date}
-            {b.startTime ? ` · ${b.startTime}${b.endTime ? `–${b.endTime}` : ""}` : ""}
+            {b.startTime ? ` · ${eventTimeRange(b.startTime, b.endTime, t("nextDay"), "–")}` : ""}
           </p>
           {(b.venueName || b.venueCity) && <p className="text-muted-foreground">{[b.venueName, b.venueCity].filter(Boolean).join(", ")}</p>}
         </div>

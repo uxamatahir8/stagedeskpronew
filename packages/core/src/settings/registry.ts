@@ -48,6 +48,11 @@ export const billingDefaultsSchema = z.object({
   graceDays: z.int().min(0).max(60),
   /** Plan new agencies start their trial on. */
   trialPlanKey: z.string().min(1).max(48),
+  /**
+   * VAT included in plan prices, in basis points (2100 = 21%; 0 = none). Prices stay as they are:
+   * Stripe shows this part of them as VAT on the invoice (an inclusive tax rate, not Stripe Tax).
+   */
+  subscriptionVatBps: z.int().min(0).max(10_000).default(2_100),
 });
 
 /**
@@ -157,7 +162,7 @@ export const settingsRegistry = {
     defaults: {
       siteName: "StageDesk",
       defaultLocale: "en",
-      supportEmail: "support@stagedesk.pro",
+      supportEmail: "info@stagedeskpro.com",
       maintenanceMode: false,
       waitlistMode: false,
       ...defaultDatePrefs,
@@ -175,7 +180,7 @@ export const settingsRegistry = {
     defaults: {
       taglineNl: "Boekingssoftware voor DJ- en bandbureaus in Nederland.",
       taglineEn: "Booking software for DJ and band agencies in the Netherlands.",
-      email: "hallo@stagedesk.pro",
+      email: "info@stagedeskpro.com",
       phone: "",
       address: "Utrecht, Nederland",
       kvkNumber: "",
@@ -220,7 +225,7 @@ export const settingsRegistry = {
   },
   "billing.defaults": {
     schema: billingDefaultsSchema,
-    defaults: { graceDays: 7, trialPlanKey: "pro" },
+    defaults: { graceDays: 7, trialPlanKey: "pro", subscriptionVatBps: 2_100 },
   },
   marketplace: {
     schema: marketplaceSchema,

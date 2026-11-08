@@ -29,6 +29,8 @@ export async function saveServiceAction(input: z.input<typeof schema>): Promise<
   if (!parsed.success || unitPriceCents === null || !vatRatesBps.includes(parsed.data.vatBps)) {
     return { ok: false, message: tb("invalidPrice") };
   }
+  // A service is something you sell; a discount is a line on the quote (or a promo code).
+  if (unitPriceCents < 0) return { ok: false, message: t("negativePrice") };
   const { id, ...data } = parsed.data;
   const values = { name: data.name, description: data.description?.trim() || null, unit: data.unit, unitPriceCents, vatBps: data.vatBps };
 

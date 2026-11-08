@@ -181,7 +181,7 @@ export function bookingEmails(bookingId: string, take = 10) {
     where: { bookingId },
     orderBy: { createdAt: "desc" },
     take,
-    select: { id: true, kind: true, to: true, status: true, attempts: true, lastError: true, createdAt: true, sentAt: true, nextAttemptAt: true },
+    select: { id: true, kind: true, key: true, to: true, status: true, attempts: true, lastError: true, createdAt: true, sentAt: true, nextAttemptAt: true },
   });
 }
 

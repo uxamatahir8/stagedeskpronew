@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/mail";
 import { clientMessages } from "@/i18n/client-messages";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -69,7 +70,7 @@ async function Site({ params }: Props) {
               <SiteSection key={section.id} section={section} data={data} theme={site.theme} ctaHref={ctaHref} contactHref={contactHref} />
             ))}
           </main>
-          <SiteFooter data={data} branding={branding} />
+          <SiteFooter data={data} branding={branding} platformUrl={appUrl} />
         </div>
       </SiteFrame>
     </NextIntlClientProvider>

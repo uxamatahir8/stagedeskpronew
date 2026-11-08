@@ -1,11 +1,12 @@
 "use client";
 
-import { CheckIcon, CreditCardIcon } from "lucide-react";
+import { CheckIcon, CreditCardIcon, TicketPercentIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useRedirect } from "@/components/redirect-button";
 import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { billingPortalAction, choosePlanAction } from "./actions";
@@ -32,7 +33,10 @@ export function PlanPicker({
   stripeReady,
   chosenPlanId,
   chosenInterval,
+  initialPromo,
 }: {
+  /** A promo code from the link (?promo=), filled in for them. */
+  initialPromo?: string;
   /** Picked on the pricing page before signing up. */
   chosenPlanId?: string;
   chosenInterval?: "month" | "year";
@@ -46,6 +50,8 @@ export function PlanPicker({
   const t = useTranslations("billing");
   const [interval, setInterval] = useState<"month" | "year">(currentSub?.interval ?? chosenInterval ?? "month");
   const [pending, go] = useRedirect();
+  const [promo, setPromo] = useState(initialPromo ?? "");
+  const [showPromo, setShowPromo] = useState(Boolean(initialPromo));
 
   return (
     <section className="grid gap-4">
@@ -59,6 +65,22 @@ export function PlanPicker({
         </Tabs>
       </div>
       {!stripeReady && <p className="text-sm text-muted-foreground">{t("stripeMissing")}</p>}
+      {showPromo ? (
+        <div className="grid max-w-sm gap-1.5">
+          <label className="text-sm font-medium" htmlFor="plan-promo">
+            {t("promoLabel")}
+          </label>
+          <Input id="plan-promo" value={promo} autoComplete="off" maxLength={32} placeholder={t("promoPlaceholder")} aria-describedby="plan-promo-hint" onChange={(e) => setPromo(e.target.value)} />
+          <span id="plan-promo-hint" className="text-xs text-muted-foreground">
+            {t("promoHint")}
+          </span>
+        </div>
+      ) : (
+        <Button variant="link" size="sm" className="w-fit px-0" onClick={() => setShowPromo(true)}>
+          <TicketPercentIcon />
+          {t("promoOpen")}
+        </Button>
+      )}
       <ul className="grid gap-4 md:grid-cols-3">
         {plans.map((p) => {
           const mine = p.id === currentSub?.planId;
@@ -104,7 +126,7 @@ export function PlanPicker({
               <Button
                 variant={mine || chosen || (!currentSub && !chosenPlanId && p.recommended) ? "default" : "outline"}
                 disabled={pending || current || !stripeReady}
-                onClick={() => go(() => choosePlanAction(p.id, interval))}
+                onClick={() => go(() => choosePlanAction(p.id, interval, promo.trim() || null))}
               >
                 {label}
               </Button>

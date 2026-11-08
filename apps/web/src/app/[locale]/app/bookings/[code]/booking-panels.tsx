@@ -42,7 +42,7 @@ import {
   revokeDetailsAction,
   updateDetailsAction,
 } from "../actions";
-import { type CatalogItem, QuoteBuilder, type BuilderLine, type QuoteDefaults } from "./quote-builder";
+import { type BookingPromo, type CatalogItem, QuoteBuilder, type BuilderLine, type QuoteDefaults } from "./quote-builder";
 
 /** Runs a server action, shows the result as a toast and refreshes the page data. */
 function useRun() {
@@ -64,12 +64,15 @@ function useRun() {
 
 type StatusAction = "decline" | "cancel" | "complete" | "settle";
 
-export function StatusActions({ bookingId, actions }: { bookingId: string; actions: StatusAction[] }) {
+export function StatusActions({ bookingId, actions, paid }: { bookingId: string; actions: StatusAction[]; /** Money received so far (formatted), when there is any. */ paid?: string | null }) {
   const t = useTranslations();
   const [pending, run] = useRun();
   const [confirming, setConfirming] = useState<StatusAction | null>(null);
   const [reason, setReason] = useState("");
+  const [settlement, setSettlement] = useState<"refund" | "keep" | null>(null);
   const needsReason = confirming === "cancel" || confirming === "decline";
+  // Cancelling or declining with money in: say how much, and decide what happens to it.
+  const needsSettlement = needsReason && Boolean(paid);
 
   if (actions.length === 0) return null;
   return (
@@ -81,6 +84,7 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
           disabled={pending}
           onClick={() => {
             setReason("");
+            setSettlement(null);
             setConfirming(action);
           }}
         >
@@ -94,6 +98,18 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
             <DialogTitle>{confirming && t(`bookingActions.${confirming}`)}</DialogTitle>
             <DialogDescription>{t("booking.confirmAction")}</DialogDescription>
           </DialogHeader>
+          {needsSettlement && (
+            <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
+              <legend className="px-1 font-medium">{t("booking.settlementTitle", { amount: paid ?? "" })}</legend>
+              <p className="text-muted-foreground">{t("booking.settlementHint")}</p>
+              {(["refund", "keep"] as const).map((option) => (
+                <label key={option} className="flex items-start gap-2">
+                  <input type="radio" name="settlement" className="mt-0.5 size-4 accent-[var(--primary)]" checked={settlement === option} onChange={() => setSettlement(option)} />
+                  <span>{t(`booking.settlement_${option}`)}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
           {needsReason && (
             <FormField id="status-reason" label={t("booking.reasonOptional")}>
               <Textarea id="status-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={1000} />
@@ -105,8 +121,8 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
             </DialogClose>
             <Button
               variant={needsReason ? "destructive" : "default"}
-              disabled={pending}
-              onClick={() => confirming && run(() => changeStatusAction(bookingId, confirming, reason), () => setConfirming(null))}
+              disabled={pending || (needsSettlement && !settlement)}
+              onClick={() => confirming && run(() => changeStatusAction(bookingId, confirming, reason, needsSettlement ? settlement : null), () => setConfirming(null))}
             >
               {confirming && t(`bookingActions.${confirming}`)}
             </Button>
@@ -285,7 +301,9 @@ export function QuoteControls({
   defaultExpiryDays,
   currency,
   quoteDefaults,
+  promo,
 }: {
+  promo: BookingPromo | null;
   bookingId: string;
   canQuote: boolean;
   hasQuote: boolean;
@@ -319,6 +337,7 @@ export function QuoteControls({
         defaultExpiryDays={defaultExpiryDays}
         currency={currency}
         defaults={quoteDefaults}
+        promo={promo}
         onDone={() => setBuilding(false)}
       />
     );

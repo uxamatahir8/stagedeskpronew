@@ -1,12 +1,15 @@
 import { existsSync } from "node:fs";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { indexingAllowed } from "./src/lib/indexing";
 
 // The single .env lives at the repo root, shared with the worker and Prisma.
 const rootEnv = new URL("../../.env", import.meta.url);
 if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const production = process.env.NODE_ENV === "production";
+// Staging (staging.* addresses) and SITE_NOINDEX=true servers tell search engines to stay away.
+const noindex = !indexingAllowed();
 
 /**
  * Content-Security-Policy for every page. Scripts and styles only from this
@@ -61,6 +64,7 @@ const nextConfig: NextConfig = {
       { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()" },
       // Only over https (production): browsers then refuse plain http for a year.
       ...(production ? [{ key: "Strict-Transport-Security", value: "max-age=31536000" }] : []),
+      ...(noindex ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
     ];
     return [
       // Nothing may be framed by other sites (clickjacking), except the embeddable form.

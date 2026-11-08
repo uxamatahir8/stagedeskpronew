@@ -200,7 +200,7 @@ export function SiteHeader({
   );
 }
 
-export function SiteFooter({ data, branding }: { data: SiteRenderData; branding: boolean }) {
+export function SiteFooter({ data, branding, platformUrl = "#" }: { data: SiteRenderData; branding: boolean; /** StageDesk's own address, for "Made with StageDesk" (the editor preview passes none). */ platformUrl?: string }) {
   const t = useTranslations("agencySite");
   const a = data.agency;
   return (
@@ -215,7 +215,7 @@ export function SiteFooter({ data, branding }: { data: SiteRenderData; branding:
           </span>
         </div>
         {branding && (
-          <a href="https://stagedesk.nl" className="self-end text-xs opacity-60 hover:opacity-100">
+          <a href={platformUrl} className="self-end text-xs opacity-60 hover:opacity-100">
             {t("madeWith")}
           </a>
         )}

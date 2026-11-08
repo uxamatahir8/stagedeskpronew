@@ -73,7 +73,7 @@ export function EventFields({ values, errors, idPrefix, bookingTypes }: { values
       {text("venueName", t("newBooking.venueName"), { maxLength: 191 })}
       {text("venueCity", t("newBooking.venueCity"), { maxLength: 96 })}
       {text("venueAddress", t("newBooking.venueAddress"), { maxLength: 191, className: "sm:col-span-2" })}
-      {text("guestCount", t("newBooking.guestCount"), { inputMode: "numeric" })}
+      {text("guestCount", t("newBooking.guestCount"), { type: "number", min: 0, max: 100000, inputMode: "numeric" })}
       {text("budget", t("newBooking.budget"), { inputMode: "decimal" })}
       {type === "wedding" && text("partnerName", t("newBooking.partnerName"), { maxLength: 191 })}
     </div>

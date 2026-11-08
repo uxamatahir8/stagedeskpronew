@@ -2,7 +2,7 @@ import { localePrefix, parseBookingTheme } from "@stagedesk/core";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
-import { prisma } from "@stagedesk/db";
+import { agencyBilling, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
@@ -52,7 +52,7 @@ async function Settings() {
     },
   });
   // Reviews are loaded even when hidden, so switching the section on shows them in the preview.
-  const [preview, branding] = await Promise.all([bookingPageData({ ...agency, showReviews: true }), showBranding(agency.id)]);
+  const [preview, branding, billing] = await Promise.all([bookingPageData({ ...agency, showReviews: true }), showBranding(agency.id), agencyBilling(agency.id)]);
   const theme = parseBookingTheme(agency.bookingTheme);
   // Agencies that hid reviews before sections existed keep them hidden.
   if (!agency.showReviews) theme.sections = theme.sections.map((s) => (s.key === "reviews" ? { ...s, visible: false } : s));
@@ -63,7 +63,8 @@ async function Settings() {
       <PageHeader title={t("title")} description={t("description")} />
       <BookingPageForm
         pageUrl={`${appUrl}${prefix}/b/${agency.slug}`}
-        embedCode={`<script src="${appUrl}/embed.js" data-agency="${agency.slug}" data-lang="${locale}" async></script>`}
+        // Only plans with the website form get the code; others see an upgrade note instead of code that shows a 404.
+        embedCode={billing.limits.embedWidget ? `<script src="${appUrl}/embed.js" data-agency="${agency.slug}" data-lang="${locale}" async></script>` : null}
         preview={preview}
         branding={branding}
         values={{

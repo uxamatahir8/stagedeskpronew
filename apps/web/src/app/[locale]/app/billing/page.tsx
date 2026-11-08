@@ -160,6 +160,7 @@ async function Billing({ searchParams }: Pick<PageProps<"/[locale]/app/billing">
       <PlanPicker
         chosenPlanId={subscription ? undefined : plans.find((p) => p.key === chosenPlan)?.id}
         chosenInterval={chosenInterval === "year" ? "year" : undefined}
+        initialPromo={typeof query["promo"] === "string" ? query["promo"].slice(0, 32) : undefined}
         stripeReady={await isStripeConfigured()}
         // The agency's plan unless cancelled; "paid" when active or on a Stripe trial (card on file).
         current={

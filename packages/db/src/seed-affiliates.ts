@@ -113,13 +113,13 @@ export async function seedAffiliates(prisma: PrismaClient, now = new Date()) {
 
   await prisma.affiliateAsset.createMany({
     data: [
-      { id: randomUUID(), kind: "logo", title: { nl: "StageDesk-logo (SVG en PNG)", en: "StageDesk logo (SVG and PNG)" }, url: "https://stagedesk.pro/brand/logo.zip", position: 0 },
+      { id: randomUUID(), kind: "logo", title: { nl: "StageDesk-logo (SVG en PNG)", en: "StageDesk logo (SVG and PNG)" }, url: "https://stagedeskpro.com/brand/logo.zip", position: 0 },
       {
         id: randomUUID(),
         kind: "email",
         title: { nl: "E-mailtekst voor bureaus", en: "Email text for agencies" },
         description: { nl: "Korte introductie met je kortingscode.", en: "Short introduction with your promo code." },
-        url: "https://stagedesk.pro/brand/email-nl-en.txt",
+        url: "https://stagedeskpro.com/brand/email-nl-en.txt",
         position: 1,
       },
     ],

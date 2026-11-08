@@ -1,7 +1,7 @@
 import { CalendarClockIcon, CalendarIcon, HandCoinsIcon, InboxIcon, MapPinIcon, WalletIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { artistEarnings, compensationOf, type EventType, todayInNetherlands } from "@stagedesk/core";
+import { artistEarnings, compensationOf, type EventType, todayInNetherlands, eventTimeRange } from "@stagedesk/core";
 import { artistGigs, currentArtistIds, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { InviteAgencyForm } from "@/components/invite-agency-form";
@@ -105,7 +105,7 @@ export async function ArtistHome({ userId }: { userId: string }) {
                       <span className="text-sm text-muted-foreground">{b.organization.name}</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      {(b.startTime || b.endTime) && <span>{[b.startTime, b.endTime].filter(Boolean).join("–")}</span>}
+                      {b.startTime && <span>{eventTimeRange(b.startTime, b.endTime, t("nextDay"), "–")}</span>}
                       {(b.venueName || b.venueCity) && (
                         <span className="flex items-center gap-1">
                           <MapPinIcon className="size-3.5" aria-hidden />

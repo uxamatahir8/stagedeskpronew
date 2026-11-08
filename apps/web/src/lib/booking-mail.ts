@@ -47,7 +47,7 @@ export async function mailCustomer(bookingId: string, update: "bookingConfirmed"
         reason: opts.reason ?? "",
         url: absoluteUrl(locale, path),
       },
-    });
+    }, { bookingId, agencyId: booking.organizationId });
   } catch (error) {
     console.error("[mail] booking update for the customer failed", update, bookingId, error);
   }
@@ -76,7 +76,7 @@ export async function mailAgencyTeam(bookingId: string, update: "quoteAccepted" 
           reason: opts.reason ?? "",
           url: absoluteUrl(locale, `/app/bookings/${booking.trackingCode}`),
         },
-      });
+      }, { bookingId, agencyId: booking.organizationId });
     }
   } catch (error) {
     console.error("[mail] booking update for the agency failed", update, bookingId, error);

@@ -1,3 +1,4 @@
+import { eventTimeRange } from "@stagedesk/core";
 import "server-only";
 import { getTranslations } from "next-intl/server";
 import type { EventType, QuoteEventField } from "@stagedesk/core";
@@ -64,7 +65,7 @@ export async function emailChangeDecision(decision: { bookingId: string; request
     const field = key as QuoteEventField;
     return decision.approved ? `${label(field)}: ${shown(field, before[field])} → ${shown(field, value)}` : `${label(field)}: ${shown(field, value)}`;
   });
-  const time = booking.startTime ? `${booking.startTime}${booking.endTime ? `–${booking.endTime}` : ""}` : null;
+  const time = eventTimeRange(booking.startTime, booking.endTime, t("ui.nextDay"), "–");
   const venue = [booking.venueName, booking.venueAddress, booking.venueCity].filter(Boolean).join(", ");
   const details = [
     `${label("eventDate")}: ${booking.eventDate ? day(booking.eventDate.toISOString().slice(0, 10)) : t("bookings.noDate")}`,

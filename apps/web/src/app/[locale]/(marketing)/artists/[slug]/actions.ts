@@ -76,8 +76,8 @@ export async function requestArtistPriceAction(slug: string, form: FormData): Pr
     kind: "inquiryReceived",
     to: d.email,
     params: { locale, name: d.name.split(/\s+/)[0] ?? d.name, agency: agency.name, code: booking.trackingCode, url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`) },
-  });
-  await announceNewBooking(agency.id, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
+  }, { bookingId: booking.id, agencyId: agency.id });
+  await announceNewBooking(agency.id, { id: booking.id, trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
   return { ok: true, code: booking.trackingCode, name: d.name.split(/\s+/)[0] ?? d.name };
 }
 
@@ -96,7 +96,7 @@ export async function orderGigAction(slug: string, listingId: string, form: Form
   try {
     const { booking, quote, organizationId, stageName } = await orderListing(slug, listingId, { ...d, email: d.email.trim().toLowerCase() });
     await emailQuote(quote.id, stageName);
-    await announceNewBooking(organizationId, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
+    await announceNewBooking(organizationId, { id: booking.id, trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
     return { ok: true, code: booking.trackingCode, name: d.name.split(/\s+/)[0] ?? d.name };
   } catch (e) {
     if (e instanceof ListingError) return { ok: false, message: tl(`error_${e.code}`) };

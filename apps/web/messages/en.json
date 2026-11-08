@@ -74,7 +74,9 @@
     "platformArtists": "Artist management",
     "inventory": "Inventory",
     "blogPosts": "My blog posts",
-    "bookingTypes": "Booking types"
+    "bookingTypes": "Booking types",
+    "subscriptionCodes": "Plan promo codes",
+    "promoCodes": "Promo codes"
   },
   "shell": {
     "search": "Search…",
@@ -183,7 +185,8 @@
     "tabsAll": "All",
     "tabsOpen": "Open",
     "tabsDone": "Done",
-    "fileTooLarge": "This file is too large. Choose one smaller than 5 MB."
+    "fileTooLarge": "This file is too large. Choose one smaller than 5 MB.",
+    "nextDay": "(+1 day)"
   },
   "auth": {
     "brandLine": "Bookings, quotes and payments for entertainment agencies.",
@@ -401,7 +404,8 @@
     "required": "This field is required.",
     "currency": "Currency",
     "currencyHint": "For quotes, invoices and payments. New bookings get this currency; existing bookings keep theirs.",
-    "currencyUnavailable": "That currency isn’t available. Choose another one."
+    "currencyUnavailable": "That currency isn’t available. Choose another one.",
+    "invalid": "This value isn't valid."
   },
   "agencies": {
     "title": "Agencies",
@@ -446,7 +450,8 @@
   "errors": {
     "forbiddenTitle": "You don't have access to this page",
     "forbiddenBody": "Ask an owner or admin of your agency if you need it.",
-    "backHome": "Back to home"
+    "backHome": "Back to home",
+    "forbiddenBodyNotForYou": "This page isn't part of your account."
   },
   "eventTypes": {
     "wedding": "Wedding",
@@ -526,7 +531,8 @@
     "negative_total": "The total of a quote can't be below zero. Check the discount lines.",
     "amount_too_high": "This amount is too high. Check the price and quantity.",
     "overpayment": "This is more than the amount still due. Check the amount, or record it anyway if the customer really paid more.",
-    "nothing_due": "There's nothing left to pay this artist."
+    "nothing_due": "There's nothing left to pay this artist.",
+    "overpaymentDue": "This is more than what's still due ({due}). Check the amount, or record it anyway if the customer really paid more."
   },
   "bookings": {
     "title": "Bookings",
@@ -587,7 +593,8 @@
     "backToCalendar": "Back to the calendar",
     "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free.",
     "pastDate": "This date has passed. Choose today or a later date.",
-    "customerName": "Customer's name"
+    "customerName": "Customer's name",
+    "invalidValue": "This value isn't valid."
   },
   "booking": {
     "eventDetails": "Event details",
@@ -739,7 +746,15 @@
     "artistBalanceDue": "You still owe {artist} {amount} for this booking. Pay them directly, then mark it as paid.",
     "artistBalanceMarkPaid": "Mark artist as paid",
     "artistBalancePaid": "Marked {artist} as paid.",
-    "inquiryNotes": "Notes from the inquiry"
+    "inquiryNotes": "Notes from the inquiry",
+    "nextDay": "(+1 day)",
+    "settlementRequired": "The customer has already paid: choose whether to refund it or keep it.",
+    "settlementTitle": "The customer has paid {amount}",
+    "settlementHint": "Decide what happens to it. A refund of an online payment is made from the payments below.",
+    "settlement_refund": "Refund it to the customer",
+    "settlement_keep": "Keep it as a cancellation fee",
+    "refundToDo": "To refund: {amount}. Make the refund from the payments below.",
+    "keptAsFee": "{amount} kept as cancellation fee."
   },
   "timeline": {
     "created": "Booking created",
@@ -778,7 +793,10 @@
     "change_withdrawn": "The customer took back their change request",
     "change_approved": "Change request approved",
     "change_rejected": "Change request refused",
-    "artist_paid": "{stageName} marked as paid"
+    "artist_paid": "{stageName} marked as paid",
+    "quote_declined": "{name} declined quote v{version}",
+    "cancel_refund": "Paid {amount} to be refunded",
+    "cancel_keep": "Paid {amount} kept as cancellation fee"
   },
   "quotes": {
     "title": "Quotes",
@@ -895,7 +913,8 @@
     "archived": "Service archived.",
     "emptyTitle": "No services yet",
     "emptyBody": "Add the things you usually quote for, like an hourly DJ rate or a light show.",
-    "searchPlaceholder": "Search by name or description"
+    "searchPlaceholder": "Search by name or description",
+    "negativePrice": "A service can't cost less than zero. Give a discount on the quote instead, or with a promo code."
   },
   "gigs": {
     "myGigs": "My gigs",
@@ -927,7 +946,8 @@
     "dateNotScheduled": "Date not scheduled yet",
     "requestsCount": "{count, plural, one {# request to answer} other {# requests to answer}}",
     "closedTitle": "No longer on your schedule",
-    "endedTitle": "This request from {agency} is no longer open"
+    "endedTitle": "This request from {agency} is no longer open",
+    "nextDay": "(+1 day)"
   },
   "availability": {
     "title": "Availability",
@@ -1035,7 +1055,14 @@
     "haveAccount": "Already have an account?",
     "signIn": "Sign in to follow your booking",
     "outdated": "The event details changed after this quote was made. The agency will send you an updated quote.",
-    "agencySuspended": "{agency} can't take new bookings or payments at the moment, so this can't be accepted or paid here. Please contact the agency directly."
+    "agencySuspended": "{agency} can't take new bookings or payments at the moment, so this can't be accepted or paid here. Please contact the agency directly.",
+    "decline": "Decline quote",
+    "declineTitle": "Decline this quote?",
+    "declineBody": "The agency is told right away. You can still ask them for a new quote.",
+    "declineReason": "Reason (optional)",
+    "declineConfirm": "Decline quote",
+    "declined": "You've declined the quote. {agency} has been told.",
+    "youDeclined": "You declined this quote. Want a new one? Contact {agency}."
   },
   "reviews": {
     "title": "Reviews",
@@ -1144,7 +1171,11 @@
     "phoneLabel": "Call us",
     "emailLabel": "Email us",
     "websiteLabel": "Website",
-    "addressLabel": "Address"
+    "addressLabel": "Address",
+    "promoCode": "Promo code (optional)",
+    "promoCodeHint": "Got a code from us? Enter it here.",
+    "embedUnavailableTitle": "Booking form not available",
+    "embedUnavailableBody": "The booking form of {agency} can't be shown here right now. Contact the agency directly."
   },
   "bookingPageSettings": {
     "title": "Booking page",
@@ -1234,7 +1265,9 @@
     "font_elegant": "Elegant",
     "font_geometric": "Geometric",
     "font_condensed": "Condensed",
-    "font_playful": "Playful"
+    "font_playful": "Playful",
+    "embedNotOnPlan": "The form on your own website is part of the Pro and Business plans. Upgrade to get the code.",
+    "embedUpgrade": "See plans"
   },
   "attention": {
     "newInquiry": "New inquiry from {name}",
@@ -1333,7 +1366,11 @@
     "cancelReason_closing": "Closing or pausing the agency",
     "cancelReason_other": "Something else",
     "cancelNote": "Anything you'd like to add? (optional)",
-    "cancelNotePlaceholder": "What would have made you stay?"
+    "cancelNotePlaceholder": "What would have made you stay?",
+    "promoOpen": "Have a promo code?",
+    "promoLabel": "Promo code",
+    "promoPlaceholder": "e.g. PILOT50",
+    "promoHint": "Applied when you choose a plan below."
   },
   "plans": {
     "title": "Plans & limits",
@@ -1430,7 +1467,9 @@
     "saved": "Settings saved.",
     "invalid": "Some values aren't valid. Check the numbers and try again.",
     "waitlistMode": "Waitlist mode",
-    "waitlistModeHint": "Before launch: the website collects sign-ups for the waitlist instead of offering a trial."
+    "waitlistModeHint": "Before launch: the website collects sign-ups for the waitlist instead of offering a trial.",
+    "subscriptionVat": "VAT included in plan prices (%)",
+    "subscriptionVatHint": "Shown as VAT on Stripe's invoices; prices don't change. 0 for none."
   },
   "agencyFee": {
     "deal": "Fee deal",
@@ -1608,7 +1647,11 @@
     "incidentReconcile": "Reconcile with Stripe",
     "incidentResolve": "Mark handled",
     "incidentResolved": "Resolved: one live subscription.",
-    "incidentStillOpen": "Still {count} live subscriptions in Stripe."
+    "incidentStillOpen": "Still {count} live subscriptions in Stripe.",
+    "webhookRejectedTitle": "Stripe events are being refused",
+    "webhookRejectedSignature": "{count, plural, one {# delivery} other {# deliveries}} from Stripe failed the signature check in the last two days: the webhook signing secret under Settings → Payment setup doesn't match the endpoint in Stripe. Subscriptions and payments don't sync until it does.",
+    "webhookRejectedNotConfigured": "{count, plural, one {# delivery} other {# deliveries}} arrived while no signing secret was set.",
+    "webhookRejectedLast": "Last one: {date}."
   },
   "partners": {
     "metaTitle": "Partner program",
@@ -1981,7 +2024,8 @@
     "change_approved": "{name} approved your requested change to {code}",
     "change_rejected": "{name} couldn't make your requested change to {code}",
     "gig_updated": "{name} changed the details of gig {code}",
-    "booking_updated": "{name} changed the details of your booking {code}"
+    "booking_updated": "{name} changed the details of your booking {code}",
+    "quote_declined": "{name} declined the quote for {code}"
   },
   "messages": {
     "title": "Messages",
@@ -2308,6 +2352,11 @@
       },
       "team": {
         "permissions": "Changed role permissions"
+      },
+      "promo": {
+        "create": "Made a promo code",
+        "enable": "Switched a promo code on",
+        "disable": "Switched a promo code off"
       }
     },
     "group_page": "Pages",
@@ -2485,7 +2534,8 @@
     "dos": "Do",
     "donts": "Don't",
     "playlist": "Open playlist",
-    "dateNotScheduled": "Date not scheduled yet"
+    "dateNotScheduled": "Date not scheduled yet",
+    "nextDay": "(+1 day)"
   },
   "customerHome": {
     "noBooking": "No booking with {agency} yet.",
@@ -3872,7 +3922,10 @@
     "kind_reviewInvitation": "Review invitation",
     "kind_reviewInvitationHint": "To the customer, when the event is completed",
     "kind_agencyInvite": "Agency invite",
-    "kind_agencyInviteHint": "To someone an agency or an artist invites to StageDesk"
+    "kind_agencyInviteHint": "To someone an agency or an artist invites to StageDesk",
+    "kind_gigAssigned_new": "Booking request to the artist",
+    "kind_gigAssigned_withdrawn": "Request withdrawn (artist)",
+    "kind_gigAssigned_cancelled": "Booking cancelled (artist)"
   },
   "supportMode": {
     "banner": "Support mode: you're working in <b>{agency}</b> as an agency admin. Changes show your name and starting or leaving is logged.",
@@ -4079,7 +4132,9 @@
     "confirmWithinDaysHint": "After this, a reported payment shows as overdue for the agency.",
     "sendReceipts": "Email receipts",
     "sendReceiptsHint": "Customers get a receipt for every recorded or confirmed payment.",
-    "saveMethods": "Save payment methods"
+    "saveMethods": "Save payment methods",
+    "testNoWebhookSecret": "No webhook signing secret is set yet, so Stripe's events will be refused.",
+    "testOkMode": "Connected to {name} ({country}), {mode}."
   },
   "agencyPayments": {
     "title": "Payment methods",
@@ -6302,7 +6357,8 @@
     "progressLabel": "Loaded",
     "progress": "{loaded} of {planned}",
     "stillToLoad": "{count, plural, one {# piece still to load} other {# pieces still to load}}",
-    "checklist": "Equipment checklist ({loaded}/{planned})"
+    "checklist": "Equipment checklist ({loaded}/{planned})",
+    "nextDay": "(+1 day)"
   },
   "communicationSettings": {
     "title": "Customer communication",
@@ -6584,5 +6640,106 @@
     "error_invalid": "Enter a valid email address.",
     "error_notArtist": "Only artists with an active profile can send invites.",
     "error_generic": "The invite couldn't be sent. Please try again."
+  },
+  "promoCodes": {
+    "platformTitle": "Plan promo codes",
+    "platformDescription": "Discount codes agencies can use on a StageDesk plan.",
+    "platformHint": "A code becomes a Stripe coupon and promotion code. Agencies enter it on the Billing page or at Stripe Checkout. Its discount can't be changed once made: switch it off and make a new one.",
+    "agencyTitle": "Promo codes",
+    "agencyDescription": "Discount codes for your customers' bookings.",
+    "agencyHint": "Customers enter a code on your booking page, or you add it to a booking. In the quote editor the discount becomes discount lines, with VAT worked out per rate.",
+    "noneTitle": "No promo codes yet",
+    "nonePlatform": "Make a code for a pilot deal or a campaign, for example PILOT50.",
+    "noneAgency": "Make a code for a campaign or a wedding fair, for example WEDDING10.",
+    "code": "Code",
+    "codeHint": "Letters, digits and dashes, 3 to 32 characters.",
+    "description": "Description (optional)",
+    "discount": "Discount",
+    "discountType": "Kind of discount",
+    "type_percentage": "Percentage",
+    "type_fixed": "Fixed amount",
+    "type_fixedInclVat": "Fixed amount (incl. VAT)",
+    "percent": "Percentage off",
+    "amount": "Amount off (€)",
+    "amountInclVat": "Amount off incl. VAT (€)",
+    "duration": "How long",
+    "duration_once": "First payment only",
+    "duration_repeating": "A number of months",
+    "duration_forever": "As long as they subscribe",
+    "duration_months": "{count, plural, one {# month} other {# months}}",
+    "months": "Months",
+    "plans": "Plans",
+    "plansHint": "Tick the plans it's for. None ticked: every plan.",
+    "allPlans": "All plans",
+    "uses": "Used",
+    "maxUses": "Maximum uses (optional)",
+    "maxUsesHint": "Empty: no limit.",
+    "expires": "Expires",
+    "expiresOn": "Valid until (optional)",
+    "expiresHint": "Up to and including this day.",
+    "firstOnly": "Only for an agency's first subscription",
+    "firstOnlyShort": "First subscription",
+    "notInStripe": "Not in Stripe yet",
+    "active": "Active",
+    "activeFor": "{code} active",
+    "activeLabel": "Active: customers can use it",
+    "new": "New code",
+    "newPlatformTitle": "New plan promo code",
+    "newPlatformHint": "The discount is fixed once the code is made.",
+    "newAgencyTitle": "New promo code",
+    "newAgencyHint": "A changed discount only applies to quotes made from now on.",
+    "editTitle": "Edit promo code",
+    "create": "Make code",
+    "save": "Save",
+    "cancel": "Cancel",
+    "created": "Code {code} made.",
+    "saved": "Code {code} saved.",
+    "deleted": "Code deleted.",
+    "enabled": "Code switched on.",
+    "disabled": "Code switched off.",
+    "valid": "Valid",
+    "always": "Always",
+    "validFrom": "Valid from (optional)",
+    "validUntil": "Valid until (optional)",
+    "minimum": "Minimum",
+    "minimumLabel": "Minimum booking amount incl. VAT (€, optional)",
+    "minimumHint": "The quote must reach this total before the discount.",
+    "actions": "Actions",
+    "editCode": "Edit {code}",
+    "deleteCode": "Delete {code}",
+    "error_invalid": "Some values aren't valid. Check the code, the discount and the dates.",
+    "error_code_taken": "That code is already in use.",
+    "error_in_use": "This code was used on a booking, so it can't be deleted. Switch it off instead.",
+    "error_not_found": "This code no longer exists.",
+    "error_unknown": "We don't know this code.",
+    "error_inactive": "This code isn't active.",
+    "error_not_started": "This code isn't valid yet.",
+    "error_expired": "This code has expired.",
+    "error_used_up": "This code has been used the maximum number of times.",
+    "error_wrong_plan": "This code isn't valid for this plan.",
+    "error_first_only": "This code is only for a first subscription.",
+    "error_below_minimum": "The booking doesn't reach this code's minimum amount yet.",
+    "error_amount": "Enter a percentage between 0 and 100, or an amount above zero.",
+    "error_max": "Maximum uses must be a whole number above zero.",
+    "error_minimum": "Enter the minimum as an amount above zero.",
+    "error_dates": "The start date must come before the end date.",
+    "problem_unknown": "We don't know this promo code. Check it and try again.",
+    "problem_inactive": "This promo code isn't active.",
+    "problem_not_started": "This promo code isn't valid yet.",
+    "problem_expired": "This promo code has expired.",
+    "problem_used_up": "This promo code has been used up.",
+    "problem_wrong_plan": "This promo code isn't valid for this plan.",
+    "problem_first_only": "This promo code is only for a first subscription.",
+    "problem_below_minimum": "The quote doesn't reach this code's minimum amount yet.",
+    "removedFromBooking": "Promo code removed from the booking.",
+    "addedToBooking": "Promo code {code} added to the booking.",
+    "promoLine": "Discount ({code})",
+    "bookingCodeCustomer": "The customer used code {code} ({discount}).",
+    "bookingCodeStaff": "Code {code} ({discount}) is on this booking.",
+    "addDiscount": "Add discount",
+    "updateDiscount": "Update discount",
+    "removeCode": "Remove code",
+    "bookingCodeLabel": "Promo code",
+    "apply": "Apply"
   }
 }

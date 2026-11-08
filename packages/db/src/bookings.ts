@@ -359,6 +359,39 @@ export async function acceptQuote(
 }
 
 /**
+ * The customer says no to the quote (with an optional reason). The quote can't
+ * be accepted any more; the booking stays "quoted" so the agency can send a new
+ * version or decline the booking. The agency team is notified and the
+ * booking's timeline shows it.
+ */
+export async function declineQuote(
+  organizationId: string,
+  quoteId: string,
+  by: { actorId: string | null; name: string },
+  reason: string | null,
+  now = new Date(),
+) {
+  const booking = await tenantDb(organizationId).$transaction(async (tx) => {
+    const found = await tx.quote.findFirst({ where: { id: quoteId }, select: { bookingId: true } });
+    if (!found) throw new BookingError("not_found");
+    const booking = await loadBooking(tx, found.bookingId);
+    const quote = await tx.quote.findFirstOrThrow({ where: { id: quoteId } });
+    if (quote.status !== "sent") throw new BookingError("quote_not_current");
+    await tx.quote.updateMany({ where: { id: quote.id, status: "sent" }, data: { status: "declined" } });
+    await tx.bookingEvent.create({
+      data: { organizationId, bookingId: booking.id, type: "quote_declined", actorId: by.actorId, data: { version: quote.version, name: by.name, reason: reason?.trim().slice(0, 1000) || null }, createdAt: now },
+    });
+    return booking;
+  });
+  await notify(
+    await agencyDeskUserIds(organizationId),
+    { type: "quote_declined", data: { name: by.name, code: booking.trackingCode }, url: `/app/bookings/${booking.trackingCode}` },
+    by.actorId,
+  );
+  return booking;
+}
+
+/**
  * An independent artist plays their own gigs: once a quote is accepted the
  * booking is confirmed with them as the artist, unless they've marked that
  * day unavailable (then it stays "booked" for them to sort out). Their share

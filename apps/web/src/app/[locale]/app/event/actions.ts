@@ -172,7 +172,7 @@ export async function requestBookingAction(form: FormData): Promise<RequestBooki
   );
   if (!duplicate) {
     await prisma.user.update({ where: { id: viewer.user.id }, data: { name: d.name, phone: d.phone } });
-    await announceNewBooking(agency.id, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name, viewer.user.id);
+    await announceNewBooking(agency.id, { id: booking.id, trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name, viewer.user.id);
   }
   return { ok: true, code: booking.trackingCode, agency: agency.name, organizationId: agency.id };
 }
