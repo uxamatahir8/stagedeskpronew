@@ -6,6 +6,7 @@ import type { Prisma } from "./generated/prisma/client";
 export type NotificationType =
   | "new_inquiry"
   | "quote_accepted"
+  | "quote_declined"
   | "gig_request"
   | "gig_response"
   | "gig_withdrawn"

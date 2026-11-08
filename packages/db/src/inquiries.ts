@@ -1,3 +1,4 @@
+import { attachBookingPromo } from "./promo-codes";
 import { randomUUID } from "node:crypto";
 import { type EventType, fullyBookedDates, isBudgetRange } from "@stagedesk/core";
 import { agencyBilling } from "./billing";
@@ -93,6 +94,8 @@ export interface InquiryInput {
   partnerName: string | null;
   ceremony: boolean | null;
   message: string | null;
+  /** An agency promo code the customer typed (checked by the caller); null for none. */
+  promoCode?: string | null;
 }
 
 /**
@@ -144,6 +147,8 @@ export async function submitInquiry(slug: string, input: InquiryInput, source: "
     },
     null,
   );
+  // Checked by the form before submitting; a code that ran out in between is simply left off.
+  if (input.promoCode) await attachBookingPromo(agency.id, booking.id, input.promoCode, "customer").catch(() => null);
   return { agency, booking, customerId: user.id, newAccount: !existing };
 }
 

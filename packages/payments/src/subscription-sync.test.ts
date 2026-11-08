@@ -149,3 +149,15 @@ describe("authoritative subscription", () => {
     expect((await record(org.id)).status).toBe("active");
   });
 });
+
+describe("events about agencies this database doesn't have", () => {
+  it("are ignored instead of failing on the foreign key (another environment, or a deleted agency)", async () => {
+    const gone = { id: `${run}-gone`, customer: `cus_${run}-gone` };
+    const { stripe } = stripeWith([sub(gone, `sub_${run}_gone`, "active", 10)]);
+    const status = await event(stripe, sub(gone, `sub_${run}_gone`, "active", 10));
+    expect(status).toBe("ignored");
+    expect(await prisma.subscription.findUnique({ where: { organizationId: gone.id } })).toBeNull();
+    expect(await applyStripeSubscription(sub(gone, `sub_${run}_gone`, "active", 10))).toBeNull();
+  });
+});
+

@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { connection } from "next/server";
 import { allPublishedSlugs, directoryArtists, getSetting, listContentCategories, prisma } from "@stagedesk/db";
+import { indexingAllowed } from "@/lib/indexing";
 import { siteUrl } from "@/lib/seo";
 
 type Entry = MetadataRoute.Sitemap[number];
@@ -16,6 +17,7 @@ function both(paths: { nl: string; en: string }, extra: Partial<Entry> = {}): En
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   await connection();
+  if (!indexingAllowed()) return [];
   const fixed = [
     "/", "/features", "/pricing", "/about", "/for-agencies", "/for-artists", "/partners", "/blog", "/help", "/changelog", "/contact",
     "/features/booking-page", "/features/quotes-invoices", "/features/payments-payouts", "/features/artist-management",

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType } from "@stagedesk/core";
+import { type EventType, eventTimeRange } from "@stagedesk/core";
 import { artistGigs } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
@@ -49,7 +49,7 @@ async function Gigs() {
         </span>
         <span className="text-sm text-muted-foreground">
           {eventDate(format, a.booking.eventDate) ?? t("dateNotScheduled")}
-          {a.booking.startTime && ` · ${a.booking.startTime}${a.booking.endTime ? `–${a.booking.endTime}` : ""}`}
+          {a.booking.startTime && ` · ${eventTimeRange(a.booking.startTime, a.booking.endTime, t("nextDay"), "–")}`}
           {` · ${a.booking.organization.name}`}
         </span>
       </div>

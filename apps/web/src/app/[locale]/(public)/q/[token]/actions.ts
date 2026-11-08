@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
-import { acceptQuote, prisma } from "@stagedesk/db";
+import { acceptQuote, declineQuote, prisma } from "@stagedesk/db";
 import { type ActionResult, runAction } from "@/lib/actions";
 import { mailAgencyTeam } from "@/lib/booking-mail";
 import { auth } from "@/lib/auth";
@@ -35,6 +35,22 @@ export async function acceptQuoteByTokenAction(token: string, name: string, agre
   );
   if (result.ok) await mailAgencyTeam(quote.bookingId, "quoteAccepted");
   return result;
+}
+
+/** Saying no through the quote link: the agency sees it right away instead of waiting for the quote to expire. */
+export async function declineQuoteByTokenAction(token: string, reason: string): Promise<ActionResult> {
+  const t = await getTranslations("quotePage");
+  const quote = await prisma.quote.findUnique({
+    where: { token },
+    select: { id: true, organizationId: true, booking: { select: { customerId: true, customer: { select: { name: true } } } }, organization: { select: { name: true } } },
+  });
+  if (!quote) return { ok: false, message: t("notFound") };
+  const session = await getSession();
+  const actorId = session && session.user.id === quote.booking.customerId ? session.user.id : null;
+  return runAction(
+    () => declineQuote(quote.organizationId, quote.id, { actorId, name: quote.booking.customer?.name ?? "" }, reason.slice(0, 1000) || null).then(() => undefined),
+    t("declined", { agency: quote.organization.name }),
+  );
 }
 
 export type SetupAccountResult = { ok: true; next: string } | { ok: false; message: string };

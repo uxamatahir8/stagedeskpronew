@@ -70,6 +70,9 @@ if (!apply) {
       // Packing lines point at bookings with Restrict; the agencies' own equipment goes too.
       await tx.bookingEquipment.deleteMany({ where: { bookingId: { in: bookingIds } } });
       await purgeInventory(tx, orgIds);
+      // Promo codes the promo spec adds (codes start with E2E-), on demo agencies and the platform.
+      await tx.bookingPromoCode.deleteMany({ where: { code: { startsWith: "E2E-" } } });
+      await tx.platformPromoCode.deleteMany({ where: { code: { startsWith: "E2E-" } } });
       // Equipment the inventory spec adds to the demo agency (codes start with E2E-), once its bookings are gone.
       const e2eItems = await tx.equipmentItem.findMany({ where: { code: { startsWith: "E2E-" } }, select: { id: true } });
       const e2eIds = e2eItems.map((i) => i.id);

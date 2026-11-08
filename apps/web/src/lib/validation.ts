@@ -37,7 +37,9 @@ export function fieldErrorKeys(error: z.ZodError): FieldErrors {
   const out: FieldErrors = {};
   for (const issue of error.issues) {
     const field = String(issue.path[0] ?? "");
-    out[field] ??= issue.message;
+    // Our schemas give message keys ("invalidNumber"); zod's own wording ("Invalid input: expected
+    // number, received NaN") is never shown to people: it becomes the generic "invalid".
+    out[field] ??= /^[a-zA-Z]+$/.test(issue.message) ? issue.message : "invalid";
   }
   return out;
 }
@@ -45,6 +47,7 @@ export function fieldErrorKeys(error: z.ZodError): FieldErrors {
 /** Lowercase, dash-separated slug for URLs like /b/feestband-utrecht. */
 export function slugify(value: string) {
   return value
+    .replace(/<[^>]*>/g, " ")
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()

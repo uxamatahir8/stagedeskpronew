@@ -36,7 +36,7 @@ export async function sendMessageAction(code: string, channel: string, body: str
         excerpt: text,
         url: absoluteUrl(locale, `/app/messages/${result.trackingCode}?channel=${channel}`),
       },
-    });
+    }, { bookingId: access.booking.id, agencyId: access.booking.organizationId });
   }
   revalidatePath("/[locale]/app", "layout");
   return { ok: true };

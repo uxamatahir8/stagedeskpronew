@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type BookingStatus, customerChangeMode, customerPreferencesOpen, type EventType, paymentStatus, playlistLink, todayInNetherlands, localePrefix } from "@stagedesk/core";
+import { type BookingStatus, customerChangeMode, customerPreferencesOpen, type EventType, paymentStatus, playlistLink, todayInNetherlands, localePrefix, eventTimeRange } from "@stagedesk/core";
 import { availableBookingTypes, fromDateOnly, prisma } from "@stagedesk/db";
 import { PayPanel } from "@/components/booking/pay-panel";
 import { SwitchAgencyLink } from "@/components/booking/switch-agency-link";
@@ -191,7 +191,7 @@ async function Event({ searchParams }: Pick<PageProps<"/[locale]/app/event">, "s
                 <Item icon={ContactIcon} label={t("customerEvent.agency")}>{organization.name}</Item>
                 <Item icon={PartyPopperIcon} label={t("newBooking.eventType")}>{typeName.get(booking.eventType) ?? booking.eventType}</Item>
                 <Item icon={CalendarIcon} label={t("newBooking.eventDate")}>{eventDate(format, booking.eventDate) ?? t("bookings.noDate")}</Item>
-                <Item icon={ClockIcon} label={t("newBooking.startTime")}>{booking.startTime ? `${booking.startTime}${booking.endTime ? ` – ${booking.endTime}` : ""}` : "—"}</Item>
+                <Item icon={ClockIcon} label={t("newBooking.startTime")}>{eventTimeRange(booking.startTime, booking.endTime, t("ui.nextDay")) ?? "—"}</Item>
                 <Item icon={MapPinIcon} label={t("newBooking.venue")}>{[booking.venueName, booking.venueAddress, booking.venueCity].filter(Boolean).join(", ") || "—"}</Item>
                 <Item icon={UsersIcon} label={t("newBooking.guestCount")}>{booking.guestCount ? t("booking.guests", { count: booking.guestCount }) : "—"}</Item>
                 {booking.partnerName && <Item label={t("newBooking.partnerName")}>{booking.partnerName}</Item>}

@@ -1,6 +1,6 @@
 import "server-only";
 import { getTranslations } from "next-intl/server";
-import { type VatGroup } from "@stagedesk/core";
+import { type VatGroup, eventTimeRange } from "@stagedesk/core";
 import { bookingTypeName, fromDateOnly, prisma } from "@stagedesk/db";
 import { agencySender, agencySenderSelect, customerMailLocale, type MailLocale } from "./correspondence";
 import { absoluteUrl, appUrl, deliver } from "./mail";
@@ -49,7 +49,7 @@ export async function emailQuote(quoteId: string, displayName?: string): Promise
   const tb = await getTranslations({ locale, namespace: "booking" });
   const b = { ...quote.booking, ...(snap ? { startTime: snap.startTime ?? null, endTime: snap.endTime ?? null, venueName: snap.venueName ?? null, venueCity: snap.venueCity ?? null } : {}) };
   const date = day
-    ? `${new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}${b.startTime ? `, ${b.startTime}${b.endTime ? `–${b.endTime}` : ""}` : ""}`
+    ? `${new Intl.DateTimeFormat(intl, { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T12:00:00Z`))}${b.startTime ? `, ${eventTimeRange(b.startTime, b.endTime, tb("nextDay"), "–")}` : ""}`
     : undefined;
   const org = quote.organization;
 

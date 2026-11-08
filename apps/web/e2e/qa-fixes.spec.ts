@@ -101,7 +101,8 @@ test.describe.serial("quotes, payments and dates at the agency", () => {
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Bedrag (€)").fill("99999");
     await dialog.getByRole("button", { name: "Betaling vastleggen" }).click();
-    await expect(dialog.getByText("Dit is meer dan het openstaande bedrag.", { exact: false })).toBeVisible();
+    // It says how much is still due (SD-13 of the client report).
+    await expect(dialog.getByText("Dit is meer dan er nog openstaat (€", { exact: false })).toBeVisible();
     await expect(dialog.getByLabel("Bedrag (€)")).toHaveValue("99999");
     // Corrected to what's due: no second question.
     await dialog.getByLabel("Bedrag (€)").fill("121");

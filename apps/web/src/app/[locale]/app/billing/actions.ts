@@ -2,8 +2,8 @@
 
 import { getLocale, getTranslations } from "next-intl/server";
 import { isCancellationReason } from "@stagedesk/core";
-import { audit, prisma, recordCancellationFeedback } from "@stagedesk/db";
-import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscriptionHere, setCancelAtPeriodEnd, subscriptionCheckout, syncPlanToStripe } from "@stagedesk/payments";
+import { audit, findPlatformPromo, prisma, recordCancellationFeedback } from "@stagedesk/db";
+import { billingPortal, changeSubscriptionPlan, getStripe, liveStripeSubscriptionHere, setCancelAtPeriodEnd, subscriptionCheckout, syncPlanToStripe, syncPlatformPromo } from "@stagedesk/payments";
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions";
 import type { RedirectResult } from "@/components/redirect-button";
@@ -13,7 +13,7 @@ import { requireAgency } from "@/lib/viewer";
 
 
 /** Starts Stripe Checkout for a plan. Only the agency owner manages billing. */
-export async function choosePlanAction(planId: string, interval: "month" | "year"): Promise<RedirectResult> {
+export async function choosePlanAction(planId: string, interval: "month" | "year", promoCode: string | null = null): Promise<RedirectResult> {
   const { viewer, organization } = await requireAgency("agency.billing");
   const stripe = await getStripe();
   if (!stripe) return { message: (await getTranslations("billing"))("stripeMissing") };
@@ -27,11 +27,19 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
     // Artist plans are for independent artists only, and agency plans for agencies.
     if (!plan?.active || plan.audience !== (org.kind === "solo" ? "artist" : "agency")) return { message: (await getTranslations("billing"))("planNotSynced") };
     if (!plan.stripeMonthlyPriceId || !plan.stripeYearlyPriceId) await syncPlanToStripe(stripe, planId);
+    // A promo code is checked here (with a clear reason when it can't be used) and made ready in Stripe.
+    let promotionCodeId: string | null = null;
+    if (promoCode) {
+      const { promo, problem } = await findPlatformPromo(promoCode, { organizationId: organization.id, planId });
+      if (!promo || problem) return { message: (await getTranslations("promoCodes"))(`problem_${problem ?? "unknown"}`) };
+      promotionCodeId = await syncPlatformPromo(stripe, promo.id);
+      if (!promotionCodeId) return { message: (await getTranslations("promoCodes"))("problem_inactive") };
+    }
     // A running Stripe subscription is switched in place, never doubled. One made with other Stripe keys
     // can't be switched from here: subscriptionCheckout starts a new one instead.
     if (await liveStripeSubscriptionHere(stripe, organization.id)) {
       await audit({ actorId: viewer.user.id, action: "billing.switch_plan", targetType: "plan", targetId: planId });
-      await changeSubscriptionPlan(stripe, { organizationId: organization.id, planId, interval });
+      await changeSubscriptionPlan(stripe, { organizationId: organization.id, planId, interval, promotionCodeId });
       return { url: absoluteUrl(locale, "/app/billing?checkout=switched") };
     }
     return {
@@ -43,6 +51,7 @@ export async function choosePlanAction(planId: string, interval: "month" | "year
         locale,
         successUrl: `${absoluteUrl(locale, "/app/billing?checkout=success")}&session_id={CHECKOUT_SESSION_ID}`,
         cancelUrl: absoluteUrl(locale, "/app/billing"),
+        promotionCodeId,
       }),
     };
   } catch (error) {

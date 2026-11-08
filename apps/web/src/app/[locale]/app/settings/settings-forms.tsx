@@ -69,6 +69,7 @@ export function SettingsForms({
     vat: bookings.vatRatesBps.map((r) => bpsToPct(r, locale)).join(", "),
   });
   const [grace, setGrace] = useState(String(billing.graceDays));
+  const [planVat, setPlanVat] = useState(bpsToPct(billing.subscriptionVatBps, locale));
   const [trialPlan, setTrialPlan] = useState(billing.trialPlanKey);
   const [s, setS] = useState(site);
 
@@ -179,8 +180,15 @@ export function SettingsForms({
               </SelectContent>
             </Select>
           </FormField>
+          {field("set-plan-vat", t("subscriptionVat"), planVat, setPlanVat, t("subscriptionVatHint"))}
           <div className="sm:col-span-2">
-            <Button disabled={pending} onClick={() => save("billing.defaults", int(grace) !== null ? { graceDays: int(grace)!, trialPlanKey: trialPlan } : null, t("invalid"))}>
+            <Button
+              disabled={pending}
+              onClick={() => {
+                const vat = pctToBps(planVat);
+                save("billing.defaults", int(grace) !== null && vat !== null ? { graceDays: int(grace)!, trialPlanKey: trialPlan, subscriptionVatBps: vat } : null, t("invalid"));
+              }}
+            >
               {t("save")}
             </Button>
           </div>

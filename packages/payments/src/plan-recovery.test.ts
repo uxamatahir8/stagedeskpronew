@@ -52,6 +52,7 @@ describe("Stripe plan recovery", () => {
         create: async () => ({ id: "cus_current_account" }),
         retrieve: async (id: string) => ({ id }),
       },
+      taxRates: { list: () => [], create: async () => ({ id: "txr_plans" }) },
       checkout: {
         sessions: {
           create: async () => {
@@ -105,6 +106,7 @@ describe("Stripe plan recovery", () => {
         update: async () => { throw new Error("must not change a subscription from another account"); },
       },
       billingPortal: { sessions: { create: async () => { throw missing("No such customer", "customer"); } } },
+      taxRates: { list: () => [], create: async () => ({ id: "txr_plans" }) },
       checkout: {
         sessions: {
           create: async (input: Record<string, unknown>) => {

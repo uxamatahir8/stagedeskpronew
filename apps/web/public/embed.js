@@ -1,7 +1,8 @@
 /*
  * StageDesk inquiry form for your own website.
  *
- *   <script src="https://stagedesk.pro/embed.js" data-agency="your-agency" data-lang="nl" async></script>
+ *   <script src="https://<your StageDesk address>/embed.js" data-agency="your-agency" data-lang="nl" async></script>
+ *   (Booking page → Share gives the exact code, with the right address.)
  *
  * Inserts the form where the script tag is and keeps its height in step.
  */

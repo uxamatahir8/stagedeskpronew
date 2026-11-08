@@ -1,11 +1,11 @@
 "use client";
 
-import { PlusIcon, SendIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, SendIcon, TicketPercentIcon, Trash2Icon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useFormatter } from "@/components/date-prefs";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { computeQuote, type DepositRule, type DepositType, parseEuros, parseQuantity, quoteAmountProblem } from "@stagedesk/core";
+import { computeQuote, type DepositRule, type DepositType, parseEuros, parseQuantity, type PromoDiscount, promoDiscountLines, quoteAmountProblem } from "@stagedesk/core";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,7 @@ import { centsToInput, euro, percent } from "@/lib/format";
 import type { ActionResult } from "@/lib/actions";
 import type { QuoteDraft } from "@/lib/quote-input";
 import { sendQuoteAction } from "../actions";
+import { setBookingPromoOnBookingAction } from "../../promo-codes/actions";
 
 export interface BuilderLine {
   key: string;
@@ -30,6 +31,17 @@ export interface BuilderLine {
   quantity: string;
   unitPrice: string;
   vatBps: number;
+  /** A discount line made from the booking's promo code (replaced when added again). */
+  promo?: boolean;
+}
+
+/** The agency promo code on a booking, for the quote editor. `label` is the discount as shown ("10%", "€ 50,00"). */
+export interface BookingPromo {
+  code: string;
+  discount: PromoDiscount;
+  minTotalCents: number | null;
+  label: string;
+  addedBy: string;
 }
 
 /** Where a booking quote starts: the agency's default upfront payment, and the language the customer will get. */
@@ -65,7 +77,10 @@ export function QuoteBuilder({
   submit: submitDraft,
   submitLabel,
   defaults,
+  promo,
 }: {
+  /** Booking quotes only: the promo code on the booking, if any. */
+  promo?: BookingPromo | null;
   /** Sends a quote on this booking; or pass `submit` to send the draft elsewhere (a price for a lead). */
   bookingId?: string;
   submit?: (input: QuoteDraft) => Promise<ActionResult>;
@@ -81,6 +96,7 @@ export function QuoteBuilder({
   defaults?: QuoteDefaults;
 }) {
   const t = useTranslations("booking");
+  const tp = useTranslations("promoCodes");
   const tu = useTranslations("ui");
   const format = useFormatter();
   const locale = useLocale();
@@ -143,6 +159,41 @@ export function QuoteBuilder({
     ]);
   }
 
+  /** The quote's lines that parse, leaving out earlier promo discount lines. */
+  const parsedLines = (ls: BuilderLine[]) =>
+    ls.flatMap((l) => {
+      const q = parseQuantity(l.quantity);
+      const p = parseEuros(l.unitPrice);
+      return !l.promo && q !== null && p !== null ? [{ description: l.description, quantityHundredths: q, unitPriceCents: p, vatBps: l.vatBps }] : [];
+    });
+
+  /** Adds the code's discount as lines (one per VAT rate), replacing ones added before. */
+  function addPromoLines() {
+    if (!promo) return;
+    const base = parsedLines(lines);
+    const gross = computeQuote(base, { type: "none" }).totalCents;
+    if (promo.minTotalCents && gross < promo.minTotalCents) return void toast.error(tp("problem_below_minimum"));
+    const cuts = promoDiscountLines(base, promo.discount, tp("promoLine", { code: promo.code }));
+    if (cuts.length === 0) return void toast.error(t("needsLine"));
+    setLines((ls) => [
+      ...ls.filter((l) => !l.promo),
+      ...cuts.map((c) => ({ key: key(), description: c.description, quantity: "1", unitPrice: centsToInput(c.unitPriceCents, locale), vatBps: c.vatBps, promo: true })),
+    ]);
+  }
+
+  const [promoInput, setPromoInput] = useState("");
+  function changePromo(code: string | null) {
+    if (!bookingId) return;
+    startTransition(async () => {
+      const r = await setBookingPromoOnBookingAction(bookingId, code);
+      if (!r.ok) return void toast.error(r.message);
+      toast.success(r.message);
+      setPromoInput("");
+      if (code === null) setLines((ls) => ls.filter((l) => !l.promo));
+      router.refresh();
+    });
+  }
+
   function submit() {
     startTransition(async () => {
       const draft: QuoteDraft = {
@@ -162,6 +213,34 @@ export function QuoteBuilder({
 
   return (
     <div className="grid gap-5">
+      {bookingId && !submitDraft && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3 text-sm">
+          <TicketPercentIcon className="size-4 text-primary" aria-hidden />
+          {promo ? (
+            <>
+              <span>
+                {tp(promo.addedBy === "customer" ? "bookingCodeCustomer" : "bookingCodeStaff", { code: promo.code, discount: promo.label })}
+              </span>
+              <Button type="button" size="sm" variant="outline" disabled={pending} onClick={addPromoLines}>
+                {tp(lines.some((l) => l.promo) ? "updateDiscount" : "addDiscount")}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => changePromo(null)}>
+                {tp("removeCode")}
+              </Button>
+            </>
+          ) : (
+            <>
+              <label htmlFor="quote-promo" className="text-muted-foreground">
+                {tp("bookingCodeLabel")}
+              </label>
+              <Input id="quote-promo" value={promoInput} maxLength={32} className="h-8 w-40 uppercase" onChange={(e) => setPromoInput(e.target.value)} />
+              <Button type="button" size="sm" variant="outline" disabled={pending || !promoInput.trim()} onClick={() => changePromo(promoInput.trim())}>
+                {tp("apply")}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>

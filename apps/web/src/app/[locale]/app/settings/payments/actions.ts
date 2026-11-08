@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { audit, deleteSecret, secretKeys, setSecret } from "@stagedesk/db";
-import { createStripe, getStripe, resetStripeConfig } from "@stagedesk/payments";
+import { createStripe, getStripe, resetStripeConfig, stripeConfig } from "@stagedesk/payments";
 import type { ActionResult } from "@/lib/actions";
 import { clientIp } from "@/lib/rate-limit";
 import { requirePermission } from "@/lib/viewer";
@@ -65,10 +65,14 @@ export async function testStripeAction(): Promise<ActionResult> {
   const stripe = await getStripe();
   if (!stripe) return { ok: false, message: t("notConfigured") };
   try {
-    const account = await stripe.accounts.retrieveCurrent();
+    const [account, config] = await Promise.all([stripe.accounts.retrieveCurrent(), stripeConfig()]);
     const name = account.settings?.dashboard?.display_name || account.business_profile?.name || account.id;
-    return { ok: true, message: t("testOk", { name, country: account.country ?? "—" }) };
-  } catch {
+    const mode = config.secretKey?.startsWith("sk_live_") || config.secretKey?.startsWith("rk_live_") ? t("modeLive") : t("modeTest");
+    // Without a signing secret, Stripe's events (subscriptions, payments) are refused; say it here too.
+    const webhook = config.webhookSecret ? "" : ` ${t("testNoWebhookSecret")}`;
+    return { ok: true, message: `${t("testOkMode", { name, country: account.country ?? "—", mode })}${webhook}` };
+  } catch (error) {
+    console.error("[stripe] connection test failed", error);
     return { ok: false, message: t("testFailed") };
   }
 }

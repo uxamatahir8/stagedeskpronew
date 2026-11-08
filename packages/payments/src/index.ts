@@ -33,3 +33,5 @@ export { closeRefundWithShortfall, executeRefund, refundPayment, type RefundResu
 export { MAX_OPERATION_ATTEMPTS, resetOperation } from "./operations";
 export { dueStripeEvents, handledStripeEvents, MAX_EVENT_ATTEMPTS, processStoredEvent, receiveWebhook, replayStripeEvent, retryStripeEvents } from "./webhooks";
 export { confirmCheckoutSession } from "./checkout-return";
+export { recordPlatformPromoFromSubscription, syncPlatformPromo } from "./promo-codes";
+export { shortError } from "./errors";

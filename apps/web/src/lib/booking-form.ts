@@ -12,7 +12,7 @@ export const time = z.preprocess(
 );
 const wholeNumber = z.preprocess(
   (v) => (typeof v === "string" && v.trim() === "" ? null : Number(v)),
-  z.number().int("invalidNumber").min(0, "invalidNumber").max(100_000, "invalidNumber").nullable(),
+  z.number({ error: "invalidNumber" }).int("invalidNumber").min(0, "invalidNumber").max(100_000, "invalidNumber").nullable(),
 );
 const euros = z.preprocess(
   (v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? parseEuros(v) : v),
@@ -58,7 +58,9 @@ export async function translateErrors(error: z.ZodError) {
       field,
       ["invalidTime", "invalidNumber", "invalidDate", "invalidPrice", "pastDate"].includes(key)
         ? tb(key as "invalidTime")
-        : ts(key as "required"),
+        : ts.has(key as "required")
+          ? ts(key as "required")
+          : tb("invalidValue"),
     ]),
   );
 }

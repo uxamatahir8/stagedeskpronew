@@ -228,7 +228,7 @@ export async function createBookingForAgencyAction(organizationId: string, _prev
         code: booking.trackingCode,
         url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`),
       },
-    });
+    }, { bookingId: booking.id, agencyId: agency.id });
   }
   await audit({ actorId: viewer.user.id, action: "booking.create_for_agency", agencyId: agency.id, targetType: "booking", targetId: booking.id, data: { code: booking.trackingCode }, ip: clientIp(await headers()) });
   done(agency.id);

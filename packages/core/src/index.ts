@@ -28,3 +28,5 @@ export * from "./config";
 export * from "./invoice-template";
 export * from "./credit-notes";
 export * from "./growth";
+export * from "./promo-codes";
+export * from "./event-times";

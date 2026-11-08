@@ -1,3 +1,4 @@
+import { appUrl } from "@/lib/mail";
 import { ImageResponse } from "next/og";
 
 /**
@@ -32,7 +33,7 @@ export function GET(request: Request) {
           {kicker && <div style={{ fontSize: 28, letterSpacing: 2, textTransform: "uppercase", color: "#d9c6f5" }}>{kicker}</div>}
           <div style={{ fontSize: title.length > 60 ? 56 : 68, fontWeight: 700, lineHeight: 1.08, maxWidth: 1000 }}>{title}</div>
         </div>
-        <div style={{ fontSize: 26, color: "#d9c6f5" }}>stagedesk.pro</div>
+        <div style={{ fontSize: 26, color: "#d9c6f5" }}>{new URL(appUrl).host}</div>
       </div>
     ),
     { width: 1200, height: 630, headers: { "Cache-Control": "public, max-age=86400, immutable" } },

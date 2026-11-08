@@ -198,9 +198,12 @@ model Organization {
   leadsAssigned Lead[]      @relation("LeadAgency")
   leadOffers    LeadOffer[] @relation("LeadOffers")
 
-  invitesSent          AgencyInvite[]         @relation("InvitingAgency")
-  invitesAccepted      AgencyInvite[]         @relation("JoinedAgency")
-  cancellationFeedback CancellationFeedback[]
+  invitesSent              AgencyInvite[]            @relation("InvitingAgency")
+  invitesAccepted          AgencyInvite[]            @relation("JoinedAgency")
+  cancellationFeedback     CancellationFeedback[]
+  platformPromoRedemptions PlatformPromoRedemption[]
+  bookingPromoCodes        BookingPromoCode[]
+  bookingPromoRedemptions  BookingPromoRedemption[]
 
   /// Payment methods the agency offers its customers (within what the platform allows).
   acceptOnline        Boolean          @default(true)
@@ -400,66 +403,68 @@ model ArtistShare {
 
 /// One event for one customer. Status changes go through transition() in core.
 model Booking {
-  id                   String                 @id @db.VarChar(64)
-  organizationId       String                 @db.VarChar(64)
-  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id                   String                  @id @db.VarChar(64)
+  organizationId       String                  @db.VarChar(64)
+  organization         Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   /// Public reference, e.g. K7Q2M9XA.
-  trackingCode         String                 @unique @db.VarChar(8)
+  trackingCode         String                  @unique @db.VarChar(8)
   /// The agency's currency when the booking was made; all amounts on it are in this currency.
-  currency             String                 @default("EUR") @db.VarChar(3)
-  status               String                 @default("inquiry") @db.VarChar(16)
-  customerId           String?                @db.VarChar(64)
-  customer             User?                  @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
-  eventType            String                 @db.VarChar(24)
-  eventDate            DateTime?              @db.Date
-  startTime            String?                @db.VarChar(5)
-  endTime              String?                @db.VarChar(5)
-  venueName            String?                @db.VarChar(191)
-  venueAddress         String?                @db.VarChar(191)
-  venueCity            String?                @db.VarChar(96)
+  currency             String                  @default("EUR") @db.VarChar(3)
+  status               String                  @default("inquiry") @db.VarChar(16)
+  customerId           String?                 @db.VarChar(64)
+  customer             User?                   @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  eventType            String                  @db.VarChar(24)
+  eventDate            DateTime?               @db.Date
+  startTime            String?                 @db.VarChar(5)
+  endTime              String?                 @db.VarChar(5)
+  venueName            String?                 @db.VarChar(191)
+  venueAddress         String?                 @db.VarChar(191)
+  venueCity            String?                 @db.VarChar(96)
   guestCount           Int?
   budgetCents          Int?
   /// The customer's own words from the inquiry.
-  message              String?                @db.Text
-  partnerName          String?                @db.VarChar(191)
+  message              String?                 @db.Text
+  partnerName          String?                 @db.VarChar(191)
   /// string[]
   dos                  Json?
   /// string[]
   donts                Json?
-  playlistUrl          String?                @db.VarChar(500)
+  playlistUrl          String?                 @db.VarChar(500)
   /// From the public inquiry form.
-  preferredArtistId    String?                @db.VarChar(64)
-  preferredGenre       String?                @db.VarChar(96)
+  preferredArtistId    String?                 @db.VarChar(64)
+  preferredGenre       String?                 @db.VarChar(96)
   /// Key from core's budgetRanges, e.g. "750_1500".
-  budgetRange          String?                @db.VarChar(16)
+  budgetRange          String?                 @db.VarChar(16)
   ceremony             Boolean?
   /// manual | booking_page | lead | gig | profile
-  source               String                 @default("manual") @db.VarChar(16)
+  source               String                  @default("manual") @db.VarChar(16)
   /// The gig an independent artist offered that the customer ordered (source "gig").
-  listingId            String?                @db.VarChar(64)
-  listing              GigListing?            @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listingId            String?                 @db.VarChar(64)
+  listing              GigListing?             @relation(fields: [listingId], references: [id], onDelete: SetNull)
   /// Copied from the accepted quote.
-  totalCents           Int                    @default(0)
-  depositCents         Int                    @default(0)
+  totalCents           Int                     @default(0)
+  depositCents         Int                     @default(0)
   /// Sum of received payments, kept in step by recordPayment().
-  paidCents            Int                    @default(0)
+  paidCents            Int                     @default(0)
   quoteExpiresAt       DateTime?
   /// { rule: FeeRule; stripeFeePaidBy } frozen when the quote is accepted.
   feeSnapshot          Json?
   /// A customer opened a card dispute; payouts wait until it's resolved.
-  disputed             Boolean                @default(false)
+  disputed             Boolean                 @default(false)
   /// When Stripe money was transferred to the agency and artist.
   paidOutAt            DateTime?
-  cancelReason         String?                @db.Text
-  createdById          String?                @db.VarChar(64)
+  cancelReason         String?                 @db.Text
+  /// What happened to money already paid when the booking was cancelled or declined: refund | keep (a cancellation fee).
+  cancelSettlement     String?                 @db.VarChar(16)
+  createdById          String?                 @db.VarChar(64)
   quotedAt             DateTime?
   bookedAt             DateTime?
   confirmedAt          DateTime?
   completedAt          DateTime?
   settledAt            DateTime?
   cancelledAt          DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
   assignments          BookingAssignment[]
   events               BookingEvent[]
   notes                BookingNote[]
@@ -467,6 +472,7 @@ model Booking {
   payments             Payment[]
   invoices             Invoice[]
   creditNotes          CreditNote[]
+  promoRedemption      BookingPromoRedemption?
   review               Review?
   ledger               LedgerEntry[]
   messages             BookingMessage[]
@@ -478,10 +484,10 @@ model Booking {
   detailRequests       BookingDetailRequest[]
   changeRequests       BookingChangeRequest[]
   /// The customer's further music wishes and instructions, separate from their first message.
-  musicRequests        String?                @db.Text
-  specialRequests      String?                @db.Text
+  musicRequests        String?                 @db.Text
+  specialRequests      String?                 @db.Text
   /// A key the customer's form sends along, so a repeated submit doesn't make a second booking.
-  clientRequestId      String?                @db.VarChar(64)
+  clientRequestId      String?                 @db.VarChar(64)
 
   /// Target of the equipment lines' composite foreign key (same agency).
   @@unique([organizationId, id])
@@ -2157,4 +2163,93 @@ model CancellationFeedback {
   @@index([agencyId])
   @@index([createdAt])
   @@map("cancellation_feedback")
+}
+
+/// A discount code for StageDesk plans, made by the platform admin. Each is a
+/// Stripe coupon plus promotion code (made on first use, again after the Stripe
+/// keys change); Stripe applies it at Checkout. Platform-level, outside tenantDb.
+model PlatformPromoCode {
+  id                    String                    @id @db.VarChar(64)
+  /// Capitals, digits and dashes (normalizeDiscountCode); shares Stripe's namespace with partner codes.
+  code                  String                    @unique @db.VarChar(32)
+  description           String?                   @db.VarChar(191)
+  /// percentage | fixed
+  discountType          String                    @db.VarChar(16)
+  percentBps            Int?
+  amountCents           Int?
+  /// once | repeating | forever
+  duration              String                    @db.VarChar(16)
+  durationMonths        Int?
+  /// Plan keys it is for; empty means every plan.
+  planKeys              Json
+  firstSubscriptionOnly Boolean                   @default(true)
+  maxRedemptions        Int?
+  expiresAt             DateTime?
+  active                Boolean                   @default(true)
+  stripeCouponId        String?                   @db.VarChar(64)
+  stripePromotionCodeId String?                   @db.VarChar(64)
+  createdById           String?                   @db.VarChar(64)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  redemptions           PlatformPromoRedemption[]
+
+  @@map("platform_promo_codes")
+}
+
+/// An agency that subscribed with a platform promo code (from the subscription webhook).
+model PlatformPromoRedemption {
+  id                   String            @id @db.VarChar(64)
+  promoCodeId          String            @db.VarChar(64)
+  promoCode            PlatformPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  agencyId             String            @db.VarChar(64)
+  agency               Organization      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String?           @db.VarChar(64)
+  createdAt            DateTime          @default(now())
+
+  @@unique([promoCodeId, agencyId])
+  @@index([agencyId])
+  @@map("platform_promo_redemptions")
+}
+
+/// An agency's own discount code for its customers' bookings. The discount
+/// becomes discount lines on the quote (promoDiscountLines), so VAT stays right.
+model BookingPromoCode {
+  id             String                   @id @db.VarChar(64)
+  organizationId String                   @db.VarChar(64)
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String                   @db.VarChar(32)
+  description    String?                  @db.VarChar(191)
+  /// percentage | fixed (a fixed amount is what the customer saves, VAT included)
+  discountType   String                   @db.VarChar(16)
+  percentBps     Int?
+  amountCents    Int?
+  /// The quote total (VAT included) the booking must reach; null for none.
+  minTotalCents  Int?
+  validFrom      DateTime?
+  validUntil     DateTime?
+  maxRedemptions Int?
+  active         Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  redemptions    BookingPromoRedemption[]
+
+  @@unique([organizationId, code])
+  @@map("booking_promo_codes")
+}
+
+/// A booking that uses an agency's promo code (one per booking).
+model BookingPromoRedemption {
+  id             String           @id @db.VarChar(64)
+  organizationId String           @db.VarChar(64)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  promoCodeId    String           @db.VarChar(64)
+  promoCode      BookingPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  bookingId      String           @unique @db.VarChar(64)
+  booking        Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// Who added it: the customer on the booking form, or staff.
+  addedBy        String           @db.VarChar(16)
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId, promoCodeId])
+  @@map("booking_promo_redemptions")
 }

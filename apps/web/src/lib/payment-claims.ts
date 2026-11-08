@@ -59,7 +59,7 @@ export async function announceClaim(claim: { organizationId: string; bookingId: 
       kind: "paymentReported",
       to: m.user.email,
       params: { locale, customer: customerName, amount: money(locale, claim.amountCents, booking.currency), method: await methodName(locale, claim.method), code: booking.trackingCode, url: absoluteUrl(locale, `/app/bookings/${booking.trackingCode}`) },
-    });
+    }, { bookingId: claim.bookingId, agencyId: claim.organizationId });
   }
   await notify(
     staff.map((m) => m.userId),
@@ -99,7 +99,7 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
         remaining: money(locale, Math.max(0, booking.totalCents - booking.paidCents), booking.currency),
         url: absoluteUrl(locale, "/app/my-payments"),
       },
-    });
+    }, { bookingId: payment.bookingId, agencyId: payment.organizationId });
   }
   await notify([booking.customerId], { type: "payment_confirmed", data: { name: booking.organization.name, code: booking.trackingCode, cents: payment.amountCents }, url: "/app/my-payments" });
 }
@@ -125,6 +125,6 @@ export async function announceRejected(claim: { bookingId: string; amountCents: 
       reason: claim.rejectReason ?? "",
       url: absoluteUrl(locale, "/app/my-payments"),
     },
-  });
+  }, { bookingId: claim.bookingId });
   await notify([booking.customerId], { type: "payment_rejected", data: { name: booking.organization.name, code: booking.trackingCode, cents: claim.amountCents }, url: "/app/my-payments" });
 }

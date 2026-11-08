@@ -22,15 +22,18 @@ import { removeStripeKeysAction, saveStripeKeysAction, testStripeAction } from "
 function useRun() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [result, setResult] = useState<ActionResult | null>(null);
   const run = (task: () => Promise<ActionResult>, after?: () => void) =>
     startTransition(async () => {
-      const r = await task();
-      if (!r.ok) return void toast.error(r.message);
+      // A request that fails outright (network, server error) still says so, instead of nothing.
+      const r = await task().catch((): ActionResult => ({ ok: false, message: undefined }));
+      setResult(r);
+      if (!r.ok) return void toast.error(r.message ?? "—");
       toast.success(r.message);
       after?.();
       router.refresh();
     });
-  return { pending, run };
+  return { pending, run, result };
 }
 
 type Saved = { hint: string; updatedAt: string } | null;
@@ -51,7 +54,8 @@ export function StripeSetup({
   connected: { agencies: number; total: number };
 }) {
   const t = useTranslations("paymentSetup");
-  const { pending, run } = useRun();
+  const { pending, run, result } = useRun();
+  const [tested, setTested] = useState(false);
   const empty = { secretKey: "", publishableKey: "", webhookSecret: "" };
   const [v, setV] = useState(empty);
   const anySaved = fields.some((f) => saved[f]);
@@ -102,10 +106,22 @@ export function StripeSetup({
         <Button disabled={pending} onClick={() => run(() => saveStripeKeysAction(v), () => setV(empty))}>
           {t("saveKeys")}
         </Button>
-        <Button variant="outline" disabled={pending || !status.source} onClick={() => run(testStripeAction)}>
+        <Button
+          variant="outline"
+          disabled={pending || !status.source}
+          onClick={() => {
+            setTested(true);
+            run(testStripeAction);
+          }}
+        >
           <PlugZapIcon />
           {t("test")}
         </Button>
+        {tested && result && (
+          <p role="status" className={`basis-full text-sm ${result.ok ? "text-success" : "text-destructive"}`}>
+            {result.message ?? t("testFailed")}
+          </p>
+        )}
         {anySaved && (
           <Dialog>
             <DialogTrigger asChild>

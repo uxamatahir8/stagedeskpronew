@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { Locale } from "@/i18n/routing";
 import { dateTime, dayOf, euro, eventDate } from "@/lib/format";
 import { payByQuoteTokenAction, reportPaymentByTokenAction } from "@/lib/pay-actions";
-import { AcceptQuoteForm } from "./accept-form";
+import { AcceptQuoteForm, DeclineQuoteButton } from "./accept-form";
 import { Link } from "@/i18n/navigation";
 import { AccountSetup } from "./account-setup";
 
@@ -134,6 +134,8 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
         </>
       ) : quote.status === "superseded" ? (
         <FormMessage>{t("quotePage.superseded")}</FormMessage>
+      ) : quote.status === "declined" && quote.booking.status === "quoted" ? (
+        <FormMessage>{t("quotePage.youDeclined", { agency: agency.name })}</FormMessage>
       ) : quote.status !== "sent" || quote.booking.status !== "quoted" ? (
         <FormMessage>{t("quotePage.notOpen")}</FormMessage>
       ) : expired ? (
@@ -145,6 +147,7 @@ async function Quote({ params, searchParams }: Pick<PageProps<"/[locale]/q/[toke
           <CardContent className="grid gap-4">
             {quote.depositCents > 0 && <p className="text-sm">{t("quotePage.depositDue", { amount: euro(format, quote.depositCents, quote.booking.currency) })}</p>}
             <AcceptQuoteForm token={token} defaultName={quote.booking.customer?.name ?? ""} />
+            <DeclineQuoteButton token={token} />
           </CardContent>
         </Card>
       )}

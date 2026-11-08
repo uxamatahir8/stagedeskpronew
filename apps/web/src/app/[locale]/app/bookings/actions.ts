@@ -26,6 +26,7 @@ import {
   sendQuote,
   toDateOnly,
   updateBookingDetails,
+  tenantDb,
 } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
@@ -41,6 +42,8 @@ import { type ActionResult, runAction } from "@/lib/actions";
 import { type FormState, optionalText } from "@/lib/validation";
 import { limitBlocked, suspendedBlocked, writeBlocked } from "@/lib/billing";
 import { sendReceipt } from "@/lib/payment-claims";
+import { euro } from "@/lib/format";
+import { getFormatter } from "@/lib/formatter";
 import { requireAgency, viewerCan } from "@/lib/viewer";
 import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
 
@@ -224,6 +227,8 @@ export async function changeStatusAction(
   bookingId: string,
   action: "decline" | "cancel" | "complete" | "settle",
   reason: string | null,
+  /** Cancel/decline with money already paid: refund it, or keep it as a cancellation fee. Required then. */
+  settlement: "refund" | "keep" | null = null,
 ): Promise<ActionResult> {
   const { viewer, organization, db } = await requireAgency("agency.bookings.status");
   const blocked = await suspendedBlocked(organization.id);
@@ -231,9 +236,16 @@ export async function changeStatusAction(
   const t = await getTranslations("booking");
   // Artists on the booking now; a cancel or decline takes them off it, and they're told.
   const active = action === "cancel" || action === "decline" ? await db.bookingAssignment.findMany({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true } }) : [];
-  const before = await db.booking.findFirst({ where: { id: bookingId }, select: { status: true } });
+  const before = await db.booking.findFirst({ where: { id: bookingId }, select: { status: true, paidCents: true } });
+  // Money already received can't be left undecided: refunded, or kept as a cancellation fee.
+  const ending = action === "cancel" || action === "decline";
+  if (ending && (before?.paidCents ?? 0) > 0 && settlement !== "refund" && settlement !== "keep") return { ok: false, message: t("settlementRequired") };
   const result = await runAction(async () => {
     await changeBookingStatus(organization.id, bookingId, action, { actor: "agency", actorId: viewer.user.id, reason: reason?.trim() || null });
+    if (ending && (before?.paidCents ?? 0) > 0 && settlement) {
+      await db.booking.updateMany({ where: { id: bookingId }, data: { cancelSettlement: settlement } });
+      await db.bookingEvent.create({ data: { organizationId: organization.id, bookingId, type: `cancel_${settlement}`, actorId: viewer.user.id, data: { amountCents: before?.paidCents ?? 0 } } });
+    }
     await emailArtists(active.map((a) => a.id), "cancelled");
   }, t("statusChanged"));
   if (result.ok) {
@@ -286,7 +298,11 @@ export async function recordPaymentAction(bookingId: string, input: z.input<type
     },
     t("paymentRecorded"),
   );
-  return overpaid ? { ...result, confirmOverpayment: true } : result;
+  if (!overpaid) return result;
+  // Say how much is still due, so they can see what they typed against it.
+  const booking = await tenantDb(organization.id).booking.findFirst({ where: { id: bookingId }, select: { totalCents: true, paidCents: true, currency: true } });
+  const due = booking ? euro(await getFormatter(), Math.max(0, booking.totalCents - booking.paidCents), booking.currency) : null;
+  return { ...result, message: due ? (await getTranslations("bookingErrors"))("overpaymentDue", { due }) : result.message, confirmOverpayment: true };
 }
 
 /** The agency paid the artist itself; the amount is worked out on the server. */

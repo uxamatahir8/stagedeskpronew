@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { parseBookingTheme, todayInNetherlands } from "@stagedesk/core";
 import { agencyBilling, agencyFullyBookedDates, availableBookingTypes, publicAgency, publicArtists } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
@@ -28,8 +28,16 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
   await connection();
   const agency = await publicAgency(slug);
   if (!agency) notFound();
-  // The embeddable form is a plan feature.
-  if (!(await agencyBilling(agency.id)).limits.embedWidget) notFound();
+  // The embeddable form is a plan feature. Without it the frame on the agency's site says so, rather than a 404.
+  if (!(await agencyBilling(agency.id)).limits.embedWidget) {
+    const t = await getTranslations("bookingPage");
+    return (
+      <div className="grid gap-2 p-6 text-center text-sm">
+        <p className="font-medium">{t("embedUnavailableTitle")}</p>
+        <p className="text-muted-foreground">{t("embedUnavailableBody", { agency: agency.name })}</p>
+      </div>
+    );
+  }
 
   const today = todayInNetherlands();
   const until = new Date(`${today}T00:00:00Z`);
