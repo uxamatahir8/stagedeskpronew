@@ -24,7 +24,7 @@ describe("plans are billed in euros", () => {
         return { id: `price_eur_${input.recurring.interval}` };
       },
     },
-    customers: { create: async () => ({ id: "cus_eur" }) },
+    customers: { create: async () => ({ id: "cus_eur" }), retrieve: async (id: string) => ({ id }) },
     checkout: {
       sessions: {
         create: async (input: Record<string, unknown>) => {
