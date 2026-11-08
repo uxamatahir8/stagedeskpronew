@@ -1,23 +1,34 @@
 import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { markTrialUsed, planTrialDays, Prisma, prisma, trialEligible } from "@stagedesk/db";
-import { referralPromotionCode } from "./affiliates";
-import { isMissingStripePrice, syncPlanToStripe } from "./plans";
+import { referralPromotionCode, syncAffiliatePromo } from "./affiliates";
+import { isMissingStripePrice, isMissingStripeResource, syncPlanToStripe } from "./plans";
 
 export class PaymentsError extends Error {
-  constructor(readonly code: "plan_not_synced" | "no_customer" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount" | "operation_in_progress" | "refund_refused") {
+  constructor(readonly code: "plan_not_synced" | "no_customer" | "other_stripe_account" | "agency_not_connected" | "nothing_due" | "not_found" | "invalid_amount" | "operation_in_progress" | "refund_refused") {
     super(`Payments: ${code}`);
     this.name = "PaymentsError";
   }
 }
 
-/** The agency's Stripe customer, created on first use. */
+/** The parameter a Stripe error is about (e.g. "customer", "discounts[0][promotion_code]"). */
+const stripeParam = (error: unknown) => {
+  const e = error as { param?: string; raw?: { param?: string } };
+  return e.param ?? e.raw?.param ?? "";
+};
+
+/**
+ * The agency's Stripe customer, created on first use. A stored customer that
+ * this Stripe account doesn't know (the platform's keys were changed to
+ * another account or mode) or that was deleted is replaced by a new one.
+ */
 export async function ensureCustomer(stripe: Stripe, organizationId: string, email: string) {
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { name: true, stripeCustomerId: true } });
-  if (org.stripeCustomerId) return org.stripeCustomerId;
+  if (org.stripeCustomerId && (await existsInThisAccount(() => stripe.customers.retrieve(org.stripeCustomerId!)))) return org.stripeCustomerId;
   const customer = await stripe.customers.create(
     { name: org.name, email, metadata: { organizationId } },
-    { idempotencyKey: `customer-${organizationId}` },
+    // A replacement gets its own key: the first one may already be used in this account for the old customer.
+    { idempotencyKey: org.stripeCustomerId ? `customer-${organizationId}-replaces-${org.stripeCustomerId}` : `customer-${organizationId}` },
   );
   await prisma.organization.update({ where: { id: organizationId }, data: { stripeCustomerId: customer.id } });
   return customer.id;
@@ -31,12 +42,45 @@ export async function subscriptionCheckout(
   stripe: Stripe,
   input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
 ) {
-  try {
-    return await subscriptionCheckoutOnce(stripe, input);
-  } catch (error) {
-    if (!isMissingStripePrice(error)) throw error;
+  // Ids stored from another Stripe account (keys changed) are repaired one by one, then checkout is tried again.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await subscriptionCheckoutOnce(stripe, input);
+    } catch (error) {
+      if (attempt >= 3 || !(await repairStaleIds(stripe, input, error))) throw error;
+    }
+  }
+}
+
+/** Fixes what a resource_missing error points at; false when it isn't something we can recreate. */
+async function repairStaleIds(stripe: Stripe, input: { organizationId: string; planId: string }, error: unknown) {
+  if (isMissingStripePrice(error)) {
     await syncPlanToStripe(stripe, input.planId);
-    return subscriptionCheckoutOnce(stripe, input);
+    return true;
+  }
+  if (!isMissingStripeResource(error)) return false;
+  const param = stripeParam(error);
+  if (param.includes("promotion_code")) {
+    const referral = await prisma.referral.findUnique({ where: { agencyId: input.organizationId }, select: { affiliateId: true } });
+    if (!referral?.affiliateId) return false;
+    await syncAffiliatePromo(stripe, referral.affiliateId);
+    return true;
+  }
+  if (param === "customer") {
+    await prisma.organization.update({ where: { id: input.organizationId }, data: { stripeCustomerId: null } });
+    return true;
+  }
+  return false;
+}
+
+/** Whether an object exists in the Stripe account the current keys belong to. */
+async function existsInThisAccount(retrieve: () => Promise<object>) {
+  try {
+    const found = await retrieve();
+    return !("deleted" in found && found.deleted);
+  } catch (error) {
+    if (isMissingStripeResource(error)) return false;
+    throw error;
   }
 }
 
@@ -44,8 +88,13 @@ async function subscriptionCheckoutOnce(
   stripe: Stripe,
   input: { organizationId: string; planId: string; interval: "month" | "year"; email: string; locale: "nl" | "en"; successUrl: string; cancelUrl: string },
 ) {
-  // Never a second subscription: a running one is switched instead (changeSubscriptionPlan).
-  if (await liveStripeSubscription(input.organizationId)) return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
+  // Never a second subscription: a running one is switched instead (changeSubscriptionPlan). One made
+  // with another Stripe account (the keys were changed) can't be changed from here; a new checkout
+  // replaces it, and its webhook overwrites the agency's subscription row.
+  const live = await liveStripeSubscription(input.organizationId);
+  if (live?.stripeSubscriptionId && (await existsInThisAccount(() => stripe.subscriptions.retrieve(live.stripeSubscriptionId!)))) {
+    return changeSubscriptionPlan(stripe, input).then(() => input.successUrl);
+  }
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
   const price = input.interval === "year" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
   if (!price) throw new PaymentsError("plan_not_synced");
@@ -100,7 +149,7 @@ async function changeSubscriptionPlanOnce(stripe: Stripe, input: { organizationI
   const plan = await prisma.plan.findUniqueOrThrow({ where: { id: input.planId } });
   const price = input.interval === "year" ? plan.stripeYearlyPriceId : plan.stripeMonthlyPriceId;
   if (!price) throw new PaymentsError("plan_not_synced");
-  const live = await stripe.subscriptions.retrieve(current.stripeSubscriptionId);
+  const live = await retrieveHere(stripe, current.stripeSubscriptionId);
   const item = live.items.data[0];
   if (!item) throw new PaymentsError("not_found");
   const updated = await stripe.subscriptions.update(live.id, {
@@ -120,16 +169,33 @@ async function changeSubscriptionPlanOnce(stripe: Stripe, input: { organizationI
 export async function setCancelAtPeriodEnd(stripe: Stripe, organizationId: string, cancel: boolean) {
   const current = await liveStripeSubscription(organizationId);
   if (!current?.stripeSubscriptionId) throw new PaymentsError("not_found");
+  await retrieveHere(stripe, current.stripeSubscriptionId);
   const updated = await stripe.subscriptions.update(current.stripeSubscriptionId, { cancel_at_period_end: cancel });
   return applyStripeSubscription(updated);
+}
+
+/** The subscription in the current Stripe account, or other_stripe_account when it was made with other keys. */
+async function retrieveHere(stripe: Stripe, subscriptionId: string) {
+  try {
+    return await stripe.subscriptions.retrieve(subscriptionId);
+  } catch (error) {
+    if (isMissingStripeResource(error)) throw new PaymentsError("other_stripe_account");
+    throw error;
+  }
 }
 
 /** Stripe's customer portal: card changes, invoices, cancellation. */
 export async function billingPortal(stripe: Stripe, organizationId: string, returnUrl: string) {
   const org = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId }, select: { stripeCustomerId: true } });
   if (!org.stripeCustomerId) throw new PaymentsError("no_customer");
-  const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: returnUrl });
-  return session.url;
+  try {
+    const session = await stripe.billingPortal.sessions.create({ customer: org.stripeCustomerId, return_url: returnUrl });
+    return session.url;
+  } catch (error) {
+    // The customer belongs to another Stripe account (keys changed): nothing to manage here yet.
+    if (isMissingStripeResource(error) && stripeParam(error) === "customer") throw new PaymentsError("other_stripe_account");
+    throw error;
+  }
 }
 
 const knownStatuses = new Set(["trialing", "active", "past_due", "unpaid", "canceled", "incomplete"]);

@@ -45,6 +45,19 @@ describe("partner promotion codes", () => {
     expect(promos.find((p) => p.id === id)?.active).toBe(true);
   });
 
+  it("creates the code again in a new Stripe account after the platform's keys change", async () => {
+    const a = await partner();
+    await setAffiliateStatus(a.id, "approved");
+    // Made with the old keys: the new account (a fresh fake) has never seen this id.
+    await syncAffiliatePromo(fakeStripe().stripe, a.id);
+    const oldId = await promoOf(a.id);
+    const { stripe, promos } = fakeStripe();
+    const newId = await syncAffiliatePromo(stripe, a.id);
+    expect(newId).not.toBe(oldId);
+    expect(await promoOf(a.id)).toBe(newId);
+    expect(promos.find((p) => p.id === newId)).toMatchObject({ active: true });
+  });
+
   it("switches the old code off when the partner's code changes", async () => {
     const { stripe, promos } = fakeStripe();
     const a = await partner();

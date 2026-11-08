@@ -116,7 +116,8 @@ export function fakeStripe(opts: { stripeFeeCents?: number } = {}) {
         }),
       retrieve: async (promoId: string) => {
         const p = promos.find((x) => x.id === promoId);
-        if (!p) throw stripeError("StripeInvalidRequestError", "No such promotion code");
+        // Like Stripe for an id from another account or mode: resource_missing.
+        if (!p) throw Object.assign(stripeError("StripeInvalidRequestError", `No such promotion code: '${promoId}'`), { code: "resource_missing", param: "promotion_code" });
         return { ...p };
       },
       update: async (promoId: string, params: { active?: boolean }) => {

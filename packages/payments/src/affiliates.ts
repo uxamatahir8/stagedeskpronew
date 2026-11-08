@@ -28,8 +28,17 @@ export async function syncAffiliatePromo(stripe: Stripe, affiliateId: string) {
   const affiliate = await prisma.affiliate.findUniqueOrThrow({ where: { id: affiliateId } });
   const wanted = affiliate.status === "approved" && program.promoDiscountBps > 0;
 
-  if (affiliate.stripePromotionCodeId) {
-    const current = await stripe.promotionCodes.retrieve(affiliate.stripePromotionCodeId);
+  // A code stored from another Stripe account (keys changed) is unknown here: forget it and create one in this account.
+  const current = affiliate.stripePromotionCodeId
+    ? await stripe.promotionCodes.retrieve(affiliate.stripePromotionCodeId).catch((error: unknown) => {
+        const e = error as { code?: string; raw?: { code?: string } };
+        if ((e.code ?? e.raw?.code) === "resource_missing") return null;
+        throw error;
+      })
+    : null;
+  const replaced = affiliate.stripePromotionCodeId && !current ? affiliate.stripePromotionCodeId : null;
+  if (replaced) await prisma.affiliate.update({ where: { id: affiliateId }, data: { stripePromotionCodeId: null } });
+  if (current) {
     if (current.code.toUpperCase() === affiliate.promoCode.toUpperCase()) {
       if (current.active !== wanted) await stripe.promotionCodes.update(current.id, { active: wanted });
       return wanted ? current.id : null;
@@ -56,7 +65,7 @@ export async function syncAffiliatePromo(stripe: Stripe, affiliateId: string) {
   }
   const promo = await stripe.promotionCodes.create(
     { promotion: { type: "coupon", coupon: couponId }, code: affiliate.promoCode, metadata: { affiliateId } },
-    { idempotencyKey: `promo-${affiliateId}-${affiliate.promoCode}` },
+    { idempotencyKey: `promo-${affiliateId}-${affiliate.promoCode}${replaced ? `-replaces-${replaced}` : ""}` },
   );
   await prisma.affiliate.update({ where: { id: affiliateId }, data: { stripePromotionCodeId: promo.id } });
   return promo.id;
