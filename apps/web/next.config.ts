@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
-import { indexingAllowed } from "./src/lib/indexing";
 
 // The single .env lives at the repo root, shared with the worker and Prisma.
 const rootEnv = new URL("../../.env", import.meta.url);
@@ -9,7 +8,16 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 
 const production = process.env.NODE_ENV === "production";
 // Staging (staging.* addresses) and SITE_NOINDEX=true servers tell search engines to stay away.
-const noindex = !indexingAllowed();
+// Keep this calculation self-contained: Next compiles the config to CommonJS
+// for `next start`, where relative imports of uncompiled TypeScript are unavailable.
+const deploymentUrl = process.env.APP_URL ?? process.env.BETTER_AUTH_URL ?? "";
+let stagingAddress = false;
+try {
+  stagingAddress = new URL(deploymentUrl).hostname.startsWith("staging.");
+} catch {
+  // Match indexingAllowed(): an invalid or absent URL is not staging by itself.
+}
+const noindex = process.env.SITE_NOINDEX === "true" || stagingAddress;
 
 /**
  * Content-Security-Policy for every page. Scripts and styles only from this
