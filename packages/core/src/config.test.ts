@@ -38,6 +38,13 @@ describe("production config check", () => {
     expect(checkProductionConfig({ ...good, TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA" }).errors.join()).toMatch(/test keys/);
   });
 
+  it("refuses to start without a trusted proxy count, so rate limits can't be spoofed", () => {
+    expect(checkProductionConfig({ ...good, TRUSTED_PROXIES: "" }).errors.join()).toMatch(/TRUSTED_PROXIES is not set/);
+    expect(checkProductionConfig({ ...good, TRUSTED_PROXIES: "0" }).errors.join()).toMatch(/1 or more/);
+    expect(checkProductionConfig({ ...good, TRUSTED_PROXIES: "yes" }).errors.join()).toMatch(/1 or more/);
+    expect(checkProductionConfig({ ...good, TRUSTED_PROXIES: "2" }).errors).toEqual([]);
+  });
+
   it("refuses a Stripe mock in production and warns about test keys", () => {
     expect(checkProductionConfig({ ...good, STRIPE_API_BASE: "http://localhost:12111" }).errors.join()).toMatch(/mock/);
     expect(checkProductionConfig({ ...good, STRIPE_SECRET_KEY: "sk_test_x" }).warnings.join()).toMatch(/test key/);

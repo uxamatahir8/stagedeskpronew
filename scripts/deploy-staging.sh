@@ -82,6 +82,15 @@ activate_release() {
 }
 
 write_ecosystem() {
+  # WEB_INSTANCES (default 1) runs that many web processes in PM2 cluster mode,
+  # so pages render on more than one core. Each can use up to max_memory_restart.
+  local web_instances="${WEB_INSTANCES:-1}"
+  if [[ ! "$web_instances" =~ ^[1-8]$ ]]; then
+    echo "WEB_INSTANCES must be 1-8 (is '$web_instances')." >&2
+    exit 1
+  fi
+  local web_mode="fork"
+  [[ "$web_instances" -gt 1 ]] && web_mode="cluster"
   cat > "$ECOSYSTEM_FILE" <<EOF
 module.exports = {
   apps: [
@@ -93,6 +102,8 @@ module.exports = {
       node_args: "--env-file=$SHARED_ENV",
       args: "start $CURRENT_LINK/apps/web --hostname staging.stagedeskpro.com --port 3100",
       env: { NODE_ENV: "production" },
+      instances: $web_instances,
+      exec_mode: "$web_mode",
       max_memory_restart: "1500M",
       time: true
     },

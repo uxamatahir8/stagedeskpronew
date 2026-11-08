@@ -1,9 +1,10 @@
+import { clientMessages } from "@/i18n/client-messages";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { setRequestLocale } from "next-intl/server";
 import { SiteFooter, SiteFrame, SiteHeader, SiteSection } from "@/components/sites/site-sections";
 import { loadSiteData } from "@/lib/site-data";
 import { pageForPath, showBranding, siteForHost, siteHref, siteOrigin } from "@/lib/site-request";
@@ -44,7 +45,7 @@ async function Site({ params }: Props) {
   if (!site || !found) notFound();
   const { content, lang, page } = found;
   setRequestLocale(lang);
-  const [data, messages, branding] = await Promise.all([loadSiteData(site.organization.id), getMessages({ locale: lang }), showBranding(site.organization.id)]);
+  const [data, messages, branding] = await Promise.all([loadSiteData(site.organization.id), clientMessages("sites", lang), showBranding(site.organization.id)]);
 
   // The booking form is a section on the home page when there is one; otherwise the agency's booking page.
   const home = site.pages.find((p) => p.slug === "");

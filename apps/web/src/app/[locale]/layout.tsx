@@ -1,3 +1,4 @@
+import { clientMessages } from "@/i18n/client-messages";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { notFound } from "next/navigation";
@@ -46,7 +47,8 @@ export default async function LocaleLayout({ children, params }: LayoutProps<"/[
     >
       {/* Browser extensions (e.g. ColorZilla) add attributes to <body> before hydration. */}
       <body className="min-h-full" suppressHydrationWarning>
-        <NextIntlClientProvider>
+        {/* Only the shell's own messages; each route group adds its own (GroupMessages). */}
+        <NextIntlClientProvider messages={await clientMessages("root", locale)}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>

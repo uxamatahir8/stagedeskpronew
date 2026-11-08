@@ -1,12 +1,12 @@
 // Auth configuration. Import `auth` from "./auth" in app code; this file has no
 // server-only guard so the Better Auth CLI can load it to generate the schema.
 import { APIError, betterAuth } from "better-auth";
-import { createAuthMiddleware } from "better-auth/api";
+import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
-import { passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
+import { deskRoles, passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
 import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmInvitationSeat, confirmJoinedSeat, confirmMemberSeat, confirmPendingForEmail, getSetting, notify, prisma, takesStaffSeat, unlinkRemovedMember } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
@@ -48,6 +48,57 @@ function seatsFull(max: number, locale: EmailLocale) {
 
 const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
 
+/**
+ * Atomic per-IP and per-account limits (Redis) on the endpoints that guess or
+ * send secrets. Better Auth's own limiter keeps its counts in the database,
+ * where a burst of parallel requests reads the counter before it goes up, and
+ * it reads the left-most X-Forwarded-For; these use clientIp() (TRUSTED_PROXIES).
+ * [path, per IP, per account (the email in the body), window in seconds].
+ */
+const guardedAuthPaths: Record<string, { ip: number; account: number | null; window: number }> = {
+  "/sign-in/email": { ip: 10, account: 20, window: 900 },
+  "/sign-in/email-otp": { ip: 5, account: 10, window: 900 },
+  "/email-otp/send-verification-otp": { ip: 3, account: 5, window: 300 },
+  "/request-password-reset": { ip: 3, account: 5, window: 300 },
+  "/sign-up/email": { ip: 3, account: null, window: 60 },
+  "/two-factor/verify-totp": { ip: 5, account: null, window: 60 },
+};
+
+async function enforceAuthLimits(path: string, headers: Headers | undefined, body: unknown) {
+  const rule = guardedAuthPaths[path];
+  if (!rule || !headers) return;
+  // Loaded here, not at the top: the Better Auth CLI loads this file outside Next.
+  const { allow, clientIp } = await import("./rate-limit");
+  const ip = clientIp(headers);
+  // Per IP over a minute, like Better Auth's own rule for the path; per account over the whole window.
+  if (!(await allow(`auth:${path}:ip:${ip}`, devLimit(rule.ip), 60))) throw new APIError("TOO_MANY_REQUESTS", { message: "Too many requests. Please try again later." });
+  const email = String((body as Record<string, unknown> | undefined)?.["email"] ?? "").trim().toLowerCase();
+  if (rule.account && email && !(await allow(`auth:${path}:account:${email}`, devLimit(rule.account), rule.window))) {
+    throw new APIError("TOO_MANY_REQUESTS", { message: "Too many attempts for this account. Please try again later." });
+  }
+}
+
+/**
+ * Better Auth's organization endpoints that read who is in an agency. Any
+ * member could call them, so a customer or artist could download every
+ * member's name and email address. Only the desk (owner, admin, staff, a solo
+ * artist's own account) and platform admins may; the app's own pages don't
+ * use them for anyone else.
+ */
+const memberReadPaths = new Set(["/organization/list-members", "/organization/get-full-organization", "/organization/list-invitations"]);
+
+async function enforceMemberReads(ctx: Parameters<Parameters<typeof createAuthMiddleware>[0]>[0]) {
+  if (!memberReadPaths.has(ctx.path)) return;
+  const session = await getSessionFromCtx(ctx);
+  if (!session) throw new APIError("UNAUTHORIZED");
+  if ((session.user as { platformRole?: string | null }).platformRole === "platform_admin") return;
+  const query = (ctx.query ?? {}) as Record<string, unknown>;
+  const body = (ctx.body ?? {}) as Record<string, unknown>;
+  const organizationId = String(query["organizationId"] ?? body["organizationId"] ?? (session.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? "");
+  const member = organizationId ? await prisma.member.findFirst({ where: { organizationId, userId: session.user.id }, select: { role: true } }) : null;
+  if (!member || !(deskRoles as readonly string[]).includes(member.role)) throw new APIError("FORBIDDEN", { message: "Not allowed", code: "MEMBER_LIST_FORBIDDEN" });
+}
+
 export const auth = betterAuth({
   appName: "StageDesk",
   baseURL: appUrl,
@@ -56,6 +107,8 @@ export const auth = betterAuth({
   // The same password rules as the forms, for every way a password is set.
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      await enforceAuthLimits(ctx.path, ctx.request?.headers ?? ctx.headers, ctx.body);
+      await enforceMemberReads(ctx);
       // Before launch only invited people sign up through the form; server-side calls
       // (a partner application) have no request and are allowed.
       if (ctx.path === "/sign-up/email" && ctx.request) {

@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getLocale, setRequestLocale } from "next-intl/server";
 import { DatePrefsProvider } from "@/components/date-prefs";
+import { GroupMessages } from "@/components/group-messages";
 import { Guide } from "@/components/shell/guide";
 
 import { pendingGigCount, pendingLegal, prisma } from "@stagedesk/db";
@@ -22,9 +23,11 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
   setRequestLocale(locale as Locale);
 
   return (
-    <Suspense fallback={<ShellSkeleton />}>
-      <Shell>{children}</Shell>
-    </Suspense>
+    <GroupMessages group="app" locale={locale}>
+      <Suspense fallback={<ShellSkeleton />}>
+        <Shell>{children}</Shell>
+      </Suspense>
+    </GroupMessages>
   );
 }
 
