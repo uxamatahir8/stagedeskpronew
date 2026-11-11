@@ -38,7 +38,8 @@ export default async function AdminBookingsPage({ params, searchParams }: PagePr
   );
 }
 
-const spec = { sorts: ["created", "date", "total", "status"], defaultSort: "created", defaultDir: "desc" as const };
+// Default (no column chosen): open bookings first, soonest event first; closed ones after.
+const spec = { sorts: ["relevance", "created", "date", "total", "status"], defaultSort: "relevance", defaultDir: "asc" as const };
 
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
@@ -62,7 +63,7 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
     getTranslations("eventTypes"),
     getFormatter(),
     listAllBookings({ q, status, organizationId: agencyId, source, page, pageSize: lq.size, sort: lq.sort as "date", dir: lq.dir }),
-    prisma.organization.findMany({ where: { suspendedAt: null }, select: { id: true, name: true, city: true }, orderBy: { name: "asc" } }),
+    prisma.organization.findMany({ where: { suspendedAt: null }, select: { id: true, name: true, city: true, kind: true }, orderBy: { name: "asc" } }),
   ]);
   const createdBooking = created
     ? await prisma.booking.findUnique({ where: { trackingCode: created }, select: { trackingCode: true, organizationId: true, organization: { select: { name: true } } } })
@@ -119,7 +120,7 @@ async function Bookings({ searchParams }: Pick<PageProps<"/[locale]/app/admin-bo
             <option value="">{t("allAgencies")}</option>
             {agencies.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.name}
+                {a.kind === "agency" ? a.name : `${a.name} (${t(`kind_${a.kind as "solo"}`)})`}
               </option>
             ))}
           </NativeSelect>

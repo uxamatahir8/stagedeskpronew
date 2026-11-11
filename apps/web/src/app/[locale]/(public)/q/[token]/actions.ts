@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import { acceptQuote, declineQuote, prisma } from "@stagedesk/db";
 import { type ActionResult, runAction } from "@/lib/actions";
-import { mailAgencyTeam } from "@/lib/booking-mail";
+import { mailAgencyTeam, mailCustomer } from "@/lib/booking-mail";
 import { auth } from "@/lib/auth";
 import { getSession } from "@/lib/viewer";
 import { passwordProblem } from "@stagedesk/core";
@@ -29,11 +29,16 @@ export async function acceptQuoteByTokenAction(token: string, name: string, agre
   const session = await getSession();
   const actorId = session && session.user.id === quote.booking.customerId ? session.user.id : null;
   const t = await getTranslations("quotePage");
+  let confirmed = false;
   const result = await runAction(
-    () => acceptQuote(quote.organizationId, quote.id, { actor: "customer", actorId, name: fullName }),
+    async () => {
+      ({ confirmed } = await acceptQuote(quote.organizationId, quote.id, { actor: "customer", actorId, name: fullName }));
+    },
     t("accepted", { agency: quote.organization.name }),
   );
   if (result.ok) await mailAgencyTeam(quote.bookingId, "quoteAccepted");
+  // The artist had already said yes: the customer hears it's confirmed, as when the artist accepts later.
+  if (result.ok && confirmed) await mailCustomer(quote.bookingId, "bookingConfirmed");
   return result;
 }
 

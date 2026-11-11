@@ -13,8 +13,9 @@ const PASSWORD = "Onboard-e2e-2026";
 const SIX_DIGITS = /\b(\d{6})\b/;
 
 /** Ids of the mails to `to` so far; mails arrive through the worker's queue, so new ones are told apart by id. */
+/** Mailpit returns 50 results unless asked for more; a long-lived dev mailbox has more. */
 async function mailIds(request: APIRequestContext, to: string): Promise<Set<string>> {
-  const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:${to}`)}`)).json();
+  const search = await (await request.get(`${MAILPIT}/search?query=${encodeURIComponent(`to:${to}`)}&limit=1000`)).json();
   return new Set((search.messages ?? []).map((m: { ID: string }) => m.ID));
 }
 
@@ -221,13 +222,15 @@ test("a new platform admin gets the account setup email", async ({ browser, requ
   const email = `admin.${run}@test.local`;
   const seen = await mailIds(request, email);
   await admin.goto("/nl/app/users");
-  await admin.getByRole("button", { name: "Beheerder toevoegen" }).click();
+  await admin.getByRole("button", { name: "Gebruiker toevoegen" }).click();
   const dialog = admin.getByRole("dialog");
+  await dialog.getByLabel("Rol").click();
+  await admin.getByRole("option", { name: "Platformbeheerder" }).click();
   await dialog.getByLabel("Naam", { exact: true }).fill("Ada Admin");
   await dialog.getByLabel("E-mailadres", { exact: true }).fill(email);
-  await dialog.getByRole("combobox").click();
+  await dialog.getByLabel("Taal").click();
   await admin.getByRole("option", { name: "Nederlands" }).click();
-  await dialog.getByRole("button", { name: "Beheerder toevoegen", exact: true }).click();
+  await dialog.getByRole("button", { name: "Toevoegen", exact: true }).click();
   const link = await fromMail(request, email, /(https?:\/\/\S+\/nl\/reset-password\?token=\w+&setup=1)/, seen);
   const page = await freshPage(browser, "nl-NL");
   await page.goto(link);

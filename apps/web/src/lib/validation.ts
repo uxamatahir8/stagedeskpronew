@@ -1,8 +1,15 @@
 import { z } from "zod";
 
-/** Empty form fields become null instead of "". */
+/**
+ * A field left empty, or not on the form at all (a field shown only for some
+ * choices, an inactive tab), is null. FormData has no entry for a field that
+ * isn't rendered, so "missing" must count as empty, not as invalid.
+ */
+export const isBlank = (v: unknown): v is null | undefined | "" => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+
+/** Empty or missing form fields become null instead of "". */
 const optional = <T extends z.ZodType>(schema: T) =>
-  z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v), schema.nullable());
+  z.preprocess((v) => (isBlank(v) ? null : typeof v === "string" ? v.trim() : v), schema.nullable());
 
 export const kvkNumber = optional(z.string().regex(/^\d{8}$/, "invalidKvk"));
 export const vatNumber = optional(

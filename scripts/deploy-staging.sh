@@ -217,6 +217,8 @@ run_pm2 save
 
 if ! health_check; then
   echo "The new release failed its internal health check." >&2
+  # The reason is usually in the web process's own log (a crash at start-up).
+  run_pm2 logs stagedesk-web --lines 80 --nostream --raw >&2 || true
   exit 1
 fi
 

@@ -1,20 +1,18 @@
 "use client";
 
-import { BanIcon, EllipsisIcon, LogInIcon, LogOutIcon, MailCheckIcon, MailIcon, PencilIcon, PlusIcon, ShieldOffIcon, Trash2Icon, UserCheckIcon } from "lucide-react";
+import { BanIcon, EllipsisIcon, LogInIcon, LogOutIcon, MailCheckIcon, MailIcon, PencilIcon, ShieldOffIcon, Trash2Icon, UserCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
 import type { ActionResult } from "@/lib/actions";
 import { startImpersonationAction } from "@/lib/impersonation-actions";
 import {
-  createPlatformAdminAction,
   deleteUserAction,
   markVerifiedAction,
   resendConfirmationAction,
@@ -157,69 +155,6 @@ function EditUserDialog({ user, onClose }: { user: UserValues; onClose: () => vo
           </DialogClose>
           <Button disabled={pending} onClick={() => run(() => updateUserAction(user.id, v), onClose)}>
             {t("save")}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Adds a platform admin; an existing account keeps its other roles. */
-export function CreateAdminDialog() {
-  const t = useTranslations("users");
-  const tl = useTranslations("languages");
-  const { pending, run } = useRun();
-  const [open, setOpen] = useState(false);
-  const [v, setV] = useState({ name: "", email: "", locale: "en" as "nl" | "en" });
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <PlusIcon />
-          {t("newAdmin")}
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t("newAdmin")}</DialogTitle>
-          <DialogDescription>{t("newAdminHint")}</DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField required id="na-name" label={t("name")} className="sm:col-span-2">
-            <Input required id="na-name" value={v.name} maxLength={191} autoComplete="off" onChange={(e) => setV({ ...v, name: e.target.value })} />
-          </FormField>
-          <FormField required id="na-email" label={t("email")}>
-            <Input required id="na-email" type="email" value={v.email} autoComplete="off" onChange={(e) => setV({ ...v, email: e.target.value })} />
-          </FormField>
-          <FormField id="na-locale" label={t("language")}>
-            <Select value={v.locale} onValueChange={(l) => setV({ ...v, locale: l as "nl" | "en" })}>
-              <SelectTrigger id="na-locale" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="nl">{tl("nl")}</SelectItem>
-                <SelectItem value="en">{tl("en")}</SelectItem>
-              </SelectContent>
-            </Select>
-          </FormField>
-        </div>
-        <DialogFooter>
-          <DialogClose asChild>
-            <Button variant="outline">{t("cancel")}</Button>
-          </DialogClose>
-          <Button
-            disabled={pending}
-            onClick={() =>
-              run(
-                () => createPlatformAdminAction(v),
-                () => {
-                  setOpen(false);
-                  setV({ name: "", email: "", locale: "en" });
-                },
-              )
-            }
-          >
-            {t("create")}
           </Button>
         </DialogFooter>
       </DialogContent>

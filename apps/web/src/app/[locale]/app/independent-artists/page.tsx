@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { listSoloArtists } from "@stagedesk/db";
+import { AddUserDialog } from "@/components/admin/add-user-dialog";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { SearchForm } from "@/components/search-form";
@@ -57,7 +58,7 @@ async function SoloArtists({ searchParams }: Pick<PageProps<"/[locale]/app/indep
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} />
+      <PageHeader title={t("title")} description={t("description")} actions={<AddUserDialog roles={["solo_artist"]} label={t("add")} />} />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard index={0} label={t("total")} value={all.length} icon={MicVocalIcon} />
         <StatCard index={1} label={t("listedCount")} value={all.filter((a) => a.listed).length} hint={t("listedHint")} />

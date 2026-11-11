@@ -1,5 +1,6 @@
 "use server";
 
+import { artistAssignableStatuses, artistHoldStatuses, parseEuros } from "@stagedesk/core";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { getLocale, getTranslations } from "next-intl/server";
@@ -9,6 +10,9 @@ import {
   assignArtist,
   deactivateArtist,
   deleteArtistProfile,
+  makeArtistIndependent,
+  moveArtist,
+  platformArtistsOrganization,
   prisma,
   reactivateArtist,
   relinkArtistUser,
@@ -19,27 +23,34 @@ import {
 import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { type ActionResult, runAction } from "@/lib/actions";
+import { copyPublicImage, deletePublicFile } from "@/lib/storage";
 import { requirePermission } from "@/lib/viewer";
 import { emailArtists } from "@/lib/artist-mail";
 import { ArtistAccountError, ensureArtistAccount, sendArtistSetup } from "@/lib/artist-account";
 
-const PLATFORM_ARTISTS_SLUG = "stagedesk-platform-artists";
+const platformOrganization = platformArtistsOrganization;
 
-async function platformOrganization() {
-  return prisma.organization.upsert({
-    where: { slug: PLATFORM_ARTISTS_SLUG },
-    update: {},
-    create: { id: randomUUID(), name: "StageDesk managed artists", slug: PLATFORM_ARTISTS_SLUG, kind: "platform", bookingPageEnabled: false, acceptsLeads: false },
-    select: { id: true, name: true },
-  });
+/** Default pay as typed: a percentage of each booking payment ("40", "37,5") or a fixed fee per booking ("250,00"). */
+export type ArtistPayInput = { type: "percentage" | "fixed"; value: string };
+
+function parsePay(pay: ArtistPayInput | undefined) {
+  const value = String(pay?.value ?? "").trim();
+  if (pay?.type === "fixed") {
+    const cents = parseEuros(value);
+    return cents !== null && cents > 0 ? { compensationType: "fixed", defaultFixedFeeCents: cents, defaultShareBps: 0 } : null;
+  }
+  const pct = Number(value.replace(",", "."));
+  return value !== "" && Number.isFinite(pct) && pct >= 0 && pct <= 100 ? { compensationType: "percentage", defaultFixedFeeCents: null, defaultShareBps: Math.round(pct * 100) } : null;
 }
 
-export async function createPlatformArtistAction(input: { stageName: string; email: string; organizationId: string | null; sharePct: number }): Promise<ActionResult> {
+export async function createPlatformArtistAction(input: { stageName: string; email: string; organizationId: string | null; pay: ArtistPayInput }): Promise<ActionResult> {
   await requirePermission("platform.agencies");
   const t = await getTranslations("platformArtists");
-  const stageName = input.stageName.trim();
-  const email = input.email.trim().toLowerCase();
-  if (!stageName || !/^\S+@\S+\.\S+$/.test(email) || input.sharePct < 0 || input.sharePct > 100) return { ok: false, message: t("invalid") };
+  const stageName = String(input?.stageName ?? "").trim();
+  const email = String(input?.email ?? "").trim().toLowerCase();
+  const pay = parsePay(input?.pay);
+  if (!stageName || !/^\S+@\S+\.\S+$/.test(email)) return { ok: false, message: t("invalid") };
+  if (!pay) return { ok: false, message: t("invalidPay") };
 
   const organization = input.organizationId
     ? await prisma.organization.findFirst({ where: { id: input.organizationId, kind: "agency" }, select: { id: true, name: true } })
@@ -48,7 +59,7 @@ export async function createPlatformArtistAction(input: { stageName: string; ema
 
   try {
     const account = await ensureArtistAccount({ organizationId: organization.id, email, name: stageName, locale: await getLocale() });
-    await prisma.artist.create({ data: { id: randomUUID(), organizationId: organization.id, stageName, genres: [], defaultShareBps: Math.round(input.sharePct * 100), userId: account.userId } });
+    await prisma.artist.create({ data: { id: randomUUID(), organizationId: organization.id, stageName, genres: [], ...pay, userId: account.userId } });
     const setup = account.needsSetup ? await sendArtistSetup(organization.id, account) : null;
     revalidatePath("/[locale]/app/platform-artists", "page");
     if (setup === "failed") return { ok: true, message: (await getTranslations("artistAccount"))("savedEmailFailed", { name: stageName }) };
@@ -79,7 +90,7 @@ export async function assignPlatformArtistAction(artistId: string, bookingId: st
   const viewer = await requirePermission("platform.agencies");
   const [artist, booking] = await Promise.all([
     prisma.artist.findUnique({ where: { id: artistId }, select: { organizationId: true } }),
-    prisma.booking.findFirst({ where: { id: bookingId, status: { in: ["booked", "confirmed"] } }, select: { id: true, organizationId: true } }),
+    prisma.booking.findFirst({ where: { id: bookingId, status: { in: [...artistAssignableStatuses] } }, select: { id: true, organizationId: true } }),
   ]);
   if (!artist || !booking) return { ok: false };
   const t = await getTranslations("platformArtists");
@@ -104,7 +115,7 @@ export async function assignPlatformArtistAction(artistId: string, bookingId: st
 const reason = z.string().trim().min(1).max(500);
 
 /** Runs one support action on an artist and turns its refusals into text. */
-async function supportAction(task: (actorId: string) => Promise<unknown>, done: "withdrawn" | "deactivated" | "reactivated" | "sharesRevoked" | "unlinked" | "relinked" | "deleted"): Promise<ActionResult> {
+async function supportAction(task: (actorId: string) => Promise<unknown>, done: "withdrawn" | "deactivated" | "reactivated" | "sharesRevoked" | "unlinked" | "relinked" | "deleted" | "madeIndependent" | "moved"): Promise<ActionResult> {
   const viewer = await requirePermission("platform.agencies");
   const t = await getTranslations("platformArtists");
   try {
@@ -122,7 +133,7 @@ export async function withdrawArtistAction(artistId: string, why: string) {
   if (!r.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_reason_required") };
   // Booking agencies are told, and so are the artists, by email too.
   return supportAction(async (actor) => {
-    const active = await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] } } }, select: { id: true } });
+    const active = await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: [...artistHoldStatuses] } } }, select: { id: true } });
     await withdrawArtistEverywhere(artistId, actor, r.data);
     await emailArtists(active.map((a) => a.id), "withdrawn");
   }, "withdrawn");
@@ -132,7 +143,7 @@ export async function deactivateArtistAction(artistId: string, why: string, with
   const r = reason.safeParse(why);
   if (!r.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_reason_required") };
   return supportAction(async (actor) => {
-    const active = withdraw ? await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] } } }, select: { id: true } }) : [];
+    const active = withdraw ? await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: [...artistHoldStatuses] } } }, select: { id: true } }) : [];
     await deactivateArtist(artistId, actor, r.data, { withdraw });
     await emailArtists(active.map((a) => a.id), "withdrawn");
   }, "deactivated");
@@ -160,4 +171,52 @@ export async function deleteArtistAction(artistId: string, why: string): Promise
   const result = await supportAction((actor) => deleteArtistProfile(artistId, actor, why), "deleted");
   if (result.ok) redirect({ href: "/app/platform-artists", locale: (await getLocale()) as Locale });
   return result;
+}
+
+/**
+ * Moves an agency's (or the managed pool's) artist to their own independent
+ * business. The photo is copied, so the agency replacing its own copy later
+ * doesn't take it away from the artist.
+ */
+export async function makeIndependentAction(artistId: string, why: string, leaveAgency: boolean, withdraw: boolean): Promise<ActionResult> {
+  const r = reason.safeParse(why);
+  if (!r.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_reason_required") };
+  return supportAction(async (actor) => {
+    const artist = await prisma.artist.findUnique({ where: { id: String(artistId) }, select: { photoUrl: true } });
+    const active = leaveAgency && withdraw ? await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: [...artistHoldStatuses] } } }, select: { id: true } }) : [];
+    const photoUrl = await copyPublicImage(artist?.photoUrl ?? null, `artists/independent-${randomUUID()}`);
+    try {
+      await makeArtistIndependent(String(artistId), actor, r.data, { leaveAgency: Boolean(leaveAgency), withdraw: Boolean(withdraw), photoUrl });
+    } catch (error) {
+      await deletePublicFile(photoUrl);
+      throw error;
+    }
+    await emailArtists(active.map((a) => a.id), "withdrawn");
+  }, "madeIndependent");
+}
+
+/**
+ * Changes where an artist works ("independent", "platform" for the managed
+ * pool, or an agency's id), optionally keeping their current role as well.
+ * The photo is copied so each profile owns its own file.
+ */
+export async function moveArtistAction(input: { artistId: string; target: string; keepCurrent: boolean; withdraw: boolean; reason: string }): Promise<ActionResult> {
+  const r = reason.safeParse(input?.reason);
+  if (!r.success) return { ok: false, message: (await getTranslations("platformArtists"))("error_reason_required") };
+  const artistId = String(input.artistId);
+  const target = String(input.target);
+  return supportAction(async (actor) => {
+    const artist = await prisma.artist.findUnique({ where: { id: artistId }, select: { photoUrl: true } });
+    const leaving = !input.keepCurrent && input.withdraw;
+    const active = leaving ? await prisma.bookingAssignment.findMany({ where: { artistId, status: { in: ["pending", "accepted"] }, booking: { status: { in: [...artistHoldStatuses] } } }, select: { id: true } }) : [];
+    const destination = target === "independent" ? { kind: "independent" as const } : { kind: "organization" as const, organizationId: target === "platform" ? (await platformOrganization()).id : target };
+    const photoUrl = await copyPublicImage(artist?.photoUrl ?? null, `artists/moved-${randomUUID()}`);
+    try {
+      await moveArtist(artistId, destination, actor, r.data, { keepCurrent: Boolean(input.keepCurrent), withdraw: Boolean(input.withdraw), photoUrl });
+    } catch (error) {
+      await deletePublicFile(photoUrl);
+      throw error;
+    }
+    await emailArtists(active.map((a) => a.id), "withdrawn");
+  }, "moved");
 }

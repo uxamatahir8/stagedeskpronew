@@ -1,6 +1,6 @@
 import { attachBookingPromo } from "./promo-codes";
 import { randomUUID } from "node:crypto";
-import { type EventType, fullyBookedDates, isBudgetRange } from "@stagedesk/core";
+import { artistHoldStatuses, type EventType, fullyBookedDates, isBudgetRange } from "@stagedesk/core";
 import { agencyBilling } from "./billing";
 import { bookableArtists, createBooking, toDateOnly } from "./bookings";
 import { prisma } from "./client";
@@ -61,7 +61,7 @@ export async function agencyFullyBookedDates(organizationId: string, from: strin
   const [blocked, playing] = await Promise.all([
     prisma.artistUnavailability.findMany({ where: { artistId: { in: ids }, date: range }, select: { artistId: true, date: true } }),
     prisma.bookingAssignment.findMany({
-      where: { artistId: { in: ids }, status: { in: ["pending", "accepted"] }, booking: { eventDate: range, status: { in: ["booked", "confirmed"] } } },
+      where: { artistId: { in: ids }, status: { in: ["pending", "accepted"] }, booking: { eventDate: range, status: { in: [...artistHoldStatuses] } } },
       select: { artistId: true, booking: { select: { eventDate: true } } },
     }),
   ]);

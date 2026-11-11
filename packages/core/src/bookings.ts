@@ -18,6 +18,17 @@ export type BookingStatus = (typeof bookingStatuses)[number];
 /** Statuses where the event is still going to happen. */
 export const openStatuses: readonly BookingStatus[] = ["inquiry", "quoted", "booked", "confirmed"];
 
+/**
+ * When an artist can be asked to play: from the first inquiry on, so the agency
+ * can line up the DJ while the quote is out, until the event. An artist asked
+ * for a booking in one of these statuses has that date held for them (an
+ * expired quote releases it until a new one is sent).
+ */
+export const artistAssignableStatuses: readonly BookingStatus[] = openStatuses;
+
+/** Booking statuses in which an open request or accepted gig makes the artist busy that day. */
+export const artistHoldStatuses: readonly BookingStatus[] = openStatuses;
+
 export const eventTypes = ["wedding", "corporate", "birthday", "party", "festival", "other"] as const;
 export type EventType = (typeof eventTypes)[number];
 

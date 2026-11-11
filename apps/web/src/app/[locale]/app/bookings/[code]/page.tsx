@@ -5,7 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { availableActions, type BookingStatus, changeConflicts, conflictFingerprint, depositRuleOf, quoteChangedFields, quoteEventSnapshot, type EventType, isBudgetRange, paymentStatus, todayInNetherlands, localePrefix, eventTimeRange } from "@stagedesk/core";
+import { artistAssignableStatuses, availableActions, type BookingStatus, changeConflicts, conflictFingerprint, depositRuleOf, quoteChangedFields, quoteEventSnapshot, type EventType, isBudgetRange, paymentStatus, todayInNetherlands, localePrefix, eventTimeRange } from "@stagedesk/core";
 import { artistAccountStatesOf, artistBalanceOnBooking, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, bookingPromoOf, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
 import { changeRows } from "@/lib/change-requests";
 import { EquipmentStagePill } from "@/components/inventory/labels";
@@ -174,7 +174,8 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
     localeReason: mailLocale.reason,
   };
 
-  const canAssign = status === "booked" || status === "confirmed";
+  // From the inquiry on, so the DJ can be lined up while the quote is out.
+  const canAssign = artistAssignableStatuses.includes(status as BookingStatus);
   // Asks to other agencies for one of their artists, newest first.
   const artistRequests = await prisma.artistRequest.findMany({
     where: { bookingId: booking.id },
@@ -651,11 +652,12 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
               {canAssign ? (
                 <>
+                  {(status === "inquiry" || status === "quoted") && <p className="text-muted-foreground">{t("booking.assignBeforeBooking")}</p>}
                   <AssignArtist bookingId={booking.id} options={artistOptions} hasArtist={Boolean(activeAssignment)} />
                   <BorrowArtist bookingId={booking.id} currency={booking.currency} />
                 </>
               ) : (
-                ["inquiry", "quoted", "expired"].includes(status) && <p className="text-muted-foreground">{t("booking.assignBlocked")}</p>
+                status === "expired" && <p className="text-muted-foreground">{t("booking.assignBlocked")}</p>
               )}
               {artistRequests.length > 0 && (
                 <ul className="grid gap-1 border-t pt-3 text-xs">

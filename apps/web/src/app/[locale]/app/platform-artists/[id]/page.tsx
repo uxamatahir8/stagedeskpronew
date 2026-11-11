@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { artistAdminDetail } from "@stagedesk/db";
+import { artistAdminDetail, prisma } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { BookingStatusBadge, Pill } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,6 +138,13 @@ async function Detail({ params }: Pick<PageProps<"/[locale]/app/platform-artists
 
       <ArtistSupport
         artistId={artist.id}
+        canMakeIndependent={
+          artist.organization.kind !== "solo" &&
+          Boolean(user) &&
+          !user?.disabledAt &&
+          user?.platformRole !== "platform_admin" &&
+          (await prisma.member.count({ where: { userId: user!.id, role: "solo_artist" } })) === 0
+        }
         active={artist.active}
         upcoming={active.length}
         shares={artist.shares.filter((s) => s.status === "accepted" || s.status === "pending").length}

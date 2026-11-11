@@ -48,4 +48,5 @@ export * from "./customer-event";
 export * from "./gigs";
 export * from "./artist-accounts";
 export * from "./artist-access";
+export * from "./artist-self";
 export * from "./email-outbox";

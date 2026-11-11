@@ -23,7 +23,7 @@ import { redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import type { ActionResult } from "@/lib/actions";
 import { announceNewBooking } from "@/lib/announce";
-import { newBookingSchema, translateErrors } from "@/lib/booking-form";
+import { bookingFormErrors, newBookingSchema } from "@/lib/booking-form";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { hasPassword, passwordSetupUrl } from "@/lib/password-setup";
 import { clientIp } from "@/lib/rate-limit";
@@ -186,7 +186,7 @@ export async function createBookingForAgencyAction(organizationId: string, _prev
   if (!agency) return { message: t("error_not_found") };
   if (agency.suspendedAt) return { message: t("bookingSuspended") };
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
+  if (!parsed.success) return await bookingFormErrors(parsed.error);
   const d = parsed.data;
   if (!(await bookingTypeExists(d.eventType, agency.id))) return { fieldErrors: { eventType: tb("invalidEventType") } };
 

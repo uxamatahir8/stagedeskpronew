@@ -120,7 +120,10 @@ async function resolveViewer(session: NonNullable<Awaited<ReturnType<typeof getS
       const artistAt = memberships.filter((m) => m.role === "artist").map((m) => m.id);
       const soloAt = memberships.filter((m) => m.role === "solo_artist").map((m) => m.id);
       // An independent artist runs their own gigs as bookings; this is only for a request from another agency.
-      if ((await hasArtistProfileAt(user.id, artistAt)) || (await hasGigsOutside(user.id, soloAt))) permissions.push("artist.gigs");
+      const artistElsewhere = await hasArtistProfileAt(user.id, artistAt);
+      if (artistElsewhere || (await hasGigsOutside(user.id, soloAt))) permissions.push("artist.gigs");
+      // Their profile at that agency is theirs to keep up to date too.
+      if (artistElsewhere && !permissions.includes("artist.profile")) permissions.push("artist.profile");
     }
     return { user, role: active.role, organization: active, memberships, permissions };
   }

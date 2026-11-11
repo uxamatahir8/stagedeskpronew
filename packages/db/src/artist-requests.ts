@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { normalizePlace } from "@stagedesk/core";
+import { artistAssignableStatuses, normalizePlace } from "@stagedesk/core";
 import { assignLentArtist, isArtistFree } from "./bookings";
 import { prisma } from "./client";
 
@@ -17,7 +17,7 @@ export class ArtistRequestError extends Error {
   }
 }
 
-const bookable = ["booked", "confirmed"];
+const bookable: string[] = [...artistAssignableStatuses];
 
 /** Artists other agencies lend out who are free on the booking's date, matching the search. */
 export async function lendableArtists(borrowerId: string, bookingId: string, q = "") {

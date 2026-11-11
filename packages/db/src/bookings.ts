@@ -1,5 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
+  artistAssignableStatuses,
+  artistHoldStatuses,
   assertCompensation,
   type BookingAction,
   type BookingActor,
@@ -263,10 +265,25 @@ export async function sendQuote(organizationId: string, bookingId: string, input
   if (amountProblem) throw new BookingError(amountProblem);
   const expiresAt = new Date(now.getTime() + input.expiresInDays * 86_400_000);
 
-  return tenantDb(organizationId).$transaction(async (tx) => {
+  const sent = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
     const latest = await tx.quote.findFirst({ where: { bookingId }, orderBy: { version: "desc" }, select: { version: true } });
     const version = (latest?.version ?? 0) + 1;
+
+    // An expired quote stopped holding the artist's date; reviving the booking takes it again,
+    // unless the artist has been booked or blocked that day since. Then they come off this booking.
+    let released: string[] = [];
+    if (booking.status === "expired" && booking.eventDate) {
+      const held = await tx.bookingAssignment.findFirst({ where: { bookingId, status: { in: ["pending", "accepted"] } }, select: { id: true, artistId: true, artist: { select: { stageName: true } } } });
+      if (held) {
+        await lockArtist(tx, held.artistId);
+        if (!(await isArtistFree(held.artistId, booking.eventDate, booking.id))) {
+          await tx.bookingAssignment.updateMany({ where: { id: held.id }, data: { status: "withdrawn", respondedAt: now } });
+          await logEvent(tx, bookingId, "artist_released", actorId, { artistId: held.artistId, stageName: held.artist.stageName, reason: "date_taken" });
+          released = [held.id];
+        }
+      }
+    }
 
     await applyTransition(tx, booking, "send_quote", "agency", actorId, now, { quoteExpiresAt: expiresAt }, { version });
     await tx.quote.updateMany({ where: { bookingId, status: "sent" }, data: { status: "superseded" } });
@@ -308,8 +325,13 @@ export async function sendQuote(organizationId: string, bookingId: string, input
         subtotalCents: line.subtotalCents,
       })),
     });
-    return tx.quote.findFirstOrThrow({ where: { id: quoteId } });
+    return { quote: await tx.quote.findFirstOrThrow({ where: { id: quoteId } }), released, code: booking.trackingCode };
   });
+  if (sent.released.length > 0) {
+    const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+    await notifyArtistsOff(sent.released, "gig_withdrawn", agency?.name ?? "", sent.code).catch((error) => console.error("[bookings] release notification failed", error));
+  }
+  return sent.quote;
 }
 
 /** Accepts the current quote, by the customer (via their link) or the agency on their behalf. */
@@ -346,7 +368,10 @@ export async function acceptQuote(
       { version: quote.version, name: by.name },
     );
     await tx.quote.updateMany({ where: { id: quote.id }, data: { status: "accepted", acceptedAt: now, acceptedByName: by.name } });
-    return booking;
+    // The artist said yes while the quote was out: the booking is confirmed now.
+    const early = await tx.bookingAssignment.findFirst({ where: { bookingId: booking.id, status: "accepted" }, select: { artist: { select: { userId: true } } } });
+    if (early) await applyTransition(tx, { ...booking, status: "booked" }, "artist_accepted", "artist", early.artist.userId, now, {}, { beforeBooking: true });
+    return { ...booking, confirmedArtistUserId: early ? early.artist.userId : undefined };
     // READ COMMITTED: the equipment reservation runs in here and must see other bookings' committed reservations.
   }, equipmentTx);
   await notify(
@@ -355,7 +380,14 @@ export async function acceptQuote(
     by.actorId,
   );
   await notifyUnreservedEquipment(organizationId, booking.id, by.actorId);
+  if (booking.confirmedArtistUserId !== undefined) {
+    // The artist agreed while the quote was out; now it's a gig.
+    const agency = await prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } });
+    await notify([booking.confirmedArtistUserId], { type: "gig_confirmed", data: { name: agency?.name ?? "", code: booking.trackingCode }, url: `/app/gigs/${booking.trackingCode}` });
+  }
   await confirmSoloBooking(organizationId, booking.id, now);
+  /** True when an artist had already said yes, so the booking went straight to confirmed (the caller tells the customer). */
+  return { confirmed: booking.confirmedArtistUserId !== undefined };
 }
 
 /**
@@ -436,7 +468,7 @@ export async function isArtistFree(artistId: string, date: Date, exceptBookingId
       where: {
         artistId,
         status: { in: ["pending", "accepted"] },
-        booking: { eventDate: date, status: { in: ["booked", "confirmed"] }, ...(exceptBookingId ? { id: { not: exceptBookingId } } : {}) },
+        booking: { eventDate: date, status: { in: [...artistHoldStatuses] }, ...(exceptBookingId ? { id: { not: exceptBookingId } } : {}) },
       },
     }),
   ]);
@@ -487,7 +519,8 @@ export async function assignArtist(
 
   const booking = await tenantDb(organizationId).$transaction(async (tx) => {
     const booking = await loadBooking(tx, bookingId);
-    if (booking.status !== "booked" && booking.status !== "confirmed") throw new BookingError("invalid_status");
+    // From the inquiry on: the agency may line up the artist while the quote is out.
+    if (!artistAssignableStatuses.includes(booking.status as BookingStatus)) throw new BookingError("invalid_status");
     const pay = assignmentCompensation(allowed, booking.currency, compensation);
     await lockArtist(tx, artistId);
     if (booking.eventDate && !(await isArtistFree(artistId, booking.eventDate, booking.id))) {
@@ -609,7 +642,10 @@ export async function respondToAssignment(
     });
     if (answered.count !== 1) throw new BookingError("no_open_assignment");
     if (answer.accept) {
-      await applyTransition(tx, booking, "artist_accepted", "artist", artistUserId, now);
+      // Before the customer has accepted, the yes is kept and the booking waits for the quote;
+      // accepting the quote then confirms it straight away (acceptQuote).
+      if (booking.status === "booked") await applyTransition(tx, booking, "artist_accepted", "artist", artistUserId, now);
+      else await logEvent(tx, booking.id, "artist_accepted", artistUserId, { from: booking.status, to: booking.status, beforeBooking: true });
     } else {
       await logEvent(tx, booking.id, "artist_declined", artistUserId, { reason: answer.reason });
     }
