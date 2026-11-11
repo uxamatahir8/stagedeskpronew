@@ -116,6 +116,11 @@ async function Gig({ params }: Pick<PageProps<"/[locale]/app/gigs/[code]">, "par
         </div>
       </div>
 
+      {(b.status === "inquiry" || b.status === "quoted") && (
+        <p className="rounded-lg border border-info/40 bg-info/10 p-3 text-sm" data-testid="gig-not-booked-yet">
+          {t("gigs.notBookedYet")}
+        </p>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>{t("gigs.brief")}</CardTitle>

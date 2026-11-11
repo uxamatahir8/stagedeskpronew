@@ -69,3 +69,22 @@ export async function deletePublicFile(url: string | null | undefined) {
   if (!url?.startsWith("/files/")) return;
   await s3.send(new DeleteObjectCommand({ Bucket: PUBLIC_BUCKET, Key: url.slice("/files/".length) })).catch(() => {});
 }
+
+/**
+ * A copy of a stored image under a new key, for a record that must not share
+ * the file with another (each deletes its own when replaced). Null when there's
+ * none or it can't be read; an outside address is returned as it is.
+ */
+export async function copyPublicImage(url: string | null | undefined, keyWithoutExt: string) {
+  if (!url) return null;
+  if (!url.startsWith("/files/")) return url;
+  try {
+    const object = await getPublicFile(url.slice("/files/".length));
+    const bytes = await object.Body?.transformToByteArray();
+    const image = bytes ? detectImage(bytes) : null;
+    if (!bytes || !image) return null;
+    return await putPublicFile(`${keyWithoutExt}.${image.ext}`, bytes, image.mime);
+  } catch {
+    return null;
+  }
+}

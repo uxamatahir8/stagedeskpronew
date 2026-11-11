@@ -120,7 +120,7 @@ const grants: Record<Role, readonly Permission[]> = {
   agency_owner: [...agencyPermissions, ...ownerOnlyPermissions, ...always],
   agency_admin: [...defaultAgencyGrants.agency_admin, ...always],
   agency_staff: [...defaultAgencyGrants.agency_staff, ...always],
-  artist: ["artist.gigs", "artist.availability", "artist.earnings", ...basics],
+  artist: ["artist.gigs", "artist.availability", "artist.earnings", "artist.profile", ...basics],
   customer: ["customer.event", "customer.payments", ...basics],
   // Runs their own bookings like a one-person agency, without a team, other artists or a website.
   solo_artist: [

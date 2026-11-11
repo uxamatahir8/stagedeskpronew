@@ -594,7 +594,8 @@
     "sameDay": "There {count, plural, one {is already # booking} other {are already # bookings}} on this date. You can add another one; check that an artist is free.",
     "pastDate": "This date has passed. Choose today or a later date.",
     "customerName": "Customer's name",
-    "invalidValue": "This value isn't valid."
+    "invalidValue": "This value isn't valid.",
+    "checkFields": "Some details need attention: check the fields marked below."
   },
   "booking": {
     "eventDetails": "Event details",
@@ -609,7 +610,7 @@
     "sharedFrom": "via {agency}",
     "unavailable": "unavailable",
     "assignHint": "The artist gets a request to accept.",
-    "assignBlocked": "Assign an artist once the customer has accepted a quote.",
+    "assignBlocked": "The quote has expired. Send a new quote to line up an artist.",
     "assigned": "Request sent to {artist}.",
     "declineReason": "Reason",
     "quote": "Quote",
@@ -754,7 +755,8 @@
     "settlement_refund": "Refund it to the customer",
     "settlement_keep": "Keep it as a cancellation fee",
     "refundToDo": "To refund: {amount}. Make the refund from the payments below.",
-    "keptAsFee": "{amount} kept as cancellation fee."
+    "keptAsFee": "{amount} kept as cancellation fee.",
+    "assignBeforeBooking": "You can ask an artist now, while the quote is out. Their date is held, and the booking is confirmed as soon as the customer accepts the quote."
   },
   "timeline": {
     "created": "Booking created",
@@ -796,7 +798,8 @@
     "artist_paid": "{stageName} marked as paid",
     "quote_declined": "{name} declined quote v{version}",
     "cancel_refund": "Paid {amount} to be refunded",
-    "cancel_keep": "Paid {amount} kept as cancellation fee"
+    "cancel_keep": "Paid {amount} kept as cancellation fee",
+    "artist_released": "{stageName} came off this booking: their date was taken while the quote had expired"
   },
   "quotes": {
     "title": "Quotes",
@@ -947,7 +950,8 @@
     "requestsCount": "{count, plural, one {# request to answer} other {# requests to answer}}",
     "closedTitle": "No longer on your schedule",
     "endedTitle": "This request from {agency} is no longer open",
-    "nextDay": "(+1 day)"
+    "nextDay": "(+1 day)",
+    "notBookedYet": "The customer hasn't accepted the quote yet. If you say yes, the date is held for you, and the gig is confirmed as soon as the customer accepts."
   },
   "availability": {
     "title": "Availability",
@@ -2025,7 +2029,8 @@
     "change_rejected": "{name} couldn't make your requested change to {code}",
     "gig_updated": "{name} changed the details of gig {code}",
     "booking_updated": "{name} changed the details of your booking {code}",
-    "quote_declined": "{name} declined the quote for {code}"
+    "quote_declined": "{name} declined the quote for {code}",
+    "gig_confirmed": "{name}: the customer accepted the quote, so gig {code} is confirmed."
   },
   "messages": {
     "title": "Messages",
@@ -2191,7 +2196,12 @@
     "resendDisabled": "This account is disabled. Enable it first.",
     "resendAlreadyVerified": "This email address is already confirmed.",
     "resendTooMany": "Already sent a few times this hour. Try again later.",
-    "resendFailed": "The confirmation email couldn't be sent. Please try again later."
+    "resendFailed": "The confirmation email couldn't be sent. Please try again later.",
+    "memberAdded": "{name} is now {role} at {agency}.",
+    "customerAdded": "{name} is now a customer of {agency}.",
+    "error_already_member": "This person is already part of that agency. Change their role on the agency's team page.",
+    "error_not_allowed": "This account can't be given that role (platform admin or disabled).",
+    "error_seats_full": "The agency has no free staff seats on its plan."
   },
   "audit": {
     "title": "Audit log",
@@ -2263,7 +2273,9 @@
         "update": "Edited an account",
         "sign_out": "Signed an account out everywhere",
         "delete": "Deleted an account",
-        "resend_confirmation": "Resent a confirmation email"
+        "resend_confirmation": "Resent a confirmation email",
+        "add_member": "Added someone to an agency team",
+        "add_customer": "Added a customer to an agency"
       },
       "ticket": {
         "close": "Closed a ticket",
@@ -2348,7 +2360,10 @@
         "relink": "Linked an artist to another account",
         "delete": "Deleted an artist",
         "invite": "Artist invited or linked to an account",
-        "setup_resent": "Artist password setup link resent"
+        "setup_resent": "Artist password setup link resent",
+        "make_independent": "Made an artist independent",
+        "create_independent": "Added an independent artist",
+        "move": "Changed where an artist works"
       },
       "team": {
         "permissions": "Changed role permissions"
@@ -4265,11 +4280,11 @@
   },
   "adminBookings": {
     "title": "Bookings",
-    "description": "Every booking on the platform. As platform admin you can also create a booking for any agency.",
+    "description": "Every booking on the platform. As platform admin you can also create one: a platform booking, or for any agency or independent artist.",
     "new": "Create booking",
-    "newHint": "Platform admin booking: choose the agency it's for. It goes into their queue and their team takes it from there.",
+    "newHint": "Choose whose booking it is: a platform booking for StageDesk's managed artists, an agency, or an independent artist. It goes into their queue and they take it from there.",
     "agency": "Agency",
-    "chooseAgency": "Choose an agency",
+    "chooseAgency": "Choose who it's for",
     "continue": "Continue",
     "cancel": "Cancel",
     "search": "Search",
@@ -4296,7 +4311,15 @@
     "createdNotice": "Platform admin booking {code} created for {agency}. Their team has been notified.",
     "source_gig": "Gig order",
     "source_profile": "Artist profile",
-    "source_customer_portal": "Customer portal"
+    "source_customer_portal": "Customer portal",
+    "bookingFor": "Booking for",
+    "group_platform": "StageDesk",
+    "platformBooking": "Platform booking (StageDesk's managed artists)",
+    "platformBookingHint": "A booking StageDesk takes itself. You handle it as support for StageDesk's own business and can assign its managed artists.",
+    "group_agencies": "Agencies",
+    "group_independents": "Independent artists",
+    "kind_solo": "independent artist",
+    "kind_platform": "StageDesk"
   },
   "websiteEditor": {
     "title": "Website",
@@ -5730,7 +5753,13 @@
     "invalid": "Check your profile: the stage name is required.",
     "invalidMedia": "This link can't be shown: {link}",
     "invalidPrice": "Enter the price from as an amount, e.g. 750.",
-    "notSolo": "This page is for independent artists."
+    "notSolo": "This page is for independent artists.",
+    "atAgency": "Your profile at {agency}",
+    "agencyProfileHint": "What {agency} shows customers about you: on its booking page, quotes and gig details. Your pay and whether you appear on the booking page are set by {agency}.",
+    "agencyProfilesTitle": "Your profiles at agencies",
+    "agencyDescription": "How you are presented at the agencies you work for.",
+    "noProfile": "You have no active artist profile at an agency yet. When an agency adds you, it shows up here.",
+    "profileGone": "This profile is no longer yours to edit. Ask the agency if you think that is a mistake."
   },
   "listings": {
     "title": "Gigs I offer",
@@ -5963,7 +5992,41 @@
     "error_user_not_found": "No account with that email.",
     "error_user_taken": "That account already has another artist profile at this agency.",
     "error_user_not_allowed": "That account can't be an artist here (platform admin or on the agency's team).",
-    "error_reason_required": "Give a reason."
+    "error_reason_required": "Give a reason.",
+    "do_independent": "Make independent",
+    "confirm_independent": "The artist gets their own independent business on StageDesk, starting from this profile (name, photo, bio, genres, media). Bookings, payments and reviews stay with this profile.",
+    "leaveAgency": "They no longer work for this agency: deactivate this profile and end their artist membership here",
+    "madeIndependent": "The artist is now independent",
+    "error_already_independent": "This person already has an independent artist business.",
+    "worksFor": "Works for",
+    "invalidPay": "Enter a share between 0 and 100, or a fixed amount above zero.",
+    "moveHint": "Move an artist to independent, to StageDesk's managed artists or to another agency. Their profile is copied; bookings, payments and reviews stay where they were.",
+    "moveTo": "New role",
+    "moveToChoose": "Choose where they go",
+    "moveToIndependent": "Independent artist (own business)",
+    "moveKeepCurrent": "Keep their current role as well (they work for both)",
+    "moveFromIndependent": "Their independent business stays; they also start working for the agency you choose.",
+    "moveNow": "Change role",
+    "moved": "The artist's role is changed",
+    "independentLabel": "Independent",
+    "error_same_place": "The artist already works there.",
+    "booking": "Booking",
+    "shareWith": "Share with",
+    "addHint": "An artist account for an agency, for StageDesk's managed artists, or an independent artist with their own business. The artist gets an email to set a password.",
+    "shareHint": "The agency can then book this artist for its own bookings.",
+    "assignHint": "Ask an artist to play a booking at any agency. Their date is held while they answer.",
+    "independentNote": "An independent artist runs their own business on StageDesk and keeps what their customers pay, so no share or fee is set here.",
+    "moveDialogTitle": "Change the role of {name}",
+    "listTitle": "All artists",
+    "searchPlaceholder": "Stage name, email or agency",
+    "filterWorks": "Works for",
+    "works_platform": "Managed by StageDesk",
+    "works_agency": "An agency",
+    "works_independent": "Independent",
+    "account_linked": "Has an account",
+    "account_none": "No account linked",
+    "empty": "No artists yet",
+    "added": "Added"
   },
   "soloAdmin": {
     "title": "Independent artists",
@@ -5992,7 +6055,14 @@
     "free": "Free",
     "suspended": "Suspended",
     "publicProfile": "Open the public profile",
-    "allArtists": "All independent artists"
+    "allArtists": "All independent artists",
+    "add": "Add independent artist",
+    "invalid": "Check the name, stage name and email address.",
+    "createdNew": "{name} is set up. We emailed {email} a link to choose a password.",
+    "createdExisting": "{name} is set up for the existing account {email}. They find it in their account menu.",
+    "error_already_independent": "This person already has an independent artist business.",
+    "error_not_allowed": "This account can't become an independent artist (platform admin or disabled).",
+    "error_invalid": "Check the stage name and email address."
   },
   "impersonation": {
     "banner": "You're logged in as <b>{name}</b> ({email}). Everything you do happens as them and is logged under your name too.",
@@ -6741,5 +6811,37 @@
     "removeCode": "Remove code",
     "bookingCodeLabel": "Promo code",
     "apply": "Apply"
+  },
+  "addUser": {
+    "open": "Add user",
+    "title": "Add a user",
+    "role": "Role",
+    "roleAgencyArtist": "Artist at an agency",
+    "agency": "Agency",
+    "customerOf": "Customer of",
+    "chooseAgency": "Choose an agency",
+    "managedPool": "StageDesk managed artists",
+    "independentBusiness": "{name} (independent artist)",
+    "agencyName": "Agency name",
+    "city": "City",
+    "ownerName": "Owner's name",
+    "name": "Name",
+    "email": "Email address",
+    "language": "Language",
+    "stageName": "Stage name",
+    "genres": "Genres",
+    "genresHint": "Separated by commas, e.g. house, disco",
+    "phone": "Phone",
+    "website": "Website",
+    "cancel": "Cancel",
+    "create": "Add",
+    "hint_agency_owner": "Creates the agency and its owner. The owner gets an email to sign in (a new account chooses a password).",
+    "hint_agency_admin": "Adds them to the agency's team as admin, without an invitation. The agency's staff seats apply.",
+    "hint_agency_staff": "Adds them to the agency's team as staff, without an invitation. The agency's staff seats apply.",
+    "hint_artist": "An artist profile at an agency, or in the StageDesk managed pool. The artist gets an email to set up their account.",
+    "hint_solo_artist": "An independent artist with their own business on StageDesk. A new account gets an email to choose a password.",
+    "hint_customer": "A customer of an agency, as the agency's own 'Add customer' does. No email is sent now.",
+    "hint_affiliate": "A partner, approved straight away. They get an email with their referral link.",
+    "hint_platform_admin": "Full access to the platform. A new account gets an email to choose a password."
   }
 }

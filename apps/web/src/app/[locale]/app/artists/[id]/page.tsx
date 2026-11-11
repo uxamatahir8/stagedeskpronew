@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType, todayInNetherlands } from "@stagedesk/core";
+import { artistHoldStatuses, type EventType, todayInNetherlands } from "@stagedesk/core";
 import { artistAccountState, prisma, toDateOnly } from "@stagedesk/db";
 import { ArtistAvatar } from "@/components/artist-avatar";
 import { ArtistAccountBadge, Pill } from "@/components/status-badge";
@@ -55,7 +55,7 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
       where: {
         artistId: artist.id,
         status: { in: ["pending", "accepted"] },
-        booking: { OR: [{ eventDate: null }, { eventDate: { gte: toDateOnly(today) } }], status: { in: ["booked", "confirmed"] } },
+        booking: { OR: [{ eventDate: null }, { eventDate: { gte: toDateOnly(today) } }], status: { in: [...artistHoldStatuses] } },
       },
       include: { booking: { select: { trackingCode: true, eventDate: true, eventType: true, venueCity: true, organizationId: true } } },
       orderBy: { booking: { eventDate: "asc" } },

@@ -1,6 +1,6 @@
 "use client";
 
-import { BuildingIcon, LinkIcon, LogInIcon, PowerIcon, Share2Icon, Trash2Icon, UnlinkIcon, UserMinusIcon } from "lucide-react";
+import { BuildingIcon, LinkIcon, LogInIcon, PowerIcon, Share2Icon, Trash2Icon, UnlinkIcon, UserMinusIcon, UserRoundCheckIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { startSupportAction } from "@/lib/support-actions";
 import {
   deactivateArtistAction,
   deleteArtistAction,
+  makeIndependentAction,
   reactivateArtistAction,
   relinkArtistAction,
   revokeArtistSharesAction,
@@ -26,7 +27,7 @@ import {
   withdrawArtistAction,
 } from "../actions";
 
-type Kind = "withdraw" | "deactivate" | "reactivate" | "revoke" | "unlink" | "relink" | "delete";
+type Kind = "withdraw" | "deactivate" | "reactivate" | "revoke" | "unlink" | "relink" | "delete" | "independent";
 
 /**
  * Support actions for one artist. Every change asks for a reason (stored in
@@ -35,6 +36,7 @@ type Kind = "withdraw" | "deactivate" | "reactivate" | "revoke" | "unlink" | "re
  */
 export function ArtistSupport({
   artistId,
+  canMakeIndependent,
   active,
   upcoming,
   shares,
@@ -44,6 +46,8 @@ export function ArtistSupport({
   deletable,
 }: {
   artistId: string;
+  /** An agency's or the managed pool's artist with a working account and no independent business yet. */
+  canMakeIndependent: boolean;
   active: boolean;
   upcoming: number;
   shares: number;
@@ -59,6 +63,7 @@ export function ArtistSupport({
   const [why, setWhy] = useState("");
   const [email, setEmail] = useState("");
   const [withdraw, setWithdraw] = useState(true);
+  const [leaveAgency, setLeaveAgency] = useState(true);
 
   const run = (task: () => Promise<ActionResult>) =>
     start(async () => {
@@ -78,6 +83,7 @@ export function ArtistSupport({
     unlink: () => unlinkArtistAction(artistId, why),
     relink: () => relinkArtistAction(artistId, email, why),
     delete: () => deleteArtistAction(artistId, why),
+    independent: () => makeIndependentAction(artistId, why, leaveAgency, withdraw),
   };
 
   const button = (kind: Kind, Icon: React.ComponentType, variant: "outline" | "destructive" = "outline") => (
@@ -112,6 +118,7 @@ export function ArtistSupport({
           {upcoming > 0 && button("withdraw", UserMinusIcon)}
           {active ? button("deactivate", PowerIcon) : button("reactivate", PowerIcon)}
           {shares > 0 && button("revoke", Share2Icon)}
+          {canMakeIndependent && button("independent", UserRoundCheckIcon)}
           {linkedUser ? button("unlink", UnlinkIcon) : null}
           {button("relink", LinkIcon)}
           {deletable ? button("delete", Trash2Icon, "destructive") : <p className="self-center text-xs text-muted-foreground">{t("notDeletable")}</p>}
@@ -135,7 +142,15 @@ export function ArtistSupport({
                 <Input id="as-email" type="email" required maxLength={191} value={email} onChange={(e) => setEmail(e.target.value)} />
               </FormField>
             )}
-            {open === "deactivate" && upcoming > 0 && (
+            {open === "independent" && (
+              <div className="flex items-start gap-2">
+                <Switch id="as-leave" checked={leaveAgency} onCheckedChange={setLeaveAgency} />
+                <Label htmlFor="as-leave" className="leading-snug font-normal">
+                  {t("leaveAgency")}
+                </Label>
+              </div>
+            )}
+            {((open === "deactivate" && upcoming > 0) || (open === "independent" && leaveAgency && upcoming > 0)) && (
               <div className="flex items-start gap-2">
                 <Switch id="as-withdraw" checked={withdraw} onCheckedChange={setWithdraw} />
                 <Label htmlFor="as-withdraw" className="leading-snug font-normal">

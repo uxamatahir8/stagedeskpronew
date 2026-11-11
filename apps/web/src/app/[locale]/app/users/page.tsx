@@ -19,7 +19,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { requirePermission } from "@/lib/viewer";
-import { CreateAdminDialog, UserActions } from "./user-menu";
+import { UserActions } from "./user-menu";
+import { AddUserDialog } from "@/components/admin/add-user-dialog";
 import { SearchForm } from "@/components/search-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/users">): Promise<Metadata> {
@@ -49,7 +50,7 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
   const page = Math.max(1, Number.parseInt(one(sp["page"]) ?? "1", 10) || 1);
   const lq = parseListQuery(sp, spec);
   // Platform-wide view: deliberately not tenant-scoped.
-  const [t, tr, format, list, totals] = await Promise.all([
+  const [t, tr, format, list, totals, agencies] = await Promise.all([
     getTranslations("users"),
     getTranslations("roles"),
     getFormatter(),
@@ -60,6 +61,8 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
       prisma.user.count({ where: { emailVerified: false } }),
       prisma.user.count({ where: { disabledAt: { not: null } } }),
     ]),
+    // For "Add user": where a team member, artist or customer goes.
+    prisma.organization.findMany({ where: { kind: { in: ["agency", "solo"] } }, select: { id: true, name: true, kind: true }, orderBy: { name: "asc" }, take: 2000 }),
   ]);
   const [all, admins, unverified, disabled] = totals;
   const href = (patch: { filter?: UserFilter; page?: number }) => {
@@ -75,7 +78,7 @@ async function Users({ searchParams }: Pick<PageProps<"/[locale]/app/users">, "s
 
   return (
     <div className="grid gap-6">
-      <PageHeader title={t("title")} description={t("description")} actions={<CreateAdminDialog />} />
+      <PageHeader title={t("title")} description={t("description")} actions={<AddUserDialog agencies={agencies} />} />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label={t("statAll")} value={all} icon={UsersRoundIcon} tone="violet" />

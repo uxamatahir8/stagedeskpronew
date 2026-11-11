@@ -74,11 +74,13 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
 
   await test.step("a platform admin is added, found with the filter and deleted again", async () => {
     await page.goto("/nl/app/users");
-    await page.getByRole("button", { name: "Beheerder toevoegen" }).click();
+    await page.getByRole("button", { name: "Gebruiker toevoegen" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Naam").fill(`Bea Beheer ${run}`);
+    await dialog.getByLabel("Rol").click();
+    await page.getByRole("option", { name: "Platformbeheerder" }).click();
+    await dialog.getByLabel("Naam", { exact: true }).fill(`Bea Beheer ${run}`);
     await dialog.getByLabel("E-mailadres").fill(`bea.${run}@e2e-beheer.nl`);
-    await dialog.getByRole("button", { name: "Beheerder toevoegen" }).click();
+    await dialog.getByRole("button", { name: "Toevoegen", exact: true }).click();
     await expect(page.getByText(`Bea Beheer ${run} is nu platformbeheerder.`)).toBeVisible();
 
     await page.getByRole("link", { name: "Platformbeheerders" }).click();

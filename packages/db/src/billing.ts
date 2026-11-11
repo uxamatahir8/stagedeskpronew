@@ -170,6 +170,23 @@ export async function confirmInvitationSeat(organizationId: string, invitationId
 }
 
 /**
+ * Adds someone to an agency's team in a staff role (a platform admin doing it
+ * for the agency), under the same seat lock as everything else that takes a
+ * seat. Returns false, writing nothing, when the plan's seats are full.
+ */
+export async function addStaffMemberWithinSeats(organizationId: string, userId: string, role: "agency_admin" | "agency_staff", now = new Date()) {
+  return withSeatLock(
+    organizationId,
+    async (tx, used, max) => {
+      if (max !== null && used + 1 > max) return false;
+      await tx.member.create({ data: { id: randomUUID(), organizationId, userId, role } });
+      return true;
+    },
+    now,
+  );
+}
+
+/**
  * A trial the platform admin grants by hand, on the configured plan. New
  * agencies don't get one automatically: they choose a plan, and only plans
  * with a trial start with free days. Safe to call twice.

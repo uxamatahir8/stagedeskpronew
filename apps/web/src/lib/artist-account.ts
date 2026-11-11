@@ -1,3 +1,4 @@
+import { artistAssignableStatuses } from "@stagedesk/core";
 import "server-only";
 
 import { randomUUID } from "node:crypto";
@@ -100,7 +101,7 @@ export async function resendArtistSetup(organizationId: string, user: { id: stri
  */
 export async function announceOpenRequests(artistId: string, userId: string) {
   const open = await prisma.bookingAssignment.findMany({
-    where: { artistId, status: "pending", booking: { status: { in: ["booked", "confirmed"] } } },
+    where: { artistId, status: "pending", booking: { status: { in: [...artistAssignableStatuses] } } },
     select: { id: true, booking: { select: { trackingCode: true, organization: { select: { name: true } } } } },
   });
   for (const a of open) {

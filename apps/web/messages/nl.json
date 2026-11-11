@@ -594,7 +594,8 @@
     "sameDay": "Er {count, plural, one {staat al # boeking} other {staan al # boekingen}} op deze datum. Je kunt er nog een toevoegen; controleer of er een artiest vrij is.",
     "pastDate": "Deze datum is al geweest. Kies vandaag of een latere datum.",
     "customerName": "Naam van de klant",
-    "invalidValue": "Deze waarde klopt niet."
+    "invalidValue": "Deze waarde klopt niet.",
+    "checkFields": "Niet alles is goed ingevuld: kijk bij de gemarkeerde velden hieronder."
   },
   "booking": {
     "eventDetails": "Evenementgegevens",
@@ -609,7 +610,7 @@
     "sharedFrom": "via {agency}",
     "unavailable": "niet beschikbaar",
     "assignHint": "De artiest krijgt een verzoek om te accepteren.",
-    "assignBlocked": "Wijs een artiest toe zodra de klant een offerte heeft geaccepteerd.",
+    "assignBlocked": "De offerte is verlopen. Stuur een nieuwe offerte om een artiest te vragen.",
     "assigned": "Verzoek verstuurd naar {artist}.",
     "declineReason": "Reden",
     "quote": "Offerte",
@@ -754,7 +755,8 @@
     "settlement_refund": "Terugbetalen aan de klant",
     "settlement_keep": "Houden als annuleringskosten",
     "refundToDo": "Nog terug te betalen: {amount}. Doe dat bij de betalingen hieronder.",
-    "keptAsFee": "{amount} gehouden als annuleringskosten."
+    "keptAsFee": "{amount} gehouden als annuleringskosten.",
+    "assignBeforeBooking": "Je kunt nu al een artiest vragen, terwijl de offerte uitstaat. De datum wordt voor de artiest vastgehouden en de boeking is bevestigd zodra de klant de offerte accepteert."
   },
   "timeline": {
     "created": "Boeking aangemaakt",
@@ -796,7 +798,8 @@
     "artist_paid": "{stageName} als betaald gemarkeerd",
     "quote_declined": "{name} heeft offerte v{version} afgewezen",
     "cancel_refund": "Betaalde {amount} wordt terugbetaald",
-    "cancel_keep": "Betaalde {amount} gehouden als annuleringskosten"
+    "cancel_keep": "Betaalde {amount} gehouden als annuleringskosten",
+    "artist_released": "{stageName} is van deze boeking gehaald: de datum werd bezet terwijl de offerte verlopen was"
   },
   "quotes": {
     "title": "Offertes",
@@ -947,7 +950,8 @@
     "requestsCount": "{count, plural, one {# aanvraag te beantwoorden} other {# aanvragen te beantwoorden}}",
     "closedTitle": "Niet meer op je planning",
     "endedTitle": "Deze aanvraag van {agency} staat niet meer open",
-    "nextDay": "(+1 dag)"
+    "nextDay": "(+1 dag)",
+    "notBookedYet": "De klant heeft de offerte nog niet geaccepteerd. Als je ja zegt, wordt de datum voor je vastgehouden en is het optreden bevestigd zodra de klant accepteert."
   },
   "availability": {
     "title": "Beschikbaarheid",
@@ -2025,7 +2029,8 @@
     "change_rejected": "{name} kon je gevraagde wijziging van {code} niet doorvoeren",
     "gig_updated": "{name} heeft de gegevens van optreden {code} gewijzigd",
     "booking_updated": "{name} heeft de gegevens van je boeking {code} gewijzigd",
-    "quote_declined": "{name} heeft de offerte voor {code} afgewezen"
+    "quote_declined": "{name} heeft de offerte voor {code} afgewezen",
+    "gig_confirmed": "{name}: de klant heeft de offerte geaccepteerd, dus optreden {code} gaat door."
   },
   "messages": {
     "title": "Berichten",
@@ -2191,7 +2196,12 @@
     "resendDisabled": "Dit account is geblokkeerd. Deblokkeer het eerst.",
     "resendAlreadyVerified": "Dit e-mailadres is al bevestigd.",
     "resendTooMany": "Al een paar keer verstuurd dit uur. Probeer het later opnieuw.",
-    "resendFailed": "De bevestigingsmail kon niet worden verstuurd. Probeer het later opnieuw."
+    "resendFailed": "De bevestigingsmail kon niet worden verstuurd. Probeer het later opnieuw.",
+    "memberAdded": "{name} is nu {role} bij {agency}.",
+    "customerAdded": "{name} is nu klant van {agency}.",
+    "error_already_member": "Deze persoon hoort al bij dat bureau. Wijzig de rol op de teampagina van het bureau.",
+    "error_not_allowed": "Dit account kan die rol niet krijgen (platformbeheerder of uitgeschakeld).",
+    "error_seats_full": "Het bureau heeft geen vrije teamplekken in zijn abonnement."
   },
   "audit": {
     "title": "Auditlog",
@@ -2263,7 +2273,9 @@
         "update": "Account gewijzigd",
         "sign_out": "Account overal uitgelogd",
         "delete": "Account verwijderd",
-        "resend_confirmation": "Stuurde een bevestigingsmail opnieuw"
+        "resend_confirmation": "Stuurde een bevestigingsmail opnieuw",
+        "add_member": "Iemand aan een bureauteam toegevoegd",
+        "add_customer": "Klant aan een bureau toegevoegd"
       },
       "ticket": {
         "close": "Ticket gesloten",
@@ -2348,7 +2360,10 @@
         "relink": "Koppelde een artiest aan een ander account",
         "delete": "Verwijderde een artiest",
         "invite": "Artiest uitgenodigd of aan account gekoppeld",
-        "setup_resent": "Wachtwoordlink artiest opnieuw verstuurd"
+        "setup_resent": "Wachtwoordlink artiest opnieuw verstuurd",
+        "make_independent": "Artiest zelfstandig gemaakt",
+        "create_independent": "Zelfstandige artiest toegevoegd",
+        "move": "Werkplek van een artiest gewijzigd"
       },
       "team": {
         "permissions": "Rolrechten gewijzigd"
@@ -4265,11 +4280,11 @@
   },
   "adminBookings": {
     "title": "Boekingen",
-    "description": "Elke boeking op het platform. Als platformbeheerder kun je ook een boeking aanmaken voor elk bureau.",
+    "description": "Alle boekingen op het platform. Als platformbeheerder kun je er ook zelf een maken: een platformboeking, of voor elk bureau of elke zelfstandige artiest.",
     "new": "Boeking aanmaken",
-    "newHint": "Boeking door de platformbeheerder: kies het bureau waarvoor hij is. Die komt in hun wachtrij en hun team neemt het over.",
+    "newHint": "Kies voor wie de boeking is: een platformboeking voor de door StageDesk beheerde artiesten, een bureau of een zelfstandige artiest. Hij komt in hun wachtrij en zij nemen het daarna over.",
     "agency": "Bureau",
-    "chooseAgency": "Kies een bureau",
+    "chooseAgency": "Kies voor wie",
     "continue": "Verder",
     "cancel": "Annuleren",
     "search": "Zoeken",
@@ -4296,7 +4311,15 @@
     "createdNotice": "Boeking {code} door de platformbeheerder aangemaakt voor {agency}. Hun team is ingelicht.",
     "source_gig": "Bestelling optreden",
     "source_profile": "Artiestenprofiel",
-    "source_customer_portal": "Klantportaal"
+    "source_customer_portal": "Klantportaal",
+    "bookingFor": "Boeking voor",
+    "group_platform": "StageDesk",
+    "platformBooking": "Platformboeking (door StageDesk beheerde artiesten)",
+    "platformBookingHint": "Een boeking die StageDesk zelf aanneemt. Je handelt die af als support voor de eigen onderneming van StageDesk en kunt de beheerde artiesten inzetten.",
+    "group_agencies": "Bureaus",
+    "group_independents": "Zelfstandige artiesten",
+    "kind_solo": "zelfstandige artiest",
+    "kind_platform": "StageDesk"
   },
   "websiteEditor": {
     "title": "Website",
@@ -5730,7 +5753,13 @@
     "invalid": "Controleer je profiel: de artiestennaam is verplicht.",
     "invalidMedia": "Deze link kan niet getoond worden: {link}",
     "invalidPrice": "Vul de prijs vanaf in als bedrag, bijv. 750.",
-    "notSolo": "Deze pagina is voor zelfstandige artiesten."
+    "notSolo": "Deze pagina is voor zelfstandige artiesten.",
+    "atAgency": "Je profiel bij {agency}",
+    "agencyProfileHint": "Wat {agency} klanten over je laat zien: op de boekingspagina, in offertes en bij optredens. Je vergoeding en of je op de boekingspagina staat, bepaalt {agency}.",
+    "agencyProfilesTitle": "Je profielen bij bureaus",
+    "agencyDescription": "Hoe je wordt gepresenteerd bij de bureaus waarvoor je werkt.",
+    "noProfile": "Je hebt nog geen actief artiestenprofiel bij een bureau. Zodra een bureau je toevoegt, zie je het hier.",
+    "profileGone": "Je kunt dit profiel niet meer bewerken. Neem contact op met het bureau als dat niet klopt."
   },
   "listings": {
     "title": "Mijn optredens",
@@ -5963,7 +5992,41 @@
     "error_user_not_found": "Geen account met dat e-mailadres.",
     "error_user_taken": "Dat account heeft al een ander artiestprofiel bij dit bureau.",
     "error_user_not_allowed": "Dat account kan hier geen artiest zijn (platformbeheerder of in het team van het bureau).",
-    "error_reason_required": "Geef een reden op."
+    "error_reason_required": "Geef een reden op.",
+    "do_independent": "Zelfstandig maken",
+    "confirm_independent": "De artiest krijgt een eigen zelfstandige onderneming op StageDesk, op basis van dit profiel (naam, foto, bio, genres, media). Boekingen, betalingen en reviews blijven bij dit profiel.",
+    "leaveAgency": "Werkt niet meer voor dit bureau: dit profiel deactiveren en het artiestenlidmaatschap hier beëindigen",
+    "madeIndependent": "De artiest is nu zelfstandig",
+    "error_already_independent": "Deze persoon heeft al een zelfstandige artiestenonderneming.",
+    "worksFor": "Werkt voor",
+    "invalidPay": "Vul een aandeel tussen 0 en 100 in, of een vast bedrag boven nul.",
+    "moveHint": "Zet een artiest om naar zelfstandig, naar de door StageDesk beheerde artiesten of naar een ander bureau. Het profiel wordt gekopieerd; boekingen, betalingen en reviews blijven waar ze waren.",
+    "moveTo": "Nieuwe rol",
+    "moveToChoose": "Kies waar de artiest naartoe gaat",
+    "moveToIndependent": "Zelfstandige artiest (eigen onderneming)",
+    "moveKeepCurrent": "Huidige rol ook houden (werkt voor beide)",
+    "moveFromIndependent": "De zelfstandige onderneming blijft bestaan; de artiest gaat daarnaast voor het gekozen bureau werken.",
+    "moveNow": "Rol wijzigen",
+    "moved": "De rol van de artiest is gewijzigd",
+    "independentLabel": "Zelfstandig",
+    "error_same_place": "De artiest werkt daar al.",
+    "booking": "Boeking",
+    "shareWith": "Delen met",
+    "addHint": "Een artiestenaccount voor een bureau, voor de door StageDesk beheerde artiesten, of een zelfstandige artiest met een eigen onderneming. De artiest krijgt een e-mail om een wachtwoord te kiezen.",
+    "shareHint": "Het bureau kan deze artiest daarna voor de eigen boekingen inzetten.",
+    "assignHint": "Vraag een artiest voor een boeking bij een willekeurig bureau. De datum wordt vastgehouden terwijl de artiest antwoordt.",
+    "independentNote": "Een zelfstandige artiest heeft een eigen onderneming op StageDesk en houdt wat de klanten betalen, dus hier stel je geen aandeel of vergoeding in.",
+    "moveDialogTitle": "Rol van {name} wijzigen",
+    "listTitle": "Alle artiesten",
+    "searchPlaceholder": "Artiestennaam, e-mail of bureau",
+    "filterWorks": "Werkt voor",
+    "works_platform": "Beheerd door StageDesk",
+    "works_agency": "Een bureau",
+    "works_independent": "Zelfstandig",
+    "account_linked": "Heeft een account",
+    "account_none": "Geen account gekoppeld",
+    "empty": "Nog geen artiesten",
+    "added": "Toegevoegd"
   },
   "soloAdmin": {
     "title": "Zelfstandige artiesten",
@@ -5992,7 +6055,14 @@
     "free": "Gratis",
     "suspended": "Geschorst",
     "publicProfile": "Openbaar profiel openen",
-    "allArtists": "Alle zelfstandige artiesten"
+    "allArtists": "Alle zelfstandige artiesten",
+    "add": "Zelfstandige artiest toevoegen",
+    "invalid": "Controleer de naam, artiestennaam en het e-mailadres.",
+    "createdNew": "{name} staat klaar. We hebben {email} een link gestuurd om een wachtwoord te kiezen.",
+    "createdExisting": "{name} staat klaar voor het bestaande account {email}. Het staat in hun accountmenu.",
+    "error_already_independent": "Deze persoon heeft al een zelfstandige artiestenonderneming.",
+    "error_not_allowed": "Dit account kan geen zelfstandige artiest worden (platformbeheerder of uitgeschakeld).",
+    "error_invalid": "Controleer de artiestennaam en het e-mailadres."
   },
   "impersonation": {
     "banner": "Je bent ingelogd als <b>{name}</b> ({email}). Alles wat je doet gebeurt namens deze persoon en wordt ook op jouw naam vastgelegd.",
@@ -6741,5 +6811,37 @@
     "removeCode": "Code verwijderen",
     "bookingCodeLabel": "Kortingscode",
     "apply": "Toepassen"
+  },
+  "addUser": {
+    "open": "Gebruiker toevoegen",
+    "title": "Gebruiker toevoegen",
+    "role": "Rol",
+    "roleAgencyArtist": "Artiest bij een bureau",
+    "agency": "Bureau",
+    "customerOf": "Klant van",
+    "chooseAgency": "Kies een bureau",
+    "managedPool": "Door StageDesk beheerde artiesten",
+    "independentBusiness": "{name} (zelfstandige artiest)",
+    "agencyName": "Naam van het bureau",
+    "city": "Plaats",
+    "ownerName": "Naam van de eigenaar",
+    "name": "Naam",
+    "email": "E-mailadres",
+    "language": "Taal",
+    "stageName": "Artiestennaam",
+    "genres": "Genres",
+    "genresHint": "Gescheiden door komma's, bijv. house, disco",
+    "phone": "Telefoon",
+    "website": "Website",
+    "cancel": "Annuleren",
+    "create": "Toevoegen",
+    "hint_agency_owner": "Maakt het bureau en de eigenaar aan. De eigenaar krijgt een e-mail om in te loggen (een nieuw account kiest een wachtwoord).",
+    "hint_agency_admin": "Voegt de persoon zonder uitnodiging als beheerder toe aan het team van het bureau. De teamplekken van het bureau gelden.",
+    "hint_agency_staff": "Voegt de persoon zonder uitnodiging als medewerker toe aan het team van het bureau. De teamplekken van het bureau gelden.",
+    "hint_artist": "Een artiestenprofiel bij een bureau, of bij de door StageDesk beheerde artiesten. De artiest krijgt een e-mail om het account in te stellen.",
+    "hint_solo_artist": "Een zelfstandige artiest met een eigen onderneming op StageDesk. Een nieuw account krijgt een e-mail om een wachtwoord te kiezen.",
+    "hint_customer": "Een klant van een bureau, zoals 'Klant toevoegen' van het bureau zelf. Er gaat nu geen e-mail uit.",
+    "hint_affiliate": "Een partner, meteen goedgekeurd. De partner krijgt een e-mail met de verwijslink.",
+    "hint_platform_admin": "Volledige toegang tot het platform. Een nieuw account krijgt een e-mail om een wachtwoord te kiezen."
   }
 }

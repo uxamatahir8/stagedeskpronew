@@ -45,14 +45,14 @@ import { sendReceipt } from "@/lib/payment-claims";
 import { euro } from "@/lib/format";
 import { getFormatter } from "@/lib/formatter";
 import { requireAgency, viewerCan } from "@/lib/viewer";
-import { eventFields, lines, newBookingSchema, translateErrors } from "@/lib/booking-form";
+import { bookingFormErrors, eventFields, lines, newBookingSchema } from "@/lib/booking-form";
 
 export async function createBookingAction(_prev: FormState, form: FormData): Promise<FormState> {
   const { viewer, organization } = await requireAgency("agency.bookings.create");
   const blocked = await limitBlocked(organization.id, "maxBookingsPerMonth");
   if (blocked) return { message: blocked };
   const parsed = newBookingSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
+  if (!parsed.success) return await bookingFormErrors(parsed.error);
   const d = parsed.data;
   if (!(await bookingTypeExists(d.eventType, organization.id))) return { fieldErrors: { eventType: (await getTranslations("newBooking"))("invalidEventType") } };
 
@@ -108,7 +108,7 @@ export async function updateDetailsAction(bookingId: string, _prev: FormState, f
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { message: blocked };
   const parsed = detailsSchema.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { fieldErrors: await translateErrors(parsed.error) };
+  if (!parsed.success) return await bookingFormErrors(parsed.error);
   const { eventDate, budget, ...rest } = parsed.data;
   // A date already on the booking may stay; a new one can't lie in the past.
   if (eventDate && eventDate < todayInNetherlands()) {
@@ -163,14 +163,21 @@ export async function sendQuoteAction(bookingId: string, input: QuoteDraft): Pro
 
 /** Emails the customer their quote link, in their own language. */
 export async function acceptOnBehalfAction(quoteId: string, name: string): Promise<ActionResult> {
-  const { viewer, organization } = await requireAgency("agency.quotes.accept");
+  const { viewer, organization, db } = await requireAgency("agency.quotes.accept");
   const blocked = await writeBlocked(organization.id);
   if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("booking");
-  return runAction(
-    () => acceptQuote(organization.id, quoteId, { actor: "agency", actorId: viewer.user.id, name: name.trim().slice(0, 191) || viewer.user.name }),
+  let confirmed = false;
+  const quote = await db.quote.findFirst({ where: { id: String(quoteId) }, select: { bookingId: true } });
+  const result = await runAction(
+    async () => {
+      ({ confirmed } = await acceptQuote(organization.id, quoteId, { actor: "agency", actorId: viewer.user.id, name: name.trim().slice(0, 191) || viewer.user.name }));
+    },
     t("statusChanged"),
   );
+  // The artist had already said yes: the customer hears it's confirmed, as when the artist accepts later.
+  if (result.ok && confirmed && quote) await mailCustomer(quote.bookingId, "bookingConfirmed");
+  return result;
 }
 
 /** Pay for this booking only, as typed: a percentage ("40") or an amount ("250,00"). */

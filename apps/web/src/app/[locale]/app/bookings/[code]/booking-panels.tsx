@@ -729,7 +729,7 @@ export function DetailRequestPanel({
         )}
       </div>
       <Dialog open={dialog} onOpenChange={setDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("title")}</DialogTitle>
             <DialogDescription>{t("description")}</DialogDescription>
@@ -754,19 +754,19 @@ export function DetailRequestPanel({
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              <FormField id="dr-locale" label={t("language")}>
+              <FormField id="dr-locale" label={t("language")} className="min-w-0">
                 <NativeSelect id="dr-locale" value={locale} onChange={(e) => setLocale(e.target.value as "nl" | "en")} className="w-full">
                   <option value="nl">Nederlands</option>
                   <option value="en">English</option>
                 </NativeSelect>
               </FormField>
-              <FormField id="dr-days" label={t("days")}>
-                <Input id="dr-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(e.target.value)} />
+              <FormField id="dr-days" label={t("days")} className="min-w-0">
+                <Input id="dr-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(e.target.value)} className="w-full min-w-0" />
               </FormField>
               {open && <p className="text-xs text-muted-foreground sm:col-span-2">{t("replaces")}</p>}
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-wrap">
             {url ? (
               <DialogClose asChild>
                 <Button>{t("done")}</Button>
@@ -777,9 +777,10 @@ export function DetailRequestPanel({
                   <CopyIcon />
                   {t("createLink")}
                 </Button>
-                <Button disabled={pending} onClick={() => create(true)}>
+                {/* A long address shortens instead of pushing the button out of the dialog; the full one is in the tooltip. */}
+                <Button disabled={pending} onClick={() => create(true)} className="max-w-full min-w-0" title={customerEmail}>
                   <SendIcon />
-                  {t("sendTo", { email: customerEmail })}
+                  <span className="truncate">{t("sendTo", { email: customerEmail })}</span>
                 </Button>
               </>
             )}

@@ -10,6 +10,7 @@ export type NotificationType =
   | "gig_request"
   | "gig_response"
   | "gig_withdrawn"
+  | "gig_confirmed"
   | "gig_cancelled"
   | "details_submitted"
   | "preferences_updated"
