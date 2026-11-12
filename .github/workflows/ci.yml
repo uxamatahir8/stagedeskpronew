@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [staging]
+    branches: [staging, main]
 
 permissions:
   contents: read
@@ -234,3 +234,44 @@ jobs:
             -o BatchMode=yes \
             "$STAGING_USER@$STAGING_HOST" \
             "bash -s -- '$DEPLOY_SHA'" < scripts/deploy-staging.sh
+
+  deploy-production:
+    name: Deploy production
+    needs: [check, security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.stagedeskpro.com
+    concurrency:
+      group: stagedesk-production-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/production_deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/production_deploy_key ~/.ssh/known_hosts
+
+      - name: Deploy verified commit
+        shell: bash
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_PORT: ${{ secrets.PRODUCTION_PORT }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          DEPLOY_MODE: ${{ vars.PRODUCTION_DEPLOY_MODE || 'live' }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          ssh \
+            -i ~/.ssh/production_deploy_key \
+            -p "$PRODUCTION_PORT" \
+            -o BatchMode=yes \
+            "$PRODUCTION_USER@$PRODUCTION_HOST" \
+            "bash -s -- '$DEPLOY_SHA' '$DEPLOY_MODE'" < scripts/deploy-production.sh
