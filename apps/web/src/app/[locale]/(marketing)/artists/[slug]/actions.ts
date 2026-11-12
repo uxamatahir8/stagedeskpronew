@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { eventTypes, generateTrackingCode, isPastInNetherlands } from "@stagedesk/core";
-import { artistProfile, ListingError, orderListing, submitInquiry } from "@stagedesk/db";
+import { artistProfile, bookingTypeExists, ListingError, orderListing, submitInquiry } from "@stagedesk/db";
 import type { InquiryResult } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { announceNewBooking } from "@/lib/announce";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
@@ -19,7 +19,7 @@ const eventFields = {
   name: z.string().trim().min(2).max(191),
   email: z.email().max(191),
   phone: text(32),
-  eventType: z.enum(eventTypes),
+  eventType: z.string().trim().min(1).max(64).transform((value) => value as (typeof eventTypes)[number]),
   eventDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   startTime: z.preprocess((v) => (v === "" ? null : v), z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable()),
   venueName: text(191),
@@ -64,7 +64,9 @@ export async function requestArtistPriceAction(slug: string, form: FormData): Pr
   if (isPastInNetherlands(d.eventDate, d.startTime)) return { ok: false, message: t("errorDate") };
   if (!(await allow(`artist-request:email:${d.email.toLowerCase()}`, 3, 3600))) return { ok: false, message: t("errorRate") };
   // Only artists in the directory (with the Artist plan) can be booked directly.
-  if (!(await artistProfile(slug))) return { ok: false, message: t("notFound") };
+  const profile = await artistProfile(slug);
+  if (!profile) return { ok: false, message: t("notFound") };
+  if (!(await bookingTypeExists(d.eventType, profile.organizationId))) return { ok: false, message: t("errorRequired") };
 
   const locale = userLocale(await getLocale());
   const result = await submitInquiry(slug, { ...d, preferredArtistId: null, locale }, "profile");
@@ -74,8 +76,8 @@ export async function requestArtistPriceAction(slug: string, form: FormData): Pr
     kind: "inquiryReceived",
     to: d.email,
     params: { locale, name: d.name.split(/\s+/)[0] ?? d.name, agency: agency.name, code: booking.trackingCode, url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`) },
-  });
-  await announceNewBooking(agency.id, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
+  }, { bookingId: booking.id, agencyId: agency.id });
+  await announceNewBooking(agency.id, { id: booking.id, trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
   return { ok: true, code: booking.trackingCode, name: d.name.split(/\s+/)[0] ?? d.name };
 }
 
@@ -94,7 +96,7 @@ export async function orderGigAction(slug: string, listingId: string, form: Form
   try {
     const { booking, quote, organizationId, stageName } = await orderListing(slug, listingId, { ...d, email: d.email.trim().toLowerCase() });
     await emailQuote(quote.id, stageName);
-    await announceNewBooking(organizationId, { trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
+    await announceNewBooking(organizationId, { id: booking.id, trackingCode: booking.trackingCode, eventType: d.eventType, eventDate: d.eventDate }, d.name);
     return { ok: true, code: booking.trackingCode, name: d.name.split(/\s+/)[0] ?? d.name };
   } catch (e) {
     if (e instanceof ListingError) return { ok: false, message: tl(`error_${e.code}`) };

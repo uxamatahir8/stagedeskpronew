@@ -1,0 +1,3 @@
+# Findings reviewed and accepted as harmless (fingerprint = commit:file:rule:line).
+# stripe-mock dummy key "sk_test_123" in a CI curl header; not a real credential, removed in a later commit.
+e4d13c5daaee0d8404a59c221d9662192eadee90:.github/workflows/ci.yml:curl-auth-header:63

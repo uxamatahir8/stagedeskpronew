@@ -91,7 +91,7 @@ const starters: Starter[] = [
           h("Bewaartermijnen"),
           p("We bewaren accountgegevens zolang je account bestaat. Facturen en betalingen bewaren we 7 jaar, zoals de wet vraagt."),
           h("Je rechten"),
-          p("Je kunt je gegevens inzien, laten corrigeren of laten verwijderen, en bezwaar maken. Mail [privacy@stagedesk.pro](mailto:privacy@stagedesk.pro). Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens."),
+          p("Je kunt je gegevens inzien, laten corrigeren of laten verwijderen, en bezwaar maken. Mail [info@stagedeskpro.com](mailto:info@stagedeskpro.com). Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens."),
         ],
       },
       en: {
@@ -107,7 +107,7 @@ const starters: Starter[] = [
           h("How long"),
           p("We keep account data for as long as your account exists. Invoices and payments are kept for 7 years, as Dutch law requires."),
           h("Your rights"),
-          p("You can access, correct or delete your data, and object to processing. Email [privacy@stagedesk.pro](mailto:privacy@stagedesk.pro). You can also complain to the Dutch Data Protection Authority (Autoriteit Persoonsgegevens)."),
+          p("You can access, correct or delete your data, and object to processing. Email [info@stagedeskpro.com](mailto:info@stagedeskpro.com). You can also complain to the Dutch Data Protection Authority (Autoriteit Persoonsgegevens)."),
         ],
       },
     },

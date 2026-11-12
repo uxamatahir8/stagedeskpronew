@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { subscriptionAccess } from "@stagedesk/core";
+import { bookingStatuses, openStatuses, subscriptionAccess } from "@stagedesk/core";
 import { startTrial } from "./billing";
 import { prisma } from "./client";
+import { markInvitesJoined } from "./growth";
+import { purgeInventory } from "./inventory";
 import type { Prisma } from "./generated/prisma/client";
 import { getSetting } from "./settings";
 
@@ -97,8 +99,9 @@ export async function freeSlug(name: string) {
 
 /**
  * Creates an agency for someone (the platform admin sets it up for them).
- * The owner gets an account if they don't have one; they sign in with an
- * emailed code and can set a password later. Like any new agency it starts
+ * The owner gets an account if they don't have one (without a password: the
+ * web action emails a one-time link to choose one; an emailed sign-in code
+ * works too). Like any new agency it starts
  * without a plan; the owner chooses one, or the admin grants or extends one.
  */
 export async function createAgencyForOwner(input: { name: string; city: string | null; ownerName: string; ownerEmail: string; locale: "nl" | "en" }) {
@@ -113,6 +116,7 @@ export async function createAgencyForOwner(input: { name: string; city: string |
     await tx.member.create({ data: { id: randomUUID(), organizationId, userId, role: "agency_owner" } });
   });
   const organization = await prisma.organization.findUniqueOrThrow({ where: { id: organizationId } });
+  await markInvitesJoined(email, organizationId);
   return { organization, ownerId: userId, newUser: !existing, email };
 }
 
@@ -178,10 +182,12 @@ export async function deleteAgency(organizationId: string) {
   if (!org) throw new AgencyAdminError("not_found");
   const c = org._count;
   if (c.bookings + c.payments + c.invoices + c.ledger > 0) throw new AgencyAdminError("has_bookings");
-  await prisma.$transaction([
-    prisma.referral.updateMany({ where: { referringAgencyId: organizationId }, data: { referringAgencyId: null } }),
-    prisma.organization.delete({ where: { id: organizationId } }),
-  ]);
+  await prisma.$transaction(async (tx) => {
+    await tx.referral.updateMany({ where: { referringAgencyId: organizationId }, data: { referringAgencyId: null } });
+    // Equipment can't be removed by the cascade alone (items in cases block it).
+    await purgeInventory(tx, [organizationId]);
+    await tx.organization.delete({ where: { id: organizationId } });
+  });
 }
 
 /** Everything the admin's agency page shows. */
@@ -230,6 +236,22 @@ export async function agencyOverview(organizationId: string, now = new Date()) {
   };
 }
 
+const BOOKING_LIST_SELECT = {
+  id: true,
+  trackingCode: true,
+  status: true,
+  eventType: true,
+  eventDate: true,
+  venueCity: true,
+  source: true,
+  totalCents: true,
+  currency: true,
+  createdAt: true,
+  createdById: true,
+  organization: { select: { id: true, name: true } },
+  customer: { select: { name: true, email: true } },
+} satisfies Prisma.BookingSelect;
+
 /** Every booking on the platform, for the admin's overview: deliberately not tenant-scoped. */
 export async function listAllBookings({
   q = "",
@@ -238,7 +260,7 @@ export async function listAllBookings({
   source = null,
   page = 1,
   pageSize = 25,
-  sort = "created",
+  sort = "relevance",
   dir = "desc",
 }: {
   q?: string;
@@ -247,7 +269,8 @@ export async function listAllBookings({
   source?: string | null;
   page?: number;
   pageSize?: number;
-  sort?: "created" | "date" | "total" | "status";
+  /** relevance: open bookings first, soonest event first; then closed ones, latest event first. */
+  sort?: "relevance" | "created" | "date" | "total" | "status";
   dir?: "asc" | "desc";
 }) {
   const search = q.trim();
@@ -265,36 +288,45 @@ export async function listAllBookings({
         }
       : {}),
   };
-  const [rows, total] = await Promise.all([
-    prisma.booking.findMany({
-      where,
-      orderBy:
-        sort === "date"
-          ? [{ eventDate: { sort: dir, nulls: "last" } }, { createdAt: "desc" }]
-          : sort === "total"
-            ? [{ totalCents: dir }]
-            : sort === "status"
-              ? [{ status: dir }, { createdAt: "desc" }]
-              : [{ createdAt: dir }],
-      skip: (Math.max(1, page) - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        trackingCode: true,
-        status: true,
-        eventType: true,
-        eventDate: true,
-        venueCity: true,
-        source: true,
-        totalCents: true,
-        currency: true,
-        createdAt: true,
-        createdById: true,
-        organization: { select: { id: true, name: true } },
-        customer: { select: { name: true, email: true } },
-      },
-    }),
-    prisma.booking.count({ where }),
-  ]);
+  const soonestFirst: Prisma.BookingOrderByWithRelationInput[] = [{ eventDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }];
+  const latestFirst: Prisma.BookingOrderByWithRelationInput[] = [{ eventDate: { sort: "desc", nulls: "last" } }, { createdAt: "desc" }];
+  const and = (extra: Prisma.BookingWhereInput): Prisma.BookingWhereInput => ({ AND: [where, extra] });
+  // The list is read as consecutive groups, each in its own order, paged as one list.
+  const groups: { where: Prisma.BookingWhereInput; orderBy: Prisma.BookingOrderByWithRelationInput[] }[] =
+    sort === "relevance"
+      ? [
+          { where: and({ status: { in: [...openStatuses] } }), orderBy: soonestFirst },
+          { where: and({ status: { notIn: [...openStatuses] } }), orderBy: latestFirst },
+        ]
+      : sort === "status"
+        ? // The booking's stage, not the alphabet: inquiry, quoted, booked … cancelled (or the reverse).
+          (dir === "asc" ? [...bookingStatuses] : [...bookingStatuses].reverse()).map((s) => ({ where: and({ status: s }), orderBy: openStatuses.includes(s) ? soonestFirst : latestFirst }))
+        : [
+            {
+              where,
+              orderBy:
+                sort === "date"
+                  ? [{ eventDate: { sort: dir, nulls: "last" } }, { createdAt: "desc" }]
+                  : sort === "total"
+                    ? [{ totalCents: dir }, { createdAt: "desc" }]
+                    : [{ createdAt: dir }],
+            },
+          ];
+  const counts = await Promise.all(groups.map((g) => prisma.booking.count({ where: g.where })));
+  const total = counts.reduce((a, b) => a + b, 0);
+  let offset = (Math.max(1, page) - 1) * pageSize;
+  let left = pageSize;
+  const rows = [];
+  for (const [i, group] of groups.entries()) {
+    if (left === 0) break;
+    if (offset >= counts[i]!) {
+      offset -= counts[i]!;
+      continue;
+    }
+    const take = Math.min(left, counts[i]! - offset);
+    rows.push(...(await prisma.booking.findMany({ where: group.where, orderBy: group.orderBy, skip: offset, take, select: BOOKING_LIST_SELECT })));
+    left -= take;
+    offset = 0;
+  }
   return { rows, total, pages: Math.max(1, Math.ceil(total / pageSize)) };
 }

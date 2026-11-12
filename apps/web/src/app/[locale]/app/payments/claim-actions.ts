@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { audit, BookingError, confirmPaymentClaim, PaymentClaimError, rejectPaymentClaim } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
-import { writeBlocked } from "@/lib/billing";
+import { suspendedBlocked, writeBlocked } from "@/lib/billing";
 import { announceRejected, sendReceipt } from "@/lib/payment-claims";
 import { clientIp } from "@/lib/rate-limit";
 import { requireAgency } from "@/lib/viewer";
@@ -39,6 +39,8 @@ export async function confirmClaimAction(claimId: string, receivedOn?: string): 
 /** Not (yet) received: the customer is told, with the reason. */
 export async function rejectClaimAction(claimId: string, reason: string): Promise<ActionResult> {
   const { viewer, organization } = await requireAgency("agency.payments.confirm");
+  const blocked = await suspendedBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const t = await getTranslations("paymentClaims");
   if (!reason.trim()) return { ok: false, message: t("reasonRequired") };
   try {

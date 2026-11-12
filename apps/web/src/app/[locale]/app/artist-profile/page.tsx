@@ -2,7 +2,7 @@ import { CheckCircle2Icon, CircleIcon, PartyPopperIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
-import { prisma, soloArtist } from "@stagedesk/db";
+import { ownAgencyArtistProfiles, prisma, soloArtist } from "@stagedesk/db";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,8 +10,9 @@ import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { centsToInput } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { requireAgency } from "@/lib/viewer";
+import { requirePermission } from "@/lib/viewer";
 import { ServiceAreaForm } from "../agency-settings/service-area-form";
+import { AgencyProfileForm } from "./agency-profile-form";
 import { SoloProfileForm } from "./profile-form";
 
 export async function generateMetadata({ params }: PageProps<"/[locale]/app/artist-profile">): Promise<Metadata> {
@@ -29,7 +30,47 @@ export default async function ArtistProfilePage({ params, searchParams }: PagePr
 }
 
 async function Profile({ searchParams }: Pick<PageProps<"/[locale]/app/artist-profile">, "searchParams">) {
-  const { organization } = await requireAgency("artist.profile");
+  const viewer = await requirePermission("artist.profile");
+  const [t, own, solo] = await Promise.all([
+    getTranslations("artistProfile"),
+    ownAgencyArtistProfiles(viewer.user.id),
+    viewer.role === "solo_artist" && viewer.organization ? soloArtist(viewer.organization.id) : null,
+  ]);
+  // Agency and managed-pool artists edit how they're presented at each agency they work for.
+  const agencyProfiles =
+    own.length > 0 ? (
+      <div className="grid gap-6">
+        {solo && <h2 className="text-lg font-semibold">{t("agencyProfilesTitle")}</h2>}
+        {own.map((a) => (
+          <AgencyProfileForm
+            key={a.id}
+            artistId={a.id}
+            agency={a.organization.kind === "platform" ? "StageDesk" : a.organization.name}
+            initial={{
+              stageName: a.stageName,
+              bio: a.bio ?? "",
+              genres: Array.isArray(a.genres) ? (a.genres as string[]).join(", ") : "",
+              mediaLinks: Array.isArray(a.mediaLinks) ? (a.mediaLinks as string[]).join("\n") : "",
+              photoUrl: a.photoUrl,
+            }}
+          />
+        ))}
+      </div>
+    ) : null;
+
+  if (!solo) {
+    return (
+      <div className="grid max-w-3xl gap-6">
+        <PageHeader title={t("title")} description={t("agencyDescription")} />
+        {agencyProfiles ?? <p className="text-muted-foreground">{t("noProfile")}</p>}
+      </div>
+    );
+  }
+  return <SoloProfile organizationId={solo.organizationId} searchParams={searchParams}>{agencyProfiles}</SoloProfile>;
+}
+
+async function SoloProfile({ organizationId, searchParams, children }: Pick<PageProps<"/[locale]/app/artist-profile">, "searchParams"> & { organizationId: string; children: React.ReactNode }) {
+  const organization = { id: organizationId };
   const [t, locale, sp, artist, org, connected, listings, unavailable] = await Promise.all([
     getTranslations("artistProfile"),
     getLocale(),
@@ -109,6 +150,7 @@ async function Profile({ searchParams }: Pick<PageProps<"/[locale]/app/artist-pr
           ownCity: org.city,
         }}
       />
+      {children}
     </div>
   );
 }

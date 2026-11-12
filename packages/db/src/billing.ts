@@ -13,6 +13,7 @@ import {
   type SubscriptionAccess,
 } from "@stagedesk/core";
 import { prisma } from "./client";
+import { Prisma } from "./generated/prisma/client";
 import { exchangeRates } from "./rates";
 import { getSetting } from "./settings";
 import { tenantDb } from "./tenant";
@@ -54,17 +55,135 @@ export async function agencyBilling(organizationId: string, now = new Date()): P
   };
 }
 
-/** Counts used by plan limits. Staff includes pending invitations, so seats can't be overrun by inviting. */
+/** Roles that take a staff seat (`maxStaff`). Artists and customers don't. */
+export const staffSeatRoles = ["agency_owner", "agency_admin", "agency_staff"] as const;
+const seatRoles: readonly string[] = staffSeatRoles;
+export const takesStaffSeat = (role: string) => seatRoles.includes(role);
+
+/** Staff seats in use: staff members plus pending staff invitations, so seats can't be overrun by inviting. */
+async function staffSeatsUsed(db: Pick<Prisma.TransactionClient, "member" | "invitation">, organizationId: string, now: Date) {
+  const [staff, invites] = await Promise.all([
+    db.member.count({ where: { organizationId, role: { in: [...staffSeatRoles] } } }),
+    db.invitation.count({ where: { organizationId, status: "pending", role: { in: ["agency_admin", "agency_staff"] }, expiresAt: { gt: now } } }),
+  ]);
+  return staff + invites;
+}
+
+/** Counts used by plan limits. */
 export async function agencyUsage(organizationId: string, now = new Date()) {
   const db = tenantDb(organizationId);
   const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-  const [maxArtists, staff, invites, maxBookingsPerMonth] = await Promise.all([
+  const [maxArtists, maxStaff, maxBookingsPerMonth] = await Promise.all([
     db.artist.count({ where: { active: true } }),
-    db.member.count({ where: { role: { in: ["agency_owner", "agency_admin", "agency_staff"] } } }),
-    db.invitation.count({ where: { status: "pending", role: { in: ["agency_admin", "agency_staff"] }, expiresAt: { gt: now } } }),
+    staffSeatsUsed(prisma, organizationId, now),
     db.booking.count({ where: { createdAt: { gte: monthStart }, source: "manual" } }),
   ]);
-  return { maxArtists, maxStaff: staff + invites, maxBookingsPerMonth, storageGb: 0 };
+  return { maxArtists, maxStaff, maxBookingsPerMonth, storageGb: 0 };
+}
+
+/**
+ * Seat checks for one agency run one at a time: each locks the agency row,
+ * counts at READ COMMITTED (so it sees what the one before it committed) and
+ * undoes its own change before letting go when the seats are over. Every
+ * change that takes a seat is written first and checked after, so whichever
+ * check runs last sees them all: two promotions, a promotion and an
+ * invitation, or either and an acceptance can't all keep a seat.
+ */
+async function withSeatLock<T>(organizationId: string, fn: (tx: Prisma.TransactionClient, used: number, max: number | null) => Promise<T>, now = new Date()) {
+  const { limits } = await agencyBilling(organizationId, now);
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$queryRaw`SELECT id FROM organizations WHERE id = ${organizationId} FOR UPDATE`;
+      return fn(tx, await staffSeatsUsed(tx, organizationId, now), limits.maxStaff);
+    },
+    { isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, timeout: 20_000 },
+  );
+}
+
+/**
+ * Re-counts seats after a member was given a staff role (Better Auth has
+ * written it by then). Over the limit, the change is undone, back to
+ * `previousRole`, and this returns false. Changes that don't take a seat
+ * (staff to staff, anything to artist) always pass.
+ */
+export async function confirmMemberSeat(organizationId: string, memberId: string, previousRole: string, now = new Date()) {
+  if (takesStaffSeat(previousRole)) return true;
+  return withSeatLock(
+    organizationId,
+    async (tx, used, max) => {
+      const member = await tx.member.findFirst({ where: { id: memberId, organizationId }, select: { role: true } });
+      if (!member || !takesStaffSeat(member.role) || max === null || used <= max) return true;
+      await tx.member.update({ where: { id: memberId }, data: { role: previousRole } });
+      return false;
+    },
+    now,
+  );
+}
+
+/**
+ * Re-counts seats after someone joined from a staff invitation. Accepting
+ * marks the invitation accepted before the member exists, so for a moment
+ * its seat looks free; a promotion made then can't be told apart afterwards.
+ * Over the limit, the new member is removed and the invitation canceled, and
+ * this returns false.
+ */
+export async function confirmJoinedSeat(organizationId: string, memberId: string, invitationId: string, now = new Date()) {
+  return withSeatLock(
+    organizationId,
+    async (tx, used, max) => {
+      const member = await tx.member.findFirst({ where: { id: memberId, organizationId }, select: { role: true } });
+      if (!member || !takesStaffSeat(member.role) || max === null || used <= max) return true;
+      await tx.member.delete({ where: { id: memberId } });
+      await tx.invitation.updateMany({ where: { id: invitationId, organizationId }, data: { status: "canceled" } });
+      return false;
+    },
+    now,
+  );
+}
+
+/**
+ * Re-counts seats once a staff invitation exists: the check before creating
+ * it can't see an invitation or promotion that's being made at the same time.
+ * Over the limit, the invitation is canceled and this returns false.
+ *
+ * Runs for every invitation email, new or resent. An invitation that passed
+ * once is marked (seatCheckedAt) under the same lock, so a resend, however
+ * soon and however many at once, finds the mark and takes no new seat, even
+ * when the agency is over its limit after a downgrade.
+ */
+export async function confirmInvitationSeat(organizationId: string, invitationId: string, now = new Date()) {
+  return withSeatLock(
+    organizationId,
+    async (tx, used, max) => {
+      const invitation = await tx.invitation.findFirst({ where: { id: invitationId, organizationId }, select: { role: true, status: true, seatCheckedAt: true } });
+      if (!invitation || invitation.status !== "pending") return false;
+      if (invitation.seatCheckedAt) return true;
+      if (!takesStaffSeat(invitation.role ?? "") || max === null || used <= max) {
+        await tx.invitation.update({ where: { id: invitationId }, data: { seatCheckedAt: now } });
+        return true;
+      }
+      await tx.invitation.update({ where: { id: invitationId }, data: { status: "canceled" } });
+      return false;
+    },
+    now,
+  );
+}
+
+/**
+ * Adds someone to an agency's team in a staff role (a platform admin doing it
+ * for the agency), under the same seat lock as everything else that takes a
+ * seat. Returns false, writing nothing, when the plan's seats are full.
+ */
+export async function addStaffMemberWithinSeats(organizationId: string, userId: string, role: "agency_admin" | "agency_staff", now = new Date()) {
+  return withSeatLock(
+    organizationId,
+    async (tx, used, max) => {
+      if (max !== null && used + 1 > max) return false;
+      await tx.member.create({ data: { id: randomUUID(), organizationId, userId, role } });
+      return true;
+    },
+    now,
+  );
 }
 
 /**

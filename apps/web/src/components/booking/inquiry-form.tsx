@@ -6,6 +6,7 @@ import { type FormEvent, useEffect, useRef, useState, useTransition } from "reac
 import { budgetRanges, eventTypes, timeInNetherlands, type EventType } from "@stagedesk/core";
 import { type InquiryResult, submitInquiryAction } from "@/app/[locale]/(public)/b/[slug]/actions";
 import { FormMessage } from "@/components/auth/auth-card";
+import { PREFER_ARTIST_EVENT } from "@/components/booking-page/shared";
 import { FormField } from "@/components/form-field";
 import { Turnstile } from "@/components/turnstile";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export function InquiryForm({
   today,
   submitAction,
   kind = "agency",
+  bookingTypes,
 }: {
   slug?: string;
   artists: { id: string; stageName: string }[];
@@ -37,6 +39,7 @@ export function InquiryForm({
   today: string;
   submitAction?: (form: FormData) => Promise<InquiryResult>;
   kind?: "agency" | "platform";
+  bookingTypes?: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -53,6 +56,15 @@ export function InquiryForm({
   useEffect(() => {
     startedAt.current = Date.now();
   }, [formKey]);
+  // "Request this artist" on the booking page fills in the preferred artist.
+  useEffect(() => {
+    const prefer = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail;
+      if (artists.some((a) => a.id === id)) setArtist(id);
+    };
+    window.addEventListener(PREFER_ARTIST_EVENT, prefer);
+    return () => window.removeEventListener(PREFER_ARTIST_EVENT, prefer);
+  }, [artists]);
   const [pending, startTransition] = useTransition();
 
   if (result) {
@@ -106,9 +118,9 @@ export function InquiryForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {eventTypes.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {t(`eventTypes.${e}`)}
+              {(bookingTypes ?? eventTypes.map((key) => ({ key, label: t(`eventTypes.${key}`) }))).map((e) => (
+                <SelectItem key={e.key} value={e.key}>
+                  {e.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -188,6 +200,12 @@ export function InquiryForm({
         <FormField id="inq-message" label={t("bookingPage.message")} className="sm:col-span-2">
           <Textarea id="inq-message" name="message" rows={4} maxLength={5000} />
         </FormField>
+        {/* An agency's own discount code; the platform's request form has none. */}
+        {kind === "agency" && (
+          <FormField id="inq-promo" label={t("bookingPage.promoCode")} hint={t("bookingPage.promoCodeHint")}>
+            <Input id="inq-promo" name="promoCode" maxLength={32} autoComplete="off" className="uppercase" />
+          </FormField>
+        )}
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">

@@ -41,7 +41,7 @@ export type LegalKey = (typeof legalKeys)[number];
 
 /** Top-level paths the app already uses; a page can't take them. */
 export const reservedSlugs = new Set([
-  "app", "api", "b", "q", "embed", "en", "nl", "files", "partners", "pricing", "features", "blog", "help", "contact",
+  "app", "api", "b", "d", "q", "embed", "en", "nl", "files", "partners", "pricing", "features", "blog", "help", "contact",
   "changelog", "for-agencies", "for-artists", "sign-in", "sign-up", "onboarding", "invite", "forgot-password",
   "reset-password", "two-factor", "accept-terms", "waitlist", "og", "sitemap.xml", "robots.txt", "about", "over-ons", "solutions", "request", "tour",
 ]);

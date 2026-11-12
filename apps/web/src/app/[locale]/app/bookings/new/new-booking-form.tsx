@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
@@ -22,10 +23,15 @@ export function NewBookingForm({
   customers,
   submitAction = createBookingAction,
   extra,
+  initialDate,
+  bookingTypes,
 }: {
   customers: { id: string; name: string; email: string }[];
+  /** Event date to start with (picked in the calendar); it can still be changed. */
+  initialDate?: string;
   submitAction?: (prev: FormState, form: FormData) => Promise<FormState>;
   extra?: React.ReactNode;
+  bookingTypes?: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const [state, action, pending] = useActionState(submitAction, {} as FormState);
@@ -34,7 +40,7 @@ export function NewBookingForm({
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form action={action} className="grid gap-6">
+    <form {...keepValues(action)} className="grid gap-6">
       <input type="hidden" name="customerMode" value={mode} />
       <input type="hidden" name="customerId" value={customerId} />
       <Card>
@@ -66,7 +72,7 @@ export function NewBookingForm({
               </FormField>
             </TabsContent>
             <TabsContent value="new" className="mt-4 grid gap-4 sm:grid-cols-2">
-              <FormField required id="nb-cname" label={t("auth.name")} error={errors["customerName"]}>
+              <FormField required id="nb-cname" label={t("newBooking.customerName")} error={errors["customerName"]}>
                 <Input required id="nb-cname" name="customerName" maxLength={191} autoComplete="off" />
               </FormField>
               <FormField required id="nb-cemail" label={t("auth.email")} error={errors["customerEmail"]}>
@@ -85,7 +91,7 @@ export function NewBookingForm({
           <CardTitle>{t("newBooking.event")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <EventFields values={emptyEvent} errors={errors} idPrefix="nb" />
+          <EventFields values={initialDate ? { ...emptyEvent, eventDate: initialDate } : emptyEvent} errors={errors} idPrefix="nb" bookingTypes={bookingTypes} />
           <FormField id="nb-message" label={t("newBooking.message")} error={errors["message"]}>
             <Textarea id="nb-message" name="message" rows={4} maxLength={5000} />
           </FormField>

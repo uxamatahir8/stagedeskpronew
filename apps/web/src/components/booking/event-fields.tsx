@@ -35,7 +35,7 @@ export const emptyEvent: EventValues = {
 };
 
 /** Event, venue and wedding fields shared by "new booking" and "edit details". */
-export function EventFields({ values, errors, idPrefix }: { values: EventValues; errors: Record<string, string>; idPrefix: string }) {
+export function EventFields({ values, errors, idPrefix, bookingTypes }: { values: EventValues; errors: Record<string, string>; idPrefix: string; bookingTypes?: { key: string; label: string }[] }) {
   const t = useTranslations();
   const [type, setType] = useState<EventType>(values.eventType);
   const id = (name: string) => `${idPrefix}-${name}`;
@@ -59,9 +59,9 @@ export function EventFields({ values, errors, idPrefix }: { values: EventValues;
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {eventTypes.map((e) => (
-              <SelectItem key={e} value={e}>
-                {t(`eventTypes.${e}`)}
+            {(bookingTypes ?? eventTypes.map((key) => ({ key, label: t(`eventTypes.${key}`) }))).map((e) => (
+              <SelectItem key={e.key} value={e.key}>
+                {e.label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -73,7 +73,7 @@ export function EventFields({ values, errors, idPrefix }: { values: EventValues;
       {text("venueName", t("newBooking.venueName"), { maxLength: 191 })}
       {text("venueCity", t("newBooking.venueCity"), { maxLength: 96 })}
       {text("venueAddress", t("newBooking.venueAddress"), { maxLength: 191, className: "sm:col-span-2" })}
-      {text("guestCount", t("newBooking.guestCount"), { inputMode: "numeric" })}
+      {text("guestCount", t("newBooking.guestCount"), { type: "number", min: 0, max: 100000, inputMode: "numeric" })}
       {text("budget", t("newBooking.budget"), { inputMode: "decimal" })}
       {type === "wedding" && text("partnerName", t("newBooking.partnerName"), { maxLength: 191 })}
     </div>

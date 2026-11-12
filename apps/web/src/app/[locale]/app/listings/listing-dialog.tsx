@@ -4,7 +4,7 @@ import { PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { type EventType, eventTypes } from "@stagedesk/core";
+import { type EventType } from "@stagedesk/core";
 import { useFormatter } from "@/components/date-prefs";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
@@ -29,9 +29,8 @@ export type ListingValues = {
   active: boolean;
 };
 
-export function ListingDialog({ listing, vatRates, defaultDepositBps, currency }: { listing?: ListingValues; vatRates: number[]; defaultDepositBps: number; currency: string }) {
+export function ListingDialog({ listing, vatRates, defaultDepositBps, currency, bookingTypes }: { listing?: ListingValues; vatRates: number[]; defaultDepositBps: number; currency: string; bookingTypes: { key: string; label: string }[] }) {
   const t = useTranslations("listings");
-  const te = useTranslations("eventTypes");
   const format = useFormatter();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -40,9 +39,9 @@ export function ListingDialog({ listing, vatRates, defaultDepositBps, currency }
   const [v, setV] = useState(initial);
   const set = (patch: Partial<ListingValues>) => setV((x) => ({ ...x, ...patch }));
   const toggleType = (type: EventType) => {
-    const current = v.eventTypes ?? [...eventTypes];
+    const current = v.eventTypes ?? bookingTypes.map((type) => type.key as EventType);
     const next = current.includes(type) ? current.filter((x) => x !== type) : [...current, type];
-    set({ eventTypes: next.length === eventTypes.length ? null : next });
+    set({ eventTypes: next.length === bookingTypes.length ? null : next });
   };
 
   return (
@@ -103,15 +102,15 @@ export function ListingDialog({ listing, vatRates, defaultDepositBps, currency }
           <fieldset className="grid gap-2 sm:col-span-2">
             <legend className="mb-1 text-sm font-medium">{t("eventTypes")}</legend>
             <div className="flex flex-wrap gap-2">
-              {eventTypes.map((type) => (
+              {bookingTypes.map((type) => (
                 <button
-                  key={type}
+                  key={type.key}
                   type="button"
-                  aria-pressed={v.eventTypes === null || v.eventTypes.includes(type)}
-                  onClick={() => toggleType(type)}
+                  aria-pressed={v.eventTypes === null || v.eventTypes.includes(type.key as EventType)}
+                  onClick={() => toggleType(type.key as EventType)}
                   className="rounded-full border px-3 py-1 text-sm transition-colors aria-pressed:border-primary aria-pressed:bg-primary/10 aria-pressed:text-primary"
                 >
-                  {te(type)}
+                  {type.label}
                 </button>
               ))}
             </div>

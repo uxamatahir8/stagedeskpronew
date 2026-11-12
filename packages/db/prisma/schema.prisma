@@ -19,38 +19,42 @@ datasource db {
 // merge by hand: model and field names must match what Better Auth expects.
 
 model User {
-  id               String            @id @db.VarChar(64)
-  name             String            @db.VarChar(191)
-  email            String            @unique @db.VarChar(191)
-  emailVerified    Boolean           @default(false)
-  image            String?           @db.Text
-  twoFactorEnabled Boolean?          @default(false)
+  id                  String            @id @db.VarChar(64)
+  name                String            @db.VarChar(191)
+  email               String            @unique @db.VarChar(191)
+  emailVerified       Boolean           @default(false)
+  image               String?           @db.Text
+  twoFactorEnabled    Boolean?          @default(false)
   /// "platform_admin" | "affiliate" | null. Never accepted from client input.
-  platformRole     String?           @db.VarChar(32)
-  locale           String?           @default("en") @db.VarChar(8)
+  platformRole        String?           @db.VarChar(32)
+  locale              String?           @default("en") @db.VarChar(8)
   /// Personal date and time display; null follows the agency, then the platform.
-  timeZone         String?           @db.VarChar(64)
-  dateFormat       String?           @db.VarChar(16)
-  timeFormat       String?           @db.VarChar(4)
+  timeZone            String?           @db.VarChar(64)
+  dateFormat          String?           @db.VarChar(16)
+  timeFormat          String?           @db.VarChar(4)
   /// Set by the platform admin: the user can't sign in.
-  disabledAt       DateTime?
-  phone            String?           @db.VarChar(32)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  sessions         Session[]
-  accounts         Account[]
-  members          Member[]
-  invitations      Invitation[]
-  twofactors       TwoFactor[]
-  artistProfiles   Artist[]
-  bookings         Booking[]         @relation("BookingCustomer")
-  reviews          Review[]
-  affiliate        Affiliate?
-  notifications    Notification[]
-  bookingMessages  BookingMessage[]
-  supportTickets   SupportTicket[]
-  ticketMessages   TicketMessage[]
-  legalAcceptances LegalAcceptance[]
+  disabledAt          DateTime?
+  phone               String?           @db.VarChar(32)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  members             Member[]
+  invitations         Invitation[]
+  twofactors          TwoFactor[]
+  artistProfiles      Artist[]
+  bookings            Booking[]         @relation("BookingCustomer")
+  reviews             Review[]
+  affiliate           Affiliate?
+  agencyInvites       AgencyInvite[]
+  notifications       Notification[]
+  bookingMessages     BookingMessage[]
+  supportTickets      SupportTicket[]
+  ticketMessages      TicketMessage[]
+  legalAcceptances    LegalAcceptance[]
+  contentArticles     ContentArticle[]  @relation("ContentAuthor")
+  contentReviews      ContentArticle[]  @relation("ContentReviewer")
+  bookingTypesCreated BookingType[]     @relation("BookingTypeCreator")
 
   @@map("users")
 }
@@ -64,6 +68,8 @@ model Session {
   userId                String   @db.VarChar(64)
   /// Platform admins only: the agency they're working in as support (set by the server, never by the client).
   supportOrganizationId String?  @db.VarChar(64)
+  /// Set on a session a platform admin opened as this user ("log in as"); the admin's user id. Written by the server only.
+  impersonatedBy        String?  @db.VarChar(64)
   user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   activeOrganizationId  String?  @db.VarChar(64)
   createdAt             DateTime @default(now())
@@ -149,6 +155,8 @@ model Organization {
   /// { question: string; answer: string }[]
   faq                Json?
   showReviews        Boolean                @default(true)
+  /// Booking page look and section order (BookingTheme in core). null = defaults.
+  bookingTheme       Json?
   stripeCustomerId   String?                @unique @db.VarChar(64)
   /// Set once the agency has had a trial; a trial is offered only once.
   trialUsedAt        DateTime?
@@ -183,11 +191,19 @@ model Organization {
   quoteItems         QuoteItem[]
   payments           Payment[]
   invoices           Invoice[]
+  creditNotes        CreditNote[]
   counters           OrganizationCounter[]
   reviews            Review[]
 
   leadsAssigned Lead[]      @relation("LeadAgency")
   leadOffers    LeadOffer[] @relation("LeadOffers")
+
+  invitesSent              AgencyInvite[]            @relation("InvitingAgency")
+  invitesAccepted          AgencyInvite[]            @relation("JoinedAgency")
+  cancellationFeedback     CancellationFeedback[]
+  platformPromoRedemptions PlatformPromoRedemption[]
+  bookingPromoCodes        BookingPromoCode[]
+  bookingPromoRedemptions  BookingPromoRedemption[]
 
   /// Payment methods the agency offers its customers (within what the platform allows).
   acceptOnline        Boolean          @default(true)
@@ -204,6 +220,40 @@ model Organization {
   gigListings         GigListing[]
   artistRequestsMade  ArtistRequest[]  @relation("ArtistRequestBorrower")
   artistRequestsIn    ArtistRequest[]  @relation("ArtistRequestLender")
+  bookingTypes        BookingType[]
+
+  /// Language for customer emails and documents when the customer hasn't chosen one (nl | en).
+  correspondenceLocale        String                 @default("nl") @db.VarChar(8)
+  /// Upfront payment new quotes start with: none | percentage | fixed. null = the platform default percentage.
+  defaultDepositType          String?                @db.VarChar(16)
+  defaultDepositBps           Int?
+  defaultDepositFixedCents    Int?
+  /// Invoice numbers: yearly (2027-0042) | continuous (000042), with an optional prefix.
+  invoiceNumbering            String                 @default("yearly") @db.VarChar(16)
+  invoicePrefix               String?                @db.VarChar(12)
+  /// Owners and admins may type an invoice's number instead of taking the next one.
+  allowManualInvoiceNumbers   Boolean                @default(false)
+  /// Invoice look (InvoiceTemplate in core): colours, header/footer text, background image. null = defaults.
+  invoiceTemplate             Json?
+  /// Display name on customer emails ("Feestband Utrecht via StageDesk"); null = the agency name.
+  emailFromName               String?                @db.VarChar(120)
+  /// Where customer replies go; null = contactEmail.
+  emailReplyTo                String?                @db.VarChar(191)
+  detailRequests              BookingDetailRequest[]
+  changeRequests              BookingChangeRequest[]
+  /// Customers may edit their music wishes and instructions in their portal.
+  customerPreferencesEditable Boolean                @default(true)
+
+  /// Other agencies may browse this agency's equipment (read-only, public fields only). Off by default.
+  inventorySharing       Boolean                @default(false)
+  /// Assigned artists may record loading and returns on their gigs.
+  artistsHandleEquipment Boolean                @default(false)
+  equipmentCategories    EquipmentCategory[]
+  equipmentItems         EquipmentItem[]
+  equipmentPackages      EquipmentPackage[]
+  equipmentPackageLines  EquipmentPackageLine[]
+  bookingEquipment       BookingEquipment[]
+  equipmentEvents        EquipmentEvent[]
 
   @@map("organizations")
 }
@@ -235,6 +285,9 @@ model Invitation {
   expiresAt      DateTime
   inviterId      String       @db.VarChar(64)
   user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  /// When the staff-seat check (under the agency lock) accepted this invitation. Set once; a resend
+  /// finds it set and takes no new seat. Not a Better Auth field: Better Auth never writes it.
+  seatCheckedAt  DateTime?
   createdAt      DateTime     @default(now())
 
   @@index([organizationId, status])
@@ -269,37 +322,40 @@ model RateLimit {
 
 /// A performer an agency books. userId links the artist's own login, if any.
 model Artist {
-  id                String                 @id @db.VarChar(64)
-  organizationId    String                 @db.VarChar(64)
-  organization      Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  userId            String?                @db.VarChar(64)
-  user              User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
-  stageName         String                 @db.VarChar(120)
-  bio               String?                @db.Text
+  id                   String                 @id @db.VarChar(64)
+  organizationId       String                 @db.VarChar(64)
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId               String?                @db.VarChar(64)
+  user                 User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  stageName            String                 @db.VarChar(120)
+  bio                  String?                @db.Text
   /// string[]
-  genres            Json
-  photoUrl          String?                @db.Text
+  genres               Json
+  photoUrl             String?                @db.Text
   /// Shown on the agency's public booking page.
-  showOnBookingPage Boolean                @default(true)
+  showOnBookingPage    Boolean                @default(true)
   /// string[]: YouTube, Vimeo, SoundCloud or Mixcloud links
-  mediaLinks        Json?
+  mediaLinks           Json?
   /// Default share of each booking payment, in basis points.
-  defaultShareBps   Int                    @default(4000)
+  defaultShareBps      Int                    @default(4000)
+  /// percentage (defaultShareBps) | fixed (defaultFixedFeeCents per booking, in the agency's currency).
+  compensationType     String                 @default("percentage") @db.VarChar(16)
+  defaultFixedFeeCents Int?
   /// Other agencies may ask to book this artist for one of their bookings, for an agreed fee.
-  lendable          Boolean                @default(false)
+  lendable             Boolean                @default(false)
   /// Independent artists: one line under their name in the directory, and their lowest price.
-  headline          String?                @db.VarChar(160)
-  priceFromCents    Int?
-  listings          GigListing[]
-  requests          ArtistRequest[]
-  active            Boolean                @default(true)
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  assignments       BookingAssignment[]
-  unavailability    ArtistUnavailability[]
-  shares            ArtistShare[]
-  reviews           Review[]
-  connectedAccount  ConnectedAccount?
+  headline             String?                @db.VarChar(160)
+  priceFromCents       Int?
+  listings             GigListing[]
+  requests             ArtistRequest[]
+  active               Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  assignments          BookingAssignment[]
+  unavailability       ArtistUnavailability[]
+  shares               ArtistShare[]
+  reviews              Review[]
+  connectedAccount     ConnectedAccount?
 
   @@unique([organizationId, userId])
   @@index([organizationId, active])
@@ -347,100 +403,145 @@ model ArtistShare {
 
 /// One event for one customer. Status changes go through transition() in core.
 model Booking {
-  id                String              @id @db.VarChar(64)
-  organizationId    String              @db.VarChar(64)
-  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  id                   String                  @id @db.VarChar(64)
+  organizationId       String                  @db.VarChar(64)
+  organization         Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   /// Public reference, e.g. K7Q2M9XA.
-  trackingCode      String              @unique @db.VarChar(8)
+  trackingCode         String                  @unique @db.VarChar(8)
   /// The agency's currency when the booking was made; all amounts on it are in this currency.
-  currency          String              @default("EUR") @db.VarChar(3)
-  status            String              @default("inquiry") @db.VarChar(16)
-  customerId        String?             @db.VarChar(64)
-  customer          User?               @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
-  eventType         String              @db.VarChar(24)
-  eventDate         DateTime?           @db.Date
-  startTime         String?             @db.VarChar(5)
-  endTime           String?             @db.VarChar(5)
-  venueName         String?             @db.VarChar(191)
-  venueAddress      String?             @db.VarChar(191)
-  venueCity         String?             @db.VarChar(96)
-  guestCount        Int?
-  budgetCents       Int?
+  currency             String                  @default("EUR") @db.VarChar(3)
+  status               String                  @default("inquiry") @db.VarChar(16)
+  customerId           String?                 @db.VarChar(64)
+  customer             User?                   @relation("BookingCustomer", fields: [customerId], references: [id], onDelete: SetNull)
+  eventType            String                  @db.VarChar(24)
+  eventDate            DateTime?               @db.Date
+  startTime            String?                 @db.VarChar(5)
+  endTime              String?                 @db.VarChar(5)
+  venueName            String?                 @db.VarChar(191)
+  venueAddress         String?                 @db.VarChar(191)
+  venueCity            String?                 @db.VarChar(96)
+  guestCount           Int?
+  budgetCents          Int?
   /// The customer's own words from the inquiry.
-  message           String?             @db.Text
-  partnerName       String?             @db.VarChar(191)
+  message              String?                 @db.Text
+  partnerName          String?                 @db.VarChar(191)
   /// string[]
-  dos               Json?
+  dos                  Json?
   /// string[]
-  donts             Json?
-  playlistUrl       String?             @db.VarChar(500)
+  donts                Json?
+  playlistUrl          String?                 @db.VarChar(500)
   /// From the public inquiry form.
-  preferredArtistId String?             @db.VarChar(64)
-  preferredGenre    String?             @db.VarChar(96)
+  preferredArtistId    String?                 @db.VarChar(64)
+  preferredGenre       String?                 @db.VarChar(96)
   /// Key from core's budgetRanges, e.g. "750_1500".
-  budgetRange       String?             @db.VarChar(16)
-  ceremony          Boolean?
+  budgetRange          String?                 @db.VarChar(16)
+  ceremony             Boolean?
   /// manual | booking_page | lead | gig | profile
-  source            String              @default("manual") @db.VarChar(16)
+  source               String                  @default("manual") @db.VarChar(16)
   /// The gig an independent artist offered that the customer ordered (source "gig").
-  listingId         String?             @db.VarChar(64)
-  listing           GigListing?         @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listingId            String?                 @db.VarChar(64)
+  listing              GigListing?             @relation(fields: [listingId], references: [id], onDelete: SetNull)
   /// Copied from the accepted quote.
-  totalCents        Int                 @default(0)
-  depositCents      Int                 @default(0)
+  totalCents           Int                     @default(0)
+  depositCents         Int                     @default(0)
   /// Sum of received payments, kept in step by recordPayment().
-  paidCents         Int                 @default(0)
-  quoteExpiresAt    DateTime?
+  paidCents            Int                     @default(0)
+  quoteExpiresAt       DateTime?
   /// { rule: FeeRule; stripeFeePaidBy } frozen when the quote is accepted.
-  feeSnapshot       Json?
+  feeSnapshot          Json?
   /// A customer opened a card dispute; payouts wait until it's resolved.
-  disputed          Boolean             @default(false)
+  disputed             Boolean                 @default(false)
   /// When Stripe money was transferred to the agency and artist.
-  paidOutAt         DateTime?
-  cancelReason      String?             @db.Text
-  createdById       String?             @db.VarChar(64)
-  quotedAt          DateTime?
-  bookedAt          DateTime?
-  confirmedAt       DateTime?
-  completedAt       DateTime?
-  settledAt         DateTime?
-  cancelledAt       DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  assignments       BookingAssignment[]
-  events            BookingEvent[]
-  notes             BookingNote[]
-  quotes            Quote[]
-  payments          Payment[]
-  invoices          Invoice[]
-  review            Review?
-  ledger            LedgerEntry[]
-  messages          BookingMessage[]
-  paymentClaims     PaymentClaim[]
-  artistRequests    ArtistRequest[]
+  paidOutAt            DateTime?
+  cancelReason         String?                 @db.Text
+  /// What happened to money already paid when the booking was cancelled or declined: refund | keep (a cancellation fee).
+  cancelSettlement     String?                 @db.VarChar(16)
+  createdById          String?                 @db.VarChar(64)
+  quotedAt             DateTime?
+  bookedAt             DateTime?
+  confirmedAt          DateTime?
+  completedAt          DateTime?
+  settledAt            DateTime?
+  cancelledAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  assignments          BookingAssignment[]
+  events               BookingEvent[]
+  notes                BookingNote[]
+  quotes               Quote[]
+  payments             Payment[]
+  invoices             Invoice[]
+  creditNotes          CreditNote[]
+  promoRedemption      BookingPromoRedemption?
+  review               Review?
+  ledger               LedgerEntry[]
+  messages             BookingMessage[]
+  paymentClaims        PaymentClaim[]
+  artistRequests       ArtistRequest[]
+  /// Set when the agency finished checking equipment back in; anything still out is then missing.
+  equipmentCheckedInAt DateTime?
+  equipment            BookingEquipment[]
+  detailRequests       BookingDetailRequest[]
+  changeRequests       BookingChangeRequest[]
+  /// The customer's further music wishes and instructions, separate from their first message.
+  musicRequests        String?                 @db.Text
+  specialRequests      String?                 @db.Text
+  /// A key the customer's form sends along, so a repeated submit doesn't make a second booking.
+  clientRequestId      String?                 @db.VarChar(64)
 
+  /// Target of the equipment lines' composite foreign key (same agency).
+  @@unique([organizationId, id])
+  @@unique([organizationId, clientRequestId])
   @@index([organizationId, status])
   @@index([organizationId, eventDate])
   @@index([customerId])
   @@map("bookings")
 }
 
-/// An artist asked to perform at a booking. One open assignment per booking.
-model BookingAssignment {
+/// A customer asking to change contract details (date, times, venue, type, guests) the agency then decides on.
+model BookingChangeRequest {
   id             String       @id @db.VarChar(64)
   organizationId String       @db.VarChar(64)
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   bookingId      String       @db.VarChar(64)
   booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  artistId       String       @db.VarChar(64)
-  artist         Artist       @relation(fields: [artistId], references: [id], onDelete: Restrict)
-  /// pending | accepted | declined | withdrawn
+  /// pending | approved | rejected | withdrawn | superseded
   status         String       @db.VarChar(16)
-  /// Artist's share for this booking, copied when assigned.
-  shareBps       Int
-  declineReason  String?      @db.Text
-  respondedAt    DateTime?
+  /// { field: new value } for the fields that would change.
+  changes        Json
+  /// { field: value at the time of asking }, so the agency sees what it replaces.
+  baseline       Json
+  note           String?      @db.Text
+  requestedById  String       @db.VarChar(64)
+  decidedById    String?      @db.VarChar(64)
+  decidedAt      DateTime?
+  decisionNote   String?      @db.Text
   createdAt      DateTime     @default(now())
+
+  @@index([bookingId, status])
+  @@index([organizationId, status])
+  @@map("booking_change_requests")
+}
+
+/// An artist asked to perform at a booking. One open assignment per booking.
+model BookingAssignment {
+  id               String       @id @db.VarChar(64)
+  organizationId   String       @db.VarChar(64)
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId        String       @db.VarChar(64)
+  booking          Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  artistId         String       @db.VarChar(64)
+  artist           Artist       @relation(fields: [artistId], references: [id], onDelete: Restrict)
+  /// pending | accepted | declined | withdrawn
+  status           String       @db.VarChar(16)
+  /// Artist's share for this booking, copied when assigned.
+  shareBps         Int
+  /// percentage (shareBps) | fixed (fixedFeeCents, in the booking's currency). Copied when assigned; old rows are percentage.
+  compensationType String       @default("percentage") @db.VarChar(16)
+  fixedFeeCents    Int?
+  declineReason    String?      @db.Text
+  respondedAt      DateTime?
+  createdAt        DateTime     @default(now())
 
   @@index([bookingId, status])
   @@index([artistId, status])
@@ -505,31 +606,39 @@ model ServiceItem {
 
 /// A versioned price offer for a booking. Totals are stored as sent.
 model Quote {
-  id             String       @id @db.VarChar(64)
-  organizationId String       @db.VarChar(64)
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  bookingId      String       @db.VarChar(64)
-  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  version        Int
+  id                String       @id @db.VarChar(64)
+  organizationId    String       @db.VarChar(64)
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId         String       @db.VarChar(64)
+  booking           Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  version           Int
   /// draft | sent | accepted | superseded | declined
-  status         String       @db.VarChar(16)
+  status            String       @db.VarChar(16)
   /// Secret for the customer's /q/<token> link.
-  token          String       @unique @db.VarChar(64)
-  notes          String?      @db.Text
-  depositBps     Int
-  subtotalCents  Int
-  vatCents       Int
-  totalCents     Int
-  depositCents   Int
+  token             String       @unique @db.VarChar(64)
+  notes             String?      @db.Text
+  /// none | percentage (depositBps) | fixed (depositFixedCents). Old quotes are percentage.
+  depositType       String       @default("percentage") @db.VarChar(16)
+  depositBps        Int
+  depositFixedCents Int?
+  /// Language the quote was sent in (emails, PDF, reminders); null on quotes from before it was stored.
+  locale            String?      @db.VarChar(8)
+  /// The event details the quote was made for (QuoteEventSnapshot in core). The customer accepts these;
+  /// when the booking's details change the quote is outdated and must be revised. null on older quotes.
+  eventSnapshot     Json?
+  subtotalCents     Int
+  vatCents          Int
+  totalCents        Int
+  depositCents      Int
   /// VatGroup[]
-  vatGroups      Json
-  expiresAt      DateTime
-  sentAt         DateTime?
-  acceptedAt     DateTime?
-  acceptedByName String?      @db.VarChar(191)
-  createdById    String?      @db.VarChar(64)
-  createdAt      DateTime     @default(now())
-  items          QuoteItem[]
+  vatGroups         Json
+  expiresAt         DateTime
+  sentAt            DateTime?
+  acceptedAt        DateTime?
+  acceptedByName    String?      @db.VarChar(191)
+  createdById       String?      @db.VarChar(64)
+  createdAt         DateTime     @default(now())
+  items             QuoteItem[]
 
   @@unique([bookingId, version])
   @@index([organizationId, status])
@@ -603,12 +712,54 @@ model LedgerEntry {
   amountCents    Int
   artistId       String?      @db.VarChar(64)
   stripeObjectId String?      @db.VarChar(64)
+  /// The FinancialOperation that wrote this row; an operation books each (type, party) once.
+  operationId    String?      @db.VarChar(64)
   createdAt      DateTime     @default(now())
 
+  @@unique([operationId, type, party])
   @@index([organizationId, createdAt])
   @@index([bookingId])
   @@index([artistId, type])
+  @@index([stripeObjectId])
   @@map("ledger_entries")
+}
+
+/// A money movement that calls Stripe (refund, payout). Created and its amount
+/// reserved in one transaction before Stripe is called, so a retry, a second
+/// click or a crashed worker continues the same operation instead of starting
+/// another. Stripe calls use keys derived from the id; results are stored as
+/// they arrive, and the ledger is written once when everything succeeded.
+model FinancialOperation {
+  id             String    @id @db.VarChar(64)
+  /// refund | payout
+  kind           String    @db.VarChar(16)
+  /// Identity of the request: refund:<request id> or payout:<payment id>.
+  key            String    @unique @db.VarChar(120)
+  organizationId String    @db.VarChar(64)
+  bookingId      String?   @db.VarChar(64)
+  paymentId      String?   @db.VarChar(64)
+  amountCents    Int
+  currency       String    @db.VarChar(3)
+  /// pending (reserved, Stripe work outstanding) | completed | failed (nothing moved) | review (needs an operator)
+  status         String    @default("pending") @db.VarChar(16)
+  /// The plan and the Stripe ids received so far (see packages/payments/src/operations.ts).
+  data           Json
+  attempts       Int       @default(0)
+  lastError      String?   @db.Text
+  nextAttemptAt  DateTime?
+  /// Claimed by a process until then; another may take over after it passes.
+  lockedUntil    DateTime?
+  /// The claim's owner (fencing token): writes by a process whose claim was taken over are refused.
+  lockToken      String?   @db.VarChar(64)
+  actorId        String?   @db.VarChar(64)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  completedAt    DateTime?
+
+  @@index([status, nextAttemptAt])
+  @@index([paymentId, status])
+  @@index([organizationId, createdAt])
+  @@map("financial_operations")
 }
 
 // ─── Subscriptions and Stripe ───────────────────────────────────────────
@@ -674,6 +825,32 @@ model Subscription {
   @@map("subscriptions")
 }
 
+/// Something in an agency's billing that a platform operator must look at,
+/// e.g. two live Stripe subscriptions. Platform-level (agencyId, not
+/// organizationId), so it stays out of tenantDb. Nothing is changed in Stripe
+/// automatically; reconciling re-reads Stripe and resolves it when it's gone.
+model BillingIncident {
+  id           String    @id @db.VarChar(64)
+  agencyId     String    @db.VarChar(64)
+  /// duplicate_subscription
+  kind         String    @db.VarChar(32)
+  /// open | resolved
+  status       String    @default("open") @db.VarChar(16)
+  /// "<agencyId>:<kind>" while open, null once resolved: one open incident per agency and kind.
+  openKey      String?   @unique @db.VarChar(120)
+  /// e.g. { authoritative: "sub_…", duplicates: ["sub_…"], customerId }
+  data         Json
+  detectedAt   DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  resolvedAt   DateTime?
+  resolvedById String?   @db.VarChar(64)
+  note         String?   @db.Text
+
+  @@index([status, detectedAt])
+  @@index([agencyId])
+  @@map("billing_incidents")
+}
+
 /// A Stripe Express account for an agency (receives its share) or an artist.
 model ConnectedAccount {
   id               String       @id @db.VarChar(64)
@@ -695,16 +872,24 @@ model ConnectedAccount {
 
 /// Every Stripe webhook event, stored once by id so it's processed at most once.
 model StripeEvent {
-  id          String    @id @db.VarChar(80)
-  type        String    @db.VarChar(80)
-  /// received | processed | failed | ignored
-  status      String    @default("received") @db.VarChar(16)
-  error       String?   @db.Text
-  payload     Json
-  receivedAt  DateTime  @default(now())
-  processedAt DateTime?
+  id            String    @id @db.VarChar(80)
+  type          String    @db.VarChar(80)
+  /// received | processing | processed | failed (retried with backoff) | dead (gave up; replay by hand) | ignored
+  status        String    @default("received") @db.VarChar(16)
+  error         String?   @db.Text
+  payload       Json
+  attempts      Int       @default(0)
+  /// A failed event is retried from then on.
+  nextAttemptAt DateTime?
+  /// Claimed by one process until then, so two can't run the same event.
+  lockedUntil   DateTime?
+  /// The claim's owner; a process whose lease was taken over can't record an outcome.
+  lockToken     String?   @db.VarChar(64)
+  receivedAt    DateTime  @default(now())
+  processedAt   DateTime?
 
   @@index([status, receivedAt])
+  @@index([status, nextAttemptAt])
   @@map("stripe_events")
 }
 
@@ -715,7 +900,9 @@ model Invoice {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
   bookingId      String       @db.VarChar(64)
   booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
-  number         String       @db.VarChar(16)
+  number         String       @db.VarChar(32)
+  /// Typed by the agency instead of drawn from the counter (audited).
+  manualNumber   Boolean      @default(false)
   issuedAt       DateTime
   dueAt          DateTime?
   subtotalCents  Int
@@ -723,10 +910,37 @@ model Invoice {
   totalCents     Int
   data           Json
   createdAt      DateTime     @default(now())
+  creditNotes    CreditNote[]
 
   @@unique([organizationId, number])
   @@index([bookingId])
   @@map("invoices")
+}
+
+/// Corrects an issued invoice when money on it is refunded. Amounts are positive; the document shows them as negative.
+model CreditNote {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  invoiceId      String       @db.VarChar(64)
+  invoice        Invoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  /// What caused it (a refund operation or a refund seen on a Stripe charge); one note per cause.
+  sourceKey      String       @unique @db.VarChar(191)
+  number         String       @db.VarChar(32)
+  issuedAt       DateTime
+  subtotalCents  Int
+  vatCents       Int
+  totalCents     Int
+  /// The VAT split, as printed.
+  vatGroups      Json
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, number])
+  @@index([bookingId])
+  @@index([invoiceId])
+  @@map("credit_notes")
 }
 
 /// Per-agency sequences, e.g. invoice numbers per year.
@@ -923,6 +1137,11 @@ model AffiliatePayout {
   /// The bank or PayPal transaction reference entered when paid by hand.
   transactionRef   String?                @db.VarChar(120)
   error            String?                @db.Text
+  /// Stripe transfer attempts so far; after the first, Stripe is searched before sending again.
+  attempts         Int                    @default(0)
+  /// While "processing": the owner's token and lease. Only the owner may finish it; an expired lease can be taken over.
+  lockToken        String?                @db.VarChar(64)
+  lockedUntil      DateTime?
   rejectReason     String?                @db.VarChar(300)
   reviewedById     String?                @db.VarChar(64)
   reviewedAt       DateTime?
@@ -1062,17 +1281,19 @@ model TicketMessage {
  * Who did what: admin, money and access changes. Append-only.
  */
 model AuditEvent {
-  id         BigInt   @id @default(autoincrement())
-  actorId    String?  @db.VarChar(64)
+  id             BigInt   @id @default(autoincrement())
+  actorId        String?  @db.VarChar(64)
   /// The agency affected, if any (platform-level, so not organizationId).
-  agencyId   String?  @db.VarChar(64)
+  agencyId       String?  @db.VarChar(64)
   /// e.g. settings.update, plan.save, agency.fee_deal, affiliate.status, payment.refund, user.disable
-  action     String   @db.VarChar(64)
-  targetType String?  @db.VarChar(32)
-  targetId   String?  @db.VarChar(64)
-  data       Json?
-  ip         String?  @db.VarChar(64)
-  createdAt  DateTime @default(now())
+  action         String   @db.VarChar(64)
+  targetType     String?  @db.VarChar(32)
+  targetId       String?  @db.VarChar(64)
+  data           Json?
+  ip             String?  @db.VarChar(64)
+  /// The platform admin behind the change when it was made while logged in as the actor.
+  impersonatorId String?  @db.VarChar(64)
+  createdAt      DateTime @default(now())
 
   @@index([createdAt])
   @@index([agencyId, createdAt])
@@ -1400,29 +1621,60 @@ model ContentCategory {
 
 /// A blog post, help article or changelog entry. Bodies are Markdown, rendered without raw HTML.
 model ContentArticle {
-  id          String           @id @db.VarChar(64)
+  id              String           @id @db.VarChar(64)
   /// blog | help | changelog
-  kind        String           @db.VarChar(16)
-  slug        String           @db.VarChar(120)
-  categoryId  String?          @db.VarChar(64)
-  category    ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  /// draft | published
-  status      String           @default("draft") @db.VarChar(16)
+  kind            String           @db.VarChar(16)
+  slug            String           @db.VarChar(120)
+  categoryId      String?          @db.VarChar(64)
+  category        ContentCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  /// draft | pending | published | rejected
+  status          String           @default("draft") @db.VarChar(16)
   /// Shown first (blog: the lead story).
-  featured    Boolean          @default(false)
-  publishedAt DateTime?
-  coverImage  String?          @db.VarChar(500)
-  authorName  String?          @db.VarChar(120)
+  featured        Boolean          @default(false)
+  publishedAt     DateTime?
+  coverImage      String?          @db.VarChar(500)
+  authorName      String?          @db.VarChar(120)
+  authorId        String?          @db.VarChar(64)
+  author          User?            @relation("ContentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  submittedAt     DateTime?
+  reviewedById    String?          @db.VarChar(64)
+  reviewedBy      User?            @relation("ContentReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+  rejectionReason String?          @db.VarChar(500)
   /// ArticleLocale (packages/core/src/content.ts); English is optional.
-  nl          Json
-  en          Json?
-  position    Int              @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  nl              Json
+  en              Json?
+  position        Int              @default(0)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@unique([kind, slug])
   @@index([kind, status, publishedAt])
+  @@index([authorId, kind, status])
   @@map("content_articles")
+}
+
+/// A booking/event type. Platform rows have no organization; agencies and
+/// independent artists own their custom rows. Historical bookings keep their
+/// stable `eventType` key, so types in use are archived rather than removed.
+model BookingType {
+  id             String        @id @db.VarChar(64)
+  key            String        @db.VarChar(64)
+  nameNl         String        @db.VarChar(80)
+  nameEn         String        @db.VarChar(80)
+  organizationId String?       @db.VarChar(64)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String?       @db.VarChar(64)
+  createdBy      User?         @relation("BookingTypeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  active         Boolean       @default(true)
+  protected      Boolean       @default(false)
+  position       Int           @default(0)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([organizationId, key])
+  @@index([organizationId, active, position])
+  @@map("booking_types")
 }
 
 /// A website or app text changed in the admin panel, merged over the
@@ -1546,16 +1798,21 @@ model NewsletterCampaign {
 
 /// One campaign to one subscriber; the unique key makes sending idempotent.
 model NewsletterDelivery {
-  id           String               @id @db.VarChar(64)
-  campaignId   String               @db.VarChar(64)
-  campaign     NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  subscriberId String               @db.VarChar(64)
-  subscriber   NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
-  /// queued | sent | failed
-  status       String               @default("queued") @db.VarChar(16)
-  error        String?              @db.VarChar(500)
-  sentAt       DateTime?
-  createdAt    DateTime             @default(now())
+  id            String               @id @db.VarChar(64)
+  campaignId    String               @db.VarChar(64)
+  campaign      NewsletterCampaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  subscriberId  String               @db.VarChar(64)
+  subscriber    NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  /// queued (also while waiting to retry) | sent | failed (permanent, or out of retries)
+  status        String               @default("queued") @db.VarChar(16)
+  error         String?              @db.VarChar(500)
+  sentAt        DateTime?
+  attempts      Int                  @default(0)
+  /// After a temporary failure (SMTP 4xx, connection): not before then.
+  nextAttemptAt DateTime?
+  /// Claimed by one sender until then, so two can't mail the same person.
+  lockedUntil   DateTime?
+  createdAt     DateTime             @default(now())
 
   @@unique([campaignId, subscriberId])
   @@index([campaignId, status])
@@ -1634,4 +1891,365 @@ model ArtistRequest {
   @@index([lenderId, status])
   @@index([bookingId, status])
   @@map("artist_requests")
+}
+
+// ─── Equipment inventory ────────────────────────────────────────────────
+// Each agency's own gear, the packing lists on its bookings, and reusable
+// packages. Rules (availability, return states) live in core's inventory.ts;
+// writes in packages/db/src/inventory.ts and booking-equipment.ts.
+// References inside the module are composite (organizationId, id) foreign
+// keys, so MySQL itself refuses a link to another agency's rows. Quantity
+// rules are CHECK constraints in the migration SQL (Prisma doesn't model them).
+
+/// An agency's own equipment category (Speakers, Cables, …).
+model EquipmentCategory {
+  id             String                 @id @db.VarChar(64)
+  organizationId String                 @db.VarChar(64)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String                 @db.VarChar(96)
+  position       Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  items          EquipmentItem[]
+  packageLines   EquipmentPackageLine[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("equipment_categories")
+}
+
+/// One piece of equipment (tracking "unit"), counted stock such as cables
+/// (tracking "bulk"), a physical case (kind "case") or a logical set (kind "set").
+/// Unit items can sit in one case or set (containerId), one level deep.
+model EquipmentItem {
+  id                 String                 @id @db.VarChar(64)
+  organizationId     String                 @db.VarChar(64)
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// The agency's own number, upper case. Unique per agency; retired items keep theirs.
+  code               String                 @db.VarChar(32)
+  name               String                 @db.VarChar(191)
+  /// item | case | set
+  kind               String                 @default("item") @db.VarChar(8)
+  /// unit (one physical asset) | bulk (counted stock)
+  tracking           String                 @default("unit") @db.VarChar(8)
+  /// Owned stock: 1 for unit items, cases and sets. Lowered when units are confirmed lost.
+  quantity           Int                    @default(1)
+  /// Bulk only: units in stock that are damaged and can't be used.
+  defectiveQty       Int                    @default(0)
+  /// available | maintenance | defective | lost | retired. Being out on a gig is derived from the packing lists.
+  status             String                 @default("available") @db.VarChar(12)
+  /// good | fair | poor
+  condition          String                 @default("good") @db.VarChar(8)
+  categoryId         String?                @db.VarChar(64)
+  category           EquipmentCategory?     @relation(fields: [organizationId, categoryId], references: [organizationId, id], onDelete: Restrict)
+  containerId        String?                @db.VarChar(64)
+  container          EquipmentItem?         @relation("Contents", fields: [organizationId, containerId], references: [organizationId, id], onDelete: Restrict, onUpdate: Restrict)
+  contents           EquipmentItem[]        @relation("Contents")
+  manufacturer       String?                @db.VarChar(96)
+  model              String?                @db.VarChar(96)
+  /// Internal only, never shared.
+  serialNumber       String?                @db.VarChar(96)
+  powerWatts         Int?
+  batteryPowered     Boolean                @default(false)
+  /// { label: string; value: string }[]. Internal only, never shared.
+  specs              Json?
+  /// Internal only, never shared.
+  notes              String?                @db.Text
+  /// Kept private even when the agency shares its inventory.
+  excludeFromSharing Boolean                @default(false)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  bookingLines       BookingEquipment[]
+  packageLines       EquipmentPackageLine[]
+  events             EquipmentEvent[]
+
+  @@unique([organizationId, code])
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@index([organizationId, categoryId])
+  @@index([organizationId, containerId])
+  @@map("equipment_items")
+}
+
+/// A reusable template ("DJ package A") applied to packing lists. Applying copies
+/// items onto the booking; later edits to the package don't change bookings.
+model EquipmentPackage {
+  id             String                 @id @db.VarChar(64)
+  organizationId String                 @db.VarChar(64)
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String                 @db.VarChar(120)
+  description    String?                @db.Text
+  position       Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  lines          EquipmentPackageLine[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+  @@map("equipment_packages")
+}
+
+/// A package line: a specific item (with a quantity for bulk stock), or
+/// "quantity unit items from this category", picked when the package is applied.
+model EquipmentPackageLine {
+  id             String             @id @db.VarChar(64)
+  organizationId String             @db.VarChar(64)
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  packageId      String             @db.VarChar(64)
+  package        EquipmentPackage   @relation(fields: [organizationId, packageId], references: [organizationId, id], onDelete: Cascade)
+  itemId         String?            @db.VarChar(64)
+  item           EquipmentItem?     @relation(fields: [organizationId, itemId], references: [organizationId, id], onDelete: Cascade)
+  categoryId     String?            @db.VarChar(64)
+  category       EquipmentCategory? @relation(fields: [organizationId, categoryId], references: [organizationId, id], onDelete: Restrict)
+  quantity       Int                @default(1)
+  position       Int                @default(0)
+
+  @@index([organizationId, packageId, position])
+  @@map("equipment_package_lines")
+}
+
+/// One item on one booking's packing list. All state is counts; outstanding
+/// (loaded and not yet resolved) and the stage are derived in core.
+model BookingEquipment {
+  id             String        @id @db.VarChar(64)
+  organizationId String        @db.VarChar(64)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String        @db.VarChar(64)
+  booking        Booking       @relation(fields: [organizationId, bookingId], references: [organizationId, id], onDelete: Restrict)
+  itemId         String        @db.VarChar(64)
+  item           EquipmentItem @relation(fields: [organizationId, itemId], references: [organizationId, id], onDelete: Restrict)
+  /// The case or set it was packed through, for grouping; a snapshot, so later membership changes don't rewrite history.
+  viaContainerId String?       @db.VarChar(64)
+  /// Planned.
+  quantity       Int
+  loadedQty      Int           @default(0)
+  /// Came back fine.
+  returnedQty    Int           @default(0)
+  /// Came back damaged (moved to the item's defective stock).
+  damagedQty     Int           @default(0)
+  /// Confirmed lost by an owner or admin.
+  lostQty        Int           @default(0)
+  /// Holds stock on the booking's date while the booking is booked or confirmed. null = not reserved (yet, or it didn't fit).
+  reservedAt     DateTime?
+  /// A same-day conflict an owner or admin accepted, with their reason.
+  overrideReason String?       @db.VarChar(191)
+  overriddenById String?       @db.VarChar(64)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([bookingId, itemId])
+  @@index([organizationId, itemId])
+  @@map("booking_equipment")
+}
+
+/// Append-only history of one item: created, edited, status, case moves, loaded, returned, damaged, lost, repaired, found.
+model EquipmentEvent {
+  id             BigInt        @id @default(autoincrement())
+  organizationId String        @db.VarChar(64)
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  itemId         String        @db.VarChar(64)
+  item           EquipmentItem @relation(fields: [organizationId, itemId], references: [organizationId, id], onDelete: Cascade)
+  /// The booking it happened on, if any (no foreign key: history outlives the link).
+  bookingId      String?       @db.VarChar(64)
+  type           String        @db.VarChar(24)
+  actorId        String?       @db.VarChar(64)
+  data           Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, itemId, createdAt])
+  @@index([organizationId, bookingId])
+  @@map("equipment_events")
+}
+
+/// A private link the agency sends a customer to fill in a booking's event details
+/// (after a phone call, say). Only the hash of the token is stored; the link
+/// expires, can be revoked, and is used once.
+model BookingDetailRequest {
+  id             String       @id @db.VarChar(64)
+  organizationId String       @db.VarChar(64)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  bookingId      String       @db.VarChar(64)
+  booking        Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// sha256 of the link's secret, base64url.
+  tokenHash      String       @unique @db.VarChar(64)
+  locale         String       @default("nl") @db.VarChar(8)
+  /// The booking's updatedAt when the link was made.
+  bookingVersion DateTime
+  /// The event fields when the link was made: a field the agency changed since keeps the agency's value.
+  snapshot       Json
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  submittedAt    DateTime?
+  createdById    String?      @db.VarChar(64)
+  emailedTo      String?      @db.VarChar(191)
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, bookingId])
+  @@map("booking_detail_requests")
+}
+
+/// Outbox for email: every message is stored before it is handed to the queue,
+/// so a Redis outage, a crashed worker or a failed SMTP call leaves a row to
+/// retry instead of losing the message. One send per row (claimed with a
+/// lease); `key` makes a repeated request store nothing new. Agency id, not
+/// organizationId, so it stays outside the tenant-scoped client.
+model EmailMessage {
+  id                String    @id @db.VarChar(64)
+  /// Idempotency key from the business record, e.g. quote:<id> or gig-new:<assignment id>.
+  key               String?   @unique @db.VarChar(191)
+  kind              String    @db.VarChar(40)
+  to                String    @db.VarChar(191)
+  /// The EmailJob; cleared after sending for mail that carries a sign-in or setup secret.
+  job               Json?
+  agencyId          String?   @db.VarChar(64)
+  bookingId         String?   @db.VarChar(64)
+  /// pending (stored) | queued (Redis accepted) | sending (claimed) | sent (SMTP server accepted) | suppressed (intentionally not sent) | failed (retry planned) | dead (gave up)
+  status            String    @default("pending") @db.VarChar(12)
+  attempts          Int       @default(0)
+  lastError         String?   @db.Text
+  nextAttemptAt     DateTime  @default(now())
+  lockedUntil       DateTime?
+  /// Unique owner of the current sending lease. Completion/failure updates must present it.
+  leaseToken        String?   @db.VarChar(64)
+  queuedAt          DateTime?
+  sentAt            DateTime?
+  /// The Message-ID the SMTP server accepted. Acceptance, not delivery to the inbox.
+  providerMessageId String?   @db.VarChar(191)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([bookingId, createdAt])
+  @@index([agencyId, createdAt])
+  @@map("email_messages")
+}
+
+/// Someone asked another agency to join StageDesk: an agency (its referral
+/// reward applies) or an artist who works for several agencies. Platform-level
+/// (agencyId-style fields), so it stays out of tenantDb. When an agency is
+/// created by someone with that email address, the invite is marked joined.
+model AgencyInvite {
+  id              String        @id @db.VarChar(64)
+  email           String        @db.VarChar(191)
+  /// agency | artist
+  kind            String        @db.VarChar(8)
+  inviterUserId   String        @db.VarChar(64)
+  inviterUser     User          @relation(fields: [inviterUserId], references: [id], onDelete: Cascade)
+  inviterAgencyId String?       @db.VarChar(64)
+  inviterAgency   Organization? @relation("InvitingAgency", fields: [inviterAgencyId], references: [id], onDelete: Cascade)
+  joinedAgencyId  String?       @db.VarChar(64)
+  joinedAgency    Organization? @relation("JoinedAgency", fields: [joinedAgencyId], references: [id], onDelete: SetNull)
+  joinedAt        DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([email])
+  @@index([inviterUserId, createdAt])
+  @@index([inviterAgencyId])
+  @@index([joinedAgencyId])
+  @@map("agency_invites")
+}
+
+/// Why an agency cancelled its plan, asked in the cancel dialog. One row per
+/// cancellation (also after a resume and a second cancel). Platform-level.
+model CancellationFeedback {
+  id        String       @id @db.VarChar(64)
+  agencyId  String       @db.VarChar(64)
+  agency    Organization @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userId    String?      @db.VarChar(64)
+  /// too_expensive | missing_features | too_complex | other_tool | few_bookings | closing | other
+  reason    String       @db.VarChar(32)
+  note      String?      @db.Text
+  createdAt DateTime     @default(now())
+
+  @@index([agencyId])
+  @@index([createdAt])
+  @@map("cancellation_feedback")
+}
+
+/// A discount code for StageDesk plans, made by the platform admin. Each is a
+/// Stripe coupon plus promotion code (made on first use, again after the Stripe
+/// keys change); Stripe applies it at Checkout. Platform-level, outside tenantDb.
+model PlatformPromoCode {
+  id                    String                    @id @db.VarChar(64)
+  /// Capitals, digits and dashes (normalizeDiscountCode); shares Stripe's namespace with partner codes.
+  code                  String                    @unique @db.VarChar(32)
+  description           String?                   @db.VarChar(191)
+  /// percentage | fixed
+  discountType          String                    @db.VarChar(16)
+  percentBps            Int?
+  amountCents           Int?
+  /// once | repeating | forever
+  duration              String                    @db.VarChar(16)
+  durationMonths        Int?
+  /// Plan keys it is for; empty means every plan.
+  planKeys              Json
+  firstSubscriptionOnly Boolean                   @default(true)
+  maxRedemptions        Int?
+  expiresAt             DateTime?
+  active                Boolean                   @default(true)
+  stripeCouponId        String?                   @db.VarChar(64)
+  stripePromotionCodeId String?                   @db.VarChar(64)
+  createdById           String?                   @db.VarChar(64)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  redemptions           PlatformPromoRedemption[]
+
+  @@map("platform_promo_codes")
+}
+
+/// An agency that subscribed with a platform promo code (from the subscription webhook).
+model PlatformPromoRedemption {
+  id                   String            @id @db.VarChar(64)
+  promoCodeId          String            @db.VarChar(64)
+  promoCode            PlatformPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  agencyId             String            @db.VarChar(64)
+  agency               Organization      @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  stripeSubscriptionId String?           @db.VarChar(64)
+  createdAt            DateTime          @default(now())
+
+  @@unique([promoCodeId, agencyId])
+  @@index([agencyId])
+  @@map("platform_promo_redemptions")
+}
+
+/// An agency's own discount code for its customers' bookings. The discount
+/// becomes discount lines on the quote (promoDiscountLines), so VAT stays right.
+model BookingPromoCode {
+  id             String                   @id @db.VarChar(64)
+  organizationId String                   @db.VarChar(64)
+  organization   Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  code           String                   @db.VarChar(32)
+  description    String?                  @db.VarChar(191)
+  /// percentage | fixed (a fixed amount is what the customer saves, VAT included)
+  discountType   String                   @db.VarChar(16)
+  percentBps     Int?
+  amountCents    Int?
+  /// The quote total (VAT included) the booking must reach; null for none.
+  minTotalCents  Int?
+  validFrom      DateTime?
+  validUntil     DateTime?
+  maxRedemptions Int?
+  active         Boolean                  @default(true)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  redemptions    BookingPromoRedemption[]
+
+  @@unique([organizationId, code])
+  @@map("booking_promo_codes")
+}
+
+/// A booking that uses an agency's promo code (one per booking).
+model BookingPromoRedemption {
+  id             String           @id @db.VarChar(64)
+  organizationId String           @db.VarChar(64)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  promoCodeId    String           @db.VarChar(64)
+  promoCode      BookingPromoCode @relation(fields: [promoCodeId], references: [id], onDelete: Cascade)
+  bookingId      String           @unique @db.VarChar(64)
+  booking        Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  /// Who added it: the customer on the booking form, or staff.
+  addedBy        String           @db.VarChar(16)
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId, promoCodeId])
+  @@map("booking_promo_redemptions")
 }

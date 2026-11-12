@@ -1,3 +1,4 @@
+import { GroupMessages } from "@/components/group-messages";
 import { ArrowLeftIcon, CheckIcon } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Suspense } from "react";
@@ -19,6 +20,7 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
   const en = locale === "en";
 
   return (
+    <GroupMessages group="auth" locale={locale}>
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden overflow-hidden bg-[oklch(0.24_0.08_322)] text-white lg:flex lg:flex-col">
         {/* Logo top left; the artist app sits in the top right corner, tilted, and fades out above the
@@ -72,5 +74,6 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[lo
         </footer>
       </div>
     </div>
+    </GroupMessages>
   );
 }

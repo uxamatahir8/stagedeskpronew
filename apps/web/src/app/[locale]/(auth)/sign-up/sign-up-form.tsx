@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { MailCheckIcon } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -61,7 +62,7 @@ export function SignUpForm() {
   }
 
   return (
-    <form action={signUp} className="grid gap-4">
+    <form {...keepValues(signUp)} className="grid gap-4">
       {invitedAgency && <FormMessage tone="success">{t("auth.signUp.invitedTo", { agency: invitedAgency })}</FormMessage>}
       <div className="grid gap-2">
         <Label htmlFor="signup-name">{t("auth.name")}</Label>

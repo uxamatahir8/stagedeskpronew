@@ -12,8 +12,20 @@ import { PaymentsError } from "@stagedesk/payments";
 export async function writeBlocked(organizationId: string): Promise<string | null> {
   const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { suspendedAt: true } });
   if (org?.suspendedAt) return (await getTranslations("agencySuspended"))("title");
-  const { access } = await agencyBilling(organizationId);
-  return access.level === "read_only" ? (await getTranslations("billing"))("readOnly") : null;
+  const { access, subscription } = await agencyBilling(organizationId);
+  if (access.level !== "read_only") return null;
+  // Someone who never had a plan isn't told it "ended".
+  return (await getTranslations("billing"))(subscription ? "readOnly" : "readOnlyNoPlan");
+}
+
+/**
+ * For money that really moved (recording a payment, invoicing it, closing a
+ * booking): an agency whose subscription lapsed can still keep its books right,
+ * so only a suspension stops these. Otherwise like writeBlocked.
+ */
+export async function suspendedBlocked(organizationId: string): Promise<string | null> {
+  const org = await prisma.organization.findUnique({ where: { id: organizationId }, select: { suspendedAt: true } });
+  return org?.suspendedAt ? (await getTranslations("agencySuspended"))("title") : null;
 }
 
 export async function limitBlocked(organizationId: string, key: CountLimit): Promise<string | null> {

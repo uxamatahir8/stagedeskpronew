@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
-import type { BookingStatus, PaymentStatus } from "@stagedesk/core";
+import type { BookingStatus, GigState, PaymentStatus } from "@stagedesk/core";
+import type { ArtistAccountState } from "@stagedesk/db";
 import { cn } from "@/lib/utils";
 
 type Tone = "neutral" | "info" | "brand" | "success" | "warning" | "danger";
@@ -62,6 +63,32 @@ const assignmentTone: Record<string, Tone> = { pending: "warning", accepted: "su
 export function AssignmentStatusBadge({ status }: { status: "pending" | "accepted" | "declined" | "withdrawn" }) {
   const t = useTranslations("assignmentStatus");
   return <Pill tone={assignmentTone[status]}>{t(status)}</Pill>;
+}
+
+const gigTone: Record<GigState, Tone> = {
+  new_request: "warning",
+  pending_response: "warning",
+  accepted: "success",
+  date_pending: "info",
+  completed: "neutral",
+  past: "neutral",
+  declined: "danger",
+  withdrawn: "neutral",
+  cancelled: "danger",
+};
+
+/** Where a gig stands for the artist, as classified by core's gigState. */
+export function GigStateBadge({ state }: { state: GigState }) {
+  const t = useTranslations("gigStates");
+  return <Pill tone={gigTone[state]}>{t(state)}</Pill>;
+}
+
+const artistAccountTone: Record<ArtistAccountState, Tone> = { no_account: "danger", not_member: "danger", disabled: "danger", inactive: "neutral", setup_pending: "warning", active: "success" };
+
+/** Whether an artist profile has someone behind it who can sign in and answer requests. */
+export function ArtistAccountBadge({ state }: { state: ArtistAccountState }) {
+  const t = useTranslations("artistAccount");
+  return <Pill tone={artistAccountTone[state]}>{t(`state_${state}`)}</Pill>;
 }
 
 export type { Tone };

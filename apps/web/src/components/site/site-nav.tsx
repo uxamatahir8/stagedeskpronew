@@ -23,11 +23,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
+import { forgetLocale, rememberLocale, savedLocale } from "@/lib/remember-locale";
 
 /** Icons by name: server components pass the name, not the component. */
 const icons = {
@@ -138,7 +139,11 @@ export function NavLinks({ entries }: { entries: NavEntry[] }) {
 /** Switches language on the same page. Builder pages redirect to their slug in the other language. */
 const languageCodes = ["nl", "en"] as const;
 
-/** Shows the language the page is in; the menu switches to the other one on the same page. */
+/**
+ * Shows the language the page is in; the menu switches on the same page and
+ * remembers the pick. "Automatic" forgets it and reloads through the proxy, which
+ * decides the language.
+ */
 export function LocaleSwitch() {
   const t = useTranslations("site");
   const tl = useTranslations("languages");
@@ -147,9 +152,11 @@ export function LocaleSwitch() {
   const pathname = usePathname();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // Only shown inside the open menu, so it's read then (some layouts around this are static).
+  const [chosen, setChosen] = useState<string | null>(null);
   const current = languages.find((l) => l.code === locale) ?? languages[0];
   return (
-    <DropdownMenu modal={false}>
+    <DropdownMenu modal={false} onOpenChange={(open) => open && setChosen(savedLocale())}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="sm" className="px-1.5 sm:px-2.5" disabled={pending} aria-label={t("languageCurrent", { language: current.label })}>
           <GlobeIcon className="hidden sm:block" />
@@ -161,12 +168,28 @@ export function LocaleSwitch() {
           <DropdownMenuItem
             key={l.code}
             lang={l.code}
-            onSelect={() => l.code !== locale && startTransition(() => router.replace(pathname, { locale: l.code as (typeof routing.locales)[number] }))}
+            onSelect={() => {
+              rememberLocale(l.code);
+              if (l.code !== locale) startTransition(() => router.replace(pathname, { locale: l.code as (typeof routing.locales)[number] }));
+            }}
           >
             {l.label}
-            {l.code === locale && <CheckIcon className="ml-auto" aria-hidden />}
+            {l.code === chosen && <CheckIcon className="ml-auto" aria-hidden />}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={() => {
+            if (!chosen) return;
+            forgetLocale();
+            // A full load of the address without a language: the proxy decides from there, and it skips client navigation.
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.assign(`${pathname}${window.location.search}`);
+          }}
+        >
+          {t("automatic")}
+          {!chosen && <CheckIcon className="ml-auto" aria-hidden />}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

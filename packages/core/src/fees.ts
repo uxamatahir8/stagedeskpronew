@@ -47,6 +47,8 @@ export function splitBookingPayment(input: {
   amount: Cents;
   stripeFee: Cents;
   artistShareBps: BasisPoints;
+  /** A fixed artist amount for this payment (see artistCutOfPayment); replaces artistShareBps. */
+  artistCents?: Cents;
   feeRule: FeeRule;
   stripeFeePaidBy: PlatformFeeSettings["stripeFeePaidBy"];
 }): PaymentSplit {
@@ -56,13 +58,24 @@ export function splitBookingPayment(input: {
   if (artistShareBps < 0 || artistShareBps > 10_000) {
     throw new RangeError(`artistShareBps must be 0–10000, got ${artistShareBps}`);
   }
+  if (input.artistCents !== undefined) {
+    assertCents(input.artistCents, "artistCents");
+    const max = availableForArtist({ amount, stripeFee, feeRule, stripeFeePaidBy });
+    if (input.artistCents < 0 || input.artistCents > max) throw new RangeError(`artistCents must be 0–${max}, got ${input.artistCents}`);
+  }
 
-  const artist = percentOf(amount, artistShareBps);
+  const artist = input.artistCents ?? percentOf(amount, artistShareBps);
   const platformFee = calculatePlatformFee(feeRule, amount);
   const platform = stripeFeePaidBy === "platform" ? platformFee - stripeFee : platformFee;
   const agency = amount - artist - platform - stripeFee;
 
   return { artist, agency, platform, stripe: stripeFee };
+}
+
+/** What a payment has left for the artist and agency after the platform fee (and Stripe's, when the agency carries it). */
+export function availableForArtist(input: { amount: Cents; stripeFee: Cents; feeRule: FeeRule; stripeFeePaidBy: PlatformFeeSettings["stripeFeePaidBy"] }): Cents {
+  const fee = calculatePlatformFee(input.feeRule, input.amount);
+  return Math.max(0, input.amount - fee - (input.stripeFeePaidBy === "platform" ? 0 : input.stripeFee));
 }
 
 /**

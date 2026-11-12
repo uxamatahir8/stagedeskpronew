@@ -13,7 +13,8 @@
  * destructive) stay separate from the brand colours. Dark mode is class-based
  * (next-themes), defaulting to the system setting.
  */
-:root {
+:root,
+.light {
   --radius: 0.625rem;
 
   --background: oklch(0.99 0.004 300);
@@ -26,7 +27,8 @@
   --primary: oklch(0.4 0.14 322);
   --primary-foreground: oklch(0.985 0.005 320);
   /* Brand accent for highlights, badges and gradients. */
-  --magenta: oklch(0.6 0.22 352);
+  /* Darkened from 0.6 so magenta text and white-on-magenta pass WCAG AA (4.5:1). */
+  --magenta: oklch(0.54 0.21 352);
   --magenta-foreground: oklch(0.99 0.005 350);
   --secondary: oklch(0.955 0.012 300);
   --secondary-foreground: oklch(0.28 0.04 300);
@@ -36,9 +38,9 @@
   --accent-foreground: oklch(0.3 0.09 325);
 
   --destructive: oklch(0.56 0.21 27);
-  --success: oklch(0.55 0.13 155);
+  --success: oklch(0.48 0.12 155);
   --warning: oklch(0.7 0.15 70);
-  --info: oklch(0.56 0.13 245);
+  --info: oklch(0.5 0.13 245);
 
   --border: oklch(0.91 0.012 300);
   --input: oklch(0.89 0.014 300);
@@ -411,5 +413,30 @@ label[data-slot="label"][data-required]::after {
 @media (prefers-reduced-motion: reduce) {
   .flatpickr-calendar.animate.open {
     animation: none;
+  }
+}
+
+/* Printable pages inside the app shell (packing lists): only the sheet is printed, in black on white. */
+@media print {
+  body:has(.print-sheet) [data-slot="sidebar"],
+  body:has(.print-sheet) [data-slot="sidebar-gap"],
+  body:has(.print-sheet) header {
+    display: none !important;
+  }
+  body:has(.print-sheet) * {
+    visibility: hidden;
+  }
+  body:has(.print-sheet) .print-sheet,
+  body:has(.print-sheet) .print-sheet * {
+    visibility: visible;
+  }
+  body:has(.print-sheet) .print-sheet {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    background: #fff;
+    color: #000;
   }
 }

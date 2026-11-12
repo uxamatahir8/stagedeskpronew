@@ -1,18 +1,30 @@
-import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { type Browser, type BrowserContext, expect, test } from "@playwright/test";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /**
  * Agency websites: an owner edits and publishes their site, a visitor sees
  * it on the agency's free address, and a Business agency connects its own
  * domain (a .localhost name, which development accepts without DNS).
  */
-test("an agency builds and publishes its website, also on its own domain", async ({ browser }) => {
+test.describe.serial("agency websites", () => {
   const run = Date.now().toString(36);
-  const owner = await (await browser.newContext()).newPage();
-  const visitor = await (await browser.newContext()).newPage();
-  const admin = await (await browser.newContext()).newPage();
-  const rotterdam = await (await browser.newContext()).newPage();
   const title = `Feest zonder zorgen ${run}`;
+  const contexts: BrowserContext[] = [];
+
+  async function freshPage(browser: Browser) {
+    const context = await browser.newContext();
+    contexts.push(context);
+    return context.newPage();
+  }
+
+  test.afterAll(async ({}, testInfo) => {
+    testInfo.setTimeout(60_000);
+    await Promise.allSettled(contexts.map((context) => context.close()));
+  });
+
+test("an agency builds and publishes its website on the free address", async ({ browser }) => {
+  const owner = await freshPage(browser);
+  const visitor = await freshPage(browser);
 
   await test.step("the owner edits the hero, adds a packages section and publishes", async () => {
     await signIn(owner, "eigenaar@feestband.local");
@@ -21,7 +33,7 @@ test("an agency builds and publishes its website, also on its own domain", async
     await preview.locator("[data-section=hero] h1").click();
     await owner.getByLabel("Titel", { exact: true }).fill(title);
     await owner.getByRole("button", { name: "Onderdeel toevoegen" }).click();
-    await owner.getByRole("menuitem", { name: "Pakketten & prijzen" }).click();
+    await owner.getByRole("dialog").getByRole("button", { name: /^Pakketten & prijzen/ }).click();
     await expect(preview.getByRole("heading", { name: "Pakketten en prijzen" }).last()).toBeVisible();
     await expect(preview.getByText("DJ, per uur").first()).toBeVisible();
     await expect(owner.getByText("Alles opgeslagen")).toBeVisible({ timeout: 15_000 });
@@ -39,23 +51,35 @@ test("an agency builds and publishes its website, also on its own domain", async
     await visitor.goto("http://feestband-utrecht.localhost:3000/sitemap.xml");
     expect(await visitor.content()).toContain("http://feestband-utrecht.localhost:3000/");
   });
+});
 
-  await test.step("own domains are a Business feature", async () => {
-    await owner.goto("/nl/app/website/domain");
-    await expect(owner.getByText("Een eigen domein hoort bij het Business-abonnement", { exact: false })).toBeVisible();
-  });
+test("a Business agency connects and serves its own domain", async ({ browser }) => {
+  const visitor = await freshPage(browser);
+  const admin = await freshPage(browser);
+  const rotterdam = await freshPage(browser);
 
-  await test.step("on Business, Rotterdam connects its own domain and its site shows there", async () => {
-    await signIn(admin, "admin@stagedesk.local");
+  // The plan is set here rather than assumed: the bulk demo seed puts Feestband on Business.
+  async function grantPlan(plan: "Pro" | "Business") {
     await admin.goto("/nl/app/agencies?q=Rotterdam");
     await admin.getByRole("link", { name: "Rotterdam DJ Collectief" }).click();
     await admin.getByRole("combobox", { name: "Abonnement toekennen" }).click();
-    await admin.getByRole("option", { name: "Business" }).click();
+    await admin.getByRole("option", { name: plan, exact: true }).click();
     await admin.getByRole("button", { name: "Toekennen" }).click();
     await expect(admin.getByText("Abonnement toegekend.")).toBeVisible();
+  }
+
+  await test.step("own domains are a Business feature", async () => {
+    await signIn(admin, ADMIN_EMAIL);
+    await grantPlan("Pro");
+    await signIn(rotterdam, "eigenaar@rotterdamdj.local");
+    await rotterdam.goto("/nl/app/website/domain");
+    await expect(rotterdam.getByText("Een eigen domein hoort bij het Business-abonnement", { exact: false })).toBeVisible();
+  });
+
+  await test.step("on Business, Rotterdam connects its own domain and its site shows there", async () => {
+    await grantPlan("Business");
 
     const domain = `www.rotterdam-${run}.localhost`;
-    await signIn(rotterdam, "eigenaar@rotterdamdj.local");
     await rotterdam.goto("/nl/app/website");
     // An earlier run may already have published it; publish only when there's something new.
     const publish = rotterdam.getByRole("button", { name: /^(Publiceren|Gepubliceerd)$/ });
@@ -68,13 +92,20 @@ test("an agency builds and publishes its website, also on its own domain", async
     await rotterdam.getByLabel("Domein", { exact: true }).fill(domain);
     await rotterdam.getByRole("button", { name: "Domein toevoegen" }).click();
     await expect(rotterdam.getByText("Domein toegevoegd.", { exact: false })).toBeVisible();
-    await rotterdam.getByRole("button", { name: "Controleren" }).click();
+    // This run's domain only: a domain left by an interrupted earlier run may be listed too.
+    const row = rotterdam
+      .locator("div")
+      .filter({ hasText: domain })
+      .filter({ has: rotterdam.getByRole("button", { name: "Verwijderen" }) })
+      .last();
+    await row.getByRole("button", { name: "Controleren" }).click();
     await expect(rotterdam.getByText("Domein gekoppeld.")).toBeVisible();
 
     await visitor.goto(`http://${domain}:3000/`);
     await expect(visitor.getByText("Rotterdam DJ Collectief").first()).toBeVisible();
 
-    await rotterdam.getByRole("button", { name: "Verwijderen" }).click();
+    await row.getByRole("button", { name: "Verwijderen" }).click();
     await expect(rotterdam.getByText("Domein verwijderd.")).toBeVisible();
   });
+});
 });

@@ -1,7 +1,8 @@
 /*
  * StageDesk inquiry form for your own website.
  *
- *   <script src="https://stagedesk.pro/embed.js" data-agency="your-agency" data-lang="nl" async></script>
+ *   <script src="https://<your StageDesk address>/embed.js" data-agency="your-agency" data-lang="nl" async></script>
+ *   (Booking page → Share gives the exact code, with the right address.)
  *
  * Inserts the form where the script tag is and keeps its height in step.
  */
@@ -11,7 +12,8 @@
   var agency = script.getAttribute("data-agency");
   if (!agency || !/^[a-z0-9-]+$/.test(agency)) return;
   var origin = new URL(script.src).origin;
-  var lang = script.getAttribute("data-lang") === "en" ? "/en" : "";
+  // English is the default language (no prefix); Dutch lives under /nl.
+  var lang = script.getAttribute("data-lang") === "nl" ? "/nl" : "";
 
   var frame = document.createElement("iframe");
   frame.src = origin + lang + "/embed/" + agency;

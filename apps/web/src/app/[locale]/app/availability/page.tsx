@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { todayInNetherlands } from "@stagedesk/core";
-import { prisma, toDateOnly } from "@stagedesk/db";
+import { artistHoldStatuses, todayInNetherlands } from "@stagedesk/core";
+import { liveAssignmentOf, prisma, toDateOnly } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { monthDays, shiftMonth, weekdayNames } from "@/components/month-grid";
 import { PageHeader } from "@/components/page-header";
@@ -50,7 +50,7 @@ async function Availability({ searchParams }: Pick<PageProps<"/[locale]/app/avai
     getLocale(),
     db.artistUnavailability.findMany({ where: { artistId: artist.id, date: range }, select: { date: true } }),
     prisma.bookingAssignment.findMany({
-      where: { artist: { userId: viewer.user.id }, status: { in: ["pending", "accepted"] }, booking: { eventDate: range, status: { in: ["booked", "confirmed"] } } },
+      where: { ...liveAssignmentOf(viewer.user.id), booking: { eventDate: range, status: { in: [...artistHoldStatuses] } } },
       select: { booking: { select: { eventDate: true } } },
     }),
   ]);

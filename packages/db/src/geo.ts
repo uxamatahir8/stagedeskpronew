@@ -9,7 +9,7 @@ type Hit = { lat: string; lon: string; address?: Record<string, string> };
 async function lookup(query: string, language: string | null): Promise<Hit | null> {
   const url = `${endpoint}?format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(query)}`;
   // Nominatim's policy asks for an identifying User-Agent and at most one request a second.
-  const headers: Record<string, string> = { "User-Agent": "StageDesk/2.0 (support@stagedesk.pro)" };
+  const headers: Record<string, string> = { "User-Agent": "StageDesk/2.0 (info@stagedeskpro.com)" };
   if (language) headers["Accept-Language"] = language;
   const response = await fetch(url, { headers, signal: AbortSignal.timeout(6000) });
   if (!response.ok) throw new Error(`Geocoder: HTTP ${response.status}`);

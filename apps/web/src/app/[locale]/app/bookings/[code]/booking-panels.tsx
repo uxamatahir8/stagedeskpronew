@@ -20,9 +20,12 @@ import {
 } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { keepValues } from "@/lib/keep-values";
 import type { ActionResult } from "@/lib/actions";
 import type { FormState } from "@/lib/validation";
 import {
@@ -30,11 +33,16 @@ import {
   addNoteAction,
   assignArtistAction,
   changeStatusAction,
+  decideChangeRequestAction,
   issueInvoiceAction,
+  markArtistPaidAction,
   recordPaymentAction,
+  requestDetailsAction,
+  retryEmailAction,
+  revokeDetailsAction,
   updateDetailsAction,
 } from "../actions";
-import { type CatalogItem, QuoteBuilder, type BuilderLine } from "./quote-builder";
+import { type BookingPromo, type CatalogItem, QuoteBuilder, type BuilderLine, type QuoteDefaults } from "./quote-builder";
 
 /** Runs a server action, shows the result as a toast and refreshes the page data. */
 function useRun() {
@@ -56,12 +64,15 @@ function useRun() {
 
 type StatusAction = "decline" | "cancel" | "complete" | "settle";
 
-export function StatusActions({ bookingId, actions }: { bookingId: string; actions: StatusAction[] }) {
+export function StatusActions({ bookingId, actions, paid }: { bookingId: string; actions: StatusAction[]; /** Money received so far (formatted), when there is any. */ paid?: string | null }) {
   const t = useTranslations();
   const [pending, run] = useRun();
   const [confirming, setConfirming] = useState<StatusAction | null>(null);
   const [reason, setReason] = useState("");
+  const [settlement, setSettlement] = useState<"refund" | "keep" | null>(null);
   const needsReason = confirming === "cancel" || confirming === "decline";
+  // Cancelling or declining with money in: say how much, and decide what happens to it.
+  const needsSettlement = needsReason && Boolean(paid);
 
   if (actions.length === 0) return null;
   return (
@@ -73,6 +84,7 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
           disabled={pending}
           onClick={() => {
             setReason("");
+            setSettlement(null);
             setConfirming(action);
           }}
         >
@@ -86,6 +98,18 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
             <DialogTitle>{confirming && t(`bookingActions.${confirming}`)}</DialogTitle>
             <DialogDescription>{t("booking.confirmAction")}</DialogDescription>
           </DialogHeader>
+          {needsSettlement && (
+            <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
+              <legend className="px-1 font-medium">{t("booking.settlementTitle", { amount: paid ?? "" })}</legend>
+              <p className="text-muted-foreground">{t("booking.settlementHint")}</p>
+              {(["refund", "keep"] as const).map((option) => (
+                <label key={option} className="flex items-start gap-2">
+                  <input type="radio" name="settlement" className="mt-0.5 size-4 accent-[var(--primary)]" checked={settlement === option} onChange={() => setSettlement(option)} />
+                  <span>{t(`booking.settlement_${option}`)}</span>
+                </label>
+              ))}
+            </fieldset>
+          )}
           {needsReason && (
             <FormField id="status-reason" label={t("booking.reasonOptional")}>
               <Textarea id="status-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={1000} />
@@ -97,8 +121,8 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
             </DialogClose>
             <Button
               variant={needsReason ? "destructive" : "default"}
-              disabled={pending}
-              onClick={() => confirming && run(() => changeStatusAction(bookingId, confirming, reason), () => setConfirming(null))}
+              disabled={pending || (needsSettlement && !settlement)}
+              onClick={() => confirming && run(() => changeStatusAction(bookingId, confirming, reason, needsSettlement ? settlement : null), () => setConfirming(null))}
             >
               {confirming && t(`bookingActions.${confirming}`)}
             </Button>
@@ -109,18 +133,83 @@ export function StatusActions({ bookingId, actions }: { bookingId: string; actio
   );
 }
 
+/** A customer's requested change: what would change, and the agency's answer. */
+export function ChangeRequestPanel({ requestId, rows, conflictFields, acknowledge, note, customer, requested }: { requestId: string; rows: { field: string; label: string; from: string; to: string; now?: string }[]; conflictFields: string[]; acknowledge: string | null; note: string | null; customer: string; requested: string }) {
+  const t = useTranslations("booking");
+  const router = useRouter();
+  const [pending, run] = useRun();
+  const [reason, setReason] = useState("");
+  const stale = conflictFields.length > 0;
+  // Refused because someone changed the booking meanwhile: show them what it says now.
+  const decide = (approve: boolean, ack: string | null = null) =>
+    run(async () => {
+      const result = await decideChangeRequestAction(requestId, approve, reason || null, ack);
+      if (!result.ok) router.refresh();
+      return result;
+    });
+  return (
+    <div className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4 text-sm" data-testid="change-request">
+      <p className="font-medium">{t("changeRequestTitle", { name: customer, date: requested })}</p>
+      <ul className="grid gap-1">
+        {rows.map((r) => (
+          <li key={r.field} data-testid={conflictFields.includes(r.field) ? "change-conflict" : undefined}>
+            {r.label}: <span className="text-muted-foreground line-through">{r.from}</span> → <span className="font-medium">{r.to}</span>
+            {conflictFields.includes(r.field) && (
+              <span className="ml-1 font-medium text-destructive">
+                ({t("changeCurrent")}: {r.now})
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {stale && (
+        <p className="rounded-lg border border-warning/50 bg-warning/10 p-2" data-testid="change-stale">
+          {t("changeStale")}
+        </p>
+      )}
+      {note && <p className="whitespace-pre-line rounded-lg bg-muted/60 p-2">{note}</p>}
+      <FormField id="change-reason" label={t("changeReason")}>
+        <Input id="change-reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+      </FormField>
+      <div className="flex flex-wrap gap-2">
+        {stale ? (
+          <Button size="sm" variant="destructive" disabled={pending} onClick={() => window.confirm(t("applyAnywayConfirm")) && decide(true, acknowledge)}>
+            {t("applyAnyway")}
+          </Button>
+        ) : (
+          <Button size="sm" disabled={pending} onClick={() => decide(true)}>
+            <CheckIcon />
+            {t("approveChange")}
+          </Button>
+        )}
+        <Button size="sm" variant="outline" disabled={pending} onClick={() => decide(false)}>
+          {t("rejectChange")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function EditDetailsDialog({
   bookingId,
   values,
   dos,
   donts,
   playlistUrl,
+  preferredGenre,
+  musicRequests,
+  specialRequests,
+  bookingTypes,
 }: {
   bookingId: string;
   values: EventValues;
   dos: string[];
   donts: string[];
   playlistUrl: string;
+  preferredGenre: string;
+  musicRequests: string;
+  specialRequests: string;
+  bookingTypes: { key: string; label: string }[];
 }) {
   const t = useTranslations();
   const router = useRouter();
@@ -134,6 +223,7 @@ export function EditDetailsDialog({
     }
     return result;
   }, {} as FormState);
+  const [, startSubmit] = useTransition();
   const errors = state.fieldErrors ?? {};
 
   return (
@@ -148,8 +238,16 @@ export function EditDetailsDialog({
         <DialogHeader>
           <DialogTitle>{t("booking.eventDetails")}</DialogTitle>
         </DialogHeader>
-        <form action={action} className="grid gap-4">
-          <EventFields values={values} errors={errors} idPrefix="ed" />
+        {/* Not a form action: React resets those when they finish, which would wipe what was typed when a field is refused. */}
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const form = new FormData(event.currentTarget);
+            startSubmit(() => action(form));
+          }}
+        >
+          <EventFields values={values} errors={errors} idPrefix="ed" bookingTypes={bookingTypes} />
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField id="ed-dos" label={t("booking.dos")} hint={t("booking.listHint")}>
               <Textarea id="ed-dos" name="dos" defaultValue={dos.join("\n")} rows={4} />
@@ -159,6 +257,15 @@ export function EditDetailsDialog({
             </FormField>
             <FormField id="ed-playlist" label={t("booking.playlist")} error={errors["playlistUrl"]} className="sm:col-span-2">
               <Input id="ed-playlist" name="playlistUrl" type="url" defaultValue={playlistUrl} placeholder="https://open.spotify.com/…" />
+            </FormField>
+            <FormField id="ed-genre" label={t("bookingPage.genre")} className="sm:col-span-2">
+              <Input id="ed-genre" name="preferredGenre" maxLength={96} defaultValue={preferredGenre} />
+            </FormField>
+            <FormField id="ed-music" label={t("customerEvent.musicRequests")}>
+              <Textarea id="ed-music" name="musicRequests" rows={3} maxLength={4000} defaultValue={musicRequests} />
+            </FormField>
+            <FormField id="ed-special" label={t("customerEvent.specialRequests")}>
+              <Textarea id="ed-special" name="specialRequests" rows={3} maxLength={4000} defaultValue={specialRequests} />
             </FormField>
           </div>
           <FormMessage>{state.message && !state.ok ? state.message : null}</FormMessage>
@@ -193,7 +300,10 @@ export function QuoteControls({
   defaultDepositBps,
   defaultExpiryDays,
   currency,
+  quoteDefaults,
+  promo,
 }: {
+  promo: BookingPromo | null;
   bookingId: string;
   canQuote: boolean;
   hasQuote: boolean;
@@ -208,6 +318,7 @@ export function QuoteControls({
   defaultDepositBps: number;
   defaultExpiryDays: number;
   currency: string;
+  quoteDefaults: QuoteDefaults;
 }) {
   const t = useTranslations();
   const [building, setBuilding] = useState(false);
@@ -225,6 +336,8 @@ export function QuoteControls({
         defaultDepositBps={defaultDepositBps}
         defaultExpiryDays={defaultExpiryDays}
         currency={currency}
+        defaults={quoteDefaults}
+        promo={promo}
         onDone={() => setBuilding(false)}
       />
     );
@@ -292,12 +405,22 @@ export interface ArtistOption {
   stageName: string;
   agency: string | null;
   free: boolean;
+  /** The artist's default pay, e.g. "40%" or "€ 250,00 per booking". */
+  payLabel: string;
+  /** Null when the artist can get a request; otherwise why not, shown next to the name. */
+  blocked: string | null;
+  /** Shown next to the name for an artist who still has to set a password. */
+  note: string | null;
 }
 
 export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: string; options: ArtistOption[]; hasArtist: boolean }) {
   const t = useTranslations("booking");
   const [pending, run] = useRun();
   const [artistId, setArtistId] = useState("");
+  // "default" takes the artist's own pay; the others set it for this booking only.
+  const [pay, setPay] = useState<"default" | "percentage" | "fixed">("default");
+  const [payValue, setPayValue] = useState("");
+  const chosen = options.find((a) => a.id === artistId);
 
   return (
     <div className="grid gap-2">
@@ -307,16 +430,58 @@ export function AssignArtist({ bookingId, options, hasArtist }: { bookingId: str
         </SelectTrigger>
         <SelectContent>
           {options.map((a) => (
-            <SelectItem key={a.id} value={a.id} disabled={!a.free}>
+            <SelectItem key={a.id} value={a.id} disabled={!a.free || a.blocked !== null}>
               {a.stageName}
               {a.agency && <span className="text-muted-foreground"> · {t("sharedFrom", { agency: a.agency })}</span>}
               {!a.free && <span className="text-muted-foreground"> · {t("unavailable")}</span>}
+              {a.blocked && <span className="text-muted-foreground"> · {a.blocked}</span>}
+              {a.note && <span className="text-muted-foreground"> · {a.note}</span>}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
+      {chosen && (
+        <div className="grid gap-2 rounded-lg border p-3">
+          <Label htmlFor="assign-pay">{t("payForBooking")}</Label>
+          <NativeSelect id="assign-pay" value={pay} onChange={(e) => setPay(e.target.value as typeof pay)} className="w-full">
+            <option value="default">{t("payDefault", { pay: chosen.payLabel })}</option>
+            <option value="percentage">{t("payPercentage")}</option>
+            <option value="fixed">{t("payFixed")}</option>
+          </NativeSelect>
+          {pay !== "default" && (
+            <Input
+              aria-label={pay === "fixed" ? t("payFixed") : t("payPercentage")}
+              value={payValue}
+              inputMode="decimal"
+              placeholder={pay === "fixed" ? "250,00" : "40"}
+              onChange={(e) => setPayValue(e.target.value)}
+            />
+          )}
+          <p className="text-xs text-muted-foreground">{t("payHint")}</p>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground">{t("assignHint")}</p>
-      <Button disabled={!artistId || pending} onClick={() => run(() => assignArtistAction(bookingId, artistId), () => setArtistId(""))}>
+      {options.some((a) => a.blocked) && (
+        <p className="text-xs text-muted-foreground" data-testid="assign-need-account">
+          {t("assignNeedsAccount", { count: options.filter((a) => a.blocked).length })}{" "}
+          <Link href="/app/artists" className="underline underline-offset-4">
+            {t("assignOpenArtists")}
+          </Link>
+        </p>
+      )}
+      <Button
+        disabled={!artistId || pending || (pay !== "default" && !payValue.trim())}
+        onClick={() =>
+          run(
+            () => assignArtistAction(bookingId, artistId, pay === "default" ? null : { type: pay, value: payValue }),
+            () => {
+              setArtistId("");
+              setPay("default");
+              setPayValue("");
+            },
+          )
+        }
+      >
         {hasArtist ? t("reassign") : t("assign")}
       </Button>
     </div>
@@ -329,18 +494,31 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
   const [pending, run] = useRun();
   const [kind, setKind] = useState<"deposit" | "balance" | "other">(suggestedKind);
   const [method, setMethod] = useState<"bank_transfer" | "cash" | "card" | "other">("bank_transfer");
+  // Above what's still due: the entered payment waits here until they confirm or change it.
+  const [overpayment, setOverpayment] = useState<{ form: FormData; message?: string } | null>(null);
 
-  function submit(form: FormData) {
+  function submit(form: FormData, confirmed = false) {
     run(
-      () =>
-        recordPaymentAction(bookingId, {
-          amount: String(form.get("amount")),
-          kind,
-          method,
-          receivedAt: String(form.get("receivedAt")),
-          reference: String(form.get("reference") ?? ""),
-        }),
-      () => setOpen(false),
+      async () => {
+        const result = await recordPaymentAction(
+          bookingId,
+          {
+            amount: String(form.get("amount")),
+            kind,
+            method,
+            receivedAt: String(form.get("receivedAt")),
+            reference: String(form.get("reference") ?? ""),
+          },
+          confirmed,
+        );
+        if (!result.confirmOverpayment) return result;
+        setOverpayment({ form, message: result.message });
+        return { ok: false };
+      },
+      () => {
+        setOverpayment(null);
+        setOpen(false);
+      },
     );
   }
 
@@ -356,9 +534,9 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
         <DialogHeader>
           <DialogTitle>{t("booking.recordPayment")}</DialogTitle>
         </DialogHeader>
-        <form action={submit} className="grid gap-4 sm:grid-cols-2">
+        <form {...keepValues((form) => submit(form))} className="grid gap-4 sm:grid-cols-2">
           <FormField id="pay-amount" label={t("booking.amount")}>
-            <Input id="pay-amount" name="amount" inputMode="decimal" required placeholder="0,00" />
+            <Input id="pay-amount" name="amount" inputMode="decimal" required placeholder="0,00" onChange={() => setOverpayment(null)} />
           </FormField>
           <FormField id="pay-date" label={t("booking.receivedAt")}>
             <DatePicker id="pay-date" name="receivedAt" defaultValue={today} required />
@@ -394,15 +572,26 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
           <FormField id="pay-ref" label={t("booking.reference")} className="sm:col-span-2">
             <Input id="pay-ref" name="reference" maxLength={191} />
           </FormField>
+          {overpayment && (
+            <p role="alert" className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm sm:col-span-2">
+              {overpayment.message}
+            </p>
+          )}
           <DialogFooter className="sm:col-span-2">
             <DialogClose asChild>
               <Button type="button" variant="outline">
                 {t("ui.secondary")}
               </Button>
             </DialogClose>
-            <Button type="submit" disabled={pending}>
-              {t("booking.recordPayment")}
-            </Button>
+            {overpayment ? (
+              <Button type="button" disabled={pending} onClick={() => submit(overpayment.form, true)}>
+                {t("booking.recordAnyway")}
+              </Button>
+            ) : (
+              <Button type="submit" disabled={pending}>
+                {t("booking.recordPayment")}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>
@@ -410,14 +599,58 @@ export function RecordPayment({ bookingId, today, suggestedKind }: { bookingId: 
   );
 }
 
-export function IssueInvoiceButton({ bookingId }: { bookingId: string }) {
+/** Offline money came in and the event is done: the agency pays the artist itself and says so here. */
+export function ArtistBalanceNotice({ bookingId, stageName, amount }: { bookingId: string; stageName: string; amount: string }) {
   const t = useTranslations("booking");
   const [pending, run] = useRun();
   return (
-    <Button variant="outline" size="sm" disabled={pending} onClick={() => run(() => issueInvoiceAction(bookingId))}>
-      <ReceiptIcon />
-      {t("issueInvoice")}
-    </Button>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+      <p>{t("artistBalanceDue", { artist: stageName, amount })}</p>
+      <Button size="sm" variant="outline" disabled={pending} onClick={() => run(() => markArtistPaidAction(bookingId))}>
+        {t("artistBalanceMarkPaid")}
+      </Button>
+    </div>
+  );
+}
+
+/** Issues the invoice after showing its number; people who may can type the number instead (when the agency allows it). */
+export function IssueInvoiceButton({ bookingId, nextNumber, canTypeNumber }: { bookingId: string; nextNumber: string; canTypeNumber: boolean }) {
+  const t = useTranslations("booking");
+  const [pending, run] = useRun();
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={pending}>
+          <ReceiptIcon />
+          {t("issueInvoice")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("issueInvoice")}</DialogTitle>
+          <DialogDescription>{t("issueInvoiceHint")}</DialogDescription>
+        </DialogHeader>
+        <p className="text-sm">
+          {t("invoiceNumberNext")}: <span className="font-mono font-medium">{typed.trim() ? typed.trim().toUpperCase() : nextNumber}</span>
+        </p>
+        {canTypeNumber && (
+          <FormField id="inv-number" label={t("invoiceNumberOwn")} hint={t("invoiceNumberOwnHint")}>
+            <Input id="inv-number" value={typed} maxLength={32} className="font-mono uppercase" placeholder={nextNumber} onChange={(e) => setTyped(e.target.value)} />
+          </FormField>
+        )}
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline">{t("dialogCancel")}</Button>
+          </DialogClose>
+          <Button disabled={pending} onClick={() => run(() => issueInvoiceAction(bookingId, typed.trim() || null), () => setOpen(false))}>
+            <ReceiptIcon />
+            {t("issueInvoiceConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -437,5 +670,134 @@ export function AddNote({ bookingId }: { bookingId: string }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Ask the customer to fill in the event details through a private link: email
+ * it to them, or copy it (e.g. to send by WhatsApp while on the phone). The
+ * link is shown once; a new link replaces the open one.
+ */
+export function DetailRequestPanel({
+  bookingId,
+  defaultLocale,
+  open,
+  customerEmail,
+}: {
+  bookingId: string;
+  defaultLocale: "nl" | "en";
+  open: { expires: string; emailedTo: string | null } | null;
+  customerEmail: string;
+}) {
+  const t = useTranslations("detailRequest");
+  const [pending, run] = useRun();
+  const [dialog, setDialog] = useState(false);
+  const [locale, setLocale] = useState(defaultLocale);
+  const [days, setDays] = useState("7");
+  const [url, setUrl] = useState<string | null>(null);
+
+  const create = (email: boolean) =>
+    run(async () => {
+      const result = await requestDetailsAction(bookingId, { locale, days: Math.max(1, Math.min(30, Number(days) || 7)), email });
+      if (result.ok && result.url) setUrl(result.url);
+      return result;
+    });
+
+  return (
+    <div className="grid gap-2 border-t pt-3">
+      {open ? (
+        <p className="text-xs text-muted-foreground">{open.emailedTo ? t("openEmailed", { email: open.emailedTo, date: open.expires }) : t("openLink", { date: open.expires })}</p>
+      ) : (
+        <p className="text-xs text-muted-foreground">{t("hint")}</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setUrl(null);
+            setDialog(true);
+          }}
+        >
+          <SendIcon />
+          {open ? t("newLink") : t("request")}
+        </Button>
+        {open && (
+          <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => revokeDetailsAction(bookingId))}>
+            {t("revoke")}
+          </Button>
+        )}
+      </div>
+      <Dialog open={dialog} onOpenChange={setDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("title")}</DialogTitle>
+            <DialogDescription>{t("description")}</DialogDescription>
+          </DialogHeader>
+          {url ? (
+            <div className="grid gap-3">
+              <p className="text-sm">{t("linkReady")}</p>
+              <div className="flex gap-2">
+                <Input readOnly value={url} aria-label={t("link")} onFocus={(e) => e.target.select()} />
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(url);
+                    toast.success(t("copied"));
+                  }}
+                >
+                  <CopyIcon />
+                  {t("copy")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("linkOnce")}</p>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField id="dr-locale" label={t("language")} className="min-w-0">
+                <NativeSelect id="dr-locale" value={locale} onChange={(e) => setLocale(e.target.value as "nl" | "en")} className="w-full">
+                  <option value="nl">Nederlands</option>
+                  <option value="en">English</option>
+                </NativeSelect>
+              </FormField>
+              <FormField id="dr-days" label={t("days")} className="min-w-0">
+                <Input id="dr-days" type="number" min={1} max={30} value={days} onChange={(e) => setDays(e.target.value)} className="w-full min-w-0" />
+              </FormField>
+              {open && <p className="text-xs text-muted-foreground sm:col-span-2">{t("replaces")}</p>}
+            </div>
+          )}
+          <DialogFooter className="flex-wrap">
+            {url ? (
+              <DialogClose asChild>
+                <Button>{t("done")}</Button>
+              </DialogClose>
+            ) : (
+              <>
+                <Button variant="outline" disabled={pending} onClick={() => create(false)}>
+                  <CopyIcon />
+                  {t("createLink")}
+                </Button>
+                {/* A long address shortens instead of pushing the button out of the dialog; the full one is in the tooltip. */}
+                <Button disabled={pending} onClick={() => create(true)} className="max-w-full min-w-0" title={customerEmail}>
+                  <SendIcon />
+                  <span className="truncate">{t("sendTo", { email: customerEmail })}</span>
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+/** "Send again" for a booking email that failed. */
+export function RetryEmailButton({ emailId }: { emailId: string }) {
+  const t = useTranslations("bookingEmails");
+  const [pending, run] = useRun();
+  return (
+    <Button variant="ghost" size="sm" disabled={pending} onClick={() => run(() => retryEmailAction(emailId))}>
+      {t("retry")}
+    </Button>
   );
 }

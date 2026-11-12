@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath, updateTag } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { type ContentKind, contentKinds } from "@stagedesk/core";
-import { type ArticleInput, audit, type CategoryInput, ContentError, deleteContentArticle, deleteContentCategory, prisma, saveContentArticle, saveContentCategory } from "@stagedesk/db";
+import { type ArticleInput, audit, type CategoryInput, ContentError, deleteContentArticle, deleteContentCategory, deleteContributorArticle, prisma, reviewBlogArticle, saveContentArticle, saveContentCategory, saveContributorArticle, submitContributorArticle, type ContributorArticleInput, withdrawContributorArticle } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { CONTENT_TAG } from "@/lib/content";
 import { detectImage, putPublicFile } from "@/lib/storage";
@@ -15,6 +15,7 @@ const isKind = (k: string): k is ContentKind => (contentKinds as readonly string
 function refresh() {
   updateTag(CONTENT_TAG);
   revalidatePath("/[locale]/app/content", "layout");
+  revalidatePath("/[locale]/app/blog-posts", "layout");
 }
 
 async function failed(error: unknown): Promise<{ ok: false; message: string }> {
@@ -45,6 +46,65 @@ export async function deleteArticleAction(id: string): Promise<ActionResult> {
   await audit({ actorId: viewer.user.id, action: "content.delete", targetType: "content", targetId: id, data: { kind: row?.kind, slug: row?.slug } });
   refresh();
   return { ok: true, message: (await getTranslations("contentAdmin"))("deleted") };
+}
+
+export async function saveMyArticleAction(id: string | null, input: ContributorArticleInput): Promise<SaveArticleResult> {
+  const viewer = await requirePermission("blog.submit");
+  const t = await getTranslations("contentAdmin");
+  try {
+    const row = await saveContributorArticle(viewer.user.id, id, { ...input, authorName: viewer.user.name });
+    await audit({ actorId: viewer.user.id, action: id ? "blog_draft.update" : "blog_draft.create", targetType: "content", targetId: row.id, data: { slug: row.slug } });
+    refresh();
+    return { ok: true, id: row.id, message: t("savedDraft") };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function submitMyArticleAction(id: string): Promise<ActionResult> {
+  const viewer = await requirePermission("blog.submit");
+  try {
+    await submitContributorArticle(viewer.user.id, id);
+    await audit({ actorId: viewer.user.id, action: "blog.submit", targetType: "content", targetId: id });
+    refresh();
+    return { ok: true, message: (await getTranslations("contentAdmin"))("submitted") };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function deleteMyArticleAction(id: string): Promise<ActionResult> {
+  const viewer = await requirePermission("blog.submit");
+  try {
+    await deleteContributorArticle(viewer.user.id, id);
+    await audit({ actorId: viewer.user.id, action: "blog_draft.delete", targetType: "content", targetId: id });
+    refresh();
+    return { ok: true, message: (await getTranslations("contentAdmin"))("deleted") };
+  } catch (error) {
+    return failed(error);
+  }
+}
+
+export async function withdrawMyArticleAction(id: string): Promise<ActionResult> {
+  const viewer = await requirePermission("blog.submit");
+  try {
+    await withdrawContributorArticle(viewer.user.id, id);
+    await audit({ actorId: viewer.user.id, action: "blog.withdraw", targetType: "content", targetId: id });
+    refresh();
+    return { ok: true, message: (await getTranslations("contentAdmin"))("withdrawn") };
+  } catch (error) { return failed(error); }
+}
+
+export async function reviewArticleAction(id: string, decision: "approve" | "reject", reason = ""): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.pages");
+  try {
+    await reviewBlogArticle(id, viewer.user.id, decision, reason);
+    await audit({ actorId: viewer.user.id, action: `blog.${decision}`, targetType: "content", targetId: id, data: { reason: reason || undefined } });
+    refresh();
+    return { ok: true, message: (await getTranslations("contentAdmin"))(decision === "approve" ? "approved" : "rejected") };
+  } catch (error) {
+    return failed(error);
+  }
 }
 
 /** Feature or unfeature a post straight from the list. */
@@ -102,7 +162,7 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /** A cover or inline image for an article, stored with the other public files. */
 export async function uploadContentImageAction(form: FormData): Promise<UploadResult> {
-  await requirePermission("platform.pages");
+  await requirePermission("blog.submit");
   const t = await getTranslations("contentAdmin");
   const file = form.get("image");
   if (!(file instanceof File) || file.size === 0 || file.size > MAX_IMAGE_BYTES) return { ok: false, message: t("invalidImage") };

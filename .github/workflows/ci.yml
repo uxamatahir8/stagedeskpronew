@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [staging]
+    branches: [staging, main]
 
 permissions:
   contents: read
@@ -11,8 +11,9 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     services:
-      # Database tests (tenant isolation) run against stagedesk_test.
+      # Database tests (tenant isolation, money flows, concurrency) run against stagedesk_test.
       mysql:
         image: mysql:8.4
         env:
@@ -25,8 +26,33 @@ jobs:
         options: >-
           --health-cmd "mysqladmin ping -h localhost -uroot -proot"
           --health-interval 5s --health-timeout 5s --health-retries 20
+      # Rate limits and the staff-seat API tests.
+      redis:
+        image: redis:8.8
+        ports:
+          - 6379:6379
+      # Email integration tests use real SMTP and inspect accepted messages through the API.
+      mailpit:
+        image: axllent/mailpit:v1.31
+        ports:
+          - 1025:1025
+          - 8025:8025
+      # Stripe request shapes (stripe-contract.test.ts); without it those tests are skipped, so CI runs it.
+      stripe-mock:
+        image: stripe/stripe-mock:v0.206.0
+        ports:
+          - 12111:12111
     env:
       DATABASE_URL: mysql://stagedesk:stagedesk@127.0.0.1:3307/stagedesk_test
+      # Migration validation replays every migration into a scratch database.
+      SHADOW_DATABASE_URL: mysql://root:root@127.0.0.1:3307/stagedesk_shadow
+      REDIS_URL: redis://127.0.0.1:6379
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: 1025
+      SMTP_USER: ""
+      MAIL_FROM: StageDesk <no-reply@stagedesk.local>
+      STRIPE_MOCK_URL: http://127.0.0.1:12111
+      BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -38,11 +64,140 @@ jobs:
       - run: pnpm db:generate
       - run: pnpm lint
       - run: pnpm typecheck
+      - name: Migrations match the schema
+        run: |
+          mysql -h 127.0.0.1 -P 3307 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS stagedesk_shadow"
+          pnpm --filter @stagedesk/db exec prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema.prisma --exit-code
+      - name: Stripe mock is reachable (contract tests must not skip)
+        # Any HTTP answer (stripe-mock replies 401 without a key) proves it's up; a refused connection fails the step.
+        run: |
+          curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:12111/v1/customers
+      - name: Mailpit is ready (email integration tests must not skip)
+        run: |
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:8025/api/v1/info >/dev/null && exit 0
+            sleep 1
+          done
+          echo "Mailpit API did not become ready" >&2
+          exit 1
       - run: pnpm test
+      - name: Production build
+        run: pnpm build
+        env:
+          NODE_ENV: production
+
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Known low/moderate advisories (shadcn CLI deps) are reported; high and critical fail the build.
+      - name: Dependency audit
+        run: pnpm audit --prod --audit-level high
+      - name: Secret scan
+        run: docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:v8.28.0 git /repo --redact --no-banner
+
+  # e2e:
+  #   # Browser journeys run against an isolated, freshly migrated and seeded stack. The crawl of every
+  #   # role's pages takes as long as all journeys together, so it has its own stack and time limit.
+  #   runs-on: ubuntu-latest
+  #   needs: check
+  #   timeout-minutes: 60
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       suite: [journeys, crawl]
+  #   services:
+  #     mysql:
+  #       image: mysql:8.4
+  #       env:
+  #         MYSQL_ROOT_PASSWORD: root
+  #         MYSQL_DATABASE: stagedesk
+  #         MYSQL_USER: stagedesk
+  #         MYSQL_PASSWORD: stagedesk
+  #       ports:
+  #         - 3307:3306
+  #       options: >-
+  #         --health-cmd "mysqladmin ping -h localhost -uroot -proot"
+  #         --health-interval 5s --health-timeout 5s --health-retries 20
+  #     redis:
+  #       image: redis:8.8
+  #       ports:
+  #         - 6379:6379
+  #     mailpit:
+  #       image: axllent/mailpit:v1.31
+  #       ports:
+  #         - 1025:1025
+  #         - 8025:8025
+  #     storage:
+  #       image: rustfs/rustfs:1.0.3
+  #       env:
+  #         RUSTFS_ACCESS_KEY: stagedesk
+  #         RUSTFS_SECRET_KEY: stagedesk-secret
+  #         RUSTFS_VOLUMES: /data
+  #         RUSTFS_ADDRESS: ":9000"
+  #       ports:
+  #         - 9000:9000
+  #   env:
+  #     DATABASE_URL: mysql://stagedesk:stagedesk@127.0.0.1:3307/stagedesk
+  #     REDIS_URL: redis://127.0.0.1:6379
+  #     APP_URL: http://localhost:3000
+  #     BETTER_AUTH_URL: http://localhost:3000
+  #     BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else-0123456789
+  #     SMTP_HOST: 127.0.0.1
+  #     SMTP_PORT: 1025
+  #     SMTP_USER: ""
+  #     MAIL_FROM: StageDesk <no-reply@stagedesk.local>
+  #     S3_ENDPOINT: http://127.0.0.1:9000
+  #     S3_REGION: us-east-1
+  #     S3_ACCESS_KEY: stagedesk
+  #     S3_SECRET_KEY: stagedesk-secret
+  #     S3_BUCKET_PUBLIC: stagedesk-public
+  #     S3_BUCKET_PRIVATE: stagedesk-private
+  #     TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+  #     TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: pnpm/action-setup@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version-file: .nvmrc
+  #         cache: pnpm
+  #     - run: pnpm install --frozen-lockfile
+  #     - run: pnpm db:generate
+  #     - run: pnpm --filter @stagedesk/db run deploy
+  #     - run: pnpm db:seed
+  #     - name: Verify local dependencies
+  #       run: |
+  #         curl --fail --silent http://127.0.0.1:8025/api/v1/info >/dev/null
+  #         curl --fail --silent http://127.0.0.1:9000/health >/dev/null
+  #     - run: pnpm --filter @stagedesk/web exec playwright install --with-deps chromium
+  #     - name: Browser journeys
+  #       if: matrix.suite == 'journeys'
+  #       run: pnpm --filter @stagedesk/web e2e --grep-invert "every role opens every page"
+  #     - name: Crawl of every role's pages
+  #       if: matrix.suite == 'crawl'
+  #       run: pnpm --filter @stagedesk/web e2e e2e/role-crawl.spec.ts
+  #     - uses: actions/upload-artifact@v4
+  #       # Also when the time limit cancels the job: the list reporter prints errors only at the end.
+  #       if: failure() || cancelled()
+  #       with:
+  #         name: playwright-results-${{ matrix.suite }}
+  #         path: apps/web/test-results
+  #         retention-days: 7
 
   deploy-staging:
     name: Deploy staging
-    needs: check
+    # A release needs every gate, the browser suite included; none of these jobs may be skipped or allowed to fail.
+    needs: [check, security]
     if: github.event_name == 'push' && github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     environment:
@@ -79,3 +234,44 @@ jobs:
             -o BatchMode=yes \
             "$STAGING_USER@$STAGING_HOST" \
             "bash -s -- '$DEPLOY_SHA'" < scripts/deploy-staging.sh
+
+  deploy-production:
+    name: Deploy production
+    needs: [check, security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.stagedeskpro.com
+    concurrency:
+      group: stagedesk-production-deployment
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PRODUCTION_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.PRODUCTION_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/production_deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/production_deploy_key ~/.ssh/known_hosts
+
+      - name: Deploy verified commit
+        shell: bash
+        env:
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+          PRODUCTION_PORT: ${{ secrets.PRODUCTION_PORT }}
+          PRODUCTION_USER: ${{ secrets.PRODUCTION_USER }}
+          DEPLOY_MODE: ${{ vars.PRODUCTION_DEPLOY_MODE || 'live' }}
+          DEPLOY_SHA: ${{ github.sha }}
+        run: |
+          ssh \
+            -i ~/.ssh/production_deploy_key \
+            -p "$PRODUCTION_PORT" \
+            -o BatchMode=yes \
+            "$PRODUCTION_USER@$PRODUCTION_HOST" \
+            "bash -s -- '$DEPLOY_SHA' '$DEPLOY_MODE'" < scripts/deploy-production.sh

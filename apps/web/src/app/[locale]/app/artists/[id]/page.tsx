@@ -4,16 +4,17 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType, todayInNetherlands } from "@stagedesk/core";
-import { prisma, toDateOnly } from "@stagedesk/db";
+import { artistHoldStatuses, type EventType, todayInNetherlands } from "@stagedesk/core";
+import { artistAccountState, prisma, toDateOnly } from "@stagedesk/db";
 import { ArtistAvatar } from "@/components/artist-avatar";
-import { Pill } from "@/components/status-badge";
+import { ArtistAccountBadge, Pill } from "@/components/status-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
-import { eventDate, percent } from "@/lib/format";
-import { requireAgency } from "@/lib/viewer";
+import { centsToInput, eventDate, euro, percent } from "@/lib/format";
+import { requireAgency, viewerCan } from "@/lib/viewer";
+import { ArtistAccountPanel } from "./account-panel";
 import { ArtistDialog, PhotoUpload, Sharing, UnavailableDates } from "../artist-forms";
 import { LendableSwitch } from "../lendable-switch";
 
@@ -30,7 +31,7 @@ export default function ArtistPage({ params }: PageProps<"/[locale]/app/artists/
 async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, "params">) {
   const { id, locale } = await params;
   setRequestLocale(locale as Locale);
-  const { organization, db } = await requireAgency("agency.artists");
+  const { viewer, organization, db } = await requireAgency("agency.artists");
   const today = todayInNetherlands();
 
   const artist = await db.artist.findFirst({
@@ -42,6 +43,7 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
     },
   });
   if (!artist) notFound();
+  const account = await artistAccountState(artist.id);
 
   const [t, te, format, members, gigs] = await Promise.all([
     getTranslations("artists"),
@@ -53,7 +55,7 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
       where: {
         artistId: artist.id,
         status: { in: ["pending", "accepted"] },
-        booking: { eventDate: { gte: toDateOnly(today) }, status: { in: ["booked", "confirmed"] } },
+        booking: { OR: [{ eventDate: null }, { eventDate: { gte: toDateOnly(today) } }], status: { in: [...artistHoldStatuses] } },
       },
       include: { booking: { select: { trackingCode: true, eventDate: true, eventType: true, venueCity: true, organizationId: true } } },
       orderBy: { booking: { eventDate: "asc" } },
@@ -76,14 +78,19 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold tracking-tight">{artist.stageName}</h1>
             {!artist.active && <Pill>{t("inactive")}</Pill>}
+            <ArtistAccountBadge state={account} />
           </div>
           {genres.length > 0 && <p className="text-muted-foreground">{genres.join(" · ")}</p>}
           <p className="text-sm text-muted-foreground">
-            {t("share")}: {percent(format, artist.defaultShareBps)}
+            {t("share")}: {artist.compensationType === "fixed" && artist.defaultFixedFeeCents !== null ? t("fixedPerBooking", { amount: euro(format, artist.defaultFixedFeeCents, organization.currency) }) : percent(format, artist.defaultShareBps)}
             {artist.user && ` · ${artist.user.name} (${artist.user.email})`}
           </p>
+          <div data-testid="artist-account-state">
+            <ArtistAccountBadge state={account} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <ArtistDialog
+              currency={organization.currency}
               accounts={accounts}
               artist={{
                 id: artist.id,
@@ -91,6 +98,8 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
                 genres: genres.join(", "),
                 bio: artist.bio ?? "",
                 sharePct: String(artist.defaultShareBps / 100),
+                compensationType: artist.compensationType === "fixed" ? "fixed" : "percentage",
+                fixedFee: artist.defaultFixedFeeCents !== null ? centsToInput(artist.defaultFixedFeeCents, locale) : "",
                 userId: artist.userId,
                 active: artist.active,
                 showOnBookingPage: artist.showOnBookingPage,
@@ -101,6 +110,8 @@ async function Artist({ params }: Pick<PageProps<"/[locale]/app/artists/[id]">, 
           </div>
         </div>
       </div>
+
+      {account !== "active" && <ArtistAccountPanel artistId={artist.id} state={account} canManage={viewerCan(viewer, "agency.artists.manage")} accounts={accounts.filter((a) => a.id !== artist.userId)} />}
 
       {artist.bio && <p className="max-w-prose whitespace-pre-line text-sm">{artist.bio}</p>}
 

@@ -1,11 +1,13 @@
 import { Suspense } from "react";
 import { getLocale, setRequestLocale } from "next-intl/server";
 import { DatePrefsProvider } from "@/components/date-prefs";
+import { GroupMessages } from "@/components/group-messages";
 import { Guide } from "@/components/shell/guide";
 
-import { pendingLegal, prisma } from "@stagedesk/db";
+import { pendingGigCount, pendingLegal, prisma } from "@stagedesk/db";
 import { AppSidebar } from "@/components/shell/app-sidebar";
 import { SubscriptionBanner } from "@/components/shell/subscription-banner";
+import { ImpersonationBanner } from "@/components/shell/impersonation-banner";
 import { SupportBanner } from "@/components/shell/support-banner";
 import { SuspendedNotice } from "@/components/shell/suspended-notice";
 import { TopBar } from "@/components/shell/top-bar";
@@ -21,28 +23,37 @@ export default async function DashboardLayout({ children, params }: LayoutProps<
   setRequestLocale(locale as Locale);
 
   return (
-    <Suspense fallback={<ShellSkeleton />}>
-      <Shell>{children}</Shell>
-    </Suspense>
+    <GroupMessages group="app" locale={locale}>
+      <Suspense fallback={<ShellSkeleton />}>
+        <Shell>{children}</Shell>
+      </Suspense>
+    </GroupMessages>
   );
 }
 
 async function Shell({ children }: { children: React.ReactNode }) {
-  const { user, role, organization, memberships, support, permissions } = await requireViewer();
-  // New Terms (or, for agencies, a new data processing agreement) are accepted before anything else.
-  if ((await pendingLegal(user.id)).length > 0) redirect({ href: "/accept-terms", locale: (await getLocale()) as Locale });
+  const { user, role, organization, memberships, support, permissions, impersonatedBy } = await requireViewer();
+  // New Terms (or, for agencies, a new data processing agreement) are accepted before anything else,
+  // by the person themselves: an admin logged in as them skips the step rather than accepting for them.
+  if (!impersonatedBy && (await pendingLegal(user.id)).length > 0) redirect({ href: "/accept-terms", locale: (await getLocale()) as Locale });
   // A suspended agency is closed to its team and customers; they can still switch agency or sign out.
   const suspended = organization ? await prisma.organization.findUnique({ where: { id: organization.id }, select: { suspendedAt: true, suspendReason: true } }) : null;
   const datePrefs = await viewerDatePrefs();
+  // Requests waiting for this artist's answer, as a count next to Gigs.
+  const gigRequests = permissions.includes("artist.gigs") ? await pendingGigCount(user.id) : 0;
   return (
     <DatePrefsProvider prefs={datePrefs}>
       <SidebarProvider>
-        <AppSidebar viewer={{ user, role, organization, memberships, permissions }} />
+        <AppSidebar viewer={{ user, role, organization, memberships, permissions, impersonatedBy }} badges={{ gigs: gigRequests }} />
         <SidebarInset>
           <TopBar permissions={permissions} role={role} />
-          <Suspense fallback={null}>
-            <Guide userId={user.id} permissions={permissions} role={role} />
-          </Suspense>
+          {/* The tour is the user's own; an admin logged in as them shouldn't dismiss it. */}
+          {!impersonatedBy && (
+            <Suspense fallback={null}>
+              <Guide userId={user.id} permissions={permissions} role={role} />
+            </Suspense>
+          )}
+          {impersonatedBy && <ImpersonationBanner name={user.name} email={user.email} />}
           {support && <SupportBanner agency={support.name} />}
           {organization && permissions.includes("agency.bookings") && !suspended?.suspendedAt && <SubscriptionBanner organizationId={organization.id} canBill={permissions.includes("agency.billing")} />}
           <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 md:px-6 md:py-8">

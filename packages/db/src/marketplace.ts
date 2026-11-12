@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { computeQuote, type QuoteLineInput, type ServiceArea, servesRequest, subscriptionAccess } from "@stagedesk/core";
-import { acceptQuote, sendQuote } from "./bookings";
+import { computeQuote, marketplaceCovers, quoteAmountProblem, type QuoteLineInput, type ServiceArea, servesRequest, subscriptionAccess } from "@stagedesk/core";
+import { acceptQuote, BookingError, sendQuote } from "./bookings";
 import { prisma } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { geocode } from "./geo";
@@ -12,6 +12,18 @@ import { getSetting } from "./settings";
  * provider serving its area, each may send a price, and the customer
  * accepts one, which becomes a booking with that provider.
  */
+
+/**
+ * Whether the platform's request form takes a request now (the `marketplace`
+ * setting). Only looks the place up on the map when launch regions are set.
+ */
+export async function marketplaceAccepts(eventType: string, venueCity: string) {
+  const setting = await getSetting("marketplace");
+  const quick = marketplaceCovers(setting, { eventType, places: [venueCity] });
+  if (quick !== "region") return quick;
+  const hit = await geocode(venueCity);
+  return marketplaceCovers(setting, { eventType, places: [venueCity, hit?.city, hit?.region] });
+}
 
 export class MarketError extends Error {
   constructor(readonly code: "not_found" | "closed" | "not_offered" | "invalid_quote" | "expired") {
@@ -117,7 +129,7 @@ export async function quoteLeadOffer(leadId: string, organizationId: string, inp
   } catch {
     throw new MarketError("invalid_quote");
   }
-  if (totals.totalCents <= 0) throw new MarketError("invalid_quote");
+  if (totals.totalCents <= 0 || quoteAmountProblem(totals)) throw new MarketError("invalid_quote");
   return prisma.leadOffer.update({
     where: { id: offer.id },
     data: {
@@ -181,38 +193,101 @@ export async function leadForCustomer(reference: string, token: string, now = ne
 
 /**
  * The customer accepts one price: the lead becomes a booking with that
- * provider, the price becomes its accepted quote, and every other offer is
- * marked lost. Returns what the caller needs for emails.
+ * provider (one transaction, see assignLead: the chosen offer is accepted and
+ * every other one lost), then the price becomes its accepted quote
+ * (completeLeadAcceptance, resumable). Accepting the same offer again returns
+ * the booking with `repeated` set, so the caller doesn't send emails twice.
  */
 export async function acceptLeadOffer(reference: string, token: string, offerId: string, now = new Date()) {
   const lead = await prisma.lead.findUnique({ where: { reference } });
   if (!lead || lead.accessToken !== token) throw new MarketError("not_found");
-  if (!openStatuses.includes(lead.status)) throw new MarketError("closed");
+  if (!openStatuses.includes(lead.status)) {
+    // A second click, or a retry after a timeout: same offer, same booking.
+    const accepted = await prisma.leadOffer.findFirst({ where: { id: offerId, leadId: lead.id, status: "accepted" } });
+    if (lead.status === "assigned" && accepted && lead.bookingId && lead.assignedAgencyId === accepted.agencyId) {
+      await completeLeadAcceptance(lead.id, now);
+      const booking = await prisma.booking.findUniqueOrThrow({ where: { id: lead.bookingId } });
+      const agency = await prisma.organization.findUniqueOrThrow({ where: { id: accepted.agencyId }, select: { id: true, name: true, suspendedAt: true } });
+      return { lead, booking, agency, lostTo: [] as string[], repeated: true };
+    }
+    throw new MarketError("closed");
+  }
   const offer = await prisma.leadOffer.findFirst({ where: { id: offerId, leadId: lead.id, status: "quoted" } });
   if (!offer || !offer.quotedById) throw new MarketError("not_offered");
   if (offer.validUntil && offer.validUntil < now) throw new MarketError("expired");
 
   let assigned;
   try {
-    assigned = await assignLead(lead.id, offer.agencyId, null);
+    assigned = await assignLead(lead.id, offer.agencyId, null, { chosenOfferId: offer.id });
   } catch (error) {
     if (error instanceof LeadError) throw new MarketError(error.code === "not_found" ? "not_found" : "closed");
     throw error;
   }
-  const { booking, agency } = assigned;
-  const quote = await sendQuote(
-    offer.agencyId,
-    booking.id,
-    { lines: (offer.quoteLines ?? []) as unknown as QuoteLineInput[], depositBps: offer.depositBps ?? 0, expiresInDays: 14, notes: offer.quoteMessage },
-    offer.quotedById,
-    now,
-  );
-  await acceptQuote(offer.agencyId, quote.id, { actor: "customer", actorId: null, name: lead.name }, now);
+  // If this fails (or the process stops) the worker finishes it: resumeLeadAcceptances.
+  await completeLeadAcceptance(lead.id, now);
+  const booking = await prisma.booking.findUniqueOrThrow({ where: { id: assigned.booking.id } });
+  return { lead, booking, agency: assigned.agency, lostTo: assigned.lostTo, repeated: false };
+}
 
-  const others = await prisma.leadOffer.findMany({ where: { leadId: lead.id, id: { not: offer.id }, status: { in: ["pending", "quoted", "withdrawn"] } }, select: { agencyId: true } });
-  await prisma.$transaction([
-    prisma.leadOffer.update({ where: { id: offer.id }, data: { status: "accepted" } }),
-    prisma.leadOffer.updateMany({ where: { leadId: lead.id, id: { not: offer.id }, status: { in: ["pending", "quoted", "withdrawn"] } }, data: { status: "lost" } }),
-  ]);
-  return { lead, booking, agency, lostTo: others.map((o) => o.agencyId) };
+/**
+ * Turns the chosen price of an assigned marketplace lead into the booking's
+ * accepted quote, from whatever step it stopped at: sends the quote while the
+ * booking is an inquiry, accepts the current quote while it's quoted, and does
+ * nothing once it's booked (or moved on). Safe to run any number of times.
+ */
+export async function completeLeadAcceptance(leadId: string, now = new Date()) {
+  const lead = await prisma.lead.findUnique({ where: { id: leadId } });
+  if (!lead || lead.status !== "assigned" || !lead.bookingId || !lead.assignedAgencyId) return "not_applicable";
+  const offer = await prisma.leadOffer.findFirst({ where: { leadId, agencyId: lead.assignedAgencyId, status: "accepted", quotedById: { not: null } } });
+  if (!offer) return "not_applicable"; // assigned by an admin or an agency, not chosen by the customer
+  const organizationId = lead.assignedAgencyId;
+  for (let step = 0; step < 3; step++) {
+    const booking = await prisma.booking.findUniqueOrThrow({ where: { id: lead.bookingId }, select: { status: true } });
+    try {
+      if (booking.status === "inquiry") {
+        await sendQuote(
+          organizationId,
+          lead.bookingId,
+          { lines: (offer.quoteLines ?? []) as unknown as QuoteLineInput[], depositBps: offer.depositBps ?? 0, expiresInDays: 14, notes: offer.quoteMessage },
+          offer.quotedById!,
+          now,
+        );
+      } else if (booking.status === "quoted") {
+        const quote = await prisma.quote.findFirst({ where: { bookingId: lead.bookingId, status: "sent" }, orderBy: { version: "desc" } });
+        if (!quote) return "stuck";
+        await acceptQuote(organizationId, quote.id, { actor: "customer", actorId: null, name: lead.name }, now);
+      } else {
+        return "done";
+      }
+    } catch (error) {
+      // Another run moved it on at the same moment: look again.
+      if (!(error instanceof BookingError)) throw error;
+    }
+  }
+  const final = await prisma.booking.findUniqueOrThrow({ where: { id: lead.bookingId }, select: { status: true } });
+  return final.status === "inquiry" || final.status === "quoted" ? "stuck" : "done";
+}
+
+/** Worker: finishes customer acceptances that stopped half-way (crash, database error). */
+export async function resumeLeadAcceptances(now = new Date()) {
+  const leads = await prisma.lead.findMany({
+    where: {
+      status: "assigned",
+      bookingId: { not: null },
+      updatedAt: { lt: new Date(now.getTime() - 2 * 60_000) },
+      offers: { some: { status: "accepted", quotedById: { not: null } } },
+    },
+    select: { id: true, bookingId: true },
+    take: 100,
+  });
+  const bookings = await prisma.booking.findMany({ where: { id: { in: leads.map((l) => l.bookingId!) }, status: { in: ["inquiry", "quoted"] } }, select: { id: true } });
+  let resumed = 0;
+  for (const lead of leads.filter((l) => bookings.some((b) => b.id === l.bookingId))) {
+    try {
+      if ((await completeLeadAcceptance(lead.id, now)) === "done") resumed++;
+    } catch (error) {
+      console.error("[leads] resuming acceptance failed", lead.id, error);
+    }
+  }
+  return { resumed };
 }

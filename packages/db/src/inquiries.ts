@@ -1,5 +1,7 @@
+import { attachBookingPromo } from "./promo-codes";
 import { randomUUID } from "node:crypto";
-import { type EventType, fullyBookedDates, isBudgetRange } from "@stagedesk/core";
+import { artistHoldStatuses, type EventType, fullyBookedDates, isBudgetRange } from "@stagedesk/core";
+import { agencyBilling } from "./billing";
 import { bookableArtists, createBooking, toDateOnly } from "./bookings";
 import { prisma } from "./client";
 import { tenantDb } from "./tenant";
@@ -22,6 +24,7 @@ export async function publicAgency(slug: string) {
       bookingIntro: true,
       faq: true,
       showReviews: true,
+      bookingTheme: true,
       city: true,
       addressLine: true,
       postalCode: true,
@@ -58,7 +61,7 @@ export async function agencyFullyBookedDates(organizationId: string, from: strin
   const [blocked, playing] = await Promise.all([
     prisma.artistUnavailability.findMany({ where: { artistId: { in: ids }, date: range }, select: { artistId: true, date: true } }),
     prisma.bookingAssignment.findMany({
-      where: { artistId: { in: ids }, status: { in: ["pending", "accepted"] }, booking: { eventDate: range, status: { in: ["booked", "confirmed"] } } },
+      where: { artistId: { in: ids }, status: { in: ["pending", "accepted"] }, booking: { eventDate: range, status: { in: [...artistHoldStatuses] } } },
       select: { artistId: true, booking: { select: { eventDate: true } } },
     }),
   ]);
@@ -91,6 +94,8 @@ export interface InquiryInput {
   partnerName: string | null;
   ceremony: boolean | null;
   message: string | null;
+  /** An agency promo code the customer typed (checked by the caller); null for none. */
+  promoCode?: string | null;
 }
 
 /**
@@ -142,5 +147,92 @@ export async function submitInquiry(slug: string, input: InquiryInput, source: "
     },
     null,
   );
+  // Checked by the form before submitting; a code that ran out in between is simply left off.
+  if (input.promoCode) await attachBookingPromo(agency.id, booking.id, input.promoCode, "customer").catch(() => null);
   return { agency, booking, customerId: user.id, newAccount: !existing };
+}
+
+export class CustomerRequestError extends Error {
+  constructor(readonly code: "not_customer" | "closed") {
+    super(`Customer request: ${code}`);
+    this.name = "CustomerRequestError";
+  }
+}
+
+export interface CustomerRequestInput {
+  /** A key from the form; a repeat with the same one returns the first booking. */
+  clientRequestId: string;
+  eventType: EventType;
+  eventDate: string;
+  startTime: string | null;
+  venueName: string | null;
+  venueCity: string;
+  guestCount: number | null;
+  budgetRange: string | null;
+  preferredArtistId: string | null;
+  preferredGenre: string | null;
+  partnerName: string | null;
+  ceremony: boolean | null;
+  message: string | null;
+}
+
+/**
+ * Whether an agency takes requests from its customers' portals: the same
+ * switches and plan feature as its public page, so turning that off, being
+ * suspended or having a plan without it stops both. The monthly booking limit
+ * plays no part: it counts bookings the agency enters itself, and an inquiry is
+ * a lead the agency shouldn't lose (see agencyUsage).
+ */
+export async function agencyTakesRequests(organizationId: string) {
+  const agency = await prisma.organization.findFirst({ where: { id: organizationId, bookingPageEnabled: true, suspendedAt: null }, select: { id: true } });
+  if (!agency) return false;
+  return (await agencyBilling(organizationId)).limits.bookingPage;
+}
+
+/**
+ * A signed-in customer asks their agency for a booking. They must already be a
+ * customer of exactly this agency, so no account is made and no other agency can
+ * be reached. `duplicate` says the booking already existed: nobody should be told again.
+ * Only the form's key decides that. Two inquiries for the same day and city are
+ * legitimate (two DJs for two rooms), so details never make a request a duplicate.
+ */
+export async function submitCustomerRequest(organizationId: string, customerId: string, input: CustomerRequestInput) {
+  const db = tenantDb(organizationId);
+  const member = await db.member.findFirst({ where: { userId: customerId, role: "customer" }, select: { id: true } });
+  if (!member) throw new CustomerRequestError("not_customer");
+  if (!(await agencyTakesRequests(organizationId))) throw new CustomerRequestError("closed");
+
+  const repeat = await db.booking.findFirst({ where: { customerId, clientRequestId: input.clientRequestId } });
+  if (repeat) return { booking: repeat, duplicate: true };
+
+  const preferred = input.preferredArtistId ? ((await publicArtists(organizationId)).find((a) => a.id === input.preferredArtistId)?.id ?? null) : null;
+  try {
+    const booking = await createBooking(
+      organizationId,
+      {
+        customerId,
+        eventType: input.eventType,
+        eventDate: input.eventDate,
+        startTime: input.startTime,
+        venueName: input.venueName,
+        venueCity: input.venueCity,
+        guestCount: input.guestCount,
+        message: input.message,
+        partnerName: input.eventType === "wedding" ? input.partnerName : null,
+        ceremony: input.eventType === "wedding" ? input.ceremony : null,
+        preferredArtistId: preferred,
+        preferredGenre: input.preferredGenre,
+        budgetRange: isBudgetRange(input.budgetRange) ? input.budgetRange : null,
+        source: "customer_portal",
+        clientRequestId: input.clientRequestId,
+      },
+      customerId,
+    );
+    return { booking, duplicate: false };
+  } catch (error) {
+    // Two submits at once: the unique index let one through, and that one is the answer.
+    const winner = await db.booking.findFirst({ where: { customerId, clientRequestId: input.clientRequestId } });
+    if (winner) return { booking: winner, duplicate: true };
+    throw error;
+  }
 }

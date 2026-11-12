@@ -161,20 +161,92 @@ export async function startCampaign(id: string, now = new Date()) {
   return prisma.newsletterCampaign.update({ where: { id }, data: { status: "sending", startedAt: now, scheduledAt: c.scheduledAt ?? now, recipients: recipients.length } });
 }
 
-/** The next batch still to send for a campaign, with what the email needs. */
-export async function nextDeliveries(campaignId: string, take = 50) {
+/** Temporary failures are retried this many times in all, with growing pauses (5 min, 30 min, 2 h). */
+export const NEWSLETTER_MAX_ATTEMPTS = 4;
+const retryDelays = [5 * 60_000, 30 * 60_000, 2 * 60 * 60_000];
+const CLAIM_MS = 10 * 60_000;
+
+/**
+ * The next batch to send for a campaign, each delivery claimed for this
+ * sender first: two senders (two worker instances, or "send now" while the
+ * every-minute run is busy) never mail the same person. Deliveries waiting
+ * for a retry are left until their time.
+ */
+export async function nextDeliveries(campaignId: string, take = 50, now = new Date()) {
+  const ready = {
+    campaignId,
+    status: "queued",
+    AND: [{ OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: now } }] }, { OR: [{ lockedUntil: null }, { lockedUntil: { lt: now } }] }],
+  } satisfies Prisma.NewsletterDeliveryWhereInput;
+  const candidates = await prisma.newsletterDelivery.findMany({ where: ready, take, select: { id: true } });
+  const claimed: string[] = [];
+  for (const { id } of candidates) {
+    const won = await prisma.newsletterDelivery.updateMany({ where: { ...ready, id }, data: { lockedUntil: new Date(now.getTime() + CLAIM_MS), attempts: { increment: 1 } } });
+    if (won.count === 1) claimed.push(id);
+  }
   return prisma.newsletterDelivery.findMany({
-    where: { campaignId, status: "queued" },
-    take,
+    where: { id: { in: claimed } },
     include: { subscriber: { select: { email: true, name: true, locale: true, token: true, status: true } } },
   });
 }
 
-export async function markDelivery(id: string, campaignId: string, result: { ok: true } | { ok: false; error: string }) {
+/**
+ * Whether a send failure is worth retrying: connection problems and SMTP 4xx
+ * are temporary; 5xx (unknown mailbox, rejected) and anything said to be
+ * permanent are not.
+ */
+export function isTemporaryMailError(error: unknown) {
+  const code = Number((error as { responseCode?: number } | null)?.responseCode);
+  if (Number.isFinite(code) && code >= 500) return false;
+  return true;
+}
+
+/**
+ * Records a send. A temporary failure goes back in the queue for a later
+ * attempt (until NEWSLETTER_MAX_ATTEMPTS); the campaign counts only final
+ * outcomes.
+ */
+export async function markDelivery(
+  id: string,
+  campaignId: string,
+  result: { ok: true } | { ok: false; error: string; temporary?: boolean },
+  now = new Date(),
+) {
+  const delivery = await prisma.newsletterDelivery.findUniqueOrThrow({ where: { id }, select: { attempts: true } });
+  if (!result.ok && result.temporary && delivery.attempts < NEWSLETTER_MAX_ATTEMPTS) {
+    const delay = retryDelays[Math.min(delivery.attempts - 1, retryDelays.length - 1)] ?? retryDelays[0]!;
+    await prisma.newsletterDelivery.update({ where: { id }, data: { error: result.error.slice(0, 500), lockedUntil: null, nextAttemptAt: new Date(now.getTime() + delay) } });
+    return "retry" as const;
+  }
   await prisma.$transaction([
-    prisma.newsletterDelivery.update({ where: { id }, data: result.ok ? { status: "sent", sentAt: new Date(), error: null } : { status: "failed", error: result.error.slice(0, 500) } }),
+    prisma.newsletterDelivery.update({
+      where: { id },
+      data: result.ok
+        ? { status: "sent", sentAt: now, error: null, lockedUntil: null, nextAttemptAt: null }
+        : { status: "failed", error: result.error.slice(0, 500), lockedUntil: null, nextAttemptAt: null },
+    }),
     prisma.newsletterCampaign.update({ where: { id: campaignId }, data: result.ok ? { sentCount: { increment: 1 } } : { failedCount: { increment: 1 } } }),
   ]);
+  return result.ok ? ("sent" as const) : ("failed" as const);
+}
+
+/**
+ * Admin: queue a campaign's failed deliveries again (e.g. after fixing the
+ * SMTP settings). People who unsubscribed meanwhile are skipped when sending.
+ */
+export async function retryFailedDeliveries(campaignId: string) {
+  return prisma.$transaction(async (tx) => {
+    const failed = await tx.newsletterDelivery.updateMany({
+      where: { campaignId, status: "failed" },
+      data: { status: "queued", attempts: 0, nextAttemptAt: null, lockedUntil: null, error: null },
+    });
+    if (failed.count === 0) return 0;
+    await tx.newsletterCampaign.updateMany({
+      where: { id: campaignId, status: { in: ["sending", "sent"] } },
+      data: { status: "sending", failedCount: { decrement: failed.count } },
+    });
+    return failed.count;
+  });
 }
 
 /** Marks the campaign sent once nothing is queued any more. */

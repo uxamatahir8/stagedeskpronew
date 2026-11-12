@@ -1,11 +1,12 @@
-import { CalendarCheckIcon, GiftIcon, UserPlusIcon, UsersIcon } from "lucide-react";
+import { CalendarCheckIcon, GiftIcon, SendIcon, UserPlusIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { agencyReferralCode, getSetting, prisma } from "@stagedesk/db";
+import { agencyReferralCode, getSetting, invitesSent, prisma } from "@stagedesk/db";
 import { CopyField } from "@/components/copy-field";
 import { EmptyState } from "@/components/empty-state";
+import { InviteAgencyForm } from "@/components/invite-agency-form";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { Pill } from "@/components/status-badge";
@@ -39,8 +40,9 @@ export default async function ReferralsPage({ params }: PageProps<"/[locale]/app
  */
 async function Referrals() {
   const { organization } = await requireAgency("agency.referrals");
-  const [t, tn, format, program, code, referred, own] = await Promise.all([
+  const [t, ti, tn, format, program, code, referred, own, invites] = await Promise.all([
     getTranslations("agencyReferral"),
+    getTranslations("agencyInvite"),
     getTranslations("nav"),
     getFormatter(),
     getSetting("affiliates.program"),
@@ -51,6 +53,7 @@ async function Referrals() {
       include: { agency: { select: { name: true, subscription: { select: { status: true } } } } },
     }),
     prisma.referral.findUnique({ where: { agencyId: organization.id }, include: { affiliate: { include: { user: { select: { name: true } } } }, referringAgency: { select: { name: true } } } }),
+    invitesSent({ inviterAgencyId: organization.id }),
   ]);
   const months = program.agencyReferralFreeMonths;
   const paying = referred.filter((r) => r.firstPaidAt).length;
@@ -90,6 +93,31 @@ async function Referrals() {
           </CardContent>
         </Card>
       )}
+      <Card id="invite">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SendIcon className="size-4 text-primary" aria-hidden />
+            {ti("agencyTitle")}
+          </CardTitle>
+          <CardDescription>{months > 0 ? ti("agencyBodyReward", { count: months }) : ti("agencyBody")}</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <InviteAgencyForm as="agency" />
+          {invites.length > 0 && (
+            <ul className="grid gap-1.5 text-sm" aria-label={ti("sentTitle")}>
+              {invites.map((invite) => (
+                <li key={invite.id} className="flex flex-wrap items-center justify-between gap-2 border-t pt-1.5">
+                  <span className="truncate">{invite.email}</span>
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    {eventDate(format, invite.createdAt, "short")}
+                    <Pill tone={invite.joinedAt ? "success" : "neutral"}>{invite.joinedAt ? ti("joined", { name: invite.joinedAgency?.name ?? "" }) : ti("pending")}</Pill>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
       <Card>
         <CardHeader>
           <CardTitle>{t("referredTitle")}</CardTitle>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, redirect } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
+import { stopImpersonationAction } from "@/lib/impersonation-actions";
 import { getViewer } from "@/lib/viewer";
 import { OnboardingForm, SoloArtistForm } from "./onboarding-form";
 
@@ -37,7 +38,10 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
   if (!viewer) redirect({ href: "/sign-in?next=/onboarding", locale });
   if (viewer!.role) redirect({ href: "/app", locale });
   const t = await getTranslations("onboarding");
-  const start = (await searchParams)["start"];
+  const query = await searchParams;
+  const start = query["start"];
+  const chosenPlan = typeof query["plan"] === "string" ? query["plan"] : undefined;
+  const chosenInterval = query["interval"] === "year" ? "year" : undefined;
   const startAgency = start === "agency";
   const invitations = await prisma.invitation.findMany({
     where: { email: viewer!.user.email.toLowerCase(), status: "pending", expiresAt: { gt: new Date() } },
@@ -48,9 +52,18 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
   const footer = (
     <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
       {t("signedInAs", { email: viewer!.user.email })}
-      <SignOutButton variant="link" className="h-auto p-0">
-        {t("signOut")}
-      </SignOutButton>
+      {viewer!.impersonatedBy ? (
+        // An admin logged in as this person goes back to their own account instead.
+        <form action={stopImpersonationAction}>
+          <Button type="submit" variant="link" className="h-auto p-0">
+            {(await getTranslations("impersonation"))("return")}
+          </Button>
+        </form>
+      ) : (
+        <SignOutButton variant="link" className="h-auto p-0">
+          {t("signOut")}
+        </SignOutButton>
+      )}
     </p>
   );
 
@@ -69,7 +82,7 @@ async function Onboarding({ searchParams }: Pick<PageProps<"/[locale]/onboarding
     return (
       <AuthCard title={t("title")} description={t("body")}>
         <div className="grid gap-6">
-          <OnboardingForm />
+          <OnboardingForm plan={chosenPlan} interval={chosenInterval} />
           {footer}
         </div>
       </AuthCard>

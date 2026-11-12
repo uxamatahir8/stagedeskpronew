@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type BookingStatus, percentOf } from "@stagedesk/core";
-import { prisma } from "@stagedesk/db";
+import { type BookingStatus, artistEarnings, artistShareOfReceived, compensationOf } from "@stagedesk/core";
+import { ARTIST_PAID_BY_AGENCY } from "@stagedesk/db";
+import { currentArtistProfile, prisma } from "@stagedesk/db";
 import { isStripeConfigured } from "@stagedesk/payments";
 import { ConnectCard } from "@/components/connect-card";
 import { EmptyState } from "@/components/empty-state";
@@ -45,7 +46,7 @@ async function Earnings() {
     getTranslations("payments"),
     getTranslations("bookingStatus"),
     getFormatter(),
-    prisma.artist.findFirst({ where: { organizationId: organization.id, userId: viewer.user.id }, include: { connectedAccount: true } }),
+    prisma.artist.findFirst({ where: { ...currentArtistProfile(viewer.user.id), organizationId: organization.id }, include: { connectedAccount: true } }),
   ]);
   if (!artist) return <EmptyState icon={HandCoinsIcon} title={t("title")} description={t("noProfile")} />;
   if (await refreshIncompleteAccount(artist.connectedAccount)) {
@@ -53,25 +54,35 @@ async function Earnings() {
   }
 
   // The artist's own bookings at this agency; shares are a fixed percentage of the booking total.
-  const [assignments, ledger] = await Promise.all([
+  const [assignments, ledger, offlinePayments] = await Promise.all([
     prisma.bookingAssignment.findMany({
       where: { artistId: artist.id, status: "accepted", booking: { status: { in: [...done, ...upcoming] } } },
       include: { booking: { select: { id: true, trackingCode: true, currency: true, eventType: true, eventDate: true, status: true, totalCents: true } } },
       orderBy: { booking: { eventDate: "desc" } },
     }),
     prisma.ledgerEntry.findMany({
-      where: { artistId: artist.id, type: { in: ["transfer", "transfer_reversal", "owed_by_agency"] } },
+      where: { artistId: artist.id, type: { in: ["transfer", "transfer_reversal", "owed_by_agency", ARTIST_PAID_BY_AGENCY] } },
       select: { bookingId: true, type: true, amountCents: true },
     }),
+    // Money the agency received itself: nothing goes through Stripe, so it pays the artist directly.
+    prisma.payment.findMany({
+      where: { kind: { not: "refund" }, method: { not: "stripe" }, booking: { assignments: { some: { artistId: artist.id, status: "accepted" } } } },
+      select: { bookingId: true, amountCents: true, refundedCents: true },
+    }),
   ]);
+  const receivedOffline = (bookingId: string) => offlinePayments.filter((p) => p.bookingId === bookingId).reduce((sum, p) => sum + p.amountCents - p.refundedCents, 0);
   const ledgerFor = (bookingId: string, types: string[]) =>
     ledger.filter((l) => l.bookingId === bookingId && types.includes(l.type)).reduce((sum, l) => sum + l.amountCents, 0);
   const rows = assignments.map((a) => ({
     ...a.booking,
     shareBps: a.shareBps,
-    share: percentOf(a.booking.totalCents, a.shareBps),
+    fixed: a.compensationType === "fixed",
+    // A share of the booking, or the fixed fee agreed for it.
+    share: artistEarnings(compensationOf(a), a.booking.totalCents),
     paidOut: ledgerFor(a.booking.id, ["transfer", "transfer_reversal"]),
-    owed: ledgerFor(a.booking.id, ["owed_by_agency"]),
+    owed: (done as readonly string[]).includes(a.booking.status)
+      ? Math.max(0, artistShareOfReceived(compensationOf(a), receivedOffline(a.booking.id), a.booking.totalCents) + ledgerFor(a.booking.id, ["owed_by_agency"]) - ledgerFor(a.booking.id, [ARTIST_PAID_BY_AGENCY]))
+      : 0,
   }));
   // Totals are in the currency most gigs are in; an artist working across currencies sees each gig in its own below.
   const counts = new Map<string, number>();
@@ -130,7 +141,7 @@ async function Earnings() {
                 <BookingStatusBadge key="s" status={r.status as BookingStatus} />,
                 <div key="sh">
                   {euro(format, r.share, r.currency)}
-                  <div className="text-xs text-muted-foreground">{percent(format, r.shareBps)}</div>
+                  <div className="text-xs text-muted-foreground">{r.fixed ? t("fixedFee") : percent(format, r.shareBps)}</div>
                 </div>,
                 r.paidOut ? euro(format, r.paidOut, r.currency) : "—",
                 r.owed ? euro(format, r.owed, r.currency) : "—",

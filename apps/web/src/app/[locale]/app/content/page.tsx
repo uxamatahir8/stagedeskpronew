@@ -35,7 +35,7 @@ export default async function ContentPage({ params, searchParams }: PageProps<"/
 const kinds = ["blog", "help", "changelog"] as const;
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
 
-const spec = { sorts: ["updated", "title", "category", "published"], defaultSort: "published", defaultDir: "desc" as const, filters: { status: ["published", "scheduled", "draft"], category: [] as string[] } };
+const spec = { sorts: ["updated", "title", "category", "published"], defaultSort: "published", defaultDir: "desc" as const, filters: { status: ["published", "scheduled", "pending", "rejected", "draft"], category: [] as string[] } };
 
 async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/content">, "params" | "searchParams">) {
   await requirePermission("platform.pages");
@@ -50,6 +50,7 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
   ]);
   const en = locale === "en";
   const now = new Date();
+  const waiting = articles.filter((a) => a.status === "pending").length;
   const publicBase = kind === "blog" ? "/blog" : kind === "help" ? "/help" : "/changelog";
 
   return (
@@ -79,6 +80,12 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
         ))}
       </nav>
 
+      {waiting > 0 && (
+        <Link href={`/app/content?${kind === "blog" ? "" : `kind=${kind}&`}status=pending`} className="flex w-fit items-center gap-2 rounded-lg border border-info/40 bg-info/10 px-3 py-2 text-sm font-medium">
+          {t("pendingApproval", { count: waiting })}
+        </Link>
+      )}
+
       <div className={cn("grid gap-6", kind !== "changelog" && "2xl:grid-cols-[minmax(0,1fr)_22rem]")}>
         <div className="grid content-start gap-4">
           {articles.length === 0 ? (
@@ -88,7 +95,7 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
               spec={{ ...spec, filters: { ...spec.filters, category: categories.map((c) => c.id) } }}
               placeholder={t("searchPlaceholder")}
               filters={[
-                { key: "status", label: t("status"), options: ["published", "scheduled", "draft"].map((v) => ({ value: v, label: t(`status_${v as "draft"}`) })) },
+                { key: "status", label: t("status"), options: ["published", "scheduled", "pending", "rejected", "draft"].map((v) => ({ value: v, label: t(`status_${v as "draft"}`) })) },
                 ...(categories.length > 0 ? [{ key: "category", label: t("category"), options: categories.map((c) => ({ value: c.id, label: en ? c.nameEn : c.nameNl })) }] : []),
               ]}
               columns={[
@@ -103,13 +110,14 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
                 const nl = a.nl as ArticleLocale;
                 const scheduled = a.status === "published" && a.publishedAt && a.publishedAt > now;
                 const live = a.status === "published" && !scheduled;
+                const state = live ? "published" : scheduled ? "scheduled" : a.status === "pending" ? "pending" : a.status === "rejected" ? "rejected" : "draft";
                 const title = (en && (a.en as ArticleLocale | null)?.title) || nl.title;
                 const category = a.category ? (en ? a.category.nameEn : a.category.nameNl) : null;
                 return {
                   id: a.id,
                   text: `${title} ${nl.title} ${a.slug} ${category ?? ""}`,
                   values: { title, category, published: a.publishedAt?.getTime() ?? null, updated: a.updatedAt.getTime() },
-                  facets: { status: live ? "published" : scheduled ? "scheduled" : "draft", category: a.categoryId ?? "" },
+                  facets: { status: state, category: a.categoryId ?? "" },
                   cells: [
                     <div key="t" className="max-w-md">
                       <Link href={`/app/content/${a.id}`} className="font-medium underline-offset-4 hover:underline">
@@ -122,7 +130,7 @@ async function Content({ params, searchParams }: Pick<PageProps<"/[locale]/app/c
                       </div>
                     </div>,
                     ...(kind !== "changelog" ? [category ?? "—"] : []),
-                    <Pill key="s" tone={live ? "success" : scheduled ? "info" : "neutral"}>{t(live ? "status_published" : scheduled ? "status_scheduled" : "status_draft")}</Pill>,
+                    <Pill key="s" tone={live ? "success" : scheduled || state === "pending" ? "info" : state === "rejected" ? "danger" : "neutral"}>{t(`status_${state as "draft"}`)}</Pill>,
                     a.publishedAt ? format.dateTime(a.publishedAt, { day: "numeric", month: "short", year: "numeric" }) : "—",
                     ...(kind === "blog" ? [<FeatureButton key="f" id={a.id} featured={a.featured} />] : []),
                     live ? (

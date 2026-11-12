@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { setRequestLocale } from "next-intl/server";
-import { todayInNetherlands } from "@stagedesk/core";
-import { agencyBilling, agencyFullyBookedDates, publicAgency, publicArtists } from "@stagedesk/db";
+import { getTranslations, setRequestLocale } from "next-intl/server";
+import { parseBookingTheme, todayInNetherlands } from "@stagedesk/core";
+import { agencyBilling, agencyFullyBookedDates, availableBookingTypes, publicAgency, publicArtists } from "@stagedesk/db";
 import { InquiryForm } from "@/components/booking/inquiry-form";
 import type { Locale } from "@/i18n/routing";
-import { brandStyle } from "@/lib/brand";
+import { BookingFrame } from "@/components/booking-page/booking-page-view";
 import { turnstileSiteKey } from "@/lib/turnstile";
 import { ReportHeight } from "./report-height";
 
@@ -28,19 +28,28 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
   await connection();
   const agency = await publicAgency(slug);
   if (!agency) notFound();
-  // The embeddable form is a plan feature.
-  if (!(await agencyBilling(agency.id)).limits.embedWidget) notFound();
+  // The embeddable form is a plan feature. Without it the frame on the agency's site says so, rather than a 404.
+  if (!(await agencyBilling(agency.id)).limits.embedWidget) {
+    const t = await getTranslations("bookingPage");
+    return (
+      <div className="grid gap-2 p-6 text-center text-sm">
+        <p className="font-medium">{t("embedUnavailableTitle")}</p>
+        <p className="text-muted-foreground">{t("embedUnavailableBody", { agency: agency.name })}</p>
+      </div>
+    );
+  }
 
   const today = todayInNetherlands();
   const until = new Date(`${today}T00:00:00Z`);
   until.setUTCMonth(until.getUTCMonth() + 18);
-  const [artists, fullyBooked] = await Promise.all([
+  const [artists, fullyBooked, bookingTypes] = await Promise.all([
     publicArtists(agency.id),
     agencyFullyBookedDates(agency.id, today, until.toISOString().slice(0, 10)),
+    availableBookingTypes(agency.id),
   ]);
 
   return (
-    <div style={brandStyle(agency.brandColor)} className="bg-background p-4">
+    <BookingFrame theme={parseBookingTheme(agency.bookingTheme)} brandColor={agency.brandColor} className="p-4">
       <ReportHeight />
       <InquiryForm
         slug={slug}
@@ -48,7 +57,8 @@ async function Embed({ params }: Pick<PageProps<"/[locale]/embed/[slug]">, "para
         fullyBooked={fullyBooked}
         siteKey={turnstileSiteKey()}
         today={today}
+        bookingTypes={bookingTypes.map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
       />
-    </div>
+    </BookingFrame>
   );
 }

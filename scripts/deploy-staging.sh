@@ -82,6 +82,15 @@ activate_release() {
 }
 
 write_ecosystem() {
+  # WEB_INSTANCES (default 1) runs that many web processes in PM2 cluster mode,
+  # so pages render on more than one core. Each can use up to max_memory_restart.
+  local web_instances="${WEB_INSTANCES:-1}"
+  if [[ ! "$web_instances" =~ ^[1-8]$ ]]; then
+    echo "WEB_INSTANCES must be 1-8 (is '$web_instances')." >&2
+    exit 1
+  fi
+  local web_mode="fork"
+  [[ "$web_instances" -gt 1 ]] && web_mode="cluster"
   cat > "$ECOSYSTEM_FILE" <<EOF
 module.exports = {
   apps: [
@@ -93,6 +102,8 @@ module.exports = {
       node_args: "--env-file=$SHARED_ENV",
       args: "start $CURRENT_LINK/apps/web --hostname staging.stagedeskpro.com --port 3100",
       env: { NODE_ENV: "production" },
+      instances: $web_instances,
+      exec_mode: "$web_mode",
       max_memory_restart: "1500M",
       time: true
     },
@@ -185,6 +196,9 @@ run_pnpm install --frozen-lockfile
 echo "Generating the Prisma client."
 run_pnpm db:generate
 
+echo "Applying production database migrations."
+run_pnpm --filter @stagedesk/db run deploy
+
 echo "Building StageDesk."
 env \
   HOME="$SITE_HOME" \
@@ -192,9 +206,6 @@ env \
   CI=true \
   NODE_ENV=production \
   "$NODE" --env-file="$SHARED_ENV" "$PNPM_JS" --dir "$RELEASE_DIR" build
-
-echo "Applying production database migrations."
-run_pnpm --filter @stagedesk/db run deploy
 
 write_ecosystem
 activate_release "$RELEASE_DIR"
@@ -206,6 +217,8 @@ run_pm2 save
 
 if ! health_check; then
   echo "The new release failed its internal health check." >&2
+  # The reason is usually in the web process's own log (a crash at start-up).
+  run_pm2 logs stagedesk-web --lines 80 --nostream --raw >&2 || true
   exit 1
 fi
 

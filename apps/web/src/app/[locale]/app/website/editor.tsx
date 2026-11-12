@@ -3,16 +3,15 @@
 import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ArrowDownIcon, ArrowUpIcon, CopyIcon, ExternalLinkIcon, FilePlusIcon, GripVerticalIcon, MonitorIcon, PlusIcon, RocketIcon, SmartphoneIcon, Trash2Icon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, CopyIcon, ExternalLinkIcon, FilePlusIcon, GripVerticalIcon, MonitorIcon, RocketIcon, SmartphoneIcon, Trash2Icon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { type Section, sectionTypes, siteFonts, type SitePageContent, type SiteTheme } from "@stagedesk/core";
+import { type Section, type SitePageContent, type SiteTheme } from "@stagedesk/core";
 import { SiteFooter, SiteFrame, SiteHeader, type SiteRenderData, SiteSection } from "@/components/sites/site-sections";
 import { Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +24,8 @@ import { createPageAction, deletePageAction, publishAction, reorderPagesAction, 
 import { SectionInspector } from "./inspector";
 import { cloneSection, newSection } from "./new-section";
 import { NativeSelect } from "@/components/ui/native-select";
+import { SectionGallery } from "./section-gallery";
+import { ThemePanel } from "./theme-panel";
 
 export type EditorPage = { id: string; slug: string; inNav: boolean; draft: SitePageContent; changed: boolean };
 type Lang = "nl" | "en";
@@ -250,21 +251,7 @@ export function SiteEditor({
           }
           pending={pending}
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" disabled={!content}>
-              <PlusIcon />
-              {t("addSection")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            {sectionTypes.map((type) => (
-              <DropdownMenuItem key={type} onSelect={() => addSection(type)}>
-                {t(`section_${type}`)}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <SectionGallery onAdd={addSection} disabled={!content} />
         <div className="flex items-center gap-1 rounded-lg bg-muted p-1" role="group" aria-label={t("language")}>
           {(["nl", "en"] as const).map((l) => (
             <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} className={cn("rounded-md px-2.5 py-1 text-sm", lang === l ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}>
@@ -353,7 +340,7 @@ export function SiteEditor({
                             setSelected(null);
                           }}
                         >
-                          <SiteSection section={section} data={data} preview ctaHref={bookingId ? `#${bookingId}` : "#"} contactHref="#" />
+                          <SiteSection section={section} data={data} theme={theme} preview ctaHref={bookingId ? `#${bookingId}` : "#"} contactHref="#" />
                         </SortableSection>
                       ))}
                     </SortableContext>
@@ -454,43 +441,7 @@ export function SiteEditor({
               </div>
             </TabsContent>
             <TabsContent value="design" className="mt-3 grid gap-4 rounded-xl border bg-card p-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1.5">
-                  <Label htmlFor="th-primary">{t("primary")}</Label>
-                  <input id="th-primary" type="color" value={theme.primary} onChange={(e) => changeTheme({ primary: e.target.value })} className="h-9 w-full cursor-pointer rounded-md border bg-background" />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="th-accent">{t("accent")}</Label>
-                  <input id="th-accent" type="color" value={theme.accent} onChange={(e) => changeTheme({ accent: e.target.value })} className="h-9 w-full cursor-pointer rounded-md border bg-background" />
-                </div>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="th-font">{t("font")}</Label>
-                <NativeSelect id="th-font" value={theme.font} onChange={(e) => changeTheme({ font: e.target.value as SiteTheme["font"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
-                  {siteFonts.map((f) => (
-                    <option key={f} value={f}>
-                      {t(`font_${f}`)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="th-radius">{t("corners")}</Label>
-                <NativeSelect id="th-radius" value={theme.radius} onChange={(e) => changeTheme({ radius: e.target.value as SiteTheme["radius"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
-                  {(["sharp", "soft", "round"] as const).map((r) => (
-                    <option key={r} value={r}>
-                      {t(`radius_${r}`)}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="th-mode">{t("header")}</Label>
-                <NativeSelect id="th-mode" value={theme.mode} onChange={(e) => changeTheme({ mode: e.target.value as SiteTheme["mode"] })} className="h-9 rounded-md border bg-background px-3 text-sm">
-                  <option value="light">{t("mode_light")}</option>
-                  <option value="dark">{t("mode_dark")}</option>
-                </NativeSelect>
-              </div>
+              <ThemePanel theme={theme} onChange={(next) => changeTheme(next)} />
               <div className="flex items-center justify-between gap-3 border-t pt-4">
                 <Label htmlFor="th-english" className="grid gap-0.5">
                   <span>{t("englishSite")}</span>

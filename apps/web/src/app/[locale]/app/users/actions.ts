@@ -4,9 +4,12 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
-import { audit, createPlatformAdmin, deleteUserByAdmin, prisma, signOutEverywhere, updateUserByAdmin, UserAdminError } from "@stagedesk/db";
+import { addAgencyCustomerByAdmin, addAgencyMemberByAdmin, audit, createPlatformAdmin, deleteUserByAdmin, prisma, signOutEverywhere, updateUserByAdmin, UserAdminError } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
-import { clientIp } from "@/lib/rate-limit";
+import { deliver } from "@/lib/mail";
+import { hasPassword, passwordSetupUrl } from "@/lib/password-setup";
+import { allow, clientIp } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth";
 import { requirePermission } from "@/lib/viewer";
 
 /**
@@ -67,6 +70,11 @@ export async function createPlatformAdminAction(input: z.input<typeof adminSchem
   if (!parsed.success) return { ok: false, message: t("invalid") };
   try {
     const user = await createPlatformAdmin(parsed.data);
+    // A new account (or one that never had a password) gets a one-time link to choose its password.
+    if (!(await hasPassword(user.id))) {
+      const locale = user.locale === "nl" ? "nl" : "en";
+      deliver({ kind: "accountSetup", to: user.email, params: { locale, name: user.name, url: await passwordSetupUrl(user.id, locale) } });
+    }
     await audit({ actorId: viewer.user.id, action: "user.create_admin", targetType: "user", targetId: user.id, data: { email: user.email }, ip: clientIp(await headers()) });
     revalidatePath("/[locale]/app/users", "page");
     return { ok: true, message: t("adminCreated", { name: user.name }) };
@@ -115,6 +123,92 @@ export async function deleteUserAction(userId: string): Promise<ActionResult> {
     await audit({ actorId: viewer.user.id, action: "user.delete", targetType: "user", targetId: userId, data: { email: user?.email }, ip: clientIp(await headers()) });
     revalidatePath("/[locale]/app/users", "page");
     return { ok: true, message: t("deleted") };
+  } catch (error) {
+    return { ok: false, message: await userError(error) };
+  }
+}
+
+/**
+ * Sends the confirmation email again. Someone with a password gets Better
+ * Auth's verification link (its own token, valid 24 hours); an account made
+ * for someone (no password yet) gets a fresh first-password link instead,
+ * which confirms the address when used. Nothing is marked confirmed here.
+ * At most three per account an hour; disabled and confirmed accounts are refused.
+ */
+export async function resendConfirmationAction(userId: string): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.users");
+  const t = await getTranslations("users");
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true, locale: true, emailVerified: true, disabledAt: true, platformRole: true } });
+  if (!user) return { ok: false, message: t("notFound") };
+  if (user.disabledAt) return { ok: false, message: t("resendDisabled") };
+  if (user.emailVerified) return { ok: false, message: t("resendAlreadyVerified") };
+  if (!(await allow(`resend-confirm:${user.id}`, 3, 3600))) return { ok: false, message: t("resendTooMany") };
+  const requestHeaders = await headers();
+  const locale = user.locale === "nl" ? "nl" : "en";
+  let kind: "verification" | "setup";
+  if (await hasPassword(user.id)) {
+    kind = "verification";
+    // Without the admin's cookies: with a session, Better Auth only sends to that session's own address.
+    try {
+      await auth.api.sendVerificationEmail({ body: { email: user.email, callbackURL: "/app" } });
+    } catch (error) {
+      console.error("[users] resending the confirmation failed", user.id, error);
+      return { ok: false, message: t("resendFailed") };
+    }
+  } else {
+    kind = "setup";
+    const url = await passwordSetupUrl(user.id, locale);
+    const artist = await prisma.artist.count({ where: { userId: user.id } });
+    deliver({ kind: artist > 0 ? "artistAccountSetup" : "accountSetup", to: user.email, params: { locale, name: user.name, url } });
+  }
+  await audit({ actorId: viewer.user.id, action: "user.resend_confirmation", targetType: "user", targetId: user.id, data: { kind }, ip: clientIp(requestHeaders) });
+  return { ok: true, message: t(kind === "verification" ? "resentVerification" : "resentSetup", { email: user.email }) };
+}
+
+const memberSchema = z.object({
+  organizationId: z.string().min(1).max(64),
+  name: z.string().trim().min(2).max(191),
+  email: z.email().max(191),
+  locale: z.enum(["nl", "en"]),
+});
+
+/** Emails a password setup link to an account that has none yet; true when one was queued. */
+async function sendSetupIfNeeded(user: { id: string; name: string; email: string }, locale: "nl" | "en") {
+  if (await hasPassword(user.id)) return false;
+  deliver({ kind: "accountSetup", to: user.email, params: { locale, name: user.name.split(/\s+/)[0] ?? user.name, url: await passwordSetupUrl(user.id, locale) } });
+  return true;
+}
+
+/** Adds someone straight to an agency's team as admin or staff (seat limits apply as for an invitation). */
+export async function addAgencyMemberAction(input: z.input<typeof memberSchema> & { role: "agency_admin" | "agency_staff" }): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.users");
+  const t = await getTranslations("users");
+  const parsed = memberSchema.safeParse(input);
+  const role = input?.role === "agency_admin" ? "agency_admin" : input?.role === "agency_staff" ? "agency_staff" : null;
+  if (!parsed.success || !role) return { ok: false, message: t("invalid") };
+  try {
+    const result = await addAgencyMemberByAdmin({ ...parsed.data, role });
+    await sendSetupIfNeeded(result.user, parsed.data.locale);
+    await audit({ actorId: viewer.user.id, action: "user.add_member", agencyId: result.agency.id, targetType: "user", targetId: result.user.id, data: { email: result.user.email, role, newUser: result.newUser }, ip: clientIp(await headers()) });
+    revalidatePath("/[locale]/app/users", "page");
+    return { ok: true, message: t("memberAdded", { name: result.user.name, agency: result.agency.name, role: (await getTranslations("roles"))(role) }) };
+  } catch (error) {
+    return { ok: false, message: await userError(error) };
+  }
+}
+
+/** Adds a customer to an agency (or an independent artist's business), as the agency's own "add customer" does. */
+export async function addAgencyCustomerAction(input: z.input<typeof memberSchema> & { phone?: string }): Promise<ActionResult> {
+  const viewer = await requirePermission("platform.users");
+  const t = await getTranslations("users");
+  const parsed = memberSchema.extend({ phone: z.string().trim().max(32).optional() }).safeParse(input);
+  if (!parsed.success) return { ok: false, message: t("invalid") };
+  try {
+    const result = await addAgencyCustomerByAdmin({ ...parsed.data, phone: parsed.data.phone || null });
+    // Like the agency's own "add customer": no email now. They hear from the agency with their first quote and sign in with an emailed code.
+    await audit({ actorId: viewer.user.id, action: "user.add_customer", agencyId: result.agency.id, targetType: "user", targetId: result.user.id, data: { email: result.user.email, newUser: result.newUser }, ip: clientIp(await headers()) });
+    revalidatePath("/[locale]/app/users", "page");
+    return { ok: true, message: t("customerAdded", { name: result.user.name, agency: result.agency.name }) };
   } catch (error) {
     return { ok: false, message: await userError(error) };
   }

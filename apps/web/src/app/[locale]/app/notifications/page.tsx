@@ -1,6 +1,7 @@
 import {
   BanknoteIcon,
   BellIcon,
+  BoxesIcon,
   CalendarClockIcon,
   CircleCheckIcon,
   HandCoinsIcon,
@@ -49,6 +50,17 @@ const icons: Record<string, { icon: LucideIcon; tone: string }> = {
   quote_accepted: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
   gig_request: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
   gig_response: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
+  gig_withdrawn: { icon: Music2Icon, tone: "bg-muted text-muted-foreground" },
+  gig_cancelled: { icon: Music2Icon, tone: "bg-destructive/10 text-destructive" },
+  details_submitted: { icon: InboxIcon, tone: "bg-primary/12 text-primary" },
+  preferences_updated: { icon: Music2Icon, tone: "bg-primary/12 text-primary" },
+  change_requested: { icon: InboxIcon, tone: "bg-warning/18 text-foreground" },
+  change_approved: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
+  change_rejected: { icon: InboxIcon, tone: "bg-destructive/12 text-destructive" },
+  gig_updated: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
+  booking_updated: { icon: InboxIcon, tone: "bg-primary/12 text-primary" },
+  artist_removed: { icon: Music2Icon, tone: "bg-warning/18 text-foreground" },
+  quote_outdated: { icon: InboxIcon, tone: "bg-warning/18 text-foreground" },
   payment_received: { icon: BanknoteIcon, tone: "bg-success/15 text-success" },
   message: { icon: MessageSquareIcon, tone: "bg-info/12 text-info" },
   ticket_new: { icon: LifeBuoyIcon, tone: "bg-warning/18 text-foreground" },
@@ -69,6 +81,9 @@ const icons: Record<string, { icon: LucideIcon; tone: string }> = {
   artist_joined: { icon: CircleCheckIcon, tone: "bg-success/15 text-success" },
   artist_request: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
   artist_request_answer: { icon: Music2Icon, tone: "bg-magenta/12 text-magenta" },
+  equipment_unreserved: { icon: BoxesIcon, tone: "bg-warning/18 text-foreground" },
+  equipment_missing: { icon: BoxesIcon, tone: "bg-destructive/12 text-destructive" },
+  equipment_damaged: { icon: BoxesIcon, tone: "bg-warning/18 text-foreground" },
 };
 const fallback = { icon: ReceiptIcon, tone: "bg-muted text-muted-foreground" };
 

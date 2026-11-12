@@ -11,7 +11,7 @@ export interface LocaleText {
 export interface ArticleValues {
   slug: string;
   categoryId: string;
-  status: "draft" | "published";
+  status: "draft" | "pending" | "published" | "rejected";
   featured: boolean;
   /** ISO from the server; shown in the editor in the browser's time zone. */
   publishedAt: string;

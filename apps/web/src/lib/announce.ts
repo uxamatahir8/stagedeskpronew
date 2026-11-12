@@ -1,7 +1,6 @@
 import "server-only";
-import { getTranslations } from "next-intl/server";
-import { deskRoles, type EventType } from "@stagedesk/core";
-import { notify, platformAdminIds, prisma } from "@stagedesk/db";
+import { deskRoles } from "@stagedesk/core";
+import { bookingTypeName, notify, platformAdminIds, prisma } from "@stagedesk/db";
 import { absoluteUrl, deliver, userLocale } from "./mail";
 
 /**
@@ -11,7 +10,7 @@ import { absoluteUrl, deliver, userLocale } from "./mail";
  */
 export async function announceNewBooking(
   organizationId: string,
-  booking: { trackingCode: string; eventType: string; eventDate: Date | string | null },
+  booking: { id: string; trackingCode: string; eventType: string; eventDate: Date | string | null },
   customerName: string,
   exceptUserId?: string | null,
 ) {
@@ -23,18 +22,18 @@ export async function announceNewBooking(
   for (const member of staff) {
     if (member.userId === exceptUserId) continue;
     const locale = userLocale(member.user.locale);
-    const tt = await getTranslations({ locale, namespace: "eventTypes" });
+    const eventName = await bookingTypeName(booking.eventType, locale, organizationId);
     deliver({
       kind: "newInquiry",
       to: member.user.email,
       params: {
         locale,
         customer: customerName,
-        event: tt(booking.eventType as EventType).toLowerCase(),
+        event: eventName.toLowerCase(),
         date: date ? new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "nl-NL", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date) : "—",
         url: absoluteUrl(locale, `/app/bookings/${booking.trackingCode}`),
       },
-    });
+    }, { bookingId: booking.id, agencyId: organizationId });
   }
   await notify(
     staff.map((m) => m.userId),
@@ -50,7 +49,7 @@ export async function announceNewBooking(
  */
 export async function announceLeadAssigned(
   lead: { id: string; name: string; email: string; locale: string; reference: string },
-  booking: { trackingCode: string; eventType: string; eventDate: Date | string | null },
+  booking: { id: string; trackingCode: string; eventType: string; eventDate: Date | string | null },
   agency: { id: string; name: string },
   actorId: string | null,
 ) {
@@ -66,6 +65,6 @@ export async function announceLeadAssigned(
       code: booking.trackingCode,
       url: absoluteUrl(locale, `/sign-in?next=${encodeURIComponent("/app/event")}`),
     },
-  });
+  }, { bookingId: booking.id, agencyId: agency.id });
   await notify(await platformAdminIds(), { type: "lead_accepted", data: { name: agency.name, code: lead.reference }, url: `/app/leads/${lead.id}` }, actorId);
 }

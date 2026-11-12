@@ -1,5 +1,6 @@
 import "server-only";
 import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import { defaultInvoiceTemplate, type InvoiceTemplate, mmToPt } from "@stagedesk/core";
 
 export interface PdfLine {
   description: string;
@@ -10,7 +11,7 @@ export interface PdfLine {
 }
 
 export interface PdfData {
-  kind: "quote" | "invoice";
+  kind: "quote" | "invoice" | "credit_note";
   locale: "nl" | "en";
   /** The booking's currency; euros when left out. */
   currency?: string;
@@ -35,9 +36,17 @@ export interface PdfData {
     | "deposit"
     | "alreadyPaid"
     | "toPay"
-    | "footer",
+    | "footer"
+    | "payTo"
+    | "page",
     string
   >;
+  /** The agency's look (issued invoices use the snapshot taken when they were issued). */
+  template?: InvoiceTemplate;
+  /** The template's background, loaded. */
+  background?: { data: Buffer; format: "png" | "jpg" } | null;
+  /** Bank details for invoices, shown when the template allows. */
+  payment?: { iban?: string | null; accountName?: string | null; instructions?: string | null };
   agency: {
     name: string;
     addressLine?: string | null;
@@ -98,16 +107,28 @@ export function BookingDocument({ data }: { data: PdfData }) {
   const date = (d: Date) => df.format(d);
   const L = data.labels;
   const a = data.agency;
-  const accent = a.brandColor ?? "#5b2a86";
+  const tpl = data.template ?? defaultInvoiceTemplate;
+  const accent = tpl.accentColor ?? a.brandColor ?? "#5b2a86";
+  const pay = data.payment;
+  const showPay = data.kind === "invoice" && tpl.showPaymentDetails && Boolean(pay?.iban || pay?.instructions);
 
   return (
     <Document title={`${L.title} ${data.number}`} author={a.name}>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={[styles.page, { paddingTop: mmToPt(tpl.marginTopMm), paddingBottom: mmToPt(tpl.marginBottomMm) + 24 }]}>
+        {/* The agency's letterhead behind every page; the margins keep the figures clear of it. */}
+        {data.background && (
+          // Anchored to all four page edges through a fixed wrapper: an absolute Image alone is offset by the page padding.
+          <View fixed style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is drawn into the PDF and has no alt */}
+            <Image src={data.background} style={{ width: "100%", height: "100%", objectFit: "fill" }} />
+          </View>
+        )}
         <View style={styles.header}>
           <View>
             {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is drawn into the PDF and has no alt */}
-            {a.logo && <Image src={a.logo} style={styles.logo} />}
+            {a.logo && !tpl.hideLogo && <Image src={a.logo} style={styles.logo} />}
             <Text style={styles.agencyName}>{a.name}</Text>
+            {tpl.headerText && <Text style={styles.muted}>{tpl.headerText}</Text>}
             {a.addressLine && <Text style={styles.muted}>{a.addressLine}</Text>}
             {(a.postalCode || a.city) && <Text style={styles.muted}>{[a.postalCode, a.city].filter(Boolean).join(" ")}</Text>}
             {a.contactEmail && <Text style={styles.muted}>{a.contactEmail}</Text>}
@@ -207,9 +228,23 @@ export function BookingDocument({ data }: { data: PdfData }) {
           </View>
         )}
 
-        <Text style={styles.footer} fixed>
-          {L.footer}
+        {showPay && (
+          <View style={styles.notes} wrap={false}>
+            <Text style={[styles.label, { marginBottom: 4 }]}>{L.payTo}</Text>
+            {pay?.iban && <Text>{[pay.accountName, pay.iban].filter(Boolean).join(" · ")}</Text>}
+            {pay?.instructions && <Text style={styles.muted}>{pay.instructions}</Text>}
+          </View>
+        )}
+
+        <Text style={[styles.footer, { bottom: Math.max(16, mmToPt(tpl.marginBottomMm) - 16) }]} fixed>
+          {tpl.footerText ? `${tpl.footerText}\n${L.footer}` : L.footer}
         </Text>
+        {/* On documents of more than one page, every page says which document and which page it is. */}
+        <Text
+          style={[styles.footer, { bottom: Math.max(16, mmToPt(tpl.marginBottomMm) - 16), textAlign: "right" }]}
+          fixed
+          render={({ pageNumber, totalPages }) => (totalPages > 1 ? L.page.replace("{page}", String(pageNumber)).replace("{pages}", String(totalPages)).replace("{number}", data.number) : "")}
+        />
       </Page>
     </Document>
   );

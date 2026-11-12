@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ArchiveIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useFormatter } from "@/components/date-prefs";
@@ -77,7 +78,7 @@ export function ServiceDialog({ service, vatRates }: { service?: Service; vatRat
         <DialogHeader>
           <DialogTitle>{service ? t("services.edit") : t("services.add")}</DialogTitle>
         </DialogHeader>
-        <form action={save} className="grid gap-4 sm:grid-cols-2">
+        <form {...keepValues(save)} className="grid gap-4 sm:grid-cols-2">
           <FormField id="svc-name" label={t("services.name")} className="sm:col-span-2">
             <Input id="svc-name" name="name" defaultValue={service?.name} required maxLength={191} />
           </FormField>

@@ -1,36 +1,37 @@
-import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, UsersIcon } from "lucide-react";
+import { ArrowLeftIcon, CalendarIcon, ClockIcon, FileDownIcon, MapPinIcon, MessagesSquareIcon, PackagePlusIcon, UsersIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import {
-  availableActions,
-  type BookingStatus,
-  type EventType,
-  isBudgetRange,
-  paymentStatus,
-  todayInNetherlands,
-  localePrefix,
-} from "@stagedesk/core";
-import { bookableArtists, fromDateOnly, getSetting, isArtistFree, prisma } from "@stagedesk/db";
+import { artistAssignableStatuses, availableActions, type BookingStatus, changeConflicts, conflictFingerprint, depositRuleOf, quoteChangedFields, quoteEventSnapshot, type EventType, isBudgetRange, paymentStatus, todayInNetherlands, localePrefix, eventTimeRange } from "@stagedesk/core";
+import { artistAccountStatesOf, artistBalanceOnBooking, artistCanBeAssigned, availableBookingTypes, bookableArtists, bookingEquipmentSummary, bookingPromoOf, fromDateOnly, getSetting, isArtistFree, nextInvoiceNumber, bookingEmails, openDetailRequest, prisma } from "@stagedesk/db";
+import { changeRows } from "@/lib/change-requests";
+import { EquipmentStagePill } from "@/components/inventory/labels";
 import { QuoteTable } from "@/components/booking/quote-table";
-import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge } from "@/components/status-badge";
+import { SwitchAgencyLink } from "@/components/booking/switch-agency-link";
+import { EmptyState } from "@/components/empty-state";
+import { AssignmentStatusBadge, BookingStatusBadge, PaymentStatusBadge, Pill } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { RefundDialog } from "../../payments/refund-dialog";
-import { centsToInput, dateTime, euro, eventDate } from "@/lib/format";
+import { centsToInput, dateTime, euro, eventDate, percent } from "@/lib/format";
 import { ClaimReview } from "@/components/booking/claim-review";
 import { requireAgency, viewerCan } from "@/lib/viewer";
+import { customerMailLocale } from "@/lib/correspondence";
 import { BorrowArtist } from "./borrow-artist";
 import {
   AddNote,
   AssignArtist,
+  ChangeRequestPanel,
+  RetryEmailButton,
+  DetailRequestPanel,
   EditDetailsDialog,
+  ArtistBalanceNotice,
   IssueInvoiceButton,
   QuoteControls,
   RecordPayment,
@@ -68,11 +69,31 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       notes: { orderBy: { createdAt: "desc" } },
       events: { orderBy: { createdAt: "desc" }, take: 50 },
       invoices: true,
+      creditNotes: { orderBy: { issuedAt: "asc" } },
+      changeRequests: { where: { status: "pending" }, orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
-  if (!booking) notFound();
+  if (!booking) {
+    // A link from a notification, with another of their agencies active: offer the way there. Only their own
+    // team memberships are searched, and only the agency's name is shown.
+    const teams = viewer.memberships.filter((m) => m.id !== organization.id && m.role !== "customer" && m.role !== "artist").map((m) => m.id);
+    const elsewhere = teams.length > 0 ? await prisma.booking.findFirst({ where: { trackingCode: code.toUpperCase(), organizationId: { in: teams } }, select: { organization: { select: { id: true, name: true } } } }) : null;
+    if (!elsewhere) notFound();
+    const tb = await getTranslations("booking");
+    return (
+      <EmptyState
+        icon={CalendarIcon}
+        title={tb("atOtherAgency", { agency: elsewhere.organization.name })}
+        action={
+          <SwitchAgencyLink organizationId={elsewhere.organization.id} href={`/app/bookings/${code.toUpperCase()}`}>
+            {tb("switchToAgency", { agency: elsewhere.organization.name })}
+          </SwitchAgencyLink>
+        }
+      />
+    );
+  }
 
-  const [t, format, catalog, defaults, people] = await Promise.all([
+  const [t, format, catalog, defaults, people, bookingTypes] = await Promise.all([
     getTranslations(),
     getFormatter(),
     db.serviceItem.findMany({ where: { active: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
@@ -81,7 +102,9 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       where: { id: { in: [...new Set([...(booking.createdById ? [booking.createdById] : []), ...booking.notes.map((n) => n.authorId), ...booking.events.flatMap((e) => (e.actorId ? [e.actorId] : []))])] } },
       select: { id: true, name: true },
     }),
+    availableBookingTypes(organization.id, true),
   ]);
+  const eventTypeLabel = bookingTypes.find((type) => type.key === booking.eventType)?.[locale === "nl" ? "nameNl" : "nameEn"] ?? booking.eventType;
   const nameOf = (id: string | null) => people.find((p) => p.id === id)?.name ?? null;
   // The requested artist can belong to a partner agency, so this isn't tenant-scoped.
   const preferredArtist = booking.preferredArtistId
@@ -107,30 +130,86 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
 
   const current = booking.quotes[0] ?? null;
   const openQuote = current?.status === "sent" ? current : null;
+  // Details changed after the quote went out: it can't be accepted until it's revised.
+  const outdatedFields = openQuote ? quoteChangedFields(openQuote.eventSnapshot, quoteEventSnapshot(booking)) : [];
   const acceptedQuote = booking.quotes.find((q) => q.status === "accepted") ?? null;
   const shownQuote = acceptedQuote ?? current;
   const activeAssignment = booking.assignments.find((a) => a.status === "pending" || a.status === "accepted") ?? null;
   const lastDeclined = !activeAssignment ? booking.assignments.find((a) => a.status === "declined") : null;
   const invoice = booking.invoices[0] ?? null;
+  const artistBalance = await artistBalanceOnBooking(organization.id, booking.id);
   const pay = paymentStatus(booking.paidCents, booking.totalCents, booking.depositCents);
+  // A revision starts from the current quote's upfront payment and language; a first quote from the agency's defaults.
+  const agencyDefaults = await prisma.organization.findUniqueOrThrow({
+    where: { id: organization.id },
+    select: { defaultDepositType: true, defaultDepositBps: true, defaultDepositFixedCents: true, allowManualInvoiceNumbers: true },
+  });
+  const startDeposit = current
+    ? depositRuleOf(current)
+    : depositRuleOf({ depositType: agencyDefaults.defaultDepositType ?? "percentage", depositBps: agencyDefaults.defaultDepositBps ?? defaults.depositBps, depositFixedCents: agencyDefaults.defaultDepositFixedCents });
+  const mailLocale = current?.locale === "nl" || current?.locale === "en" ? { locale: current.locale as "nl" | "en", reason: "customer" as const } : await customerMailLocale(booking.id);
+  // What happened to the booking's emails: stored, queued, accepted by the mail server, or failing.
+  const emails = await bookingEmails(booking.id);
+  // An artist's emails share one kind; the step (request, withdrawn, cancelled) is in the outbox key "gig-<step>-<id>".
+  const emailLabel = (m: { kind: string; key: string | null }) => {
+    const step = m.kind === "gigAssigned" ? /^gig-(new|withdrawn|cancelled)-/.exec(m.key ?? "")?.[1] : undefined;
+    const key = (step ? `emailPreviews.kind_gigAssigned_${step}` : `emailPreviews.kind_${m.kind}`) as "emailPreviews.kind_quote";
+    return t.has(key) ? t(key) : m.kind;
+  };
+  // The customer can fill in the event details through a link until a quote is accepted.
+  const detailRequest =
+    booking.customer && ["inquiry", "quoted", "expired"].includes(status) && viewerCan(viewer, "agency.bookings.edit")
+      ? { open: await openDetailRequest(organization.id, booking.id), locale: mailLocale.locale }
+      : null;
+  // The agency promo code on the booking, shown in the quote editor with its discount.
+  const promoRow = await bookingPromoOf(organization.id, booking.id);
+  const promo = promoRow
+    ? { code: promoRow.code, discount: promoRow.discount, minTotalCents: promoRow.minTotalCents, addedBy: promoRow.addedBy, label: promoRow.discount.type === "percentage" ? percent(format, promoRow.discount.bps) : euro(format, promoRow.discount.cents, booking.currency) }
+    : null;
+  const ended = status === "cancelled" || status === "declined";
+  const quoteDefaults = {
+    depositType: startDeposit.type,
+    depositFixed: startDeposit.type === "fixed" ? centsToInput(startDeposit.cents, locale) : "",
+    locale: mailLocale.locale,
+    localeReason: mailLocale.reason,
+  };
 
-  const canAssign = status === "booked" || status === "confirmed";
+  // From the inquiry on, so the DJ can be lined up while the quote is out.
+  const canAssign = artistAssignableStatuses.includes(status as BookingStatus);
   // Asks to other agencies for one of their artists, newest first.
   const artistRequests = await prisma.artistRequest.findMany({
     where: { bookingId: booking.id },
     orderBy: { createdAt: "desc" },
     include: { artist: { select: { stageName: true } }, lender: { select: { name: true } } },
   });
-  const artistOptions = canAssign
-    ? await Promise.all(
-        (await bookableArtists(organization.id)).map(async (a) => ({
-          id: a.id,
-          stageName: a.stageName,
-          agency: a.organizationId === organization.id ? null : a.organization.name,
-          free: booking.eventDate ? await isArtistFree(a.id, booking.eventDate, booking.id) : true,
-        })),
-      )
-    : [];
+  const bookable = canAssign ? await bookableArtists(organization.id) : [];
+  // Whether there's someone behind each profile who can read and answer a request.
+  const accounts = await artistAccountStatesOf([...bookable.map((a) => a.id), ...(activeAssignment ? [activeAssignment.artistId] : [])]);
+  const artistOptions = await Promise.all(
+    bookable.map(async (a) => {
+      const account = accounts.get(a.id) ?? "no_account";
+      return {
+        id: a.id,
+        stageName: a.stageName,
+        agency: a.organizationId === organization.id ? null : a.organization.name,
+        free: booking.eventDate ? await isArtistFree(a.id, booking.eventDate, booking.id) : true,
+        payLabel:
+          a.compensationType === "fixed" && a.defaultFixedFeeCents !== null
+            ? t("artists.fixedPerBooking", { amount: euro(format, a.defaultFixedFeeCents, a.organization.currency) })
+            : percent(format, a.defaultShareBps),
+        blocked: artistCanBeAssigned(account) ? null : t(`artistAccount.state_${account}`),
+        note: account === "setup_pending" ? t("artistAccount.state_setup_pending") : null,
+      };
+    }),
+  );
+  const activeAccount = activeAssignment ? (accounts.get(activeAssignment.artistId) ?? "no_account") : null;
+  const pendingChange = booking.changeRequests[0] ?? null;
+  const nowSnapshot = quoteEventSnapshot(booking);
+  const pendingChangeRows = pendingChange ? await changeRows(pendingChange.changes, pendingChange.baseline, format, nowSnapshot) : [];
+  const pendingConflicts = pendingChange ? changeConflicts(pendingChange.changes, pendingChange.baseline, nowSnapshot) : [];
+
+  // Equipment for this gig: only for people who handle gig equipment.
+  const equipment = viewerCan(viewer, "agency.inventory.gigs") ? await bookingEquipmentSummary(organization.id, booking.id) : null;
 
   const timelineText = (e: (typeof booking.events)[number]) => {
     const data = (e.data ?? {}) as Record<string, unknown>;
@@ -143,6 +222,15 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
       reason: String(data["reason"] ?? ""),
       number: String(data["number"] ?? ""),
       amount: typeof data["amountCents"] === "number" ? euro(format, data["amountCents"], booking.currency) : "",
+      // Equipment events.
+      count: Number(data["count"] ?? 0),
+      codes: String(data["codes"] ?? ""),
+      reserved: Number(data["reserved"] ?? 0),
+      failed: Number(data["failed"] ?? 0),
+      missing: Number(data["missing"] ?? 0),
+      returned: Number(data["returned"] ?? 0),
+      damaged: Number(data["damaged"] ?? 0),
+      lost: Number(data["lost"] ?? 0),
     };
     return t.has(key) ? t(key, params) : e.type;
   };
@@ -174,14 +262,14 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
           <div className="grid gap-1">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight">
-                {t(`eventTypes.${booking.eventType as EventType}`)} · {booking.customer?.name ?? t("bookings.noCustomer")}
+                {eventTypeLabel} · {booking.customer?.name ?? t("bookings.noCustomer")}
               </h1>
               <BookingStatusBadge status={status} />
             </div>
             <p className="font-mono text-sm text-muted-foreground">{booking.trackingCode}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatusActions bookingId={booking.id} actions={actions} />
+            <StatusActions bookingId={booking.id} actions={actions} paid={booking.paidCents > 0 ? euro(format, booking.paidCents, booking.currency) : null} />
           </div>
         </div>
       </div>
@@ -199,17 +287,27 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     dos={dos}
                     donts={donts}
                     playlistUrl={booking.playlistUrl ?? ""}
+                    preferredGenre={booking.preferredGenre ?? ""}
+                    musicRequests={booking.musicRequests ?? ""}
+                    specialRequests={booking.specialRequests ?? ""}
+                    bookingTypes={bookingTypes.filter((type) => type.active || type.key === booking.eventType).map((type) => ({ key: type.key, label: locale === "nl" ? type.nameNl : type.nameEn }))}
                   />
                 </CardAction>
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {pendingChange &&
+                (viewerCan(viewer, "agency.bookings.edit") ? (
+                  <ChangeRequestPanel requestId={pendingChange.id} rows={pendingChangeRows} conflictFields={pendingConflicts.map((c) => c.field)} acknowledge={pendingConflicts.length > 0 ? conflictFingerprint(pendingConflicts) : null} note={pendingChange.note} customer={booking.customer?.name ?? ""} requested={dateTime(format, pendingChange.createdAt)} />
+                ) : (
+                  <p className="rounded-lg border border-info/30 bg-info/5 p-3 text-sm">{t("booking.changeRequestTitle", { name: booking.customer?.name ?? "", date: dateTime(format, pendingChange.createdAt) })}</p>
+                ))}
               <dl className="grid gap-3 text-sm sm:grid-cols-2">
                 <Detail icon={CalendarIcon} label={t("newBooking.eventDate")}>
                   {eventDate(format, booking.eventDate) ?? t("bookings.noDate")}
                 </Detail>
                 <Detail icon={ClockIcon} label={t("newBooking.startTime")}>
-                  {booking.startTime ? `${booking.startTime}${booking.endTime ? ` – ${booking.endTime}` : ""}` : "—"}
+                  {eventTimeRange(booking.startTime, booking.endTime, t("ui.nextDay")) ?? "—"}
                 </Detail>
                 <Detail icon={MapPinIcon} label={t("newBooking.venue")}>
                   {[booking.venueName, booking.venueAddress, booking.venueCity].filter(Boolean).join(", ") || "—"}
@@ -234,7 +332,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               </dl>
               {booking.message && (
                 <div className="rounded-lg bg-muted/60 p-3 text-sm">
-                  <p className="mb-1 font-medium">{t("booking.customerMessage")}</p>
+                  <p className="mb-1 font-medium">{booking.source === "manual" ? t("booking.inquiryNotes") : t("booking.customerMessage")}</p>
                   <p className="whitespace-pre-line text-muted-foreground">{booking.message}</p>
                 </div>
               )}
@@ -249,6 +347,8 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   )}
                 </div>
               )}
+              {booking.musicRequests && <TextBlock title={t("customerEvent.musicRequests")} body={booking.musicRequests} />}
+              {booking.specialRequests && <TextBlock title={t("customerEvent.specialRequests")} body={booking.specialRequests} />}
             </CardContent>
           </Card>
 
@@ -267,6 +367,11 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {outdatedFields.length > 0 && (
+                <p className="rounded-lg border border-warning/50 bg-warning/10 p-3 text-sm">
+                  {t("booking.quoteOutdated", { fields: outdatedFields.map((f) => t(`booking.field_${f}`)).join(", ") })}
+                </p>
+              )}
               {shownQuote ? (
                 <QuoteTable quote={shownQuote} currency={booking.currency} />
               ) : (
@@ -279,7 +384,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                 quoteId={openQuote?.id ?? null}
                 quoteLink={openQuote ? `${localePrefix(locale)}/q/${openQuote.token}` : null}
                 pdfHref={shownQuote ? `/api/pdf/quote/${shownQuote.id}?lang=${locale}` : null}
-                canAcceptOnBehalf={Boolean(openQuote) && viewerCan(viewer, "agency.quotes.accept")}
+                canAcceptOnBehalf={Boolean(openQuote) && outdatedFields.length === 0 && viewerCan(viewer, "agency.quotes.accept")}
                 customerName={booking.customer?.name ?? ""}
                 catalog={catalog.map((c) => ({ id: c.id, name: c.name, unit: c.unit, unitPriceCents: c.unitPriceCents, vatBps: c.vatBps }))}
                 vatRates={defaults.vatRatesBps}
@@ -289,12 +394,60 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   unitPrice: centsToInput(i.unitPriceCents, locale),
                   vatBps: i.vatBps,
                 }))}
-                defaultDepositBps={current?.depositBps ?? defaults.depositBps}
+                defaultDepositBps={startDeposit.type === "percentage" ? startDeposit.bps : defaults.depositBps}
                 defaultExpiryDays={defaults.quoteExpiryDays}
                 currency={booking.currency}
+                quoteDefaults={quoteDefaults}
+                promo={promo}
               />
             </CardContent>
           </Card>
+
+          {equipment ? (
+            <Card id="equipment">
+              <CardHeader>
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  {t("equipment.title")}
+                  <EquipmentStagePill stage={equipment.stage} />
+                  {equipment.totals.unreserved > 0 && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.unreservedShort", { count: equipment.totals.unreserved })}</Pill>}
+                </CardTitle>
+                <CardDescription>{t("equipment.bookingHint")}</CardDescription>
+                <CardAction className="flex flex-wrap gap-2">
+                  <Button asChild size="sm" variant={equipment.totals.lines > 0 ? "outline" : "default"}>
+                    <Link href={`/app/bookings/${booking.trackingCode}/equipment`}>
+                      <PackagePlusIcon />
+                      {t("equipment.addEquipmentOrPackage")}
+                    </Link>
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="grid gap-3 text-sm">
+                {equipment.totals.lines > 0 ? (
+                  <>
+                    <ul className="divide-y rounded-lg border">
+                      {equipment.preview.map((l) => (
+                        <li key={l.code} className="flex items-center justify-between gap-3 px-3 py-2">
+                          <span className="min-w-0 truncate">
+                            <span className="font-mono text-xs text-muted-foreground">{l.code}</span> {l.name}
+                          </span>
+                          <span className="flex shrink-0 items-center gap-2 tabular-nums">
+                            ×{l.quantity}
+                            {!l.reserved && ["booked", "confirmed"].includes(status) && <Pill tone="warning">{t("equipment.notReserved")}</Pill>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-muted-foreground tabular-nums">{t("equipment.summary", { planned: equipment.totals.planned, loaded: equipment.totals.loaded, out: equipment.totals.outstanding })}</p>
+                    <Link href={`/app/bookings/${booking.trackingCode}/equipment`} className="w-fit text-primary underline-offset-4 hover:underline">
+                      {t("equipment.openFull", { count: equipment.totals.lines })}
+                    </Link>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">{t("equipment.emptyBooking")}</p>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>
@@ -312,8 +465,16 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                       </a>
                     </Button>
                   ) : (
-                    ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} />
+                    ["booked", "confirmed", "completed", "settled"].includes(status) && <IssueInvoiceButton bookingId={booking.id} nextNumber={await nextInvoiceNumber(organization.id)} canTypeNumber={agencyDefaults.allowManualInvoiceNumbers && viewerCan(viewer, "agency.settings")} />
                   )}
+                  {booking.creditNotes.map((note) => (
+                    <Button key={note.id} variant="outline" size="sm" asChild>
+                      <a href={`/api/pdf/credit-note/${note.id}?lang=${locale}`} target="_blank" rel="noopener">
+                        <FileDownIcon />
+                        {t("booking.downloadCreditNote", { number: note.number })}
+                      </a>
+                    </Button>
+                  ))}
                   {status !== "settled" && status !== "cancelled" && (
                     <RecordPayment bookingId={booking.id} today={today} suggestedKind={booking.paidCents < booking.depositCents ? "deposit" : "balance"} />
                   )}
@@ -321,12 +482,22 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardHeader>
             <CardContent className="grid gap-4">
+              {canPay && artistBalance && artistBalance.dueCents > 0 && (
+                <ArtistBalanceNotice bookingId={booking.id} stageName={artistBalance.stageName} amount={euro(format, artistBalance.dueCents, booking.currency)} />
+              )}
               {booking.totalCents > 0 && (
                 <dl className="grid grid-cols-3 gap-3 text-sm">
                   <Figure label={t("booking.total")} value={euro(format, booking.totalCents, booking.currency)} />
                   <Figure label={t("booking.paid")} value={euro(format, booking.paidCents, booking.currency)} />
-                  <Figure label={t("booking.due")} value={euro(format, Math.max(0, booking.totalCents - booking.paidCents), booking.currency)} />
+                  {/* A cancelled or declined booking owes nothing more; money in is refunded or kept (cancelSettlement). */}
+                  <Figure label={t("booking.due")} value={euro(format, ended ? 0 : Math.max(0, booking.totalCents - booking.paidCents), booking.currency)} />
                 </dl>
+              )}
+              {ended && booking.paidCents > 0 && booking.cancelSettlement === "refund" && (
+                <p className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">{t("booking.refundToDo", { amount: euro(format, booking.paidCents, booking.currency) })}</p>
+              )}
+              {ended && booking.paidCents > 0 && booking.cancelSettlement === "keep" && (
+                <p className="text-sm text-muted-foreground">{t("booking.keptAsFee", { amount: euro(format, booking.paidCents, booking.currency) })}</p>
               )}
               {booking.paymentClaims.map((c) => (
                 <div key={c.id} className="grid gap-3 rounded-xl border border-info/30 bg-info/5 p-4">
@@ -348,7 +519,7 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                       <span>
                         {t(`paymentKinds.${p.kind as "deposit"}`)} · {t(`paymentMethods.${p.method as "cash"}`)}
-                        {p.reference && <span className="text-muted-foreground"> · {p.reference}</span>}
+                        {p.reference && p.kind !== "refund" && <span className="text-muted-foreground"> · {p.reference}</span>}
                       </span>
                       <span className="flex items-center gap-3 tabular-nums">
                         <span className="text-muted-foreground">{eventDate(format, p.receivedAt, "short")}</span>
@@ -429,6 +600,14 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                     {booking.customer.email}
                   </a>
                   {booking.customer.phone && <p className="tabular-nums">{booking.customer.phone}</p>}
+                  {detailRequest && (
+                    <DetailRequestPanel
+                      bookingId={booking.id}
+                      defaultLocale={detailRequest.locale}
+                      customerEmail={booking.customer.email}
+                      open={detailRequest.open ? { expires: dateTime(format, detailRequest.open.expiresAt), emailedTo: detailRequest.open.emailedTo } : null}
+                    />
+                  )}
                 </>
               ) : (
                 <p className="text-muted-foreground">{t("bookings.noCustomer")}</p>
@@ -450,6 +629,18 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
                   <div>
                     <AssignmentStatusBadge status={activeAssignment.status as "pending"} />
                   </div>
+                  {/* A request made before this rule, or the account changed since: nobody can answer it until that's fixed. */}
+                  {activeAccount && !artistCanBeAssigned(activeAccount) && (
+                    <p className="mt-2 rounded-lg border border-warning/50 bg-warning/10 p-2" data-testid="artist-unreachable">
+                      {t("booking.artistUnreachable", { state: t(`artistAccount.state_${activeAccount}`) })}{" "}
+                      {activeAssignment.artist.organizationId === organization.id && (
+                        <Link href={`/app/artists/${activeAssignment.artistId}`} className="underline underline-offset-4">
+                          {t("booking.artistUnreachableFix")}
+                        </Link>
+                      )}
+                    </p>
+                  )}
+                  {activeAccount === "setup_pending" && activeAssignment.status === "pending" && <p className="mt-2 text-muted-foreground">{t("booking.artistSetupPending")}</p>}
                 </div>
               ) : (
                 <p className="text-muted-foreground">{t("booking.noArtist")}</p>
@@ -461,11 +652,12 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
               {canAssign ? (
                 <>
+                  {(status === "inquiry" || status === "quoted") && <p className="text-muted-foreground">{t("booking.assignBeforeBooking")}</p>}
                   <AssignArtist bookingId={booking.id} options={artistOptions} hasArtist={Boolean(activeAssignment)} />
                   <BorrowArtist bookingId={booking.id} currency={booking.currency} />
                 </>
               ) : (
-                ["inquiry", "quoted", "expired"].includes(status) && <p className="text-muted-foreground">{t("booking.assignBlocked")}</p>
+                status === "expired" && <p className="text-muted-foreground">{t("booking.assignBlocked")}</p>
               )}
               {artistRequests.length > 0 && (
                 <ul className="grid gap-1 border-t pt-3 text-xs">
@@ -483,6 +675,32 @@ async function Booking({ params }: Pick<PageProps<"/[locale]/app/bookings/[code]
               )}
             </CardContent>
           </Card>
+
+          {emails.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("bookingEmails.title")}</CardTitle>
+                <CardDescription>{t("bookingEmails.hint")}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="grid gap-2 text-sm">
+                  {emails.map((m) => (
+                    <li key={m.id} className="grid gap-0.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="min-w-0 truncate">{emailLabel(m)}</span>
+                        <Pill tone={m.status === "sent" ? "success" : m.status === "failed" || m.status === "dead" || m.status === "suppressed" ? "danger" : "neutral"}>{t(`bookingEmails.status_${m.status as "sent"}`)}</Pill>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {m.to} · {dateTime(format, m.sentAt ?? m.createdAt)}
+                        {m.status === "failed" && ` · ${t("bookingEmails.nextTry", { date: dateTime(format, m.nextAttemptAt) })}`}
+                      </p>
+                      {(m.status === "failed" || m.status === "dead") && viewerCan(viewer, "agency.bookings.edit") && <RetryEmailButton emailId={m.id} />}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -517,6 +735,15 @@ function Detail({ icon: Icon, label, children }: { icon?: React.ComponentType<{ 
         {label}
       </dt>
       <dd>{children}</dd>
+    </div>
+  );
+}
+
+function TextBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="text-sm">
+      <p className="mb-1 font-medium">{title}</p>
+      <p className="whitespace-pre-line text-muted-foreground">{body}</p>
     </div>
   );
 }

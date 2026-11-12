@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
 // Declared here so every runner (Next, tsx in the worker, Vitest) uses the automatic JSX runtime.
-import { Text } from "@react-email/components";
+import { Section, Text } from "@react-email/components";
 import { copy, type EmailLocale } from "./copy";
 import { ActionButton, EmailLayout, LinkFallback, Paragraph } from "./layout";
 
@@ -52,6 +52,28 @@ export function ResetPassword({ locale, name, url }: { locale: EmailLocale; name
   );
 }
 
+export function ArtistAccountSetup({ locale, name, url }: { locale: EmailLocale; name: string; url: string }) {
+  const c = copy[locale].artistSetup;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export function AccountSetup({ locale, name, url }: { locale: EmailLocale; name: string; url: string }) {
+  const c = copy[locale].accountSetup;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name)}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
 export function InquiryReceived({ locale, name, agency, code, url }: { locale: EmailLocale; name: string; agency: string; code: string; url: string }) {
   const c = copy[locale].inquiryReceived;
   return (
@@ -74,6 +96,14 @@ export function NewInquiry({ locale, customer, event, date, url }: { locale: Ema
   );
 }
 
+/** One line of a quote as the customer sees it; every amount is formatted by the sender from the saved quote. */
+export interface QuoteEmailLine {
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+}
+
 export function QuoteSent({
   locale,
   name,
@@ -82,6 +112,20 @@ export function QuoteSent({
   until,
   url,
   accountUrl,
+  reference,
+  event,
+  date,
+  venue,
+  lines,
+  subtotal,
+  vat,
+  deposit,
+  balance,
+  notes,
+  paymentTerms,
+  contactEmail,
+  contactPhone,
+  pdfUrl,
 }: {
   locale: EmailLocale;
   name: string;
@@ -91,12 +135,105 @@ export function QuoteSent({
   url: string;
   /** Set when the customer has no password yet: where they create their account. */
   accountUrl?: string;
+  /** The booking's tracking code. */
+  reference?: string;
+  event?: string;
+  date?: string;
+  venue?: string;
+  lines?: QuoteEmailLine[];
+  subtotal?: string;
+  vat?: { label: string; amount: string }[];
+  /** Upfront payment; absent when nothing is due upfront. */
+  deposit?: string;
+  balance?: string;
+  notes?: string;
+  paymentTerms?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  pdfUrl?: string;
 }) {
   const c = copy[locale].quoteSent;
+  const cell = { color: "#3a3446", fontSize: 13, lineHeight: "18px", padding: "6px 0", borderBottom: "1px solid #eee9f3", verticalAlign: "top" } as const;
+  const num = { ...cell, textAlign: "right" as const, whiteSpace: "nowrap" as const, paddingLeft: 12 };
+  const sum = { color: "#3a3446", fontSize: 13, padding: "3px 0" } as const;
   return (
     <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
       <Paragraph>{c.body(name, agency, total, until)}</Paragraph>
+      {(reference || event || date || venue) && (
+        <Section style={{ backgroundColor: "#f6f4fa", borderRadius: 8, padding: "12px 16px", margin: "0 0 20px" }}>
+          {event && <Text style={{ ...sum, margin: 0, fontWeight: 600 }}>{event}</Text>}
+          {date && <Text style={{ ...sum, margin: 0 }}>{c.date}: {date}</Text>}
+          {venue && <Text style={{ ...sum, margin: 0 }}>{c.venue}: {venue}</Text>}
+          {reference && <Text style={{ ...sum, margin: 0 }}>{c.reference}: {reference}</Text>}
+        </Section>
+      )}
+      {lines && lines.length > 0 && (
+        <table role="presentation" cellPadding={0} cellSpacing={0} style={{ width: "100%", borderCollapse: "collapse", margin: "0 0 12px" }}>
+          <thead>
+            <tr>
+              <th style={{ ...cell, fontWeight: 600, textAlign: "left" }}>{c.what}</th>
+              <th style={{ ...num, fontWeight: 600 }}>{c.quantity}</th>
+              <th style={{ ...num, fontWeight: 600 }}>{c.price}</th>
+              <th style={{ ...num, fontWeight: 600 }}>{c.amount}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l, i) => (
+              <tr key={i}>
+                <td style={cell}>{l.description}</td>
+                <td style={num}>{l.quantity}</td>
+                <td style={num}>{l.unitPrice}</td>
+                <td style={num}>{l.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {subtotal && (
+        <table role="presentation" cellPadding={0} cellSpacing={0} style={{ width: "100%", margin: "0 0 20px" }}>
+          <tbody>
+            <tr>
+              <td style={sum}>{c.subtotal}</td>
+              <td style={{ ...sum, textAlign: "right" }}>{subtotal}</td>
+            </tr>
+            {(vat ?? []).map((v) => (
+              <tr key={v.label}>
+                <td style={sum}>{v.label}</td>
+                <td style={{ ...sum, textAlign: "right" }}>{v.amount}</td>
+              </tr>
+            ))}
+            <tr>
+              <td style={{ ...sum, fontWeight: 700, fontSize: 15, borderTop: "1px solid #e2dceb", paddingTop: 8 }}>{c.total}</td>
+              <td style={{ ...sum, fontWeight: 700, fontSize: 15, borderTop: "1px solid #e2dceb", paddingTop: 8, textAlign: "right" }}>{total}</td>
+            </tr>
+            {deposit && (
+              <tr>
+                <td style={sum}>{c.deposit}</td>
+                <td style={{ ...sum, textAlign: "right" }}>{deposit}</td>
+              </tr>
+            )}
+            {deposit && balance && (
+              <tr>
+                <td style={sum}>{c.balance}</td>
+                <td style={{ ...sum, textAlign: "right" }}>{balance}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
+      {subtotal && !deposit && <Paragraph>{c.noDeposit}</Paragraph>}
+      {notes && <Paragraph>{notes}</Paragraph>}
+      {paymentTerms && <Paragraph>{paymentTerms}</Paragraph>}
+      <Paragraph>{c.validUntil(until)}</Paragraph>
       <ActionButton href={url}>{c.button}</ActionButton>
+      {pdfUrl && (
+        <Paragraph>
+          <a href={pdfUrl} style={{ color: "#6d2a7a", fontWeight: 600 }}>
+            {c.pdf}
+          </a>
+        </Paragraph>
+      )}
+      {(contactEmail || contactPhone) && <Paragraph>{c.contact(agency, [contactEmail, contactPhone].filter(Boolean).join(" · "))}</Paragraph>}
       {accountUrl && (
         <Paragraph>
           {c.account}{" "}
@@ -133,12 +270,13 @@ export function Invitation({
   );
 }
 
-export function AffiliateApproved({ locale, name, link, promo, url }: { locale: EmailLocale; name: string; link: string; promo: string; url: string }) {
+/** `setup`: the partner's account is new and `url` is their one-time password setup link. */
+export function AffiliateApproved({ locale, name, link, promo, url, setup = false }: { locale: EmailLocale; name: string; link: string; promo: string; url: string; setup?: boolean }) {
   const c = copy[locale].affiliateApproved;
   return (
     <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
-      <Paragraph>{c.body(name, link, promo)}</Paragraph>
-      <ActionButton href={url}>{c.button}</ActionButton>
+      <Paragraph>{setup ? c.bodySetup(name, link, promo) : c.body(name, link, promo)}</Paragraph>
+      <ActionButton href={url}>{setup ? c.buttonSetup : c.button}</ActionButton>
       <LinkFallback locale={locale} href={url} />
     </EmailLayout>
   );
@@ -251,11 +389,24 @@ export function ContactMessage({ locale, name, email, company, message }: { loca
   );
 }
 
-export function AgencyCreated({ locale, name, agency, url }: { locale: EmailLocale; name: string; agency: string; url: string }) {
+/** `setup`: the owner's account is new and `url` is their one-time password setup link. */
+export function AgencyCreated({ locale, name, agency, url, setup = false }: { locale: EmailLocale; name: string; agency: string; url: string; setup?: boolean }) {
   const c = copy[locale].agencyCreated;
   return (
     <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
-      <Paragraph>{c.body(name, agency)}</Paragraph>
+      <Paragraph>{setup ? c.bodySetup(name, agency) : c.body(name, agency)}</Paragraph>
+      <ActionButton href={url}>{setup ? c.buttonSetup : c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+/** An agency or an artist asks someone to start an agency on StageDesk. `agency` is the inviting agency (null for an artist). */
+export function AgencyInvite({ locale, inviter, agency, url }: { locale: EmailLocale; inviter: string; agency: string | null; url: string }) {
+  const c = copy[locale].agencyInvite;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{agency ? c.bodyAgency(inviter, agency) : c.bodyArtist(inviter)}</Paragraph>
       <ActionButton href={url}>{c.button}</ActionButton>
       <LinkFallback locale={locale} href={url} />
     </EmailLayout>
@@ -388,6 +539,105 @@ export function PaymentReported({ locale, customer, amount, method, code, url }:
       <Paragraph>{c.body(customer, amount, method, code)}</Paragraph>
       <ActionButton href={url}>{c.button}</ActionButton>
       <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+/** An agency put the artist on a booking (request), took them off it, or the booking was cancelled. */
+export function GigAssigned({
+  locale,
+  status,
+  name,
+  agency,
+  event,
+  date,
+  venue,
+  url,
+  setupUrl,
+}: {
+  locale: EmailLocale;
+  status: "new" | "withdrawn" | "cancelled";
+  name: string;
+  agency: string;
+  event: string;
+  date: string;
+  venue: string;
+  url: string;
+  /** For an artist without a password yet: where they choose one first. */
+  setupUrl?: string;
+}) {
+  const c = copy[locale].gigAssigned;
+  return (
+    <EmailLayout locale={locale} preview={c.preview[status]} heading={c.heading[status]}>
+      <Paragraph>{c.body[status](name, agency, event, date, venue)}</Paragraph>
+      {status === "new" && (
+        <>
+          <ActionButton href={setupUrl ?? url}>{setupUrl ? c.setupButton : c.button}</ActionButton>
+          {setupUrl && <Paragraph>{c.setupHint}</Paragraph>}
+          <LinkFallback locale={locale} href={setupUrl ?? url} />
+        </>
+      )}
+    </EmailLayout>
+  );
+}
+
+/** The agency asks the customer to fill in the event details through a private link. */
+export function BookingDetailsRequest({ locale, name, agency, message, until, url }: { locale: EmailLocale; name: string; agency: string; message?: string; until: string; url: string }) {
+  const c = copy[locale].detailsRequest;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(name, agency)}</Paragraph>
+      {message && <Paragraph>{message}</Paragraph>}
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <Paragraph>{c.until(until)}</Paragraph>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+/** The agency's answer to a change the customer asked for on their event. */
+export function ChangeDecision({ locale, name, agency, code, event, approved, changes, details, note, contact, url }: { locale: EmailLocale; name: string; agency: string; code: string; event: string; approved: boolean; changes: string[]; details: string[]; note?: string | null; contact?: string | null; url: string }) {
+  const c = copy[locale].changeDecision;
+  return (
+    <EmailLayout locale={locale} preview={c.preview(approved, code)} heading={c.heading(approved)}>
+      <Paragraph>{c.body(approved, name, agency, event, code)}</Paragraph>
+      <Paragraph>{c.changesTitle(approved)}</Paragraph>
+      {changes.map((line) => (
+        <Paragraph key={line}>{line}</Paragraph>
+      ))}
+      {note && <Paragraph>{c.note(agency, note)}</Paragraph>}
+      {details.length > 0 && <Paragraph>{c.detailsTitle(approved)}</Paragraph>}
+      {details.map((line) => (
+        <Paragraph key={line}>{line}</Paragraph>
+      ))}
+      <ActionButton href={url}>{c.button}</ActionButton>
+      {contact && <Paragraph>{c.contact(agency, contact)}</Paragraph>}
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+export type BookingUpdateName = "quoteAccepted" | "artistAccepted" | "artistDeclined" | "bookingConfirmed" | "bookingCancelled" | "invoiceIssued" | "reviewInvitation";
+
+/** A step in a booking, told to the agency's team or the customer. */
+export function BookingUpdate({ locale, update, url, name = "", agency = "", customer = "", artist = "", code = "", event = "", date = "", reason = "" }: { locale: EmailLocale; update: BookingUpdateName; url: string; name?: string; agency?: string; customer?: string; artist?: string; code?: string; event?: string; date?: string; reason?: string }) {
+  const c = copy[locale].bookingUpdate[update];
+  const text = c.body({ name, agency, customer, artist, code, event, date, reason });
+  return (
+    <EmailLayout locale={locale} preview={text} heading={c.heading}>
+      <Paragraph>{text}</Paragraph>
+      <ActionButton href={url}>{c.button}</ActionButton>
+      <LinkFallback locale={locale} href={url} />
+    </EmailLayout>
+  );
+}
+
+/** Sent from the agency settings to check how customer emails arrive. */
+export function SenderTest({ locale, agency, replyTo }: { locale: EmailLocale; agency: string; replyTo: string }) {
+  const c = copy[locale].senderTest;
+  return (
+    <EmailLayout locale={locale} preview={c.preview} heading={c.heading}>
+      <Paragraph>{c.body(agency, replyTo)}</Paragraph>
     </EmailLayout>
   );
 }

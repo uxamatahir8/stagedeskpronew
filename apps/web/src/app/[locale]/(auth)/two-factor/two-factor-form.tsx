@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -30,12 +31,11 @@ export function TwoFactorForm() {
       : await authClient.twoFactor.verifyTotp({ code, trustDevice: form.get("trust") === "on" });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
-    router.push(next);
-    router.refresh();
+    router.replace(next);
   }
 
   return (
-    <form action={submit} className="grid gap-4">
+    <form {...keepValues(submit)} className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor="twofactor-code">{backup ? t("auth.twoFactor.backupCode") : t("auth.code")}</Label>
         <Input

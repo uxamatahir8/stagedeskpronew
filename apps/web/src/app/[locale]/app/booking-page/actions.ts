@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
+import { bookingThemeSchema, normalizeBookingSections } from "@stagedesk/core";
 import { prisma } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
 import { deletePublicFile, detectImage, putPublicFile } from "@/lib/storage";
@@ -12,8 +13,8 @@ import { requireAgency } from "@/lib/viewer";
 const schema = z.object({
   enabled: z.boolean(),
   intro: z.string().max(5000),
-  showReviews: z.boolean(),
   faq: z.array(z.object({ question: z.string().trim().max(300), answer: z.string().trim().max(3000) })).max(20),
+  theme: bookingThemeSchema,
 });
 
 
@@ -23,14 +24,17 @@ export async function saveBookingPageAction(input: z.input<typeof schema>): Prom
   if (blocked) return { ok: false, message: blocked };
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { ok: false, message: (await getTranslations("auth"))("generic") };
+  const sections = normalizeBookingSections(parsed.data.theme.sections);
   // Not part of Better Auth's organization fields; requireAgency already limits this to owners and admins.
   await prisma.organization.update({
     where: { id: organization.id },
     data: {
       bookingPageEnabled: parsed.data.enabled,
       bookingIntro: parsed.data.intro.trim() || null,
-      showReviews: parsed.data.showReviews,
       faq: parsed.data.faq.filter((f) => f.question && f.answer),
+      // The reviews section's switch also decides whether reviews are loaded at all.
+      showReviews: sections.find((s) => s.key === "reviews")!.visible,
+      bookingTheme: { ...parsed.data.theme, sections },
     },
   });
   return { ok: true, message: (await getTranslations("bookingPageSettings"))("saved") };

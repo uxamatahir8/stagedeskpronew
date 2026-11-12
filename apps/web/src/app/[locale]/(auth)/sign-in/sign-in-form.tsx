@@ -1,8 +1,8 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
-import { type FormEvent, useState } from "react";
+import { useTranslations } from "next-intl";
+import { type FormEvent, useState, useSyncExternalStore } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
 import { authClient } from "@/lib/auth-client";
 import { authErrorKey } from "@/lib/auth-errors";
-import { localePath, safeNext } from "@/lib/paths";
+import { safeNext } from "@/lib/paths";
 import { PasswordInput } from "@/components/password-input";
+
+const subscribeToHydration = () => () => undefined;
 
 export function SignInForm() {
   const t = useTranslations();
-  const locale = useLocale();
   const router = useRouter();
   const next = safeNext(useSearchParams().get("next"));
 
@@ -24,25 +25,26 @@ export function SignInForm() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null);
+  const [code, setCode] = useState("");
 
   function done(twoFactor?: boolean) {
     if (twoFactor) {
-      router.push(`/two-factor?next=${encodeURIComponent(next)}`);
+      router.replace(`/two-factor?next=${encodeURIComponent(next)}`);
       return;
     }
-    router.push(next);
-    router.refresh();
+    router.replace(next);
   }
 
   async function signInWithPassword(form: FormData) {
+    if (pending) return;
     setPending(true);
     setError(null);
     setNotice(null);
     const { data, error } = await authClient.signIn.email({
       email: String(form.get("email")),
       password: String(form.get("password")),
-      callbackURL: localePath(locale, next),
     });
     setPending(false);
     if (error) {
@@ -54,21 +56,29 @@ export function SignInForm() {
     done(data && "twoFactorRedirect" in data && Boolean(data.twoFactorRedirect));
   }
 
-  async function sendCode(form: FormData) {
-    const address = String(form.get("email"));
+  async function requestCode(address: string) {
+    // Every code request starts with an empty field: a new code replaces the old one.
+    setCode("");
     setPending(true);
     setError(null);
+    setNotice(null);
     const { error } = await authClient.emailOtp.sendVerificationOtp({ email: address, type: "sign-in" });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
     setCodeSentTo(address);
   }
 
-  async function signInWithCode(form: FormData) {
-    if (!codeSentTo) return;
+  async function sendCode(form: FormData) {
+    if (pending) return;
+    await requestCode(String(form.get("email")).trim());
+  }
+
+  async function signInWithCode() {
+    if (!codeSentTo || pending) return;
+    if (!/^\d{6}$/.test(code)) return setError(t("auth.signIn.invalidCode"));
     setPending(true);
     setError(null);
-    const { data, error } = await authClient.signIn.emailOtp({ email: codeSentTo, otp: String(form.get("code")).trim() });
+    const { data, error } = await authClient.signIn.emailOtp({ email: codeSentTo, otp: code });
     setPending(false);
     if (error) return setError(t(authErrorKey(error)));
     done(data && "twoFactorRedirect" in data && Boolean(data.twoFactorRedirect));
@@ -87,7 +97,7 @@ export function SignInForm() {
       </TabsList>
 
       <TabsContent value="password" className="mt-4">
-        <form onSubmit={submit(signInWithPassword)} className="grid gap-4">
+        <form method="post" onSubmit={submit(signInWithPassword)} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="signin-email">{t("auth.email")}</Label>
             <Input
@@ -96,6 +106,7 @@ export function SignInForm() {
               type="email"
               autoComplete="email"
               required
+              disabled={!hydrated || pending}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -107,11 +118,11 @@ export function SignInForm() {
                 {t("auth.signIn.forgot")}
               </Link>
             </div>
-            <PasswordInput id="signin-password" name="password" autoComplete="current-password" required />
+            <PasswordInput id="signin-password" name="password" autoComplete="current-password" required disabled={!hydrated || pending} />
           </div>
           <FormMessage>{error}</FormMessage>
           <FormMessage tone="success">{notice}</FormMessage>
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" disabled={!hydrated || pending}>
             {t("auth.signIn.submit")}
           </Button>
         </form>
@@ -119,31 +130,50 @@ export function SignInForm() {
 
       <TabsContent value="code" className="mt-4">
         {codeSentTo ? (
-          <form onSubmit={submit(signInWithCode)} className="grid gap-4">
+          // Its own key: React must not reuse the email step's input for the code (it kept the typed address).
+          <form key="code-step" method="post" onSubmit={submit(signInWithCode)} className="grid gap-4">
             <FormMessage tone="success">{t("auth.signIn.codeSent", { email: codeSentTo })}</FormMessage>
             <div className="grid gap-2">
               <Label htmlFor="signin-code">{t("auth.code")}</Label>
               <Input
                 id="signin-code"
-                name="code"
+                name="one-time-code"
+                type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                pattern="[0-9]{6}"
-                maxLength={6}
+                autoFocus
                 required
+                disabled={!hydrated || pending}
+                value={code}
+                // Digits only, so a pasted "123 456" or "123-456" still works.
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 className="font-mono tracking-[0.4em]"
               />
             </div>
             <FormMessage>{error}</FormMessage>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={!hydrated || pending}>
               {t("auth.signIn.verifyCode")}
             </Button>
-            <Button type="button" variant="ghost" onClick={() => setCodeSentTo(null)}>
-              {t("auth.signIn.otherEmail")}
-            </Button>
+            <div className="flex flex-wrap justify-center gap-x-2">
+              <Button type="button" variant="ghost" disabled={pending} onClick={() => void requestCode(codeSentTo)}>
+                {t("auth.signIn.resendCode")}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pending}
+                onClick={() => {
+                  setCodeSentTo(null);
+                  setCode("");
+                  setError(null);
+                }}
+              >
+                {t("auth.signIn.otherEmail")}
+              </Button>
+            </div>
           </form>
         ) : (
-          <form onSubmit={submit(sendCode)} className="grid gap-4">
+          <form key="email-step" method="post" onSubmit={submit(sendCode)} className="grid gap-4">
             <p className="text-sm text-muted-foreground">{t("auth.signIn.codeIntro")}</p>
             <div className="grid gap-2">
               <Label htmlFor="signin-code-email">{t("auth.email")}</Label>
@@ -153,12 +183,13 @@ export function SignInForm() {
                 type="email"
                 autoComplete="email"
                 required
+                disabled={!hydrated || pending}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <FormMessage>{error}</FormMessage>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={!hydrated || pending}>
               {t("auth.signIn.sendCode")}
             </Button>
           </form>

@@ -6,8 +6,21 @@ import type { Prisma } from "./generated/prisma/client";
 export type NotificationType =
   | "new_inquiry"
   | "quote_accepted"
+  | "quote_declined"
   | "gig_request"
   | "gig_response"
+  | "gig_withdrawn"
+  | "gig_confirmed"
+  | "gig_cancelled"
+  | "details_submitted"
+  | "preferences_updated"
+  | "change_requested"
+  | "change_approved"
+  | "change_rejected"
+  | "gig_updated"
+  | "booking_updated"
+  | "artist_removed"
+  | "quote_outdated"
   | "payment_received"
   | "message"
   | "ticket_new"
@@ -27,7 +40,10 @@ export type NotificationType =
   | "withdrawal_rejected"
   | "artist_joined"
   | "artist_request"
-  | "artist_request_answer";
+  | "artist_request_answer"
+  | "equipment_unreserved"
+  | "equipment_missing"
+  | "equipment_damaged";
 
 export interface NotificationInput {
   type: NotificationType;

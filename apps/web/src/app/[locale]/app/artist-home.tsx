@@ -1,88 +1,82 @@
 import { CalendarClockIcon, CalendarIcon, HandCoinsIcon, InboxIcon, MapPinIcon, WalletIcon } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type EventType, percentOf, todayInNetherlands } from "@stagedesk/core";
-import { prisma, toDateOnly } from "@stagedesk/db";
+import { artistEarnings, compensationOf, type EventType, todayInNetherlands, eventTimeRange } from "@stagedesk/core";
+import { artistGigs, currentArtistIds, prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
+import { InviteAgencyForm } from "@/components/invite-agency-form";
 import { StatCard } from "@/components/stat-card";
-import { AssignmentStatusBadge } from "@/components/status-badge";
+import { GigStateBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
 import { euro, eventDate } from "@/lib/format";
 
 const listOf = (value: unknown) => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string" && v.trim() !== "") : []);
+
+/** Requests waiting for an answer, on any agency's home: someone can be an artist elsewhere. */
+export async function GigRequestsCard({ userId, known }: { userId: string; known?: Awaited<ReturnType<typeof artistGigs>>["requests"] }) {
+  const [t, te, format, requests] = await Promise.all([getTranslations("artistHome"), getTranslations("eventTypes"), getFormatter(), known ?? artistGigs(userId).then((g) => g.requests)]);
+  if (requests.length === 0) return null;
+  return (
+    <Card className="border-warning/60" data-testid="gig-requests">
+      <CardHeader>
+        <CardTitle>{t("requestsTitle")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y">
+          {requests.map((a) => (
+            <li key={a.id}>
+              <Link href={`/app/gigs/${a.booking.trackingCode}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-accent/40">
+                <span className="grid">
+                  <span className="font-medium">
+                    {te(a.booking.eventType as EventType)} · {eventDate(format, a.booking.eventDate, "short") ?? t("dateNotScheduled")}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {a.booking.organization.name} · {a.artist.stageName}
+                  </span>
+                </span>
+                <GigStateBadge state={a.state} />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
 
 /** Artist home: requests to answer, the next gigs with their brief, and earnings. */
 export async function ArtistHome({ userId }: { userId: string }) {
   const today = todayInNetherlands();
   const yearStart = new Date(`${today.slice(0, 4)}-01-01T00:00:00Z`);
   // An artist's own gigs, at their agency and at partner agencies they're shared with.
-  const [t, te, format, assignments, paid] = await Promise.all([
+  const [t, ti, te, format, { requests, upcoming: gigs }, paid] = await Promise.all([
     getTranslations("artistHome"),
+    getTranslations("agencyInvite"),
     getTranslations("eventTypes"),
     getFormatter(),
-    prisma.bookingAssignment.findMany({
-      where: { artist: { userId }, status: { in: ["pending", "accepted"] }, booking: { status: { in: ["booked", "confirmed"] }, eventDate: { gte: toDateOnly(today) } } },
-      orderBy: { booking: { eventDate: "asc" } },
-      take: 20,
-      include: {
-        artist: { select: { stageName: true } },
-        booking: {
-          select: {
-            trackingCode: true, eventType: true, eventDate: true, startTime: true, endTime: true, venueName: true, venueCity: true,
-            guestCount: true, totalCents: true, currency: true, dos: true, donts: true, playlistUrl: true, organization: { select: { name: true } },
-          },
-        },
-      },
-    }),
+    artistGigs(userId),
     prisma.ledgerEntry.aggregate({
-      where: { type: { in: ["transfer", "transfer_reversal"] }, party: "artist", createdAt: { gte: yearStart }, artistId: { in: (await prisma.artist.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id) } },
+      where: { type: { in: ["transfer", "transfer_reversal"] }, party: "artist", createdAt: { gte: yearStart }, artistId: { in: await currentArtistIds(userId) } },
       _sum: { amountCents: true },
     }),
   ]);
-  const requests = assignments.filter((a) => a.status === "pending");
-  const gigs = assignments.filter((a) => a.status === "accepted");
   // In the currency of the next gig; gigs in another currency are left out of the sum.
   const currency = gigs[0]?.booking.currency ?? "EUR";
-  const upcoming = gigs.filter((a) => a.booking.currency === currency).reduce((sum, a) => sum + percentOf(a.booking.totalCents, a.shareBps), 0);
-  const next = gigs[0];
+  const upcoming = gigs.filter((a) => a.booking.currency === currency).reduce((sum, a) => sum + artistEarnings(compensationOf(a), a.booking.totalCents), 0);
+  const next = gigs.find((a) => a.booking.eventDate) ?? gigs[0];
 
   return (
     <>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard index={0} label={t("nextGig")} value={next ? (eventDate(format, next.booking.eventDate, "short") ?? "—") : "—"} hint={next ? next.booking.organization.name : t("noGigs")} icon={CalendarClockIcon} />
+        <StatCard index={0} label={t("nextGig")} value={next ? (eventDate(format, next.booking.eventDate, "short") ?? t("dateNotScheduled")) : "—"} hint={next ? next.booking.organization.name : t("noGigs")} icon={CalendarClockIcon} />
         <StatCard index={1} label={t("requests")} value={requests.length} icon={InboxIcon} />
         <StatCard index={2} label={t("upcomingEarnings")} value={euro(format, upcoming, currency)} hint={t("gigCount", { count: gigs.length })} icon={HandCoinsIcon} />
         <StatCard index={3} label={t("paidThisYear")} value={euro(format, paid._sum.amountCents ?? 0, currency)} icon={WalletIcon} />
       </section>
 
-      {requests.length > 0 && (
-        <Card className="border-warning/60">
-          <CardHeader>
-            <CardTitle>{t("requestsTitle")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="divide-y">
-              {requests.map((a) => (
-                <li key={a.id}>
-                  <Link href={`/app/gigs/${a.booking.trackingCode}`} className="flex flex-wrap items-center justify-between gap-2 py-3 hover:bg-accent/40">
-                    <span className="grid">
-                      <span className="font-medium">
-                        {te(a.booking.eventType as EventType)} · {eventDate(format, a.booking.eventDate, "short")}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {a.booking.organization.name} · {a.artist.stageName}
-                      </span>
-                    </span>
-                    <AssignmentStatusBadge status="pending" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+      <GigRequestsCard userId={userId} known={requests} />
 
       <Card>
         <CardHeader>
@@ -106,12 +100,12 @@ export async function ArtistHome({ userId }: { userId: string }) {
                   <li key={a.id} className="grid gap-2 rounded-lg border p-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <Link href={`/app/gigs/${b.trackingCode}`} className="font-medium underline-offset-4 hover:underline">
-                        {te(b.eventType as EventType)} · {eventDate(format, b.eventDate)}
+                        {te(b.eventType as EventType)} · {eventDate(format, b.eventDate) ?? t("dateNotScheduled")}
                       </Link>
                       <span className="text-sm text-muted-foreground">{b.organization.name}</span>
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      {(b.startTime || b.endTime) && <span>{[b.startTime, b.endTime].filter(Boolean).join("–")}</span>}
+                      {b.startTime && <span>{eventTimeRange(b.startTime, b.endTime, t("nextDay"), "–")}</span>}
                       {(b.venueName || b.venueCity) && (
                         <span className="flex items-center gap-1">
                           <MapPinIcon className="size-3.5" aria-hidden />
@@ -144,6 +138,16 @@ export async function ArtistHome({ userId }: { userId: string }) {
               })}
             </ul>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{ti("artistTitle")}</CardTitle>
+          <CardDescription>{ti("artistBody")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <InviteAgencyForm as="artist" />
         </CardContent>
       </Card>
     </>

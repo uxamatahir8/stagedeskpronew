@@ -1,4 +1,5 @@
 import "server-only";
+import { agencySender, agencySenderSelect, bookingMailLocale } from "./correspondence";
 import { getTranslations } from "next-intl/server";
 import { deskRoles, formatIban } from "@stagedesk/core";
 import { getSetting, notify, prisma } from "@stagedesk/db";
@@ -20,11 +21,13 @@ export async function paymentOptions(organizationId: string): Promise<PaymentOpt
     getSetting("payments.methods"),
     prisma.organization.findUniqueOrThrow({
       where: { id: organizationId },
-      select: { acceptOnline: true, acceptBankTransfer: true, acceptCash: true, iban: true, bankAccountName: true, paymentInstructions: true },
+      select: { suspendedAt: true, acceptOnline: true, acceptBankTransfer: true, acceptCash: true, iban: true, bankAccountName: true, paymentInstructions: true },
     }),
     prisma.connectedAccount.count({ where: { organizationId, artistId: null, chargesEnabled: true } }),
     isStripeConfigured(),
   ]);
+  // A suspended agency can't confirm or answer anything, so customers aren't offered a way to pay it.
+  if (agency.suspendedAt) return { online: false, bank: null, cash: false };
   return {
     online: allowed.online && agency.acceptOnline && stripe && connected > 0,
     bank:
@@ -56,7 +59,7 @@ export async function announceClaim(claim: { organizationId: string; bookingId: 
       kind: "paymentReported",
       to: m.user.email,
       params: { locale, customer: customerName, amount: money(locale, claim.amountCents, booking.currency), method: await methodName(locale, claim.method), code: booking.trackingCode, url: absoluteUrl(locale, `/app/bookings/${booking.trackingCode}`) },
-    });
+    }, { bookingId: claim.bookingId, agencyId: claim.organizationId });
   }
   await notify(
     staff.map((m) => m.userId),
@@ -73,15 +76,17 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
     getSetting("payments.methods"),
     prisma.booking.findUniqueOrThrow({
       where: { id: payment.bookingId },
-      select: { trackingCode: true, currency: true, totalCents: true, paidCents: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
+      select: { trackingCode: true, currency: true, totalCents: true, paidCents: true, customerId: true, organization: { select: agencySenderSelect }, customer: { select: { name: true, email: true, locale: true } } },
     }),
   ]);
   if (!booking.customer || !booking.customerId) return;
-  const locale = userLocale(booking.customer.locale);
+  // The booking's correspondence language (its quote's), signed by the agency.
+  const locale = await bookingMailLocale(payment.bookingId);
   if (sendReceipts) {
     deliver({
       kind: "paymentReceipt",
       to: booking.customer.email,
+      sender: agencySender(booking.organization),
       params: {
         locale,
         name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,
@@ -94,7 +99,7 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
         remaining: money(locale, Math.max(0, booking.totalCents - booking.paidCents), booking.currency),
         url: absoluteUrl(locale, "/app/my-payments"),
       },
-    });
+    }, { bookingId: payment.bookingId, agencyId: payment.organizationId });
   }
   await notify([booking.customerId], { type: "payment_confirmed", data: { name: booking.organization.name, code: booking.trackingCode, cents: payment.amountCents }, url: "/app/my-payments" });
 }
@@ -103,13 +108,14 @@ export async function sendReceipt(payment: { organizationId: string; bookingId: 
 export async function announceRejected(claim: { bookingId: string; amountCents: number; rejectReason: string | null }) {
   const booking = await prisma.booking.findUniqueOrThrow({
     where: { id: claim.bookingId },
-    select: { trackingCode: true, currency: true, customerId: true, organization: { select: { name: true } }, customer: { select: { name: true, email: true, locale: true } } },
+    select: { trackingCode: true, currency: true, customerId: true, organization: { select: agencySenderSelect }, customer: { select: { name: true, email: true, locale: true } } },
   });
   if (!booking.customer || !booking.customerId) return;
-  const locale = userLocale(booking.customer.locale);
+  const locale = await bookingMailLocale(claim.bookingId);
   deliver({
     kind: "paymentNotReceived",
     to: booking.customer.email,
+    sender: agencySender(booking.organization),
     params: {
       locale,
       name: booking.customer.name.split(/\s+/)[0] ?? booking.customer.name,
@@ -119,6 +125,6 @@ export async function announceRejected(claim: { bookingId: string; amountCents: 
       reason: claim.rejectReason ?? "",
       url: absoluteUrl(locale, "/app/my-payments"),
     },
-  });
+  }, { bookingId: claim.bookingId });
   await notify([booking.customerId], { type: "payment_rejected", data: { name: booking.organization.name, code: booking.trackingCode, cents: claim.amountCents }, url: "/app/my-payments" });
 }

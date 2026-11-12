@@ -11,12 +11,26 @@ export interface AuditInput {
   ip?: string | null;
 }
 
+/** Who is really behind the current request when an admin is logged in as someone else; null otherwise. */
+type ImpersonatorLookup = () => Promise<string | null>;
+let currentImpersonator: ImpersonatorLookup = async () => null;
+
+/**
+ * Lets the web app tell audit() about "log in as" sessions, so every change
+ * made meanwhile names the admin too, without each caller passing it along.
+ */
+export function setImpersonatorLookup(lookup: ImpersonatorLookup) {
+  currentImpersonator = lookup;
+}
+
 /**
  * Records an admin, money or access change. Never throws: a failed audit
  * write is logged rather than undoing the change it describes.
  */
 export async function audit(input: AuditInput) {
   try {
+    // Outside a request (the worker, scripts) there is nobody to look up.
+    const impersonatorId = await currentImpersonator().catch(() => null);
     await prisma.auditEvent.create({
       data: {
         actorId: input.actorId,
@@ -26,9 +40,37 @@ export async function audit(input: AuditInput) {
         targetId: input.targetId ?? null,
         data: (input.data ?? undefined) as Prisma.InputJsonValue | undefined,
         ip: input.ip ?? null,
+        impersonatorId: impersonatorId === input.actorId ? null : impersonatorId,
       },
     });
   } catch (error) {
     console.error("[audit] could not record", input.action, error);
   }
+}
+
+/** Anything that can write an audit row: the plain client or a transaction (tenant-scoped ones too). */
+interface AuditWriter {
+  auditEvent: { create(args: { data: Prisma.AuditEventUncheckedCreateInput }): PromiseLike<unknown> };
+}
+
+/**
+ * Records a sensitive change inside the transaction that makes it, so the
+ * change and its audit row commit or roll back together. Unlike audit(), a
+ * failed write throws and undoes the change: these actions must not happen
+ * without their record (overrides, losses, stock corrections, sharing).
+ */
+export async function auditTx(tx: AuditWriter, input: AuditInput) {
+  const impersonatorId = await currentImpersonator().catch(() => null);
+  await tx.auditEvent.create({
+    data: {
+      actorId: input.actorId,
+      action: input.action,
+      agencyId: input.agencyId ?? null,
+      targetType: input.targetType ?? null,
+      targetId: input.targetId ?? null,
+      data: (input.data ?? undefined) as Prisma.InputJsonValue | undefined,
+      ip: input.ip ?? null,
+      impersonatorId: impersonatorId === input.actorId ? null : impersonatorId,
+    },
+  });
 }

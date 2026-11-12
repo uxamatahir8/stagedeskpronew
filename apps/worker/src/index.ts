@@ -1,11 +1,21 @@
 import { Queue, Worker } from "bullmq";
 import { Redis } from "ioredis";
-import { localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
-import { approveDueCommissions, expireQuotes, prisma, saveExchangeRates } from "@stagedesk/db";
+import { checkProductionConfig, localePrefix, parseEcbRates, parseOpenRates } from "@stagedesk/core";
+import { approveDueCommissions, dueEmails, expireQuotes, markEmailQueued, prisma, processEmail, recordEmail, resumeLeadAcceptances, saveExchangeRates } from "@stagedesk/db";
 import { EMAIL_QUEUE, type EmailJob, sendEmailJob } from "@stagedesk/emails";
-import { getStripe, processStoredEvent, runAffiliatePayouts, runDuePayouts } from "@stagedesk/payments";
+import { getStripe, reconcileAffiliatePromos, recoverStripeWithdrawals, retryStripeEvents, runAffiliatePayouts, runDuePayouts, runFinancialOperations } from "@stagedesk/payments";
 import { sendCampaign, sendDueCampaigns } from "./newsletter";
 import { sendReminders } from "./reminders";
+
+// In production, refuse to run with an unsafe or incomplete configuration (same rules as the web app).
+if (process.env["NODE_ENV"] === "production") {
+  const { errors, warnings } = checkProductionConfig(process.env, "worker");
+  for (const w of warnings) console.warn(`[config] ${w}`);
+  if (errors.length > 0) {
+    for (const e of errors) console.error(`[config] ${e}`);
+    process.exit(1);
+  }
+}
 
 const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379", {
   maxRetriesPerRequest: null,
@@ -15,15 +25,41 @@ const connection = new Redis(process.env["REDIS_URL"] ?? "redis://localhost:6379
 // web app; "retry-stripe-events" picks up any that failed, so none are lost.
 const systemQueue = new Queue("system", { connection });
 
-// Every email goes through this queue: the web app and the jobs below add
-// { kind, to, params }; failed sends are retried with backoff.
+// Email: every message is stored in the outbox (email_messages) first; the
+// queue only carries its id. Sending goes through the outbox claim, so one
+// row is sent once however many jobs or processes see it; retries are the
+// outbox's (the "email-outbox" sweep), so the queue job runs once.
 const emailQueue = new Queue(EMAIL_QUEUE, { connection });
-const queueEmail = (job: EmailJob) =>
-  emailQueue.add(job.kind, job, { attempts: 5, backoff: { type: "exponential", delay: 30_000 }, removeOnComplete: 1000, removeOnFail: 5000 });
+const sendStored = (id: string) => processEmail(id, (job, messageId) => sendEmailJob(job as EmailJob, { messageId }));
+
+const enqueueStored = async (id: string, kind: string) => {
+  try {
+    await emailQueue.add(kind, { outboxId: id }, { jobId: id, attempts: 1, removeOnComplete: 1000, removeOnFail: 5000 });
+    await markEmailQueued(id);
+  } catch (error) {
+    // Redis is down: the row stays pending and the sweep sends it.
+    console.error("[mail] queue unavailable; left in the outbox", id, error);
+  }
+};
+
+/**
+ * Stores an email for the jobs below and queues it. `key` makes a repeat (a
+ * reminder run twice) store nothing new. Throws only when the outbox itself
+ * can't store it, so callers that claim work (reminders) give the claim back.
+ */
+const queueEmail = async (job: EmailJob, key?: string) => {
+  const stored = await recordEmail({ key: key ?? null, kind: job.kind, to: job.to, job });
+  if (!stored.duplicate) await enqueueStored(stored.id, job.kind);
+};
 
 const emailWorker = new Worker(EMAIL_QUEUE, async (job) => {
-  await sendEmailJob(job.data as EmailJob);
-  return { to: (job.data as EmailJob).to };
+  const data = job.data as { outboxId?: string } & Partial<EmailJob>;
+  // Jobs queued before the outbox existed carry the email itself.
+  if (!data.outboxId) {
+    await sendEmailJob(job.data as EmailJob);
+    return { to: data.to, legacy: true };
+  }
+  return { outboxId: data.outboxId, result: await sendStored(data.outboxId) };
 }, { connection, concurrency: 5 });
 
 const systemWorker = new Worker(
@@ -34,12 +70,20 @@ const systemWorker = new Worker(
     switch (job.name) {
       case "heartbeat": {
         const settings = await prisma.platformSetting.count();
+        // Read by /api/health: a stale value means no worker is taking jobs.
+        await connection.set("worker:heartbeat", String(Date.now()), "EX", 600);
         return { at: new Date().toISOString(), settings };
       }
       case "expire-quotes":
         return { expired: await expireQuotes() };
       case "reminders":
         return sendReminders(queueEmail);
+      case "email-outbox": {
+        // Never queued (Redis was down), failed and due, lost from the queue, or held by a process that died.
+        const due = await dueEmails();
+        for (const row of due) await sendStored(row.id).catch((error: unknown) => console.error("[mail] outbox send failed", row.id, error));
+        return { due: due.length };
+      }
       case "payouts":
         return stripe ? { paidOut: await runDuePayouts(stripe) } : { skipped: "Stripe not configured" };
       case "approve-commissions":
@@ -58,17 +102,21 @@ const systemWorker = new Worker(
         return sendCampaign((job.data as { campaignId: string }).campaignId);
       case "newsletter-due":
         return sendDueCampaigns();
-      case "retry-stripe-events": {
-        // Picks up events whose immediate processing failed or never ran.
-        if (!stripe) return { skipped: "Stripe not configured" };
-        const stuck = await prisma.stripeEvent.findMany({
-          where: { status: { in: ["received", "failed"] }, receivedAt: { lt: new Date(Date.now() - 60_000) } },
-          select: { id: true },
-          take: 100,
-        });
-        for (const e of stuck) await processStoredEvent(stripe, e.id).catch(() => undefined);
-        return { retried: stuck.length };
-      }
+      case "retry-stripe-events":
+        // Events whose processing failed (with backoff), never ran, or whose worker died mid-run.
+        return stripe ? retryStripeEvents(stripe) : { skipped: "Stripe not configured" };
+      case "recover-withdrawals":
+        // Stripe withdrawals whose process stopped or whose transfer outcome was unknown.
+        return stripe ? recoverStripeWithdrawals(stripe) : { skipped: "Stripe not configured" };
+      case "affiliate-promos":
+        // Stripe promotion codes match their partners: on while approved, off otherwise or once deleted.
+        return stripe ? reconcileAffiliatePromos(stripe) : { skipped: "Stripe not configured" };
+      case "resume-lead-acceptances":
+        // Customer acceptances of a marketplace price that stopped half-way.
+        return resumeLeadAcceptances();
+      case "financial-operations":
+        // Refunds and payouts that didn't finish (Stripe timeouts, crashes): continued with the same keys.
+        return stripe ? runFinancialOperations(stripe) : { skipped: "Stripe not configured" };
       default:
         throw new Error(`Unknown system job: ${job.name}`);
     }
@@ -139,6 +187,7 @@ for (const w of [systemWorker, emailWorker]) {
 await systemQueue.upsertJobScheduler("heartbeat", { every: 60_000 }, { name: "heartbeat" });
 await systemQueue.upsertJobScheduler("expire-quotes", { every: 15 * 60_000 }, { name: "expire-quotes" });
 await systemQueue.upsertJobScheduler("reminders", { every: 60 * 60_000 }, { name: "reminders" });
+await systemQueue.upsertJobScheduler("email-outbox", { every: 60_000 }, { name: "email-outbox" });
 await systemQueue.upsertJobScheduler("payouts", { every: 60 * 60_000 }, { name: "payouts" });
 await systemQueue.upsertJobScheduler("approve-commissions", { every: 60 * 60_000 }, { name: "approve-commissions" });
 await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }, { name: "affiliate-payouts" });
@@ -146,7 +195,11 @@ await systemQueue.upsertJobScheduler("affiliate-payouts", { every: 60 * 60_000 }
 await systemQueue.upsertJobScheduler("exchange-rates", { every: 6 * 60 * 60_000 }, { name: "exchange-rates" });
 await systemQueue.add("exchange-rates", {}, { attempts: 3, backoff: { type: "exponential", delay: 60_000 }, removeOnComplete: 100 });
 await systemQueue.upsertJobScheduler("newsletter-due", { every: 60_000 }, { name: "newsletter-due" });
-await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 5 * 60_000 }, { name: "retry-stripe-events" });
+await systemQueue.upsertJobScheduler("retry-stripe-events", { every: 60_000 }, { name: "retry-stripe-events" });
+await systemQueue.upsertJobScheduler("recover-withdrawals", { every: 5 * 60_000 }, { name: "recover-withdrawals" });
+await systemQueue.upsertJobScheduler("affiliate-promos", { every: 24 * 60 * 60_000 }, { name: "affiliate-promos" });
+await systemQueue.upsertJobScheduler("resume-lead-acceptances", { every: 5 * 60_000 }, { name: "resume-lead-acceptances" });
+await systemQueue.upsertJobScheduler("financial-operations", { every: 2 * 60_000 }, { name: "financial-operations" });
 console.log(`Worker started. Queues: system, ${EMAIL_QUEUE}. Stripe ${(await getStripe()) ? "configured" : "not configured"}.`);
 
 async function shutdown() {

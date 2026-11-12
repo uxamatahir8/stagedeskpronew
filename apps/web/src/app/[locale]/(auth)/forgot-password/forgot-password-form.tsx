@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
@@ -31,7 +32,7 @@ export function ForgotPasswordForm() {
   if (sentTo) return <FormMessage tone="success">{t("auth.forgot.sent", { email: sentTo })}</FormMessage>;
 
   return (
-    <form action={submit} className="grid gap-4">
+    <form {...keepValues(submit)} className="grid gap-4">
       <div className="grid gap-2">
         <Label htmlFor="forgot-email">{t("auth.email")}</Label>
         <Input id="forgot-email" name="email" type="email" autoComplete="email" required />

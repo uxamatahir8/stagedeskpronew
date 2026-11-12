@@ -1,10 +1,11 @@
 import type { Permission } from "@stagedesk/core";
-import { prisma, tenantDb } from "@stagedesk/db";
+import { audit, inventoryExportRows, prisma, tenantDb } from "@stagedesk/db";
 import { getViewer } from "@/lib/viewer";
 
 const kinds: Record<string, Permission> = {
   bookings: "agency.reports",
   customers: "agency.customers",
+  equipment: "agency.inventory",
   payments: "agency.reports",
   waitlist: "platform.pages",
   withdrawals: "platform.affiliates",
@@ -19,7 +20,10 @@ function cell(value: unknown) {
   if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   return /[",\r\n;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
-const euros = (cents: number) => (cents / 100).toFixed(2);
+/** Major units with two decimals; the row's currency is in its own column. */
+const amount = (cents: number) => (cents / 100).toFixed(2);
+/** Affiliate money is always euros (commissions and payouts are paid in EUR). */
+const euros = amount;
 const day = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : "");
 
 /** UTF-8 with BOM so Excel reads accents. */
@@ -38,6 +42,8 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
   const viewer = await getViewer();
   if (!permission) return new Response(null, { status: 404 });
   if (!viewer?.role || !viewer.permissions.includes(permission)) return new Response(null, { status: 403 });
+  // Exports are bulk reads of personal data: keep a record of who took what.
+  await audit({ actorId: viewer.user.id, action: "data.export", agencyId: viewer.organization?.id ?? null, targetType: "export", targetId: kind });
 
   if (kind === "waitlist") {
     // Platform-level list, not agency data.
@@ -81,20 +87,26 @@ export async function GET(_request: Request, { params }: RouteContext<"/api/expo
       include: { customer: { select: { name: true, email: true } }, assignments: { where: { status: "accepted" }, take: 1, select: { artist: { select: { stageName: true } } } } },
     });
     rows = [
-      ["code", "status", "event_type", "event_date", "customer", "email", "venue", "city", "artist", "total_eur", "paid_eur", "source", "created_at"],
+      // Each booking keeps the currency it was made in, so the currency is per row.
+      ["code", "status", "event_type", "event_date", "customer", "email", "venue", "city", "artist", "currency", "total", "paid", "source", "created_at"],
       ...bookings.map((b) => [
         b.trackingCode, b.status, b.eventType, day(b.eventDate), b.customer?.name, b.customer?.email, b.venueName, b.venueCity,
-        b.assignments[0]?.artist.stageName, euros(b.totalCents), euros(b.paidCents), b.source, b.createdAt,
+        b.assignments[0]?.artist.stageName, b.currency, amount(b.totalCents), amount(b.paidCents), b.source, b.createdAt,
       ]),
     ];
+  } else if (kind === "equipment") {
+    // The agency's own equipment only (inventoryExportRows reads through tenantDb).
+    const items = await inventoryExportRows(viewer.organization.id);
+    const header = ["code", "name", "kind", "tracking", "quantity", "defective", "status", "condition", "category", "container", "manufacturer", "model", "serialNumber", "powerWatts", "batteryPowered", "shared", "notes"] as const;
+    rows = [[...header], ...items.map((i) => header.map((h) => i[h]))];
   } else if (kind === "customers") {
     const members = await db.member.findMany({ where: { role: "customer" }, include: { user: { select: { name: true, email: true, phone: true, createdAt: true } } } });
     rows = [["name", "email", "phone", "since"], ...members.map((m) => [m.user.name, m.user.email, m.user.phone, day(m.user.createdAt)])];
   } else {
-    const payments = await db.payment.findMany({ orderBy: { receivedAt: "desc" }, include: { booking: { select: { trackingCode: true } } } });
+    const payments = await db.payment.findMany({ orderBy: { receivedAt: "desc" }, include: { booking: { select: { trackingCode: true, currency: true } } } });
     rows = [
-      ["date", "booking", "kind", "method", "amount_eur", "refunded_eur", "reference"],
-      ...payments.map((p) => [day(p.receivedAt), p.booking.trackingCode, p.kind, p.method, euros(p.amountCents), euros(p.refundedCents), p.reference]),
+      ["date", "booking", "kind", "method", "currency", "amount", "refunded", "reference"],
+      ...payments.map((p) => [day(p.receivedAt), p.booking.trackingCode, p.kind, p.method, p.booking.currency, amount(p.amountCents), amount(p.refundedCents), p.reference]),
     ];
   }
   return csvResponse(kind, rows);

@@ -1,3 +1,15 @@
+/** What the booking update emails can mention. */
+export interface BookingUpdateCopy {
+  name: string;
+  agency: string;
+  customer: string;
+  artist: string;
+  code: string;
+  event: string;
+  date: string;
+  reason: string;
+}
+
 export type EmailLocale = "nl" | "en";
 
 /** All email text in both languages. Templates only arrange it. */
@@ -25,6 +37,21 @@ export const copy = {
       heading: "Nieuw wachtwoord instellen",
       body: (name: string) => `Hoi ${name}, klik op de knop om een nieuw wachtwoord te kiezen. De link is 1 uur geldig.`,
       button: "Nieuw wachtwoord instellen",
+    },
+    artistSetup: {
+      subject: "Activeer je artiestenaccount",
+      preview: "Kies je wachtwoord voor je StageDesk-artiestenaccount.",
+      heading: "Je artiestenaccount staat klaar",
+      body: (name: string) => `Hoi ${name}, je artiestenaccount is aangemaakt. Kies binnen 24 uur je wachtwoord om je optredens, beschikbaarheid en inkomsten te beheren.`,
+      button: "Wachtwoord kiezen",
+    },
+    accountSetup: {
+      subject: "Stel je StageDesk-account in",
+      preview: "Kies een wachtwoord voor je StageDesk-account.",
+      heading: "Je StageDesk-account staat klaar",
+      body: (name: string) =>
+        `Hoi ${name}, er is een StageDesk-account voor je aangemaakt. Kies binnen 24 uur je wachtwoord om in te loggen. Is de link verlopen? Vraag dan op de inlogpagina een nieuwe aan via "Wachtwoord vergeten?".`,
+      button: "Wachtwoord kiezen",
     },
     invitation: {
       subject: (agency: string) => `Je bent uitgenodigd voor ${agency} op StageDesk`,
@@ -57,6 +84,10 @@ export const copy = {
       body: (name: string, link: string, promo: string) =>
         `Hoi ${name}, je aanmelding is goedgekeurd. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Koppel een Stripe-account in je dashboard om uitbetaald te worden.`,
       button: "Naar je partnerdashboard",
+      // Added by the platform admin with a new account: the button sets the password.
+      bodySetup: (name: string, link: string, promo: string) =>
+        `Hoi ${name}, je bent toegevoegd als StageDesk-partner. Deel je link ${link} of je code ${promo}: bureaus die zich via jou aanmelden leveren je commissie op over hun abonnement. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook) en koppel daarna een Stripe-account in je dashboard om uitbetaald te worden.`,
+      buttonSetup: "Wachtwoord kiezen",
     },
     affiliatePayout: {
       subject: (amount: string) => `Uitbetaling van ${amount} onderweg`,
@@ -123,6 +154,20 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Log in met je e-mailadres: je krijgt een code per mail, een wachtwoord is niet nodig. Je proefperiode loopt al.`,
       button: "Inloggen",
+      // A new account: the button sets the password.
+      bodySetup: (name: string, agency: string) =>
+        `Hoi ${name}, we hebben ${agency} voor je aangemaakt op StageDesk. Kies binnen 24 uur je wachtwoord om in te loggen (inloggen met een code per mail kan ook). Je proefperiode loopt al.`,
+      buttonSetup: "Wachtwoord kiezen",
+    },
+    agencyInvite: {
+      subject: (inviter: string) => `${inviter} nodigt je uit voor StageDesk`,
+      preview: "Boekingssoftware voor DJ- en bandbureaus.",
+      heading: "Je bent uitgenodigd voor StageDesk",
+      bodyAgency: (inviter: string, agency: string) =>
+        `${inviter} van ${agency} werkt met StageDesk en nodigt je uit om het ook te proberen. Je beheert aanvragen, offertes, artiesten en betalingen op één plek, en als jullie allebei op StageDesk zitten, kunnen jullie elkaars artiesten boeken.`,
+      bodyArtist: (inviter: string) =>
+        `${inviter} treedt op via StageDesk en nodigt je bureau uit. Je beheert aanvragen, offertes, artiesten en betalingen op één plek, en artiesten worden na het optreden automatisch uitbetaald.`,
+      button: "StageDesk bekijken",
     },
     leadReceived: {
       subject: (reference: string) => `We hebben je aanvraag ontvangen (${reference})`,
@@ -206,15 +251,112 @@ export const copy = {
         `${customer} meldt dat ${amount} is betaald per ${method} voor boeking ${code}. Bevestig de ontvangst zodra je het bedrag ziet, of geef aan dat het niet binnen is.`,
       button: "Betaling controleren",
     },
+    gigAssigned: {
+      subject: { new: (agency: string) => `Nieuwe boekingsaanvraag van ${agency}`, withdrawn: (agency: string) => `Boeking bij ${agency} gaat niet door voor jou`, cancelled: (agency: string) => `Boeking bij ${agency} geannuleerd` },
+      preview: { new: "Je bent gevraagd voor een optreden.", withdrawn: "Je staat niet meer op deze boeking.", cancelled: "Deze boeking is geannuleerd." },
+      heading: { new: "Je bent gevraagd voor een optreden", withdrawn: "Je staat niet meer op deze boeking", cancelled: "Boeking geannuleerd" },
+      body: {
+        new: (name: string, agency: string, event: string, date: string, venue: string) => `Hoi ${name}, ${agency} vraagt je voor een ${event} op ${date}${venue ? ` in ${venue}` : ""}. Bekijk de details en laat weten of je kunt.`,
+        withdrawn: (name: string, agency: string, event: string, date: string) => `Hoi ${name}, ${agency} heeft de ${event} op ${date} aan iemand anders gegeven of je aanvraag ingetrokken. Je hoeft niets te doen.`,
+        cancelled: (name: string, agency: string, event: string, date: string) => `Hoi ${name}, de ${event} op ${date} bij ${agency} is geannuleerd. Je hoeft niets te doen.`,
+      },
+      button: "Aanvraag bekijken",
+      setupButton: "Wachtwoord kiezen en aanvraag bekijken",
+      setupHint: "Je hebt nog geen wachtwoord. Kies er eerst een; daarna zie je de aanvraag in je overzicht.",
+    },
+    detailsRequest: {
+      subject: (agency: string) => `${agency} vraagt de gegevens van je evenement`,
+      preview: "Vul de gegevens van je evenement in.",
+      heading: "Vul de gegevens van je evenement in",
+      body: (name: string, agency: string) => `Hoi ${name}, ${agency} heeft nog een paar gegevens nodig om je offerte te maken. Het invullen duurt een paar minuten.`,
+      button: "Gegevens invullen",
+      until: (until: string) => `De link werkt tot ${until} en is alleen voor jou.`,
+    },
+    bookingUpdate: {
+      quoteAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.customer} heeft de offerte geaccepteerd (${p.code})`,
+        heading: "Offerte geaccepteerd",
+        body: (p: BookingUpdateCopy) => `${p.customer} heeft de offerte voor de ${p.event}${p.date ? ` op ${p.date}` : ""} geaccepteerd. Wijs nu een artiest toe als dat nog niet is gebeurd.`,
+        button: "Boeking openen",
+      },
+      artistAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} treedt op (${p.code})`,
+        heading: "Artiest heeft geaccepteerd",
+        body: (p: BookingUpdateCopy) => `${p.artist} heeft het optreden voor de ${p.event}${p.date ? ` op ${p.date}` : ""} geaccepteerd.`,
+        button: "Boeking openen",
+      },
+      artistDeclined: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} kan niet optreden (${p.code})`,
+        heading: "Artiest heeft afgezegd",
+        body: (p: BookingUpdateCopy) => `${p.artist} kan niet optreden op de ${p.event}${p.date ? ` op ${p.date}` : ""}. Kies een andere artiest.${p.reason ? ` Reden: ${p.reason}` : ""}`,
+        button: "Andere artiest kiezen",
+      },
+      bookingConfirmed: {
+        subject: (p: BookingUpdateCopy) => `Je boeking bij ${p.agency} is bevestigd (${p.code})`,
+        heading: "Je boeking is bevestigd",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, alles staat klaar voor je ${p.event}${p.date ? ` op ${p.date}` : ""}. De artiest heeft bevestigd.`,
+        button: "Bekijk je boeking",
+      },
+      bookingCancelled: {
+        subject: (p: BookingUpdateCopy) => `Je boeking bij ${p.agency} is geannuleerd (${p.code})`,
+        heading: "Je boeking is geannuleerd",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, ${p.agency} heeft je ${p.event}${p.date ? ` op ${p.date}` : ""} geannuleerd.${p.reason ? ` Reden: ${p.reason}` : ""} Vragen? Neem contact op met het bureau.`,
+        button: "Bekijk je boeking",
+      },
+      invoiceIssued: {
+        subject: (p: BookingUpdateCopy) => `Factuur van ${p.agency} (${p.code})`,
+        heading: "Je factuur staat klaar",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, ${p.agency} heeft de factuur voor je ${p.event} gemaakt. Je kunt hem hier bekijken en downloaden.`,
+        button: "Factuur bekijken",
+      },
+      reviewInvitation: {
+        subject: (p: BookingUpdateCopy) => `Hoe was je ${p.event} met ${p.agency}?`,
+        heading: "Hoe was het?",
+        body: (p: BookingUpdateCopy) => `Hoi ${p.name}, we hopen dat je ${p.event} geweldig was. Laat ${p.agency} in een minuutje weten hoe je het vond.`,
+        button: "Beoordeling schrijven",
+      },
+    },
+    changeDecision: {
+      subject: (approved: boolean, agency: string, code: string) => (approved ? `${agency} heeft je wijziging doorgevoerd (${code})` : `${agency} kon je wijziging niet doorvoeren (${code})`),
+      preview: (approved: boolean, code: string) => (approved ? `Je wijziging voor boeking ${code} is goedgekeurd.` : `Je wijziging voor boeking ${code} is niet doorgevoerd.`),
+      heading: (approved: boolean) => (approved ? "Je wijziging is doorgevoerd" : "Je wijziging is niet doorgevoerd"),
+      body: (approved: boolean, name: string, agency: string, event: string, code: string) => (approved ? `Hoi ${name}, ${agency} heeft je gevraagde wijziging voor je ${event} (boeking ${code}) goedgekeurd.` : `Hoi ${name}, ${agency} kon je gevraagde wijziging voor je ${event} (boeking ${code}) niet doorvoeren. Je boeking blijft zoals ze was.`),
+      changesTitle: (approved: boolean) => (approved ? "Dit is gewijzigd:" : "Je vroeg om:"),
+      note: (agency: string, note: string) => `Bericht van ${agency}: ${note}`,
+      detailsTitle: (approved: boolean) => (approved ? "Je evenement nu:" : "Je evenement blijft:"),
+      button: "Bekijk je boeking",
+      contact: (agency: string, contact: string) => `Vragen? Neem contact op met ${agency}: ${contact}.`,
+    },
+    senderTest: {
+      subject: "Testmail van StageDesk",
+      preview: "Zo komen je e-mails aan bij klanten.",
+      heading: "Zo komen je e-mails aan",
+      body: (agency: string, replyTo: string) => `Klanten zien deze e-mails als afkomstig van ${agency}. Als ze antwoorden, gaat hun antwoord naar ${replyTo}.`,
+    },
     quoteSent: {
       subject: (agency: string) => `Je offerte van ${agency}`,
       preview: "Je offerte staat klaar.",
       heading: "Je offerte staat klaar",
       body: (name: string, agency: string, total: string, until: string) =>
         `Hoi ${name}, ${agency} heeft een offerte voor je gemaakt van ${total}. Accepteer hem vóór ${until} om je datum vast te leggen.`,
-      button: "Offerte bekijken",
+      button: "Offerte bekijken en accepteren",
       account: "Wil je je boeking volgen, betalen en berichten sturen vanuit je eigen omgeving?",
       accountLink: "Maak je account aan en kies een wachtwoord.",
+      date: "Datum",
+      venue: "Locatie",
+      reference: "Referentie",
+      what: "Omschrijving",
+      quantity: "Aantal",
+      price: "Prijs",
+      amount: "Bedrag",
+      subtotal: "Subtotaal (excl. btw)",
+      total: "Totaal (incl. btw)",
+      deposit: "Aanbetaling bij akkoord",
+      balance: "Restbedrag",
+      noDeposit: "Er is geen aanbetaling nodig: je betaalt het volledige bedrag later.",
+      validUntil: (until: string) => `Deze offerte is geldig tot en met ${until}.`,
+      pdf: "Offerte als pdf downloaden",
+      contact: (agency: string, how: string) => `Vragen? Neem contact op met ${agency}: ${how}.`,
     },
   },
   en: {
@@ -240,6 +382,21 @@ export const copy = {
       heading: "Set a new password",
       body: (name: string) => `Hi ${name}, click the button to choose a new password. The link is valid for 1 hour.`,
       button: "Set new password",
+    },
+    artistSetup: {
+      subject: "Activate your artist account",
+      preview: "Choose a password for your StageDesk artist account.",
+      heading: "Your artist account is ready",
+      body: (name: string) => `Hi ${name}, your artist account has been created. Choose your password within 24 hours to manage your gigs, availability and earnings.`,
+      button: "Choose password",
+    },
+    accountSetup: {
+      subject: "Set up your StageDesk account",
+      preview: "Choose a password for your StageDesk account.",
+      heading: "Your StageDesk account is ready",
+      body: (name: string) =>
+        `Hi ${name}, a StageDesk account has been created for you. Choose your password within 24 hours to sign in. Has the link expired? Request a new one on the sign-in page under "Forgot password?".`,
+      button: "Choose password",
     },
     invitation: {
       subject: (agency: string) => `You're invited to ${agency} on StageDesk`,
@@ -272,6 +429,10 @@ export const copy = {
       body: (name: string, link: string, promo: string) =>
         `Hi ${name}, your application was approved. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Connect a Stripe account in your dashboard to get paid.`,
       button: "Open your partner dashboard",
+      // Added by the platform admin with a new account: the button sets the password.
+      bodySetup: (name: string, link: string, promo: string) =>
+        `Hi ${name}, you've been added as a StageDesk partner. Share your link ${link} or your code ${promo}: agencies that sign up through you earn you commission on their subscription. Choose your password within 24 hours to sign in (signing in with an emailed code works too), then connect a Stripe account in your dashboard to get paid.`,
+      buttonSetup: "Choose password",
     },
     affiliatePayout: {
       subject: (amount: string) => `Payout of ${amount} on its way`,
@@ -338,6 +499,20 @@ export const copy = {
       body: (name: string, agency: string) =>
         `Hi ${name}, we've set up ${agency} for you on StageDesk. Sign in with your email address: we'll email you a code, no password needed. Your trial has started.`,
       button: "Sign in",
+      // A new account: the button sets the password.
+      bodySetup: (name: string, agency: string) =>
+        `Hi ${name}, we've set up ${agency} for you on StageDesk. Choose your password within 24 hours to sign in (signing in with an emailed code works too). Your trial has started.`,
+      buttonSetup: "Choose password",
+    },
+    agencyInvite: {
+      subject: (inviter: string) => `${inviter} invites you to StageDesk`,
+      preview: "Booking software for DJ and band agencies.",
+      heading: "You're invited to StageDesk",
+      bodyAgency: (inviter: string, agency: string) =>
+        `${inviter} from ${agency} works with StageDesk and invites you to try it too. You manage requests, quotes, artists and payments in one place, and when you're both on StageDesk you can book each other's artists.`,
+      bodyArtist: (inviter: string) =>
+        `${inviter} performs through StageDesk and invites your agency. You manage requests, quotes, artists and payments in one place, and artists are paid automatically after the event.`,
+      button: "Have a look at StageDesk",
     },
     leadReceived: {
       subject: (reference: string) => `We've received your request (${reference})`,
@@ -421,15 +596,112 @@ export const copy = {
         `${customer} says ${amount} was paid by ${method} for booking ${code}. Confirm receipt once you see the amount, or mark it as not received.`,
       button: "Check the payment",
     },
+    gigAssigned: {
+      subject: { new: (agency: string) => `New booking request from ${agency}`, withdrawn: (agency: string) => `A booking at ${agency} is off for you`, cancelled: (agency: string) => `Booking at ${agency} cancelled` },
+      preview: { new: "You've been asked to play a gig.", withdrawn: "You're no longer on this booking.", cancelled: "This booking was cancelled." },
+      heading: { new: "You've been asked to play a gig", withdrawn: "You're no longer on this booking", cancelled: "Booking cancelled" },
+      body: {
+        new: (name: string, agency: string, event: string, date: string, venue: string) => `Hi ${name}, ${agency} asks you to play a ${event} on ${date}${venue ? ` at ${venue}` : ""}. Check the details and let them know if you can.`,
+        withdrawn: (name: string, agency: string, event: string, date: string) => `Hi ${name}, ${agency} gave the ${event} on ${date} to someone else or withdrew the request. There's nothing you need to do.`,
+        cancelled: (name: string, agency: string, event: string, date: string) => `Hi ${name}, the ${event} on ${date} at ${agency} was cancelled. There's nothing you need to do.`,
+      },
+      button: "View request",
+      setupButton: "Choose a password and view the request",
+      setupHint: "You don't have a password yet. Choose one first; then you'll see the request on your dashboard.",
+    },
+    detailsRequest: {
+      subject: (agency: string) => `${agency} asks for your event details`,
+      preview: "Fill in your event details.",
+      heading: "Fill in your event details",
+      body: (name: string, agency: string) => `Hi ${name}, ${agency} needs a few more details to prepare your quote. It takes a couple of minutes.`,
+      button: "Fill in details",
+      until: (until: string) => `The link works until ${until} and is just for you.`,
+    },
+    bookingUpdate: {
+      quoteAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.customer} accepted the quote (${p.code})`,
+        heading: "Quote accepted",
+        body: (p: BookingUpdateCopy) => `${p.customer} accepted the quote for the ${p.event}${p.date ? ` on ${p.date}` : ""}. Assign an artist now if you haven't yet.`,
+        button: "Open booking",
+      },
+      artistAccepted: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} will perform (${p.code})`,
+        heading: "Artist accepted",
+        body: (p: BookingUpdateCopy) => `${p.artist} accepted the gig for the ${p.event}${p.date ? ` on ${p.date}` : ""}.`,
+        button: "Open booking",
+      },
+      artistDeclined: {
+        subject: (p: BookingUpdateCopy) => `${p.artist} can't perform (${p.code})`,
+        heading: "Artist declined",
+        body: (p: BookingUpdateCopy) => `${p.artist} can't perform at the ${p.event}${p.date ? ` on ${p.date}` : ""}. Choose another artist.${p.reason ? ` Reason: ${p.reason}` : ""}`,
+        button: "Choose another artist",
+      },
+      bookingConfirmed: {
+        subject: (p: BookingUpdateCopy) => `Your booking with ${p.agency} is confirmed (${p.code})`,
+        heading: "Your booking is confirmed",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, everything is set for your ${p.event}${p.date ? ` on ${p.date}` : ""}. The artist has confirmed.`,
+        button: "View your booking",
+      },
+      bookingCancelled: {
+        subject: (p: BookingUpdateCopy) => `Your booking with ${p.agency} was cancelled (${p.code})`,
+        heading: "Your booking was cancelled",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, ${p.agency} cancelled your ${p.event}${p.date ? ` on ${p.date}` : ""}.${p.reason ? ` Reason: ${p.reason}` : ""} Any questions? Please contact the agency.`,
+        button: "View your booking",
+      },
+      invoiceIssued: {
+        subject: (p: BookingUpdateCopy) => `Invoice from ${p.agency} (${p.code})`,
+        heading: "Your invoice is ready",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, ${p.agency} has made the invoice for your ${p.event}. You can view and download it here.`,
+        button: "View invoice",
+      },
+      reviewInvitation: {
+        subject: (p: BookingUpdateCopy) => `How was your ${p.event} with ${p.agency}?`,
+        heading: "How was it?",
+        body: (p: BookingUpdateCopy) => `Hi ${p.name}, we hope your ${p.event} was great. Take a minute to tell ${p.agency} how it went.`,
+        button: "Write a review",
+      },
+    },
+    changeDecision: {
+      subject: (approved: boolean, agency: string, code: string) => (approved ? `${agency} has made your change (${code})` : `${agency} couldn't make your change (${code})`),
+      preview: (approved: boolean, code: string) => (approved ? `Your change to booking ${code} was approved.` : `Your change to booking ${code} wasn't made.`),
+      heading: (approved: boolean) => (approved ? "Your change has been made" : "Your change wasn't made"),
+      body: (approved: boolean, name: string, agency: string, event: string, code: string) => (approved ? `Hi ${name}, ${agency} approved the change you asked for on your ${event} (booking ${code}).` : `Hi ${name}, ${agency} couldn't make the change you asked for on your ${event} (booking ${code}). Your booking stays as it was.`),
+      changesTitle: (approved: boolean) => (approved ? "What changed:" : "You asked for:"),
+      note: (agency: string, note: string) => `A note from ${agency}: ${note}`,
+      detailsTitle: (approved: boolean) => (approved ? "Your event now:" : "Your event stays:"),
+      button: "View your booking",
+      contact: (agency: string, contact: string) => `Questions? Contact ${agency}: ${contact}.`,
+    },
+    senderTest: {
+      subject: "Test email from StageDesk",
+      preview: "This is how your emails reach customers.",
+      heading: "This is how your emails arrive",
+      body: (agency: string, replyTo: string) => `Customers see these emails as coming from ${agency}. When they reply, their answer goes to ${replyTo}.`,
+    },
     quoteSent: {
       subject: (agency: string) => `Your quote from ${agency}`,
       preview: "Your quote is ready.",
       heading: "Your quote is ready",
       body: (name: string, agency: string, total: string, until: string) =>
         `Hi ${name}, ${agency} has prepared a quote for ${total}. Accept it before ${until} to book your date.`,
-      button: "View quote",
+      button: "View and accept the quote",
       account: "Want to follow your booking, pay and send messages from your own account?",
       accountLink: "Create your account and choose a password.",
+      date: "Date",
+      venue: "Venue",
+      reference: "Reference",
+      what: "Description",
+      quantity: "Qty",
+      price: "Price",
+      amount: "Amount",
+      subtotal: "Subtotal (excl. VAT)",
+      total: "Total (incl. VAT)",
+      deposit: "Deposit on acceptance",
+      balance: "Balance",
+      noDeposit: "No deposit is needed: you pay the full amount later.",
+      validUntil: (until: string) => `This quote is valid until ${until}.`,
+      pdf: "Download the quote as a PDF",
+      contact: (agency: string, how: string) => `Questions? Contact ${agency}: ${how}.`,
     },
   },
 } as const;

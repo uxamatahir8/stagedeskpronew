@@ -14,6 +14,7 @@ if (existsSync(rootEnv)) process.loadEnvFile(rootEnv);
 if (process.env["NODE_ENV"] === "production") throw new Error("Refusing to clean a production database.");
 
 const { prisma } = await import("./client");
+const { purgeInventory } = await import("./inventory");
 
 /** Email domains used only by tests (see apps/web/e2e and scripts/smoke-*.sh). */
 const testDomains = ["test.local", "e2e-partners.nl", "e2e-bureau.nl", "e2e-beheer.nl"];
@@ -28,8 +29,9 @@ const users = await prisma.user.findMany({
 const testAdmins = await prisma.user.findMany({ where: { platformRole: "platform_admin", email: { endsWith: "@e2e-beheer.nl" } }, select: { id: true } });
 const userIds = [...users, ...testAdmins].map((u) => u.id);
 
-// Agencies whose only owner is a test account.
-const owned = await prisma.member.findMany({ where: { userId: { in: userIds }, role: "agency_owner" }, select: { organizationId: true } });
+// Agencies and independent businesses whose owner is a test account.
+// Independent artists own their business through the solo_artist role.
+const owned = await prisma.member.findMany({ where: { userId: { in: userIds }, role: { in: ["agency_owner", "solo_artist"] } }, select: { organizationId: true } });
 const orgIds = [...new Set(owned.map((m) => m.organizationId))];
 
 const bookings = await prisma.booking.findMany({ where: { OR: [{ organizationId: { in: orgIds } }, { customerId: { in: userIds } }] }, select: { id: true, trackingCode: true } });
@@ -38,7 +40,9 @@ const payments = await prisma.payment.findMany({ where: { OR: [{ bookingId: { in
 const paymentIds = payments.map((p) => p.id);
 const affiliates = await prisma.affiliate.findMany({ where: { userId: { in: userIds } }, select: { id: true } });
 const affiliateIds = affiliates.map((a) => a.id);
-const artists = await prisma.artist.findMany({ where: { OR: [{ userId: { in: userIds } }, { organizationId: { in: orgIds } }] }, select: { id: true } });
+// Also profiles e2e tests made at demo agencies ("E2E …") whose test account is already gone:
+// left behind they fill the agency's artist limit, and later runs can't add one.
+const artists = await prisma.artist.findMany({ where: { OR: [{ userId: { in: userIds } }, { organizationId: { in: orgIds } }, { userId: null, stageName: { startsWith: "E2E " } }] }, select: { id: true } });
 const artistIds = artists.map((a) => a.id);
 // Invitations and blog comments carry an email without needing an account.
 const onTestDomain = (field: "email" | "authorEmail") => testDomains.map((d) => ({ [field]: { endsWith: `@${d}` } }));
@@ -62,10 +66,32 @@ if (!apply) {
     async (tx) => {
       // Money records point at bookings and payments with Restrict, so they go first.
       await tx.ledgerEntry.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { paymentId: { in: paymentIds } }, { organizationId: { in: orgIds } }] } });
+      await tx.financialOperation.deleteMany({ where: { organizationId: { in: orgIds } } });
       await tx.invoice.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { organizationId: { in: orgIds } }] } });
       await tx.payment.deleteMany({ where: { id: { in: paymentIds } } });
       await tx.bookingAssignment.deleteMany({ where: { OR: [{ bookingId: { in: bookingIds } }, { artistId: { in: artistIds } }] } });
+      // Packing lines point at bookings with Restrict; the agencies' own equipment goes too.
+      await tx.bookingEquipment.deleteMany({ where: { bookingId: { in: bookingIds } } });
+      await purgeInventory(tx, orgIds);
+      // Promo codes the promo spec adds (codes start with E2E-), on demo agencies and the platform.
+      await tx.bookingPromoCode.deleteMany({ where: { code: { startsWith: "E2E-" } } });
+      await tx.platformPromoCode.deleteMany({ where: { code: { startsWith: "E2E-" } } });
+      // Equipment the inventory spec adds to the demo agency (codes start with E2E-), once its bookings are gone.
+      const e2eItems = await tx.equipmentItem.findMany({ where: { code: { startsWith: "E2E-" } }, select: { id: true } });
+      const e2eIds = e2eItems.map((i) => i.id);
+      if ((await tx.bookingEquipment.count({ where: { itemId: { in: e2eIds } } })) === 0) {
+        await tx.equipmentEvent.deleteMany({ where: { itemId: { in: e2eIds } } });
+        await tx.equipmentPackageLine.deleteMany({ where: { OR: [{ itemId: { in: e2eIds } }, { package: { name: { startsWith: "E2E " } } }, { category: { name: { startsWith: "E2E " } } }] } });
+        await tx.equipmentPackage.deleteMany({ where: { name: { startsWith: "E2E " } } });
+        await tx.equipmentItem.updateMany({ where: { id: { in: e2eIds } }, data: { containerId: null } });
+        await tx.equipmentItem.deleteMany({ where: { id: { in: e2eIds } } });
+        await tx.equipmentCategory.deleteMany({ where: { name: { startsWith: "E2E " }, items: { none: {} } } });
+      }
       await tx.booking.deleteMany({ where: { id: { in: bookingIds } } });
+      // Test artists' profiles at demo agencies: deleting the account only unlinks them, so they go here.
+      // A profile that still has money history (ledger rows on a demo booking) is kept.
+      const withHistory = new Set((await tx.ledgerEntry.findMany({ where: { artistId: { in: artistIds } }, select: { artistId: true } })).map((l) => l.artistId));
+      await tx.artist.deleteMany({ where: { id: { in: artistIds.filter((id) => !withHistory.has(id)) } } });
       // Partner records: commissions and payouts before their referrals and partner.
       await tx.commission.deleteMany({ where: { OR: [{ affiliateId: { in: affiliateIds } }, { referral: { agencyId: { in: orgIds } } }] } });
       await tx.affiliatePayout.deleteMany({ where: { affiliateId: { in: affiliateIds } } });

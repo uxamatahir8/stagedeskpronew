@@ -7,7 +7,7 @@ import { PaymentClaimError, prisma, submitPaymentClaim } from "@stagedesk/db";
 import { bookingCheckout, getStripe, PaymentsError } from "@stagedesk/payments";
 import type { RedirectResult } from "@/components/redirect-button";
 import type { ActionResult } from "@/lib/actions";
-import { paymentsErrorMessage } from "@/lib/billing";
+import { paymentsErrorMessage, suspendedBlocked } from "@/lib/billing";
 import { absoluteUrl, userLocale } from "@/lib/mail";
 import { announceClaim, paymentOptions } from "@/lib/payment-claims";
 import { requirePermission } from "@/lib/viewer";
@@ -15,6 +15,8 @@ import { requirePermission } from "@/lib/viewer";
 async function checkout(booking: { id: string; organizationId: string; customer: { email: string } | null }, returnPath: (paid: 0 | 1) => string): Promise<RedirectResult> {
   const stripe = await getStripe();
   const locale = userLocale(await getLocale());
+  const blocked = await suspendedBlocked(booking.organizationId);
+  if (blocked) return { message: blocked };
   try {
     if (!stripe) throw new PaymentsError("agency_not_connected");
     return {

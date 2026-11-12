@@ -1,14 +1,16 @@
 "use client";
 
-import { CheckIcon } from "lucide-react";
+import { CheckIcon, XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 import { FormMessage } from "@/components/auth/auth-card";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
-import { acceptQuoteByTokenAction } from "./actions";
+import { acceptQuoteByTokenAction, declineQuoteByTokenAction } from "./actions";
 
 export function AcceptQuoteForm({ token, defaultName }: { token: string; defaultName: string }) {
   const t = useTranslations("quotePage");
@@ -42,5 +44,51 @@ export function AcceptQuoteForm({ token, defaultName }: { token: string; default
         {t("accept")}
       </Button>
     </form>
+  );
+}
+
+/** "No thanks": tells the agency now, with an optional reason, instead of letting the quote expire. */
+export function DeclineQuoteButton({ token }: { token: string }) {
+  const t = useTranslations("quotePage");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button type="button" variant="ghost" className="w-fit text-muted-foreground">
+          <XIcon />
+          {t("decline")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t("declineTitle")}</DialogTitle>
+          <DialogDescription>{t("declineBody")}</DialogDescription>
+        </DialogHeader>
+        <FormField id="decline-reason" label={t("declineReason")}>
+          <Textarea id="decline-reason" rows={3} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} />
+        </FormField>
+        {message && <FormMessage>{message}</FormMessage>}
+        <DialogFooter>
+          <Button
+            variant="destructive"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const r = await declineQuoteByTokenAction(token, reason.trim());
+                if (!r.ok) return void setMessage(r.message ?? null);
+                setOpen(false);
+                router.refresh();
+              })
+            }
+          >
+            {t("declineConfirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

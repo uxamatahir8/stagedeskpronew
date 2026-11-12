@@ -59,6 +59,7 @@ export function SettingsForms({
   const [rule, setRule] = useState(feeRuleToDraft(fees.defaultRule, locale));
   const [paidBy, setPaidBy] = useState(fees.stripeFeePaidBy);
   const [serviceFee, setServiceFee] = useState(centsToInput(fees.customerServiceFeeCents, locale));
+  const [exampleStripeFee, setExampleStripeFee] = useState(centsToInput(fees.exampleStripeFeeCents, locale));
 
   const [b, setB] = useState({
     quoteExpiryDays: String(bookings.quoteExpiryDays),
@@ -68,6 +69,7 @@ export function SettingsForms({
     vat: bookings.vatRatesBps.map((r) => bpsToPct(r, locale)).join(", "),
   });
   const [grace, setGrace] = useState(String(billing.graceDays));
+  const [planVat, setPlanVat] = useState(bpsToPct(billing.subscriptionVatBps, locale));
   const [trialPlan, setTrialPlan] = useState(billing.trialPlanKey);
   const [s, setS] = useState(site);
 
@@ -99,6 +101,7 @@ export function SettingsForms({
               </Select>
             </FormField>
             {field("set-service", t("serviceFee"), serviceFee, setServiceFee, t("serviceFeeHint"))}
+            {field("set-example-stripe", t("exampleStripeFee"), exampleStripeFee, setExampleStripeFee, t("exampleStripeFeeHint"))}
           </div>
           <Button
             className="w-fit"
@@ -106,7 +109,12 @@ export function SettingsForms({
             onClick={() => {
               const defaultRule = draftToFeeRule(rule);
               const fee = parseEuros(serviceFee || "0");
-              save("fees.platform", defaultRule && fee !== null && fee >= 0 ? { defaultRule, stripeFeePaidBy: paidBy, customerServiceFeeCents: fee } : null, t("invalid"));
+              const example = parseEuros(exampleStripeFee || "0");
+              save(
+                "fees.platform",
+                defaultRule && fee !== null && fee >= 0 && example !== null && example >= 0 ? { defaultRule, stripeFeePaidBy: paidBy, customerServiceFeeCents: fee, exampleStripeFeeCents: example } : null,
+                t("invalid"),
+              );
             }}
           >
             {t("save")}
@@ -172,8 +180,15 @@ export function SettingsForms({
               </SelectContent>
             </Select>
           </FormField>
+          {field("set-plan-vat", t("subscriptionVat"), planVat, setPlanVat, t("subscriptionVatHint"))}
           <div className="sm:col-span-2">
-            <Button disabled={pending} onClick={() => save("billing.defaults", int(grace) !== null ? { graceDays: int(grace)!, trialPlanKey: trialPlan } : null, t("invalid"))}>
+            <Button
+              disabled={pending}
+              onClick={() => {
+                const vat = pctToBps(planVat);
+                save("billing.defaults", int(grace) !== null && vat !== null ? { graceDays: int(grace)!, trialPlanKey: trialPlan, subscriptionVatBps: vat } : null, t("invalid"));
+              }}
+            >
               {t("save")}
             </Button>
           </div>

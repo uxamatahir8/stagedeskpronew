@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { ImageUpIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useFormatter } from "@/components/date-prefs";
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { DatePicker } from "@/components/date-picker";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,13 +39,13 @@ import {
 function useRun() {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const run = (task: () => Promise<ActionResult>, after?: (r: ActionResult) => void) =>
+  // `after` returns true when it navigated: a refresh right after a push can cancel the push.
+  const run = (task: () => Promise<ActionResult>, after?: (r: ActionResult) => boolean | void) =>
     startTransition(async () => {
       const result = await task();
       if (!result.ok) return void (result.message && toast.error(result.message));
       if (result.message) toast.success(result.message);
-      after?.(result);
-      router.refresh();
+      if (!after?.(result)) router.refresh();
     });
   return [pending, run] as const;
 }
@@ -54,6 +56,10 @@ interface ArtistValues {
   genres: string;
   bio: string;
   sharePct: string;
+  /** How the artist is paid by default: a share of each booking or a fixed amount per booking. */
+  compensationType: "percentage" | "fixed";
+  /** Fixed amount per booking as an input value ("250,00"). */
+  fixedFee: string;
   userId: string | null;
   active: boolean;
   showOnBookingPage: boolean;
@@ -62,13 +68,14 @@ interface ArtistValues {
 
 const NO_ACCOUNT = "none";
 
-export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; accounts: { id: string; label: string }[] }) {
+export function ArtistDialog({ artist, accounts, currency = "EUR" }: { artist?: ArtistValues; accounts: { id: string; label: string }[]; currency?: string }) {
   const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [userId, setUserId] = useState(artist?.userId ?? NO_ACCOUNT);
   const [active, setActive] = useState(artist?.active ?? true);
   const [onPage, setOnPage] = useState(artist?.showOnBookingPage ?? true);
+  const [payType, setPayType] = useState<"percentage" | "fixed">(artist?.compensationType ?? "percentage");
   const [pending, run] = useRun();
 
   function save(form: FormData) {
@@ -79,15 +86,21 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
           stageName: String(form.get("stageName")),
           genres: String(form.get("genres") ?? ""),
           bio: String(form.get("bio") ?? "") || null,
-          sharePct: Number(String(form.get("sharePct")).replace(",", ".")),
+          sharePct: payType === "percentage" ? Number(String(form.get("sharePct")).replace(",", ".")) : Number(String(artist?.sharePct ?? "40").replace(",", ".")),
+          compensationType: payType,
+          fixedFee: payType === "fixed" ? String(form.get("fixedFee") ?? "") : null,
           userId: userId === NO_ACCOUNT ? null : userId,
+          email: artist ? null : String(form.get("email") ?? ""),
           active,
           showOnBookingPage: onPage,
           mediaLinks: String(form.get("mediaLinks") ?? ""),
         }),
       (result) => {
         setOpen(false);
-        if (!artist && "id" in result && result.id) router.push(`/app/artists/${result.id}`);
+        if (!artist && "id" in result && result.id) {
+          router.push(`/app/artists/${result.id}`);
+          return true;
+        }
       },
     );
   }
@@ -111,7 +124,7 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
         <DialogHeader>
           <DialogTitle>{artist ? artist.stageName : t("artists.addTitle")}</DialogTitle>
         </DialogHeader>
-        <form action={save} className="grid gap-4 sm:grid-cols-2">
+        <form {...keepValues(save)} className="grid gap-4 sm:grid-cols-2">
           <FormField id="ar-name" label={t("artists.stageName")} className="sm:col-span-2">
             <Input id="ar-name" name="stageName" defaultValue={artist?.stageName} required maxLength={120} />
           </FormField>
@@ -121,10 +134,27 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
           <FormField id="ar-bio" label={t("artists.bio")} className="sm:col-span-2">
             <Textarea id="ar-bio" name="bio" defaultValue={artist?.bio} rows={4} maxLength={5000} />
           </FormField>
-          <FormField id="ar-share" label={t("artists.share")} hint={t("artists.shareHint")}>
-            <Input id="ar-share" name="sharePct" defaultValue={artist?.sharePct ?? "40"} inputMode="decimal" required />
+          <FormField id="ar-pay" label={t("artists.payType")} hint={t(`artists.payType_${payType}Hint`)}>
+            <NativeSelect id="ar-pay" value={payType} onChange={(e) => setPayType(e.target.value as "percentage" | "fixed")} className="w-full">
+              <option value="percentage">{t("artists.payType_percentage")}</option>
+              <option value="fixed">{t("artists.payType_fixed")}</option>
+            </NativeSelect>
           </FormField>
-          <FormField id="ar-account" label={t("artists.account")} hint={t("artists.accountHint")}>
+          {payType === "percentage" ? (
+            <FormField id="ar-share" label={t("artists.share")} hint={t("artists.shareHint")}>
+              <Input id="ar-share" name="sharePct" defaultValue={artist?.sharePct ?? "40"} inputMode="decimal" required />
+            </FormField>
+          ) : (
+            <FormField id="ar-fixed" label={t("artists.fixedFee", { currency })} hint={t("artists.fixedFeeHint")}>
+              <Input id="ar-fixed" name="fixedFee" defaultValue={artist?.fixedFee ?? ""} inputMode="decimal" placeholder="250,00" required />
+            </FormField>
+          )}
+          {!artist && (
+            <FormField required id="ar-email" label={t("artists.email")} hint={t("artists.emailHint")}>
+              <Input id="ar-email" name="email" type="email" autoComplete="off" required maxLength={191} />
+            </FormField>
+          )}
+          {artist && <FormField id="ar-account" label={t("artists.account")} hint={t("artists.accountHint")}>
             <Select value={userId} onValueChange={setUserId}>
               <SelectTrigger id="ar-account" className="w-full">
                 <SelectValue />
@@ -138,7 +168,7 @@ export function ArtistDialog({ artist, accounts }: { artist?: ArtistValues; acco
                 ))}
               </SelectContent>
             </Select>
-          </FormField>
+          </FormField>}
           <FormField id="ar-media" label={t("artists.media")} hint={t("artists.mediaHint")} className="sm:col-span-2">
             <Textarea id="ar-media" name="mediaLinks" defaultValue={artist?.mediaLinks} rows={3} placeholder="https://www.youtube.com/watch?v=…" />
           </FormField>

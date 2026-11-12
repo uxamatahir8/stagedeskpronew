@@ -22,6 +22,8 @@ export const platformFeeSettingsSchema = z.object({
   stripeFeePaidBy: z.enum(["agency", "platform"]),
   /** Optional fee shown to the customer as its own quote line (never a card surcharge). */
   customerServiceFeeCents: z.int().min(0),
+  /** Stripe's cost in the example booking on the website: deposit and balance, each paid with iDEAL | Wero. */
+  exampleStripeFeeCents: z.int().min(0).max(100_000).default(58),
 });
 
 export type PlatformFeeSettings = z.infer<typeof platformFeeSettingsSchema>;

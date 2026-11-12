@@ -14,7 +14,9 @@ export async function acceptLeadOfferAction(reference: string, token: string, of
   const ip = clientIp(await headers());
   if (!(await allow(`lead-accept:${ip}`, 10, 3600))) return { ok: false, message: t("error_rate") };
   try {
-    const { lead, booking, agency, lostTo } = await acceptLeadOffer(reference, token, offerId);
+    const { lead, booking, agency, lostTo, repeated } = await acceptLeadOffer(reference, token, offerId);
+    // Accepted already (double click, retry): same answer, no second round of emails.
+    if (repeated) return { ok: true, message: t("acceptedToast", { provider: agency.name }) };
     await announceLeadAssigned(lead, booking, agency, null);
     await announceLeadDecided(lead, agency, booking.trackingCode, lostTo);
     await audit({ actorId: null, action: "lead.customer_accept", agencyId: agency.id, targetType: "lead", targetId: lead.id, data: { booking: booking.trackingCode }, ip });

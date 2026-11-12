@@ -1,10 +1,10 @@
 import { CalendarCheckIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
 import { getFormatter } from "@/lib/formatter";
-import { type BookingStatus, bookingStatuses, type EventType, eventTypes, listHref, pageWindow, parseListQuery } from "@stagedesk/core";
-import type { Prisma } from "@stagedesk/db";
+import { type BookingStatus, bookingStatuses, eventTypes, listHref, pageWindow, parseListQuery } from "@stagedesk/core";
+import { availableBookingTypes, type Prisma } from "@stagedesk/db";
 import { EmptyState } from "@/components/empty-state";
 import { ExportButton } from "@/components/export-button";
 import { PageHeader } from "@/components/page-header";
@@ -75,8 +75,10 @@ const spec = {
 };
 
 async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/bookings">, "searchParams">) {
-  const { db } = await requireAgency("agency.bookings");
-  const query = parseListQuery(await searchParams, spec);
+  const { db, organization } = await requireAgency("agency.bookings");
+  const bookingTypes = await availableBookingTypes(organization.id, true);
+  const runtimeSpec = { ...spec, filters: { ...spec.filters, type: bookingTypes.map((type) => type.key) } };
+  const query = parseListQuery(await searchParams, runtimeSpec);
   const tab = (query.filters.tab ?? "all") as Tab;
   const statuses = tabs[tab];
   const and: Prisma.BookingWhereInput[] = [];
@@ -104,14 +106,15 @@ async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/booki
     : query.sort === "created" ? [{ createdAt: query.dir }]
     : [{ eventDate: { sort: query.dir, nulls: "last" } }, { createdAt: "desc" }];
 
-  const [t, te, tbs, format, total, any] = await Promise.all([
+  const [t, tbs, format, total, any, locale] = await Promise.all([
     getTranslations("bookings"),
-    getTranslations("eventTypes"),
     getTranslations("bookingStatus"),
     getFormatter(),
     db.booking.count({ where }),
     db.booking.count(),
+    getLocale(),
   ]);
+  const typeName = new Map(bookingTypes.map((type) => [type.key, locale === "nl" ? type.nameNl : type.nameEn]));
   const win = pageWindow(query, total);
   const bookings = await db.booking.findMany({ where, orderBy, skip: win.skip, take: win.take, include: { customer: { select: { name: true } } } });
 
@@ -122,7 +125,7 @@ async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/booki
         {(Object.keys(tabs) as Tab[]).map((key) => (
           <Link
             key={key}
-            href={listHref("/app/bookings", query, { tab: key === "all" ? null : key, status: null }, spec)}
+            href={listHref("/app/bookings", query, { tab: key === "all" ? null : key, status: null }, runtimeSpec)}
             aria-current={key === tab ? "page" : undefined}
             className={cn("rounded-md px-3 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground", key === tab && "bg-background text-foreground shadow-sm")}
           >
@@ -131,13 +134,13 @@ async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/booki
         ))}
       </nav>
       <ServerTable
-        spec={spec}
+        spec={runtimeSpec}
         total={total}
         count={bookings.length}
         placeholder={t("searchPlaceholder")}
         filters={[
           { key: "status", label: t("status"), options: (statuses ?? bookingStatuses).map((s) => ({ value: s, label: tbs(s) })) },
-          { key: "type", label: t("event"), options: eventTypes.map((e) => ({ value: e, label: te(e) })) },
+          { key: "type", label: t("event"), options: bookingTypes.filter((type) => type.active).map((type) => ({ value: type.key, label: typeName.get(type.key) ?? type.key })) },
           { key: "paid", label: t("payment"), options: (["unpaid", "partly", "paid"] as const).map((p) => ({ value: p, label: t(`paid_${p}`) })) },
         ]}
         columns={[
@@ -158,7 +161,7 @@ async function BookingList({ searchParams }: Pick<PageProps<"/[locale]/app/booki
               <div className="font-mono text-xs text-muted-foreground">{b.trackingCode}</div>
             </TableCell>
             <TableCell>
-              <div>{te(b.eventType as EventType)}</div>
+              <div>{typeName.get(b.eventType) ?? b.eventType}</div>
               {(b.venueName || b.venueCity) && <div className="text-sm text-muted-foreground">{[b.venueName, b.venueCity].filter(Boolean).join(", ")}</div>}
             </TableCell>
             <TableCell className="whitespace-nowrap tabular-nums">{eventDate(format, b.eventDate, "short") ?? <span className="text-muted-foreground">{t("noDate")}</span>}</TableCell>

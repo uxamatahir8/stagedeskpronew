@@ -2,23 +2,28 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
+import { AUTOMATIC } from "@stagedesk/core";
 import { CurrencyFlag, currencyName } from "@/components/currency-flag";
 import { Select, SelectContent, SelectItem, SelectLabel, SelectTrigger } from "@/components/ui/select";
 import { useRouter } from "@/i18n/navigation";
 import { setDisplayCurrencyAction } from "@/lib/site-actions";
 
-/** Lets visitors see prices in their own currency (searchable, with flags); billing stays in euros. */
-export function CurrencySwitch({ current, options }: { current: string; options: string[] }) {
+/**
+ * Lets visitors see prices in their own currency (searchable, with flags); billing stays in euros.
+ * `chosen` says they picked `current` themselves; otherwise it was detected and "Automatic" is marked.
+ */
+export function CurrencySwitch({ current, chosen, options }: { current: string; chosen: boolean; options: string[] }) {
   const t = useTranslations("site");
   const locale = useLocale();
   const router = useRouter();
   const [pending, start] = useTransition();
+  const selected = chosen ? current : AUTOMATIC;
   return (
     <Select
-      value={current}
+      value={selected}
       disabled={pending}
       onValueChange={(c) =>
-        c !== current &&
+        c !== selected &&
         start(async () => {
           await setDisplayCurrencyAction(c);
           router.refresh();
@@ -34,6 +39,9 @@ export function CurrencySwitch({ current, options }: { current: string; options:
       </SelectTrigger>
       <SelectContent align="end" className="w-80">
         <SelectLabel>{t("currencyHint")}</SelectLabel>
+        <SelectItem value={AUTOMATIC} textValue={t("automatic")}>
+          {t("automatic")}
+        </SelectItem>
         {options.map((c) => (
           <SelectItem key={c} value={c} textValue={c}>
             <CurrencyFlag code={c} />

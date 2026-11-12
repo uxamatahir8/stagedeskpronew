@@ -19,7 +19,8 @@
     "db:studio": "pnpm --filter @stagedesk/db studio",
     "db:clean-test": "pnpm --filter @stagedesk/db clean-test",
     "db:seed-showcase": "pnpm --filter @stagedesk/db seed-showcase",
-    "db:seed-content": "pnpm --filter @stagedesk/db seed-content"
+    "db:seed-content": "pnpm --filter @stagedesk/db seed-content",
+    "dev:e2e": "node scripts/dev-e2e.mjs"
   },
   "devDependencies": {
     "turbo": "2.11.10",

@@ -1,3 +1,4 @@
+import { currentArtistIds } from "./artist-access";
 import { lastMonths } from "./analytics";
 import { prisma } from "./client";
 import { Prisma } from "./generated/prisma/client";
@@ -165,7 +166,11 @@ export async function adminDashboard(now = new Date()) {
       prisma.newsletterSubscriber.count({ where: { status: "subscribed" } }),
       prisma.plan.findMany({ select: { id: true, name: true, key: true } }),
     ]);
-  const orgNames = await prisma.organization.findMany({ where: { id: { in: topAgencies.map((a) => a.organizationId) } }, select: { id: true, name: true } });
+  const [orgNames, activation, cancellations] = await Promise.all([
+    prisma.organization.findMany({ where: { id: { in: topAgencies.map((a) => a.organizationId) } }, select: { id: true, name: true } }),
+    agencyActivation(ninetyDays),
+    prisma.cancellationFeedback.groupBy({ by: ["reason"], where: { createdAt: { gte: since } }, _count: { _all: true } }),
+  ]);
   const leadCount = (s: string) => leads.find((l) => l.status === s)?._count._all ?? 0;
   return {
     usersByMonth: series(userRows, months),
@@ -186,6 +191,44 @@ export async function adminDashboard(now = new Date()) {
     topAgencies: topAgencies.map((a) => ({ key: a.organizationId, label: orgNames.find((o) => o.id === a.organizationId)?.name ?? "—", value: n(a._sum.totalCents) })),
     leadFunnel: { total: leads.reduce((t, l) => t + l._count._all, 0), offered: leadCount("offered") + leadCount("assigned"), assigned: leadCount("assigned"), closed: leadCount("closed") },
     tickets: tickets.map((t) => ({ key: t.status, value: t._count._all })),
+    activation,
+    cancellationReasons: cancellations.map((c) => ({ key: c.reason, value: c._count._all })),
+  };
+}
+
+/**
+ * How far agencies that started since `since` got, each step counting only
+ * those that also passed the ones before: sent a quote, received an online
+ * payment, completed a payout (the split was transferred; this is "activated"),
+ * then pay for a plan (not a trial or a granted plan). `invited` counts the
+ * agencies that came from another agency's or an artist's invite or referral.
+ */
+export async function agencyActivation(since: Date) {
+  const [row] = await prisma.$queryRaw<{ signed: bigint; quoted: unknown; paidOnline: unknown; paidOut: unknown; subscribed: unknown; invited: unknown }[]>(Prisma.sql`
+    SELECT
+      COUNT(*) AS signed,
+      SUM(quoted) AS quoted,
+      SUM(quoted AND paidOnline) AS paidOnline,
+      SUM(quoted AND paidOnline AND paidOut) AS paidOut,
+      SUM(quoted AND paidOnline AND paidOut AND subscribed) AS subscribed,
+      SUM(invited) AS invited
+    FROM (
+      SELECT
+        EXISTS(SELECT 1 FROM quotes q WHERE q.organizationId = o.id AND q.sentAt IS NOT NULL) AS quoted,
+        EXISTS(SELECT 1 FROM payments p WHERE p.organizationId = o.id AND p.method = 'stripe') AS paidOnline,
+        EXISTS(SELECT 1 FROM payments p WHERE p.organizationId = o.id AND p.transferredAt IS NOT NULL) AS paidOut,
+        EXISTS(SELECT 1 FROM subscriptions s WHERE s.organizationId = o.id AND s.status IN ('active', 'past_due') AND s.complimentary = FALSE) AS subscribed,
+        EXISTS(SELECT 1 FROM agency_invites i WHERE i.joinedAgencyId = o.id) OR EXISTS(SELECT 1 FROM referrals r WHERE r.agencyId = o.id AND r.referringAgencyId IS NOT NULL) AS invited
+      FROM organizations o
+      WHERE o.kind = 'agency' AND o.createdAt >= ${since}
+    ) AS cohort`);
+  return {
+    signed: Number(row?.signed ?? 0),
+    quoted: Number(row?.quoted ?? 0),
+    paidOnline: Number(row?.paidOnline ?? 0),
+    paidOut: Number(row?.paidOut ?? 0),
+    subscribed: Number(row?.subscribed ?? 0),
+    invited: Number(row?.invited ?? 0),
   };
 }
 
@@ -194,13 +237,13 @@ export async function adminDashboard(now = new Date()) {
 export async function artistDashboard(userId: string, now = new Date()) {
   const months = lastMonths(12, now);
   const since = new Date(`${months[0]}-01T00:00:00Z`);
-  const artistIds = (await prisma.artist.findMany({ where: { userId }, select: { id: true } })).map((a) => a.id);
+  const artistIds = await currentArtistIds(userId);
   if (artistIds.length === 0) return null;
   const ids = Prisma.join(artistIds);
   const [earnRows, gigRows, answered, types, agencies, rating] = await Promise.all([
     // The artist's share of gigs that took place, by event month.
     prisma.$queryRaw<MonthRow[]>(Prisma.sql`
-      SELECT DATE_FORMAT(b.eventDate, '%Y-%m') AS month, SUM(FLOOR(b.totalCents * a.shareBps / 10000)) AS total
+      SELECT DATE_FORMAT(b.eventDate, '%Y-%m') AS month, SUM(CASE WHEN a.compensationType = 'fixed' THEN COALESCE(a.fixedFeeCents, 0) ELSE FLOOR(b.totalCents * a.shareBps / 10000) END) AS total
         FROM booking_assignments a JOIN bookings b ON b.id = a.bookingId
        WHERE a.artistId IN (${ids}) AND a.status = 'accepted' AND b.status IN ('completed','settled') AND b.eventDate >= ${since}
        GROUP BY month`),

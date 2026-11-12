@@ -15,6 +15,7 @@ import {
   prisma,
 } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
+import { emailArtists } from "@/lib/artist-mail";
 import { featureBlocked, writeBlocked } from "@/lib/billing";
 import { absoluteUrl, deliver, userLocale } from "@/lib/mail";
 import { clientIp } from "@/lib/rate-limit";
@@ -103,6 +104,11 @@ export async function answerArtistRequestAction(requestId: string, action: "acce
     const { request, notifyOrganizationId } = await answerArtistRequest(requestId, organization.id, answer, viewer.user.id);
     const status = action === "counter" ? "counter" : action === "accept" ? "accepted" : action === "decline" ? "declined" : "withdrawn";
     await tellOtherAgency(request.id, notifyOrganizationId, status, organization.name);
+    // The agencies agreed: the artist hears about the gig by email too, not only in the app.
+    if (action === "accept") {
+      const gig = await prisma.bookingAssignment.findFirst({ where: { bookingId: request.bookingId, artistId: request.artistId, status: "accepted" }, orderBy: { createdAt: "desc" }, select: { id: true } });
+      if (gig) await emailArtists([gig.id], "new");
+    }
     await audit({ actorId: viewer.user.id, action: `artist_request.${action}`, agencyId: organization.id, targetType: "artist_request", targetId: request.id, data: { feeCents: request.feeCents }, ip: clientIp(await headers()) });
   } catch (error) {
     return { ok: false, message: await errorMessage(error) };

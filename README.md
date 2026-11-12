@@ -188,7 +188,8 @@ reward, review threshold, tiers) are in Settings and apply to new referrals only
   only affects new bookings. Fixed platform-fee amounts are set in euros and converted at the day's rate when
   a booking's fee is fixed. The worker fetches the ECB reference rates every six hours (`exchange_rates`).
   Visitors can show website prices in their own currency (header menu, cookie `display_currency`); plans are
-  still billed in euros and the page says so.
+  still billed in euros and the page says so. The first language and currency depend on a country header from
+  the edge: see `docs/operations/visitor-country.md`.
 - **Website texts** (`/app/texts`, platform admin): every text of the website and the app, in both languages,
   grouped per page, with search. Changes are stored in `site_texts` and merged over `apps/web/messages/*.json`
   in `i18n/request.ts` (cached, tag `site-texts`). A change may only use the placeholders and tags of the original

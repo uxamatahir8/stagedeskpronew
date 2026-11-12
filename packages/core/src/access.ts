@@ -21,9 +21,10 @@ export const deskRoles = ["agency_owner", "agency_admin", "agency_staff", "solo_
 
 /** What an agency owner can hand out, grouped as on the permissions screen. */
 export const agencyPermissionGroups = {
-  bookings: ["agency.bookings", "agency.bookings.create", "agency.bookings.edit", "agency.bookings.status", "agency.leads"],
+  bookings: ["agency.bookings", "agency.bookings.create", "agency.bookings.edit", "agency.bookings.status", "agency.booking-types", "agency.leads"],
   quotes: ["agency.quotes", "agency.quotes.send", "agency.quotes.accept", "agency.services"],
   planning: ["agency.calendar", "agency.artists", "agency.artists.manage"],
+  inventory: ["agency.inventory", "agency.inventory.manage", "agency.inventory.gigs", "agency.inventory.admin"],
   customers: ["agency.customers", "agency.customers.manage", "agency.reviews"],
   money: ["agency.payments", "agency.payments.record", "agency.payments.confirm", "agency.payments.refund", "agency.invoices", "agency.reports"],
   agency: ["agency.team", "agency.team.manage", "agency.settings", "agency.website", "agency.referrals"],
@@ -36,7 +37,13 @@ export type AgencyPermission = (typeof agencyPermissions)[number];
 export const ownerOnlyPermissions = ["agency.billing", "agency.permissions"] as const;
 
 /** Things only an admin may be given, never staff (they reach outside day-to-day work). */
-export const adminOnlyPermissions: readonly AgencyPermission[] = ["agency.team.manage", "agency.settings", "agency.payments.refund"];
+export const adminOnlyPermissions: readonly AgencyPermission[] = [
+  "agency.team.manage",
+  "agency.settings",
+  "agency.payments.refund",
+  // Overriding equipment conflicts and writing equipment off as lost.
+  "agency.inventory.admin",
+];
 
 export const permissions = [
   "platform.agencies",
@@ -48,7 +55,7 @@ export const permissions = [
   "platform.users",
   "platform.audit",
   "platform.support",
-  "platform.newsletter",
+    "platform.newsletter",
   ...agencyPermissions,
   ...ownerOnlyPermissions,
   "artist.gigs",
@@ -64,6 +71,7 @@ export const permissions = [
   "affiliate.payouts",
   "messages",
   "support",
+  "blog.submit",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -76,6 +84,7 @@ export const defaultAgencyGrants: Record<"agency_admin" | "agency_staff", readon
     "agency.bookings.create",
     "agency.bookings.edit",
     "agency.bookings.status",
+    "agency.booking-types",
     "agency.leads",
     "agency.quotes",
     "agency.quotes.send",
@@ -84,10 +93,14 @@ export const defaultAgencyGrants: Record<"agency_admin" | "agency_staff", readon
     "agency.customers",
     "agency.customers.manage",
     "agency.team",
+    "agency.inventory",
+    "agency.inventory.gigs",
   ],
 };
 
-const always = ["messages", "support"] as const;
+const always = ["messages", "support", "blog.submit"] as const;
+/** People an agency works for or with: no blog posts (those are for agencies and partners). */
+const basics = ["messages", "support"] as const;
 
 const grants: Record<Role, readonly Permission[]> = {
   platform_admin: [
@@ -101,13 +114,14 @@ const grants: Record<Role, readonly Permission[]> = {
     "platform.audit",
     "platform.support",
   "platform.newsletter",
+    "blog.submit",
     "support",
   ],
   agency_owner: [...agencyPermissions, ...ownerOnlyPermissions, ...always],
   agency_admin: [...defaultAgencyGrants.agency_admin, ...always],
   agency_staff: [...defaultAgencyGrants.agency_staff, ...always],
-  artist: ["artist.gigs", "artist.availability", "artist.earnings", ...always],
-  customer: ["customer.event", "customer.payments", ...always],
+  artist: ["artist.gigs", "artist.availability", "artist.earnings", "artist.profile", ...basics],
+  customer: ["customer.event", "customer.payments", ...basics],
   // Runs their own bookings like a one-person agency, without a team, other artists or a website.
   solo_artist: [
     "agency.bookings",
@@ -131,16 +145,43 @@ const grants: Record<Role, readonly Permission[]> = {
     "agency.reports",
     "agency.settings",
     "agency.billing",
+    "agency.inventory",
+    "agency.inventory.manage",
+    "agency.inventory.gigs",
+    "agency.inventory.admin",
     "artist.availability",
     "artist.profile",
     "solo.listings",
     ...always,
   ],
-  affiliate: ["affiliate.dashboard", "affiliate.links", "affiliate.payouts", "support"],
+  affiliate: ["affiliate.dashboard", "affiliate.links", "affiliate.payouts", "blog.submit", "support"],
 };
 
-/** An agency's own choice for its admins and staff, as stored on the agency. */
-export type RolePermissions = Partial<Record<"agency_admin" | "agency_staff", string[]>>;
+/**
+ * An agency's own choice for its admins and staff, as stored on the agency.
+ * `known` lists the permissions that existed when the owner saved it; ones
+ * added later (none of the owner's decision yet) are worked out by
+ * `roleGrants`. Saved before `known` existed = every permission except
+ * those in `laterPermissions`.
+ */
+export type RolePermissions = Partial<Record<"agency_admin" | "agency_staff", string[]>> & { known?: string[] };
+
+/**
+ * Permissions added after owners could customise roles, with the permission
+ * each builds on. For an agency with its own choices, a role gets such a
+ * permission by default only if it still holds what it builds on, so a role
+ * the owner deliberately kept away from bookings doesn't gain equipment
+ * access. Owners always have everything; admin-only stays admin-only.
+ */
+export const laterPermissions: Partial<Record<AgencyPermission, AgencyPermission>> = {
+  "agency.booking-types": "agency.bookings",
+  "agency.inventory": "agency.bookings",
+  "agency.inventory.gigs": "agency.bookings.edit",
+  "agency.inventory.manage": "agency.artists.manage",
+  "agency.inventory.admin": "agency.settings",
+};
+
+const isAgencyPermission = (p: unknown): p is AgencyPermission => (agencyPermissions as readonly string[]).includes(p as string);
 
 /**
  * Cleans what an owner chose: only known agency permissions, nothing
@@ -152,18 +193,38 @@ export function sanitizeRolePermissions(input: unknown): RolePermissions {
   for (const role of ["agency_admin", "agency_staff"] as const) {
     const list = (input as Record<string, unknown>)[role];
     if (!Array.isArray(list)) continue;
-    out[role] = [...new Set(list.filter((p): p is AgencyPermission => (agencyPermissions as readonly string[]).includes(p as string)))].filter(
-      (p) => role === "agency_admin" || !adminOnlyPermissions.includes(p),
-    );
+    out[role] = [...new Set(list.filter(isAgencyPermission))].filter((p) => role === "agency_admin" || !adminOnlyPermissions.includes(p));
   }
+  const known = (input as Record<string, unknown>)["known"];
+  if (Array.isArray(known)) out.known = [...new Set(known.filter(isAgencyPermission))];
   return out;
+}
+
+/** What the owner had a say in when they saved their choices. */
+function knownPermissions(custom: RolePermissions): readonly string[] {
+  return custom.known ?? agencyPermissions.filter((p) => !(p in laterPermissions));
+}
+
+/**
+ * The agency permissions an admin or staff member has: the defaults, or the
+ * owner's choices plus, for permissions added since, the default where the
+ * role still holds what that permission builds on.
+ */
+export function roleGrants(role: "agency_admin" | "agency_staff", custom?: RolePermissions | null): AgencyPermission[] {
+  const list = custom?.[role];
+  if (!custom || !list) return [...defaultAgencyGrants[role]];
+  const chosen = (sanitizeRolePermissions({ [role]: list })[role] ?? []) as AgencyPermission[];
+  const known = knownPermissions(custom);
+  const added = (Object.entries(laterPermissions) as [AgencyPermission, AgencyPermission][])
+    .filter(([p, basis]) => !known.includes(p) && defaultAgencyGrants[role].includes(p) && chosen.includes(basis))
+    .map(([p]) => p);
+  return [...new Set([...chosen, ...added])].filter((p) => role === "agency_admin" || !adminOnlyPermissions.includes(p));
 }
 
 /** Everything a role may do, taking the agency's own settings into account. */
 export function permissionsFor(role: Role, custom?: RolePermissions | null): Permission[] {
   if ((role === "agency_admin" || role === "agency_staff") && custom?.[role]) {
-    const chosen = (sanitizeRolePermissions({ [role]: custom[role] })[role] ?? []) as AgencyPermission[];
-    return [...chosen, ...always];
+    return [...roleGrants(role, custom), ...always];
   }
   return [...grants[role]];
 }

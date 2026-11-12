@@ -1,5 +1,6 @@
 "use client";
 
+import { keepValues } from "@/lib/keep-values";
 import { UserPlusIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
@@ -50,7 +51,7 @@ export function AddCustomerDialog() {
           <DialogTitle>{t("customers.addTitle")}</DialogTitle>
           <DialogDescription>{t("customers.addBody")}</DialogDescription>
         </DialogHeader>
-        <form action={action} className="grid gap-4">
+        <form {...keepValues(action)} className="grid gap-4">
           <FormField id="customer-name" label={t("auth.name")} error={errors["name"]}>
             <Input id="customer-name" name="name" required maxLength={191} autoComplete="off" />
           </FormField>

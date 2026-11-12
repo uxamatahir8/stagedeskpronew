@@ -1,11 +1,11 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { connection } from "next/server";
 import { forbidden } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { cache } from "react";
 import { isRole, type Permission, permissionsFor, type Role, sanitizeRolePermissions } from "@stagedesk/core";
-import { prisma, tenantDb } from "@stagedesk/db";
+import { hasArtistProfileAt, hasGigsOutside, prisma, setImpersonatorLookup, tenantDb } from "@stagedesk/db";
 import { redirect } from "@/i18n/navigation";
 import { auth } from "./auth";
 
@@ -19,6 +19,8 @@ export interface ViewerOrganization {
   /** The owner's choices for admins and staff (cleaned), or null for the defaults. */
   rolePermissions: ReturnType<typeof sanitizeRolePermissions> | null;
   role: Role;
+  /** Closed by the platform: its team and customers can't work in it. */
+  suspended: boolean;
 }
 
 export interface Viewer {
@@ -35,6 +37,8 @@ export interface Viewer {
    * agency admin there (no billing), behind a banner, until they leave.
    */
   support?: { organizationId: string; name: string };
+  /** The platform admin's user id when an admin is logged in as this user ("log in as"); null otherwise. */
+  impersonatedBy: string | null;
 }
 
 /**
@@ -46,19 +50,44 @@ export const getSession = cache(async () => {
   return auth.api.getSession({ headers: await headers() });
 });
 
+/**
+ * Changes made while an admin is logged in as someone else name the admin in the audit log too.
+ * This reads the session row straight from the cookie: asking Better Auth instead (getSession)
+ * inside the action that swaps sessions would see the request's old, deleted session and clear
+ * the new cookie.
+ */
+setImpersonatorLookup(async () => {
+  const store = await cookies();
+  const signed = store.get("__Secure-better-auth.session_token")?.value ?? store.get("better-auth.session_token")?.value;
+  // The cookie is "<token>.<signature>"; the token alone finds the session.
+  const token = signed ? decodeURIComponent(signed).split(".")[0] : null;
+  if (!token) return null;
+  return (await prisma.session.findUnique({ where: { token }, select: { impersonatedBy: true } }))?.impersonatedBy ?? null;
+});
+
 /** The signed-in user with their active agency and role, or null when signed out. */
 export const getViewer = cache(async (): Promise<Viewer | null> => {
   const session = await getSession();
   if (!session) return null;
+  const viewer = await resolveViewer(session);
+  return { ...viewer, impersonatedBy: session.session.impersonatedBy ?? null };
+});
+
+async function resolveViewer(session: NonNullable<Awaited<ReturnType<typeof getSession>>>): Promise<Omit<Viewer, "impersonatedBy">> {
 
   const rows = await prisma.member.findMany({
     where: { userId: session.user.id },
-    include: { organization: { select: { id: true, name: true, slug: true, logo: true, currency: true, rolePermissions: true } } },
+    include: { organization: { select: { id: true, name: true, slug: true, logo: true, currency: true, rolePermissions: true, suspendedAt: true } } },
     orderBy: { createdAt: "asc" },
   });
   const memberships: ViewerOrganization[] = rows
     .filter((m) => isRole(m.role))
-    .map((m) => ({ ...m.organization, rolePermissions: m.organization.rolePermissions ? sanitizeRolePermissions(m.organization.rolePermissions) : null, role: m.role as Role }));
+    .map(({ organization: { suspendedAt, ...organization }, role }) => ({
+      ...organization,
+      rolePermissions: organization.rolePermissions ? sanitizeRolePermissions(organization.rolePermissions) : null,
+      role: role as Role,
+      suspended: suspendedAt !== null,
+    }));
 
   const user = {
     id: session.user.id,
@@ -71,21 +100,37 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
   const platformRole = session.user.platformRole;
   if (platformRole === "platform_admin") {
     const supportId = session.session.supportOrganizationId;
-    const agency = supportId ? await prisma.organization.findUnique({ where: { id: supportId }, select: { id: true, name: true, slug: true, logo: true, currency: true } }) : null;
+    const agency = supportId ? await prisma.organization.findUnique({ where: { id: supportId }, select: { id: true, name: true, slug: true, logo: true, currency: true, suspendedAt: true } }) : null;
     // Support works with the default admin rights, whatever the agency chose for its own admins.
     if (agency) {
-      return { user, role: "agency_admin", organization: { ...agency, rolePermissions: null, role: "agency_admin" }, memberships, permissions: permissionsFor("agency_admin"), support: { organizationId: agency.id, name: agency.name } };
+      const { suspendedAt, ...organization } = agency;
+      return { user, role: "agency_admin", organization: { ...organization, rolePermissions: null, role: "agency_admin", suspended: suspendedAt !== null }, memberships, permissions: permissionsFor("agency_admin"), support: { organizationId: agency.id, name: agency.name } };
     }
     return { user, role: "platform_admin", organization: null, memberships, permissions: permissionsFor("platform_admin") };
   }
 
   const active =
     memberships.find((m) => m.id === session.session.activeOrganizationId) ?? memberships[0] ?? null;
-  if (active) return { user, role: active.role, organization: active, memberships, permissions: permissionsFor(active.role, active.rolePermissions) };
+  if (active) {
+    const permissions = permissionsFor(active.role, active.rolePermissions);
+    // An artist's gigs don't depend on which agency is active: someone who's a customer of one
+    // agency and an artist at another can still open a request sent to them. Those pages only
+    // ever read the person's own assignments.
+    if (!permissions.includes("artist.gigs")) {
+      const artistAt = memberships.filter((m) => m.role === "artist").map((m) => m.id);
+      const soloAt = memberships.filter((m) => m.role === "solo_artist").map((m) => m.id);
+      // An independent artist runs their own gigs as bookings; this is only for a request from another agency.
+      const artistElsewhere = await hasArtistProfileAt(user.id, artistAt);
+      if (artistElsewhere || (await hasGigsOutside(user.id, soloAt))) permissions.push("artist.gigs");
+      // Their profile at that agency is theirs to keep up to date too.
+      if (artistElsewhere && !permissions.includes("artist.profile")) permissions.push("artist.profile");
+    }
+    return { user, role: active.role, organization: active, memberships, permissions };
+  }
 
   if (platformRole === "affiliate") return { user, role: "affiliate", organization: null, memberships, permissions: permissionsFor("affiliate") };
   return { user, role: null, organization: null, memberships, permissions: [] };
-});
+}
 
 async function goTo(href: string): Promise<never> {
   redirect({ href, locale: (await getLocale()) as "nl" | "en" });
@@ -119,5 +164,8 @@ export function viewerCan(viewer: Pick<Viewer, "permissions">, permission: Permi
 export async function requireAgency(permission: Permission) {
   const viewer = await requirePermission(permission);
   if (!viewer.organization) forbidden();
+  // The shell hides a suspended agency's pages; this closes its actions too, which can be called directly.
+  // Support can still look inside, and writeBlocked keeps their changes out.
+  if (viewer.organization.suspended && !viewer.support) forbidden();
   return { viewer, organization: viewer.organization, db: tenantDb(viewer.organization.id) };
 }

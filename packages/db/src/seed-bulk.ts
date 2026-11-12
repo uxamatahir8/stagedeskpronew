@@ -189,7 +189,8 @@ export async function seedBulk(prisma: PrismaClient, now = new Date()) {
     const past = stage === "completed" || stage === "settled";
     // Past events spread over the last 18 months, future ones over the next 14.
     const eventDay = past ? new Date(now.getTime() - (5 + i * 3) * DAY) : new Date(now.getTime() + (10 + i * 2) * DAY);
-    const createdAt = new Date(eventDay.getTime() - r.int(40, 200) * DAY);
+    // Made some weeks before the event, but never in the future.
+    const createdAt = new Date(Math.min(eventDay.getTime() - r.int(40, 200) * DAY, now.getTime() - DAY));
     const quotedAt = new Date(Math.min(createdAt.getTime() + 2 * DAY, now.getTime()));
     const customerId = customers[i % customers.length]!;
     const artist = artists[i % 30]!;

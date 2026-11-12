@@ -1,17 +1,18 @@
 // Auth configuration. Import `auth` from "./auth" in app code; this file has no
 // server-only guard so the Better Auth CLI can load it to generate the schema.
 import { APIError, betterAuth } from "better-auth";
-import { createAuthMiddleware } from "better-auth/api";
+import { createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP, organization, twoFactor } from "better-auth/plugins";
 import { createTranslator } from "next-intl";
-import { passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
-import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmPendingForEmail, getSetting, notify, prisma } from "@stagedesk/db";
+import { deskRoles, passwordProblem, passwordRules, withinLimit, localePrefix } from "@stagedesk/core";
+import { agencyBilling, agencyDeskUserIds, agencyUsage, confirmInvitationSeat, confirmJoinedSeat, confirmMemberSeat, confirmPendingForEmail, getSetting, notify, prisma, takesStaffSeat, unlinkRemovedMember } from "@stagedesk/db";
 import type { EmailLocale } from "@stagedesk/emails";
 import en from "../../messages/en.json";
 import nl from "../../messages/nl.json";
 import { ac, organizationRoles } from "./auth-roles";
+import { impersonation } from "./impersonation-plugin";
 import { deliver } from "./deliver";
 
 const appUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
@@ -36,7 +37,67 @@ function appPath(locale: EmailLocale, path: string) {
   return `${appUrl}${localePrefix(locale)}${path}`;
 }
 
+const billingText = (locale: EmailLocale) => createTranslator({ locale, messages: locale === "en" ? en : nl, namespace: "billing" });
+
+/** All staff seats of the plan are taken. `code` lets callers show it in the viewer's language. */
+function seatsFull(max: number, locale: EmailLocale) {
+  const t = billingText(locale);
+  return new APIError("FORBIDDEN", { message: t("limitReached", { max: String(max), limit: t("limit_maxStaff") }), code: "STAFF_SEATS_FULL", max });
+}
+
+
 const devLimit = (max: number) => (process.env.NODE_ENV === "production" ? max : max * 20);
+
+/**
+ * Atomic per-IP and per-account limits (Redis) on the endpoints that guess or
+ * send secrets. Better Auth's own limiter keeps its counts in the database,
+ * where a burst of parallel requests reads the counter before it goes up, and
+ * it reads the left-most X-Forwarded-For; these use clientIp() (TRUSTED_PROXIES).
+ * [path, per IP, per account (the email in the body), window in seconds].
+ */
+const guardedAuthPaths: Record<string, { ip: number; account: number | null; window: number }> = {
+  "/sign-in/email": { ip: 10, account: 20, window: 900 },
+  "/sign-in/email-otp": { ip: 5, account: 10, window: 900 },
+  "/email-otp/send-verification-otp": { ip: 3, account: 5, window: 300 },
+  "/request-password-reset": { ip: 3, account: 5, window: 300 },
+  "/sign-up/email": { ip: 3, account: null, window: 60 },
+  "/two-factor/verify-totp": { ip: 5, account: null, window: 60 },
+};
+
+async function enforceAuthLimits(path: string, headers: Headers | undefined, body: unknown) {
+  const rule = guardedAuthPaths[path];
+  if (!rule || !headers) return;
+  // Loaded here, not at the top: the Better Auth CLI loads this file outside Next.
+  const { allow, clientIp } = await import("./rate-limit");
+  const ip = clientIp(headers);
+  // Per IP over a minute, like Better Auth's own rule for the path; per account over the whole window.
+  if (!(await allow(`auth:${path}:ip:${ip}`, devLimit(rule.ip), 60))) throw new APIError("TOO_MANY_REQUESTS", { message: "Too many requests. Please try again later." });
+  const email = String((body as Record<string, unknown> | undefined)?.["email"] ?? "").trim().toLowerCase();
+  if (rule.account && email && !(await allow(`auth:${path}:account:${email}`, devLimit(rule.account), rule.window))) {
+    throw new APIError("TOO_MANY_REQUESTS", { message: "Too many attempts for this account. Please try again later." });
+  }
+}
+
+/**
+ * Better Auth's organization endpoints that read who is in an agency. Any
+ * member could call them, so a customer or artist could download every
+ * member's name and email address. Only the desk (owner, admin, staff, a solo
+ * artist's own account) and platform admins may; the app's own pages don't
+ * use them for anyone else.
+ */
+const memberReadPaths = new Set(["/organization/list-members", "/organization/get-full-organization", "/organization/list-invitations"]);
+
+async function enforceMemberReads(ctx: Parameters<Parameters<typeof createAuthMiddleware>[0]>[0]) {
+  if (!memberReadPaths.has(ctx.path)) return;
+  const session = await getSessionFromCtx(ctx);
+  if (!session) throw new APIError("UNAUTHORIZED");
+  if ((session.user as { platformRole?: string | null }).platformRole === "platform_admin") return;
+  const query = (ctx.query ?? {}) as Record<string, unknown>;
+  const body = (ctx.body ?? {}) as Record<string, unknown>;
+  const organizationId = String(query["organizationId"] ?? body["organizationId"] ?? (session.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? "");
+  const member = organizationId ? await prisma.member.findFirst({ where: { organizationId, userId: session.user.id }, select: { role: true } }) : null;
+  if (!member || !(deskRoles as readonly string[]).includes(member.role)) throw new APIError("FORBIDDEN", { message: "Not allowed", code: "MEMBER_LIST_FORBIDDEN" });
+}
 
 export const auth = betterAuth({
   appName: "StageDesk",
@@ -46,6 +107,8 @@ export const auth = betterAuth({
   // The same password rules as the forms, for every way a password is set.
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      await enforceAuthLimits(ctx.path, ctx.request?.headers ?? ctx.headers, ctx.body);
+      await enforceMemberReads(ctx);
       // Before launch only invited people sign up through the form; server-side calls
       // (a partner application) have no request and are allowed.
       if (ctx.path === "/sign-up/email" && ctx.request) {
@@ -81,6 +144,12 @@ export const auth = betterAuth({
     revokeSessionsOnPasswordReset: true,
     sendResetPassword: async ({ user, url }) => {
       deliver({ kind: "resetPassword", to: user.email, params: { locale: localeOf(user), name: user.name, url } });
+    },
+    // The link was mailed to the account's address, so using it confirms that address. Accounts
+    // created for someone (agency owners, admins) start unconfirmed; without this their first
+    // password sign-in would be refused. An admin email change voids open links (updateUserByAdmin).
+    onPasswordReset: async ({ user }) => {
+      if (!user.emailVerified) await prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
     },
   },
 
@@ -141,6 +210,10 @@ export const auth = betterAuth({
       roles: organizationRoles,
       creatorRole: "agency_owner",
       organizationLimit: 1,
+      // Every booking customer is a member (role customer), so Better Auth's default cap of 100
+      // members made accepting any invitation fail with a 403 once an agency had ~100 customers.
+      // Team seats are limited by the plan instead (maxStaff, checked in beforeCreateInvitation).
+      membershipLimit: 1_000_000,
       invitationExpiresIn: 60 * 60 * 24 * 7,
       cancelPendingInvitationsOnReInvite: true,
       requireEmailVerificationOnInvitation: true,
@@ -150,23 +223,69 @@ export const auth = betterAuth({
         beforeCreateInvitation: async ({ invitation, inviter }) => {
           if (!invitableRoles.has(invitation.role)) throw new APIError("BAD_REQUEST", { message: "This role can't be invited." });
           // Staff seats and read-only access come from the agency's plan.
-          const t = createTranslator({ locale: localeOf(inviter), messages: localeOf(inviter) === "en" ? en : nl, namespace: "billing" });
+          const t = billingText(localeOf(inviter));
           const [{ access, limits }, usage] = await Promise.all([agencyBilling(invitation.organizationId), agencyUsage(invitation.organizationId)]);
           if (access.level === "read_only") throw new APIError("FORBIDDEN", { message: t("readOnly") });
-          if (invitation.role !== "artist" && !withinLimit(limits, "maxStaff", usage.maxStaff)) {
-            throw new APIError("FORBIDDEN", { message: t("limitReached", { max: String(limits.maxStaff), limit: t("limit_maxStaff") }) });
-          }
+          if (invitation.role !== "artist" && !withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, localeOf(inviter));
         },
-        // An artist's account is linked to their profile by the agency; tell it someone is waiting.
-        afterAcceptInvitation: async ({ member, user, organization }) => {
+        afterAcceptInvitation: async ({ invitation, member, user, organization }) => {
+          // Better Auth marks the invitation accepted before creating the member, so for a moment its
+          // seat looks free to other changes; if one took it, this join is undone.
+          if (takesStaffSeat(member.role) && !(await confirmJoinedSeat(organization.id, member.id, invitation.id))) {
+            throw seatsFull((await agencyBilling(organization.id)).limits.maxStaff ?? 0, localeOf(user));
+          }
+          // An artist's account is linked to their profile by the agency; tell it someone is waiting.
           if (member.role !== "artist") return;
           if (await prisma.artist.findFirst({ where: { organizationId: organization.id, userId: user.id }, select: { id: true } })) return;
           await notify(await agencyDeskUserIds(organization.id, ["agency_owner", "agency_admin"]), { type: "artist_joined", data: { name: user.name }, url: "/app/artists" });
         },
-        beforeUpdateMemberRole: async ({ member, newRole }) => {
+        // The check above can't see an invitation or promotion made at the same moment, so
+        // sendInvitationEmail re-counts under a lock once the invitation exists and cancels it
+        // if the seats ran out (Better Auth ignores errors there); this reports that to the caller.
+        afterCreateInvitation: async ({ invitation, inviter }) => {
+          const current = await prisma.invitation.findUnique({ where: { id: invitation.id }, select: { status: true, seatCheckedAt: true } });
+          // Pending but never checked: the check failed and even canceling failed (Better Auth swallowed both).
+          // Cancel it here and say so, instead of reporting an invitation that wasn't sent as sent.
+          if (current?.status === "pending" && !current.seatCheckedAt) {
+            await prisma.invitation.updateMany({ where: { id: invitation.id, status: "pending" }, data: { status: "canceled" } });
+            throw new APIError("SERVICE_UNAVAILABLE", { message: "The invitation couldn't be checked. Try again.", code: "SEAT_CHECK_FAILED" });
+          }
+          if (current?.status !== "canceled") return;
+          const [{ limits }, usage] = await Promise.all([agencyBilling(invitation.organizationId), agencyUsage(invitation.organizationId)]);
+          if (!withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, localeOf(inviter));
+          // Canceled although seats are free: the re-check itself failed (see sendInvitationEmail).
+          throw new APIError("SERVICE_UNAVAILABLE", { message: "The invitation couldn't be checked. Try again.", code: "SEAT_CHECK_FAILED" });
+        },
+        // Better Auth has checked who may change roles by now. It writes the role after this
+        // hook returns, so the check here only refuses early; afterUpdateMemberRole decides.
+        // The hooks don't know who's asking: the team action translates the error by its code.
+        beforeUpdateMemberRole: async ({ member, newRole, organization }) => {
           if (member.role === "customer" || !assignableRoles.has(newRole)) {
             throw new APIError("BAD_REQUEST", { message: "This role change isn't allowed." });
           }
+          if (takesStaffSeat(newRole) && !takesStaffSeat(member.role)) {
+            const [{ limits }, usage] = await Promise.all([agencyBilling(organization.id), agencyUsage(organization.id)]);
+            if (!withinLimit(limits, "maxStaff", usage.maxStaff)) throw seatsFull(limits.maxStaff ?? 0, "en");
+          }
+        },
+        // Re-counts under the agency's lock once the role is written and undoes it when the seats
+        // are over (another change got in between), so the request fails with nothing changed.
+        afterUpdateMemberRole: async ({ member, previousRole, organization }) => {
+          let kept: boolean;
+          try {
+            kept = await confirmMemberSeat(organization.id, member.id, previousRole);
+          } catch (error) {
+            // Couldn't check: don't leave an unchecked seat behind a failed request.
+            if (takesStaffSeat(member.role) && !takesStaffSeat(previousRole)) {
+              await prisma.member.updateMany({ where: { id: member.id, role: member.role }, data: { role: previousRole } }).catch(() => undefined);
+            }
+            throw error;
+          }
+          if (!kept) throw seatsFull((await agencyBilling(organization.id)).limits.maxStaff ?? 0, "en");
+        },
+        // Off the team: their account no longer answers for this agency's artist profiles.
+        afterRemoveMember: async ({ member, organization }) => {
+          await unlinkRemovedMember(organization.id, member.userId);
         },
       },
       schema: {
@@ -185,6 +304,19 @@ export const auth = betterAuth({
         },
       },
       sendInvitationEmail: async ({ id, role, email, organization, inviter }) => {
+        // A new invitation over the seat limit (a race with another invitation or promotion) is
+        // canceled, not sent. A resend finds its seat already checked (seatCheckedAt) and is sent again.
+        let kept: boolean;
+        try {
+          kept = await confirmInvitationSeat(organization.id, id);
+        } catch (error) {
+          // Better Auth swallows errors from here, which would leave an unchecked invitation:
+          // cancel it instead (fail closed); afterCreateInvitation then reports the failure.
+          console.error("[team] seat check for invitation failed", id, error);
+          await prisma.invitation.updateMany({ where: { id, status: "pending", seatCheckedAt: null }, data: { status: "canceled" } });
+          return;
+        }
+        if (!kept) return;
         const locale = localeOf(inviter.user);
         deliver({
           kind: "invitation",
@@ -214,6 +346,7 @@ export const auth = betterAuth({
       },
     }),
     twoFactor({ issuer: "StageDesk" }),
+    impersonation(),
     // Must stay last: lets server actions set auth cookies.
     nextCookies(),
   ],

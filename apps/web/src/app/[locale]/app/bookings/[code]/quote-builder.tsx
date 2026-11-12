@@ -1,11 +1,11 @@
 "use client";
 
-import { PlusIcon, SendIcon, Trash2Icon } from "lucide-react";
+import { PlusIcon, SendIcon, TicketPercentIcon, Trash2Icon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useFormatter } from "@/components/date-prefs";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { computeQuote, parseEuros, parseQuantity } from "@stagedesk/core";
+import { computeQuote, type DepositRule, type DepositType, parseEuros, parseQuantity, type PromoDiscount, promoDiscountLines, quoteAmountProblem } from "@stagedesk/core";
 import { FormField } from "@/components/form-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
@@ -22,6 +23,7 @@ import { centsToInput, euro, percent } from "@/lib/format";
 import type { ActionResult } from "@/lib/actions";
 import type { QuoteDraft } from "@/lib/quote-input";
 import { sendQuoteAction } from "../actions";
+import { setBookingPromoOnBookingAction } from "../../promo-codes/actions";
 
 export interface BuilderLine {
   key: string;
@@ -29,6 +31,27 @@ export interface BuilderLine {
   quantity: string;
   unitPrice: string;
   vatBps: number;
+  /** A discount line made from the booking's promo code (replaced when added again). */
+  promo?: boolean;
+}
+
+/** The agency promo code on a booking, for the quote editor. `label` is the discount as shown ("10%", "€ 50,00"). */
+export interface BookingPromo {
+  code: string;
+  discount: PromoDiscount;
+  minTotalCents: number | null;
+  label: string;
+  addedBy: string;
+}
+
+/** Where a booking quote starts: the agency's default upfront payment, and the language the customer will get. */
+export interface QuoteDefaults {
+  depositType: DepositType;
+  /** Fixed upfront amount as an input value ("250,00"). */
+  depositFixed: string;
+  locale: "nl" | "en";
+  /** "customer": their own language; "agency": the agency's language, as the customer never chose one. */
+  localeReason: "customer" | "agency";
 }
 
 export interface CatalogItem {
@@ -53,7 +76,11 @@ export function QuoteBuilder({
   onDone,
   submit: submitDraft,
   submitLabel,
+  defaults,
+  promo,
 }: {
+  /** Booking quotes only: the promo code on the booking, if any. */
+  promo?: BookingPromo | null;
   /** Sends a quote on this booking; or pass `submit` to send the draft elsewhere (a price for a lead). */
   bookingId?: string;
   submit?: (input: QuoteDraft) => Promise<ActionResult>;
@@ -65,8 +92,11 @@ export function QuoteBuilder({
   defaultExpiryDays: number;
   currency: string;
   onDone: () => void;
+  /** Booking quotes only: upfront payment kinds and the email language (lead prices are percentages only). */
+  defaults?: QuoteDefaults;
 }) {
   const t = useTranslations("booking");
+  const tp = useTranslations("promoCodes");
   const tu = useTranslations("ui");
   const format = useFormatter();
   const locale = useLocale();
@@ -76,6 +106,9 @@ export function QuoteBuilder({
     initialLines.length ? initialLines.map((l) => ({ ...l, key: key() })) : [{ key: key(), description: "", quantity: "1", unitPrice: "", vatBps: vatRates[0] ?? 2_100 }],
   );
   const [depositPct, setDepositPct] = useState(String(defaultDepositBps / 100));
+  const [depositType, setDepositType] = useState<DepositType>(defaults?.depositType ?? "percentage");
+  const [depositFixed, setDepositFixed] = useState(defaults?.depositFixed ?? "");
+  const [mailLocale, setMailLocale] = useState<"nl" | "en">(defaults?.locale ?? (locale === "en" ? "en" : "nl"));
   const [days, setDays] = useState(String(defaultExpiryDays));
   const [notes, setNotes] = useState("");
 
@@ -86,9 +119,31 @@ export function QuoteBuilder({
       const p = parseEuros(l.unitPrice);
       return q !== null && p !== null ? [{ description: l.description, quantityHundredths: q, unitPriceCents: p, vatBps: l.vatBps }] : [];
     });
-    const deposit = Math.min(100, Math.max(0, Number(depositPct.replace(",", ".")) || 0));
-    return computeQuote(valid, Math.round(deposit * 100));
-  }, [lines, depositPct]);
+    const pct = Math.min(100, Math.max(0, Number(depositPct.replace(",", ".")) || 0));
+    const fixed = parseEuros(depositFixed);
+    const rule: DepositRule =
+      depositType === "none" ? { type: "none" } : depositType === "fixed" ? { type: "fixed", cents: fixed !== null && fixed > 0 ? fixed : 0 } : { type: "percentage", bps: Math.round(pct * 100) };
+    return computeQuote(valid, rule);
+  }, [lines, depositPct, depositType, depositFixed]);
+  const fixedInvalid = depositType === "fixed" && (parseEuros(depositFixed) === null || (parseEuros(depositFixed) ?? 0) < 0);
+
+  // Why it can't be sent yet, said out loud instead of a greyed-out button or a silently changed value.
+  const pctValue = Number(depositPct.replace(",", "."));
+  const pctInvalid = depositType === "percentage" && (depositPct.trim() === "" || !Number.isFinite(pctValue) || pctValue < 0 || pctValue > 100);
+  const daysValue = Number(days);
+  const daysInvalid = !Number.isInteger(daysValue) || daysValue < 1 || daysValue > 180;
+  const badLine = lines.findIndex((l) => (l.description || l.unitPrice) && (parseQuantity(l.quantity) === null || parseEuros(l.unitPrice) === null));
+  const amountProblem = quoteAmountProblem(totals);
+  const blocked =
+    badLine >= 0
+      ? t("invalidLine", { n: badLine + 1 })
+      : totals.lines.length === 0
+        ? t("needsLine")
+        : amountProblem === "negative_total"
+          ? t("totalNegative")
+          : amountProblem === "amount_too_high"
+            ? t("totalTooHigh")
+            : null;
 
   const update = (k: string, patch: Partial<BuilderLine>) => setLines((ls) => ls.map((l) => (l.key === k ? { ...l, ...patch } : l)));
   const lineTotal = (l: BuilderLine) => {
@@ -104,11 +159,47 @@ export function QuoteBuilder({
     ]);
   }
 
+  /** The quote's lines that parse, leaving out earlier promo discount lines. */
+  const parsedLines = (ls: BuilderLine[]) =>
+    ls.flatMap((l) => {
+      const q = parseQuantity(l.quantity);
+      const p = parseEuros(l.unitPrice);
+      return !l.promo && q !== null && p !== null ? [{ description: l.description, quantityHundredths: q, unitPriceCents: p, vatBps: l.vatBps }] : [];
+    });
+
+  /** Adds the code's discount as lines (one per VAT rate), replacing ones added before. */
+  function addPromoLines() {
+    if (!promo) return;
+    const base = parsedLines(lines);
+    const gross = computeQuote(base, { type: "none" }).totalCents;
+    if (promo.minTotalCents && gross < promo.minTotalCents) return void toast.error(tp("problem_below_minimum"));
+    const cuts = promoDiscountLines(base, promo.discount, tp("promoLine", { code: promo.code }));
+    if (cuts.length === 0) return void toast.error(t("needsLine"));
+    setLines((ls) => [
+      ...ls.filter((l) => !l.promo),
+      ...cuts.map((c) => ({ key: key(), description: c.description, quantity: "1", unitPrice: centsToInput(c.unitPriceCents, locale), vatBps: c.vatBps, promo: true })),
+    ]);
+  }
+
+  const [promoInput, setPromoInput] = useState("");
+  function changePromo(code: string | null) {
+    if (!bookingId) return;
+    startTransition(async () => {
+      const r = await setBookingPromoOnBookingAction(bookingId, code);
+      if (!r.ok) return void toast.error(r.message);
+      toast.success(r.message);
+      setPromoInput("");
+      if (code === null) setLines((ls) => ls.filter((l) => !l.promo));
+      router.refresh();
+    });
+  }
+
   function submit() {
     startTransition(async () => {
       const draft: QuoteDraft = {
+        ...(defaults ? { depositType, depositFixed, locale: mailLocale } : {}),
         depositPct: Math.min(100, Math.max(0, Number(depositPct.replace(",", ".")) || 0)),
-        expiresInDays: Math.max(1, Math.min(180, Number(days) || 14)),
+        expiresInDays: daysValue,
         notes: notes || null,
         lines: lines.map(({ description, quantity, unitPrice, vatBps }) => ({ description, quantity, unitPrice, vatBps })),
       };
@@ -122,6 +213,34 @@ export function QuoteBuilder({
 
   return (
     <div className="grid gap-5">
+      {bookingId && !submitDraft && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-3 text-sm">
+          <TicketPercentIcon className="size-4 text-primary" aria-hidden />
+          {promo ? (
+            <>
+              <span>
+                {tp(promo.addedBy === "customer" ? "bookingCodeCustomer" : "bookingCodeStaff", { code: promo.code, discount: promo.label })}
+              </span>
+              <Button type="button" size="sm" variant="outline" disabled={pending} onClick={addPromoLines}>
+                {tp(lines.some((l) => l.promo) ? "updateDiscount" : "addDiscount")}
+              </Button>
+              <Button type="button" size="sm" variant="ghost" disabled={pending} onClick={() => changePromo(null)}>
+                {tp("removeCode")}
+              </Button>
+            </>
+          ) : (
+            <>
+              <label htmlFor="quote-promo" className="text-muted-foreground">
+                {tp("bookingCodeLabel")}
+              </label>
+              <Input id="quote-promo" value={promoInput} maxLength={32} className="h-8 w-40 uppercase" onChange={(e) => setPromoInput(e.target.value)} />
+              <Button type="button" size="sm" variant="outline" disabled={pending || !promoInput.trim()} onClick={() => changePromo(promoInput.trim())}>
+                {tp("apply")}
+              </Button>
+            </>
+          )}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-sm">
           <thead>
@@ -209,11 +328,37 @@ export function QuoteBuilder({
 
       <div className="grid gap-6 md:grid-cols-[1fr_18rem]">
         <div className="grid content-start gap-4 sm:grid-cols-2">
-          <FormField required id="q-deposit" label={t("deposit")}>
-            <Input required id="q-deposit" value={depositPct} inputMode="decimal" onChange={(e) => setDepositPct(e.target.value)} />
-          </FormField>
-          <FormField required id="q-days" label={t("validDays")}>
-            <Input required id="q-days" value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} />
+          {defaults && (
+            <FormField id="q-deposit-type" label={t("depositType")} hint={t(`depositType_${depositType}Hint`)}>
+              <NativeSelect id="q-deposit-type" value={depositType} onChange={(e) => setDepositType(e.target.value as DepositType)} className="w-full">
+                {(["none", "percentage", "fixed"] as const).map((k) => (
+                  <option key={k} value={k}>
+                    {t(`depositType_${k}`)}
+                  </option>
+                ))}
+              </NativeSelect>
+            </FormField>
+          )}
+          {depositType === "percentage" && (
+            <FormField required id="q-deposit" label={t("deposit")} error={pctInvalid ? t("depositPctInvalid") : undefined}>
+              <Input required id="q-deposit" value={depositPct} inputMode="decimal" onChange={(e) => setDepositPct(e.target.value)} aria-invalid={pctInvalid || undefined} />
+            </FormField>
+          )}
+          {depositType === "fixed" && (
+            <FormField required id="q-deposit-fixed" label={t("depositFixed")} error={fixedInvalid ? t("depositFixedInvalid") : undefined}>
+              <Input required id="q-deposit-fixed" value={depositFixed} inputMode="decimal" placeholder="0,00" onChange={(e) => setDepositFixed(e.target.value)} aria-invalid={fixedInvalid || undefined} />
+            </FormField>
+          )}
+          {defaults && (
+            <FormField id="q-locale" label={t("mailLanguage")} hint={mailLocale === defaults.locale ? t(`mailLanguage_${defaults.localeReason}`) : t("mailLanguage_chosen")}>
+              <NativeSelect id="q-locale" value={mailLocale} onChange={(e) => setMailLocale(e.target.value as "nl" | "en")} className="w-full">
+                <option value="nl">Nederlands</option>
+                <option value="en">English</option>
+              </NativeSelect>
+            </FormField>
+          )}
+          <FormField required id="q-days" label={t("validDays")} error={daysInvalid ? t("validDaysInvalid") : undefined}>
+            <Input required id="q-days" value={days} inputMode="numeric" onChange={(e) => setDays(e.target.value)} aria-invalid={daysInvalid || undefined} />
           </FormField>
           <FormField id="q-notes" label={t("notes")} className="sm:col-span-2">
             <Textarea id="q-notes" value={notes} rows={3} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />
@@ -234,20 +379,34 @@ export function QuoteBuilder({
             <dt>{t("total")}</dt>
             <dd className="tabular-nums">{euro(format, totals.totalCents, currency)}</dd>
           </div>
-          {totals.depositCents > 0 && (
-            <div className="flex justify-between text-muted-foreground">
-              <dt>{t("depositLine", { pct: depositPct.replace(".", ",") + "%" })}</dt>
-              <dd className="tabular-nums">{euro(format, totals.depositCents, currency)}</dd>
-            </div>
+          {totals.depositCents > 0 ? (
+            <>
+              <div className="flex justify-between text-muted-foreground">
+                <dt>{depositType === "fixed" ? t("depositFixedLine") : t("depositLine", { pct: depositPct.replace(".", ",") + "%" })}</dt>
+                <dd className="tabular-nums">{euro(format, totals.depositCents, currency)}</dd>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <dt>{t("balanceLine")}</dt>
+                <dd className="tabular-nums">{euro(format, totals.balanceCents, currency)}</dd>
+              </div>
+            </>
+          ) : (
+            totals.totalCents > 0 && <p className="text-muted-foreground">{t("noDepositLine")}</p>
           )}
+          {defaults && <p className="border-t pt-2 text-xs text-muted-foreground">{t("mailLanguageSummary", { language: mailLocale === "nl" ? "Nederlands" : "English" })}</p>}
         </dl>
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {blocked && (
+          <p role="status" className="mr-auto text-sm text-muted-foreground">
+            {blocked}
+          </p>
+        )}
         <Button variant="ghost" onClick={onDone}>
           {tu("secondary")}
         </Button>
-        <Button onClick={submit} disabled={pending || totals.lines.length === 0}>
+        <Button onClick={submit} disabled={pending || blocked !== null || fixedInvalid || pctInvalid || daysInvalid}>
           <SendIcon />
           {submitLabel ?? t("send")}
         </Button>

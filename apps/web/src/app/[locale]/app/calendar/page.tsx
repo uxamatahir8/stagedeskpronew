@@ -1,4 +1,4 @@
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getLocale, getTranslations, setRequestLocale } from "next-intl/server";
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@/i18n/navigation";
 import type { Locale } from "@/i18n/routing";
 import { cn } from "@/lib/utils";
-import { requireAgency } from "@/lib/viewer";
+import { requireAgency, viewerCan } from "@/lib/viewer";
 
 const chip: Partial<Record<BookingStatus, string>> = {
   inquiry: "bg-info/12 text-info",
@@ -42,7 +42,9 @@ export default async function CalendarPage({ params, searchParams }: PageProps<"
 }
 
 async function Calendar({ searchParams }: Pick<PageProps<"/[locale]/app/calendar">, "searchParams">) {
-  const { db } = await requireAgency("agency.calendar");
+  const { db, viewer } = await requireAgency("agency.calendar");
+  // Picking a day opens the booking form with that date; only for people who may create bookings.
+  const canCreate = viewerCan(viewer, "agency.bookings.create");
   const today = todayInNetherlands();
   const requested = (await searchParams)["month"];
   const month = typeof requested === "string" && /^\d{4}-\d{2}$/.test(requested) ? requested : today.slice(0, 7);
@@ -81,7 +83,16 @@ async function Calendar({ searchParams }: Pick<PageProps<"/[locale]/app/calendar
         <Button variant="ghost" size="sm" asChild className="ml-auto">
           <Link href="/app/calendar">{t("today")}</Link>
         </Button>
+        {canCreate && (
+          <Button size="sm" asChild>
+            <Link href={`/app/bookings/new?from=calendar&month=${month}`}>
+              <PlusIcon />
+              {t("addBooking")}
+            </Link>
+          </Button>
+        )}
       </div>
+      {canCreate && <p className="text-sm text-muted-foreground">{t("addHint")}</p>}
       <MonthGrid
         month={month}
         today={today}
@@ -102,6 +113,23 @@ async function Calendar({ searchParams }: Pick<PageProps<"/[locale]/app/calendar
                 </li>
               ))}
               {list.length > 3 && <li className="px-1.5 text-xs text-muted-foreground">{t("more", { count: list.length - 3 })}</li>}
+              {canCreate && date >= today && (
+                <li>
+                  <Link
+                    href={`/app/bookings/new?date=${date}&from=calendar`}
+                    className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                    aria-label={
+                      list.length > 0
+                        ? t("addOnBusyDay", { date: format.dateTime(new Date(`${date}T12:00:00Z`), { day: "numeric", month: "long", timeZone: "UTC" }), count: list.length })
+                        : t("addOnDay", { date: format.dateTime(new Date(`${date}T12:00:00Z`), { day: "numeric", month: "long", timeZone: "UTC" }) })
+                    }
+                    title={list.length > 0 ? t("busyDay", { count: list.length }) : undefined}
+                  >
+                    <PlusIcon className="size-3" />
+                    <span className="sr-only sm:not-sr-only">{t("add")}</span>
+                  </Link>
+                </li>
+              )}
             </ul>
           );
         }}

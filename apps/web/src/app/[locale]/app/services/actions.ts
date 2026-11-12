@@ -6,6 +6,7 @@ import { z } from "zod";
 import { parseEuros } from "@stagedesk/core";
 import { getSetting } from "@stagedesk/db";
 import type { ActionResult } from "@/lib/actions";
+import { writeBlocked } from "@/lib/billing";
 import { requireAgency } from "@/lib/viewer";
 
 const schema = z.object({
@@ -19,6 +20,8 @@ const schema = z.object({
 
 export async function saveServiceAction(input: z.input<typeof schema>): Promise<ActionResult> {
   const { organization, db } = await requireAgency("agency.services");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   const [t, tb] = await Promise.all([getTranslations("services"), getTranslations("newBooking")]);
   const parsed = schema.safeParse(input);
   const unitPriceCents = parsed.success ? parseEuros(parsed.data.price) : null;
@@ -26,6 +29,8 @@ export async function saveServiceAction(input: z.input<typeof schema>): Promise<
   if (!parsed.success || unitPriceCents === null || !vatRatesBps.includes(parsed.data.vatBps)) {
     return { ok: false, message: tb("invalidPrice") };
   }
+  // A service is something you sell; a discount is a line on the quote (or a promo code).
+  if (unitPriceCents < 0) return { ok: false, message: t("negativePrice") };
   const { id, ...data } = parsed.data;
   const values = { name: data.name, description: data.description?.trim() || null, unit: data.unit, unitPriceCents, vatBps: data.vatBps };
 
@@ -39,7 +44,9 @@ export async function saveServiceAction(input: z.input<typeof schema>): Promise<
 }
 
 export async function archiveServiceAction(id: string): Promise<ActionResult> {
-  const { db } = await requireAgency("agency.services");
+  const { organization, db } = await requireAgency("agency.services");
+  const blocked = await writeBlocked(organization.id);
+  if (blocked) return { ok: false, message: blocked };
   await db.serviceItem.updateMany({ where: { id }, data: { active: false } });
   return { ok: true, message: (await getTranslations("services"))("archived") };
 }

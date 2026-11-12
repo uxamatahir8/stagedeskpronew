@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { ADMIN_EMAIL, signIn } from "./helpers";
 
 /** The platform admin manages agencies, partners and accounts by hand. */
 test("platform admin creates, finds, suspends and deletes an agency; adds and removes a partner and an admin", async ({ page }) => {
@@ -8,7 +8,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
   const run = Date.now().toString(36);
   const agency = `E2E Beheer ${run}`;
   const partner = `Piet Partner ${run}`;
-  await signIn(page, "admin@stagedesk.local");
+  await signIn(page, ADMIN_EMAIL);
 
   await test.step("a new agency is created for an owner and opens on its own page", async () => {
     await page.goto("/nl/app/agencies");
@@ -74,11 +74,13 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
 
   await test.step("a platform admin is added, found with the filter and deleted again", async () => {
     await page.goto("/nl/app/users");
-    await page.getByRole("button", { name: "Beheerder toevoegen" }).click();
+    await page.getByRole("button", { name: "Gebruiker toevoegen" }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Naam").fill(`Bea Beheer ${run}`);
+    await dialog.getByLabel("Rol").click();
+    await page.getByRole("option", { name: "Platformbeheerder" }).click();
+    await dialog.getByLabel("Naam", { exact: true }).fill(`Bea Beheer ${run}`);
     await dialog.getByLabel("E-mailadres").fill(`bea.${run}@e2e-beheer.nl`);
-    await dialog.getByRole("button", { name: "Beheerder toevoegen" }).click();
+    await dialog.getByRole("button", { name: "Toevoegen", exact: true }).click();
     await expect(page.getByText(`Bea Beheer ${run} is nu platformbeheerder.`)).toBeVisible();
 
     await page.getByRole("link", { name: "Platformbeheerders" }).click();
@@ -99,7 +101,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await expect(page.getByText("Your quote from Feestband Utrecht")).toBeVisible();
     await expect(page.frameLocator("iframe").getByText("Feestband Utrecht").first()).toBeVisible();
     await page.getByRole("button", { name: "Test naar mij sturen" }).click();
-    await expect(page.getByText("Testmail verstuurd naar admin@stagedesk.local.")).toBeVisible();
+    await expect(page.getByText(`Testmail verstuurd naar ${ADMIN_EMAIL}.`)).toBeVisible();
   });
 
   await test.step("the platform admin creates a booking for an agency, which shows up in the overview", async () => {
@@ -110,7 +112,7 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     await page.getByRole("dialog").getByRole("button", { name: "Verder" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Boeking door platformbeheerder" })).toBeVisible();
     await page.getByRole("tab", { name: "Nieuwe klant" }).click();
-    await page.getByLabel("Je naam").fill(`Klant Platform ${run}`);
+    await page.getByLabel("Naam van de klant").fill(`Klant Platform ${run}`);
     await page.getByLabel("E-mailadres").fill(`platform.${run}@test.local`);
     await page.getByLabel("Plaats").fill("Utrecht");
     await page.getByRole("button", { name: "Boeking aanmaken" }).click();
@@ -119,7 +121,8 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
 
     await page.goto(`/nl/app/admin-bookings?source=platform_admin&q=platform.${run}`);
     const row = page.getByRole("row").filter({ hasText: `Klant Platform ${run}` });
-    await expect(row).toContainText("platformbeheerder (Iris Platform)");
+    // The local demo admin may have been renamed; attribution must still name the actual actor.
+    await expect(row).toContainText(/platformbeheerder \([^)]+\)/);
     await expect(row).toContainText("Aanvraag");
   });
 
@@ -133,7 +136,8 @@ test("platform admin creates, finds, suspends and deletes an agency; adds and re
     // Platform pages are closed while supporting; the agency's own pages are open.
     await page.goto("/nl/app/agencies");
     await expect(page.getByText("Je hebt geen toegang", { exact: false })).toBeVisible();
-    await page.goto("/nl/app/bookings");
+    // The bulk demo data fills the first page; search for this run's booking.
+    await page.goto(`/nl/app/bookings?q=${encodeURIComponent(`Klant Platform ${run}`)}`);
     await expect(page.getByText(`Klant Platform ${run}`).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Supportmodus verlaten" }).click();

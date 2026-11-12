@@ -18,6 +18,17 @@ export type BookingStatus = (typeof bookingStatuses)[number];
 /** Statuses where the event is still going to happen. */
 export const openStatuses: readonly BookingStatus[] = ["inquiry", "quoted", "booked", "confirmed"];
 
+/**
+ * When an artist can be asked to play: from the first inquiry on, so the agency
+ * can line up the DJ while the quote is out, until the event. An artist asked
+ * for a booking in one of these statuses has that date held for them (an
+ * expired quote releases it until a new one is sent).
+ */
+export const artistAssignableStatuses: readonly BookingStatus[] = openStatuses;
+
+/** Booking statuses in which an open request or accepted gig makes the artist busy that day. */
+export const artistHoldStatuses: readonly BookingStatus[] = openStatuses;
+
 export const eventTypes = ["wedding", "corporate", "birthday", "party", "festival", "other"] as const;
 export type EventType = (typeof eventTypes)[number];
 
@@ -179,4 +190,30 @@ export function generateTrackingCode(random: (n: number) => Uint8Array = (n) => 
 /** Invoice numbers run per agency per year: "2027-0042". */
 export function formatInvoiceNumber(year: number, sequence: number) {
   return `${year}-${String(sequence).padStart(4, "0")}`;
+}
+
+/**
+ * How an agency numbers its invoices. "yearly" restarts every year
+ * (prefix + 2027-0042, the original format); "continuous" never restarts
+ * (prefix + 000042). Dutch rules ask for one unbroken, unique series; a
+ * prefix may separate series (e.g. a new one per year).
+ */
+export const invoiceNumberings = ["yearly", "continuous"] as const;
+export type InvoiceNumbering = (typeof invoiceNumberings)[number];
+
+export const invoicePrefixPattern = /^[A-Z0-9][A-Z0-9\-_/.]{0,11}$/;
+/** What a typed invoice number may look like: letters, digits and - _ / . , 1–32 characters. */
+export const invoiceNumberPattern = /^[A-Z0-9][A-Z0-9\-_/.]{0,31}$/;
+
+export const normalizeInvoiceNumber = (value: string) => value.trim().toUpperCase();
+
+/** The counter key a numbering scheme draws from: per year, or one for ever. */
+export function invoiceCounterKey(numbering: InvoiceNumbering, year: number) {
+  return numbering === "continuous" ? "invoice:all" : `invoice:${year}`;
+}
+
+export function formatAgencyInvoiceNumber(input: { numbering: InvoiceNumbering; prefix: string | null; year: number; sequence: number }) {
+  const prefix = input.prefix ? normalizeInvoiceNumber(input.prefix) : "";
+  const body = input.numbering === "continuous" ? String(input.sequence).padStart(6, "0") : formatInvoiceNumber(input.year, input.sequence);
+  return `${prefix}${body}`;
 }

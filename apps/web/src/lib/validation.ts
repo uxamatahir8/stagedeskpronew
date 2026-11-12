@@ -1,8 +1,15 @@
 import { z } from "zod";
 
-/** Empty form fields become null instead of "". */
+/**
+ * A field left empty, or not on the form at all (a field shown only for some
+ * choices, an inactive tab), is null. FormData has no entry for a field that
+ * isn't rendered, so "missing" must count as empty, not as invalid.
+ */
+export const isBlank = (v: unknown): v is null | undefined | "" => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+
+/** Empty or missing form fields become null instead of "". */
 const optional = <T extends z.ZodType>(schema: T) =>
-  z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? null : typeof v === "string" ? v.trim() : v), schema.nullable());
+  z.preprocess((v) => (isBlank(v) ? null : typeof v === "string" ? v.trim() : v), schema.nullable());
 
 export const kvkNumber = optional(z.string().regex(/^\d{8}$/, "invalidKvk"));
 export const vatNumber = optional(
@@ -37,7 +44,9 @@ export function fieldErrorKeys(error: z.ZodError): FieldErrors {
   const out: FieldErrors = {};
   for (const issue of error.issues) {
     const field = String(issue.path[0] ?? "");
-    out[field] ??= issue.message;
+    // Our schemas give message keys ("invalidNumber"); zod's own wording ("Invalid input: expected
+    // number, received NaN") is never shown to people: it becomes the generic "invalid".
+    out[field] ??= /^[a-zA-Z]+$/.test(issue.message) ? issue.message : "invalid";
   }
   return out;
 }
@@ -45,6 +54,7 @@ export function fieldErrorKeys(error: z.ZodError): FieldErrors {
 /** Lowercase, dash-separated slug for URLs like /b/feestband-utrecht. */
 export function slugify(value: string) {
   return value
+    .replace(/<[^>]*>/g, " ")
     .normalize("NFKD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
