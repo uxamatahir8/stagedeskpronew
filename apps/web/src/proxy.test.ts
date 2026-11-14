@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, type NextFetchEvent } from "next/server";
 import { describe, expect, it, vi } from "vitest";
+import { routing } from "./i18n/routing";
 import proxy from "./proxy";
 
 // The language decision is under test here; the real next-intl routing runs in e2e/visitor-region.spec.ts.
@@ -24,6 +25,12 @@ function visit(path: string, opts: { country?: string; browser?: string; cookie?
 const target = (r: Response) => r.headers.get("location");
 const redirectedToDutch = (r: Response, path: string) => expect([r.status, new URL(target(r) ?? "/", "http://localhost:3000").pathname]).toEqual([307, path]);
 const stays = (r: Response) => expect(target(r)).toBeNull();
+
+describe("response headers", () => {
+  it("leaves alternate links to page metadata instead of the HTTP Link header", () => {
+    expect(routing.alternateLinks).toBe(false);
+  });
+});
 
 describe("language on a page load", () => {
   it("sends a first visitor in the Netherlands to Dutch, whatever their browser says", () => {

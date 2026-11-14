@@ -10,6 +10,10 @@ export const routing = defineRouting({
   defaultLocale,
   localePrefix: "as-needed",
   localeDetection: false,
+  // Public pages already emit canonical and hreflang metadata in their HTML.
+  // Avoid duplicating those links in the HTTP Link header, which can overflow
+  // reverse-proxy response-header buffers when Next.js also adds preload links.
+  alternateLinks: false,
 });
 
 export type Locale = (typeof routing.locales)[number];
